@@ -8,9 +8,9 @@ type MiniChartProps = {
 };
 
 export function MiniChart({ data, type, color }: MiniChartProps) {
-  return (
-    <ResponsiveContainer width="100%" height="100%">
-      {type === "line" && (
+  const renderChart = () => {
+    if (type === "line") {
+      return (
         <LineChart data={data}>
           <Line 
             type="monotone" 
@@ -20,8 +20,11 @@ export function MiniChart({ data, type, color }: MiniChartProps) {
             dot={false}
           />
         </LineChart>
-      )}
-      {type === "area" && (
+      );
+    }
+    
+    if (type === "area") {
+      return (
         <AreaChart data={data}>
           <Area 
             type="monotone" 
@@ -31,12 +34,19 @@ export function MiniChart({ data, type, color }: MiniChartProps) {
             fillOpacity={0.3}
           />
         </AreaChart>
-      )}
-      {type === "bar" && (
-        <BarChart data={data}>
-          <Bar dataKey="value" fill={color} />
-        </BarChart>
-      )}
+      );
+    }
+    
+    return (
+      <BarChart data={data}>
+        <Bar dataKey="value" fill={color} />
+      </BarChart>
+    );
+  };
+
+  return (
+    <ResponsiveContainer width="100%" height="100%">
+      {renderChart()}
     </ResponsiveContainer>
   );
 }
