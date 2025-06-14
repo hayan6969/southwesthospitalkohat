@@ -25,8 +25,15 @@ export type Appointment = {
   notes?: string;
   created_at: string;
   updated_at: string;
-  patient?: User;
-  doctor?: User;
+  patient?: {
+    id: string;
+    users?: User;
+  };
+  doctor?: {
+    id: string;
+    specialization?: string;
+    users?: User;
+  };
 };
 
 export type MedicalRecord = {
@@ -39,8 +46,15 @@ export type MedicalRecord = {
   prescription?: string;
   notes?: string;
   created_at: string;
-  patient?: User;
-  doctor?: User;
+  patient?: {
+    id: string;
+    users?: User;
+  };
+  doctor?: {
+    id: string;
+    specialization?: string;
+    users?: User;
+  };
 };
 
 export type Invoice = {
@@ -53,7 +67,10 @@ export type Invoice = {
   description?: string;
   created_at: string;
   paid_at?: string;
-  patient?: User;
+  patient?: {
+    id: string;
+    users?: User;
+  };
 };
 
 export type LabReport = {
@@ -66,8 +83,15 @@ export type LabReport = {
   status: 'pending' | 'completed' | 'reviewed';
   notes?: string;
   created_at: string;
-  patient?: User;
-  doctor?: User;
+  patient?: {
+    id: string;
+    users?: User;
+  };
+  doctor?: {
+    id: string;
+    specialization?: string;
+    users?: User;
+  };
 };
 
 export type Department = {
@@ -75,6 +99,15 @@ export type Department = {
   name: string;
   description?: string;
   created_at: string;
+};
+
+export type AuditLog = {
+  id: string;
+  user_id?: string;
+  action: string;
+  details?: string;
+  created_at: string;
+  user?: User;
 };
 
 // Appointments hooks
@@ -92,6 +125,7 @@ export const useAppointments = () => {
           ),
           doctor:doctors!appointments_doctor_id_fkey(
             id,
+            specialization,
             users!doctors_id_fkey(first_name, last_name, email, phone)
           )
         `)
@@ -159,6 +193,7 @@ export const useMedicalRecords = () => {
           ),
           doctor:doctors!medical_records_doctor_id_fkey(
             id,
+            specialization,
             users!doctors_id_fkey(first_name, last_name, email, phone)
           )
         `)
@@ -232,6 +267,27 @@ export const useCreateInvoice = () => {
   });
 };
 
+export const useUpdateInvoice = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async ({ id, ...updates }: Partial<Invoice> & { id: string }) => {
+      const { data, error } = await supabase
+        .from('invoices')
+        .update(updates)
+        .eq('id', id)
+        .select()
+        .single();
+      
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['invoices'] });
+    }
+  });
+};
+
 // Lab Reports hooks
 export const useLabReports = () => {
   return useQuery({
@@ -247,6 +303,7 @@ export const useLabReports = () => {
           ),
           doctor:doctors!lab_reports_doctor_id_fkey(
             id,
+            specialization,
             users!doctors_id_fkey(first_name, last_name, email, phone)
           )
         `)
@@ -258,6 +315,27 @@ export const useLabReports = () => {
   });
 };
 
+export const useUpdateLabReport = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async ({ id, ...updates }: Partial<LabReport> & { id: string }) => {
+      const { data, error } = await supabase
+        .from('lab_reports')
+        .update(updates)
+        .eq('id', id)
+        .select()
+        .single();
+      
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['lab_reports'] });
+    }
+  });
+};
+
 // Users hooks
 export const useUsers = () => {
   return useQuery({
@@ -265,11 +343,34 @@ export const useUsers = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('users')
-        .select('*')
+        .select(`
+          *,
+          departments(name)
+        `)
         .order('created_at', { ascending: false });
       
       if (error) throw error;
       return data;
+    }
+  });
+};
+
+export const useCreateUser = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async (user: Omit<User, 'id' | 'created_at' | 'updated_at'>) => {
+      const { data, error } = await supabase
+        .from('users')
+        .insert([user])
+        .select()
+        .single();
+      
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['users'] });
     }
   });
 };
@@ -291,6 +392,42 @@ export const useDoctors = () => {
   });
 };
 
+export const useCreateDoctor = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async (doctor: { user: Omit<User, 'id' | 'created_at' | 'updated_at'>; specialization?: string; license_number?: string; experience_years?: number }) => {
+      // First create the user
+      const { data: userData, error: userError } = await supabase
+        .from('users')
+        .insert([{ ...doctor.user, role: 'doctor' }])
+        .select()
+        .single();
+      
+      if (userError) throw userError;
+      
+      // Then create the doctor record
+      const { data, error } = await supabase
+        .from('doctors')
+        .insert([{
+          id: userData.id,
+          specialization: doctor.specialization,
+          license_number: doctor.license_number,
+          experience_years: doctor.experience_years || 0
+        }])
+        .select()
+        .single();
+      
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['doctors'] });
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+    }
+  });
+};
+
 export const usePatients = () => {
   return useQuery({
     queryKey: ['patients'],
@@ -308,6 +445,43 @@ export const usePatients = () => {
   });
 };
 
+export const useCreatePatient = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async (patient: { user: Omit<User, 'id' | 'created_at' | 'updated_at'>; date_of_birth?: string; address?: string; blood_type?: string; allergies?: string }) => {
+      // First create the user
+      const { data: userData, error: userError } = await supabase
+        .from('users')
+        .insert([{ ...patient.user, role: 'patient' }])
+        .select()
+        .single();
+      
+      if (userError) throw userError;
+      
+      // Then create the patient record
+      const { data, error } = await supabase
+        .from('patients')
+        .insert([{
+          id: userData.id,
+          date_of_birth: patient.date_of_birth,
+          address: patient.address,
+          blood_type: patient.blood_type,
+          allergies: patient.allergies
+        }])
+        .select()
+        .single();
+      
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['patients'] });
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+    }
+  });
+};
+
 // Departments hooks
 export const useDepartments = () => {
   return useQuery({
@@ -317,6 +491,45 @@ export const useDepartments = () => {
         .from('departments')
         .select('*')
         .order('name');
+      
+      if (error) throw error;
+      return data;
+    }
+  });
+};
+
+export const useCreateDepartment = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async (department: Omit<Department, 'id' | 'created_at'>) => {
+      const { data, error } = await supabase
+        .from('departments')
+        .insert([department])
+        .select()
+        .single();
+      
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['departments'] });
+    }
+  });
+};
+
+// Audit Logs hooks
+export const useAuditLogs = () => {
+  return useQuery({
+    queryKey: ['audit_logs'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('audit_logs')
+        .select(`
+          *,
+          user:users(first_name, last_name, email)
+        `)
+        .order('created_at', { ascending: false });
       
       if (error) throw error;
       return data;

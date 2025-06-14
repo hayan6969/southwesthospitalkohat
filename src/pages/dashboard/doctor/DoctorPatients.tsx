@@ -11,18 +11,19 @@ export default function DoctorPatients() {
   const { data: patients, isLoading } = usePatients();
   const createMedicalRecord = useCreateMedicalRecord();
 
-  const handleCreateRecord = async (patientId: string) => {
+  const handleAddRecord = async (patientId: string) => {
     try {
       await createMedicalRecord.mutateAsync({
         patient_id: patientId,
-        doctor_id: "550e8400-e29b-41d4-a716-446655440001", // Current doctor
-        diagnosis: "Initial consultation",
-        treatment: "Assessment completed",
-        notes: "Created via patient management"
+        doctor_id: '550e8400-e29b-41d4-a716-446655440001', // Current doctor ID
+        visit_date: new Date().toISOString(),
+        diagnosis: 'New consultation',
+        treatment: 'To be determined',
+        notes: 'Initial assessment needed'
       });
-      toast.success("Medical record created successfully");
+      toast.success('Medical record created');
     } catch (error) {
-      toast.error("Failed to create medical record");
+      toast.error('Failed to create medical record');
     }
   };
 
@@ -32,11 +33,11 @@ export default function DoctorPatients() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold text-gray-900">My Patients</h1>
-            <p className="text-gray-600 mt-1">Manage your patient roster and medical records</p>
+            <p className="text-gray-600 mt-1">View and manage your assigned patients</p>
           </div>
           <Button className="bg-blue-600 hover:bg-blue-700">
             <Plus className="w-4 h-4 mr-2" />
-            Add Patient
+            Add Patient Record
           </Button>
         </div>
 
@@ -54,8 +55,8 @@ export default function DoctorPatients() {
                 <TableRow>
                   <TableHead>Patient Name</TableHead>
                   <TableHead>Date of Birth</TableHead>
-                  <TableHead>Blood Type</TableHead>
                   <TableHead>Contact</TableHead>
+                  <TableHead>Blood Type</TableHead>
                   <TableHead>Last Visit</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
@@ -85,13 +86,15 @@ export default function DoctorPatients() {
                       <TableCell>
                         {patient.date_of_birth ? format(new Date(patient.date_of_birth), 'MMM d, yyyy') : 'N/A'}
                       </TableCell>
+                      <TableCell>{patient.users?.phone || 'N/A'}</TableCell>
                       <TableCell>
                         <span className="px-2 py-1 bg-red-100 text-red-700 rounded-full text-sm font-medium">
                           {patient.blood_type || 'Unknown'}
                         </span>
                       </TableCell>
-                      <TableCell>{patient.users?.phone || 'N/A'}</TableCell>
-                      <TableCell>Recent</TableCell>
+                      <TableCell>
+                        <span className="text-sm text-gray-500">No records</span>
+                      </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
                           <Button size="sm" variant="outline">
@@ -101,11 +104,11 @@ export default function DoctorPatients() {
                           <Button 
                             size="sm" 
                             variant="outline"
-                            onClick={() => handleCreateRecord(patient.id)}
+                            onClick={() => handleAddRecord(patient.id)}
                             disabled={createMedicalRecord.isPending}
                           >
                             <FileText className="w-3 h-3 mr-1" />
-                            Record
+                            Add Record
                           </Button>
                         </div>
                       </TableCell>
