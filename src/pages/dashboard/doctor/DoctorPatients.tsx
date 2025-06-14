@@ -1,7 +1,7 @@
-
 import AppLayout from "@/layouts/AppLayout";
 import { usePatients, useCreateMedicalRecord } from "@/hooks/useDatabase";
-import { Users, Plus, Eye, FileText } from "lucide-react";
+import { AppointmentDialog } from "@/components/dialogs/AppointmentDialog";
+import { Users, Eye, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { format } from "date-fns";
@@ -35,10 +35,7 @@ export default function DoctorPatients() {
             <h1 className="text-3xl font-bold text-gray-900">My Patients</h1>
             <p className="text-gray-600 mt-1">View and manage your assigned patients</p>
           </div>
-          <Button className="bg-blue-600 hover:bg-blue-700">
-            <Plus className="w-4 h-4 mr-2" />
-            Add Patient Record
-          </Button>
+          <AppointmentDialog />
         </div>
 
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm">

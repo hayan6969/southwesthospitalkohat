@@ -1,10 +1,9 @@
-
 import AppLayout from "@/layouts/AppLayout";
-import { useDoctors, useCreateDoctor } from "@/hooks/useDatabase";
-import { UserCheck, Plus, Edit, Mail, Phone, Award } from "lucide-react";
+import { useDoctors } from "@/hooks/useDatabase";
+import { DoctorDialog } from "@/components/dialogs/DoctorDialog";
+import { UserCheck, Edit, Mail, Phone, Award } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { format } from "date-fns";
 
 export default function AdminDoctors() {
   const { data: doctors, isLoading } = useDoctors();
@@ -17,10 +16,7 @@ export default function AdminDoctors() {
             <h1 className="text-3xl font-bold text-gray-900">Doctor Management</h1>
             <p className="text-gray-600 mt-1">Manage hospital doctors and specialists</p>
           </div>
-          <Button className="bg-blue-600 hover:bg-blue-700">
-            <Plus className="w-4 h-4 mr-2" />
-            Add Doctor
-          </Button>
+          <DoctorDialog />
         </div>
 
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm">

@@ -69,10 +69,10 @@ export default function AdminAuditLogs() {
                           <User className="w-4 h-4 text-gray-400" />
                           <div>
                             <div className="font-medium">
-                              {log.users?.first_name} {log.users?.last_name}
+                              {log.user?.first_name} {log.user?.last_name}
                             </div>
                             <div className="text-sm text-gray-500">
-                              {log.users?.role}
+                              {log.user?.email}
                             </div>
                           </div>
                         </div>

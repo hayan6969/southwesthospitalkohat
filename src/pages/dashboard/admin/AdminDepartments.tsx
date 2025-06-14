@@ -1,11 +1,10 @@
-
 import AppLayout from "@/layouts/AppLayout";
-import { useDepartments, useCreateDepartment } from "@/hooks/useDatabase";
-import { Building2, Plus, Edit, Users } from "lucide-react";
+import { useDepartments } from "@/hooks/useDatabase";
+import { DepartmentDialog } from "@/components/dialogs/DepartmentDialog";
+import { Building2, Edit, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { format } from "date-fns";
-import { toast } from "sonner";
 
 export default function AdminDepartments() {
   const { data: departments, isLoading } = useDepartments();
@@ -18,10 +17,7 @@ export default function AdminDepartments() {
             <h1 className="text-3xl font-bold text-gray-900">Department Management</h1>
             <p className="text-gray-600 mt-1">Manage hospital departments and organization</p>
           </div>
-          <Button className="bg-blue-600 hover:bg-blue-700">
-            <Plus className="w-4 h-4 mr-2" />
-            Add Department
-          </Button>
+          <DepartmentDialog />
         </div>
 
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm">

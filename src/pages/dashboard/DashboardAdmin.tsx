@@ -1,11 +1,11 @@
-
 import AppLayout from "@/layouts/AppLayout";
 import { StatsCard } from "@/components/StatsCard";
 import { AppointmentChart } from "@/components/AppointmentChart";
 import { MiniChart } from "@/components/MiniChart";
 import { DemoTable } from "@/components/DemoTable";
 import { AuditLog } from "@/components/AuditLog";
-import { Users, UserCheck, Calendar, DollarSign, Plus } from "lucide-react";
+import { AppointmentDialog } from "@/components/dialogs/AppointmentDialog";
+import { Users, UserCheck, Calendar, DollarSign } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const chartData = {
@@ -21,10 +21,7 @@ export default function DashboardAdmin() {
       <div className="flex items-center justify-between mb-8">
         <h2 className="text-2xl font-bold">Admin Dashboard</h2>
         <div className="flex gap-3">
-          <Button>
-            <Plus className="w-4 h-4 mr-2" />
-            New Appointment
-          </Button>
+          <AppointmentDialog />
           <Button variant="outline">Schedule Availability</Button>
         </div>
       </div>

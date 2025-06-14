@@ -1,11 +1,10 @@
-
 import AppLayout from "@/layouts/AppLayout";
-import { useUsers, useCreateUser, useDepartments } from "@/hooks/useDatabase";
-import { Users, Plus, Edit, UserCheck } from "lucide-react";
+import { useUsers, useDepartments } from "@/hooks/useDatabase";
+import { StaffDialog } from "@/components/dialogs/StaffDialog";
+import { Users, Edit, UserCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { format } from "date-fns";
-import { toast } from "sonner";
 
 export default function AdminStaff() {
   const { data: users, isLoading } = useUsers();
@@ -22,10 +21,7 @@ export default function AdminStaff() {
             <h1 className="text-3xl font-bold text-gray-900">Staff Management</h1>
             <p className="text-gray-600 mt-1">Manage hospital staff and administrators</p>
           </div>
-          <Button className="bg-blue-600 hover:bg-blue-700">
-            <Plus className="w-4 h-4 mr-2" />
-            Add Staff Member
-          </Button>
+          <StaffDialog />
         </div>
 
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
