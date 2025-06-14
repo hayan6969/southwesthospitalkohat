@@ -1,3 +1,4 @@
+
 import AppLayout from "@/layouts/AppLayout";
 import { StatsCard } from "@/components/StatsCard";
 import { AppointmentChart } from "@/components/AppointmentChart";
@@ -5,6 +6,7 @@ import { MiniChart } from "@/components/MiniChart";
 import { DemoTable } from "@/components/DemoTable";
 import { AuditLog } from "@/components/AuditLog";
 import { AppointmentDialog } from "@/components/dialogs/AppointmentDialog";
+import { useStats } from "@/hooks/useDatabase";
 import { Users, UserCheck, Calendar, DollarSign } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -16,6 +18,8 @@ const chartData = {
 };
 
 export default function DashboardAdmin() {
+  const { data: stats, isLoading } = useStats();
+
   return (
     <AppLayout>
       <div className="flex items-center justify-between mb-8">
@@ -29,35 +33,39 @@ export default function DashboardAdmin() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         <StatsCard
           title="Doctors"
-          value="247"
+          value={stats?.totalDoctors?.toString() || "0"}
           change="+5%"
           changeType="positive"
           icon={<UserCheck className="w-5 h-5 text-blue-600" />}
           chart={<MiniChart data={chartData.doctors} type="bar" color="#3b82f6" />}
+          loading={isLoading}
         />
         <StatsCard
           title="Patients"
-          value="4178"
+          value={stats?.totalPatients?.toString() || "0"}
           change="+25%"
           changeType="positive"
           icon={<Users className="w-5 h-5 text-orange-600" />}
           chart={<MiniChart data={chartData.patients} type="area" color="#f97316" />}
+          loading={isLoading}
         />
         <StatsCard
           title="Appointments"
-          value="12178"
+          value={stats?.totalAppointments?.toString() || "0"}
           change="-5%"
           changeType="negative"
           icon={<Calendar className="w-5 h-5 text-red-600" />}
           chart={<MiniChart data={chartData.appointments} type="bar" color="#ef4444" />}
+          loading={isLoading}
         />
         <StatsCard
           title="Revenue"
-          value="$55,240"
+          value={`$${stats?.totalRevenue?.toLocaleString() || "0"}`}
           change="+23%"
           changeType="positive"
           icon={<DollarSign className="w-5 h-5 text-green-600" />}
           chart={<MiniChart data={chartData.revenue} type="line" color="#10b981" />}
+          loading={isLoading}
         />
       </div>
 

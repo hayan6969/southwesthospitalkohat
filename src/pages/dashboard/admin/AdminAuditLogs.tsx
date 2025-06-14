@@ -1,12 +1,39 @@
 
+import { useEffect } from "react";
 import AppLayout from "@/layouts/AppLayout";
 import { useAuditLogs } from "@/hooks/useDatabase";
+import { supabase } from "@/integrations/supabase/client";
 import { Shield, User, Calendar, Activity } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { format } from "date-fns";
+import { useQueryClient } from "@tanstack/react-query";
 
 export default function AdminAuditLogs() {
   const { data: auditLogs, isLoading } = useAuditLogs();
+  const queryClient = useQueryClient();
+
+  // Set up real-time updates for audit logs
+  useEffect(() => {
+    const channel = supabase
+      .channel('audit-logs-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'audit_logs'
+        },
+        () => {
+          // Invalidate and refetch audit logs when new ones are added
+          queryClient.invalidateQueries({ queryKey: ['audit_logs'] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [queryClient]);
 
   return (
     <AppLayout>

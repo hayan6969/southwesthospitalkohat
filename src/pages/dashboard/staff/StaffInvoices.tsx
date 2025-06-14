@@ -1,7 +1,8 @@
 
 import AppLayout from "@/layouts/AppLayout";
 import { useInvoices, useUpdateInvoice } from "@/hooks/useDatabase";
-import { DollarSign, FileText, Calendar, Plus, CheckCircle } from "lucide-react";
+import { InvoiceDialog } from "@/components/dialogs/InvoiceDialog";
+import { DollarSign, FileText, Calendar, CheckCircle, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { format } from "date-fns";
@@ -24,6 +25,35 @@ export default function StaffInvoices() {
     }
   };
 
+  const handleDownloadPDF = (invoice: any) => {
+    // Create a simple PDF content
+    const pdfContent = `
+      MEDICAL INVOICE
+      
+      Invoice #: ${invoice.invoice_number}
+      Patient: ${invoice.patient?.users?.first_name} ${invoice.patient?.users?.last_name}
+      Date: ${format(new Date(invoice.created_at), 'MMM d, yyyy')}
+      Amount: $${invoice.amount}
+      Status: ${invoice.status}
+      
+      Description: ${invoice.description}
+      
+      Due Date: ${invoice.due_date ? format(new Date(invoice.due_date), 'MMM d, yyyy') : 'N/A'}
+    `;
+    
+    const blob = new Blob([pdfContent], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `invoice-${invoice.invoice_number}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    
+    toast.success('Invoice downloaded');
+  };
+
   return (
     <AppLayout>
       <div className="space-y-8">
@@ -32,10 +62,7 @@ export default function StaffInvoices() {
             <h1 className="text-3xl font-bold text-gray-900">Invoice Management</h1>
             <p className="text-gray-600 mt-1">Manage patient billing and payments</p>
           </div>
-          <Button className="bg-blue-600 hover:bg-blue-700">
-            <Plus className="w-4 h-4 mr-2" />
-            Create Invoice
-          </Button>
+          <InvoiceDialog />
         </div>
 
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
@@ -123,8 +150,13 @@ export default function StaffInvoices() {
                               Mark Paid
                             </Button>
                           )}
-                          <Button size="sm" variant="outline">
-                            View Details
+                          <Button 
+                            size="sm" 
+                            variant="outline"
+                            onClick={() => handleDownloadPDF(invoice)}
+                          >
+                            <Download className="w-3 h-3 mr-1" />
+                            Download
                           </Button>
                         </div>
                       </TableCell>

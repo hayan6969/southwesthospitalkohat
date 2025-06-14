@@ -1,11 +1,10 @@
-
 import AppLayout from "@/layouts/AppLayout";
-import { usePatients, useCreatePatient } from "@/hooks/useDatabase";
-import { Users, Plus, Eye, Edit } from "lucide-react";
+import { usePatients } from "@/hooks/useDatabase";
+import { PatientDialog } from "@/components/dialogs/PatientDialog";
+import { Users, Eye, Edit } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { format } from "date-fns";
-import { toast } from "sonner";
 
 export default function StaffPatients() {
   const { data: patients, isLoading } = usePatients();
@@ -18,10 +17,7 @@ export default function StaffPatients() {
             <h1 className="text-3xl font-bold text-gray-900">Patient Management</h1>
             <p className="text-gray-600 mt-1">Register and manage patient information</p>
           </div>
-          <Button className="bg-blue-600 hover:bg-blue-700">
-            <Plus className="w-4 h-4 mr-2" />
-            Register Patient
-          </Button>
+          <PatientDialog />
         </div>
 
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm">

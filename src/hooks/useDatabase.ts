@@ -1,4 +1,3 @@
-
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -556,6 +555,27 @@ export const useStats = () => {
         pendingInvoices: invoicesRes.data?.filter(inv => inv.status === 'pending').length || 0,
         totalRevenue: invoicesRes.data?.reduce((sum, inv) => sum + (inv.amount || 0), 0) || 0
       };
+    }
+  });
+};
+
+// Add missing lab report creation hook
+export const useCreateLabReport = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async (labReport: Omit<LabReport, 'id' | 'created_at'>) => {
+      const { data, error } = await supabase
+        .from('lab_reports')
+        .insert([labReport])
+        .select()
+        .single();
+      
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['lab_reports'] });
     }
   });
 };

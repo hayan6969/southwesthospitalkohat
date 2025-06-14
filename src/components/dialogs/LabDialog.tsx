@@ -1,7 +1,6 @@
 
 import { useState } from "react";
-import { useCreateAppointment, useDoctors, usePatients } from "@/hooks/useDatabase";
-import { PatientDialog } from "./PatientDialog";
+import { useCreateLabReport, usePatients, useDoctors } from "@/hooks/useDatabase";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,48 +10,48 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { Plus } from "lucide-react";
 
-export function AppointmentDialog() {
+export function LabDialog() {
   const [open, setOpen] = useState(false);
-  const [appointmentDate, setAppointmentDate] = useState("");
   const [patientId, setPatientId] = useState("");
   const [doctorId, setDoctorId] = useState("");
-  const [type, setType] = useState("");
+  const [testName, setTestName] = useState("");
+  const [testDate, setTestDate] = useState("");
   const [notes, setNotes] = useState("");
 
-  const createAppointment = useCreateAppointment();
-  const { data: doctors } = useDoctors();
+  const createLabReport = useCreateLabReport();
   const { data: patients } = usePatients();
+  const { data: doctors } = useDoctors();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!appointmentDate || !patientId || !doctorId || !type) {
+    if (!patientId || !doctorId || !testName.trim()) {
       toast.error("Please fill in all required fields");
       return;
     }
 
     try {
-      await createAppointment.mutateAsync({
-        appointment_date: new Date(appointmentDate).toISOString(),
+      await createLabReport.mutateAsync({
         patient_id: patientId,
         doctor_id: doctorId,
-        type,
-        status: 'scheduled',
-        notes: notes || undefined
+        test_name: testName.trim(),
+        test_date: testDate ? new Date(testDate).toISOString() : new Date().toISOString(),
+        status: 'pending',
+        notes: notes.trim() || undefined
       });
       
-      toast.success("Appointment created successfully");
+      toast.success("Lab order created successfully");
       setOpen(false);
       
       // Reset form
-      setAppointmentDate("");
       setPatientId("");
       setDoctorId("");
-      setType("");
+      setTestName("");
+      setTestDate("");
       setNotes("");
     } catch (error) {
-      toast.error("Failed to create appointment");
-      console.error("Error creating appointment:", error);
+      toast.error("Failed to create lab order");
+      console.error("Error creating lab order:", error);
     }
   };
 
@@ -61,30 +60,16 @@ export function AppointmentDialog() {
       <DialogTrigger asChild>
         <Button className="bg-blue-600 hover:bg-blue-700">
           <Plus className="w-4 h-4 mr-2" />
-          New Appointment
+          New Lab Order
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Create New Appointment</DialogTitle>
+          <DialogTitle>Create Lab Order</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="date">Date & Time</Label>
-            <Input
-              id="date"
-              type="datetime-local"
-              value={appointmentDate}
-              onChange={(e) => setAppointmentDate(e.target.value)}
-              required
-            />
-          </div>
-          
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <Label htmlFor="patient">Patient</Label>
-              <PatientDialog />
-            </div>
+            <Label htmlFor="patient">Patient</Label>
             <Select value={patientId} onValueChange={setPatientId} required>
               <SelectTrigger>
                 <SelectValue placeholder="Select a patient" />
@@ -100,7 +85,7 @@ export function AppointmentDialog() {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="doctor">Doctor</Label>
+            <Label htmlFor="doctor">Ordering Doctor</Label>
             <Select value={doctorId} onValueChange={setDoctorId} required>
               <SelectTrigger>
                 <SelectValue placeholder="Select a doctor" />
@@ -116,19 +101,24 @@ export function AppointmentDialog() {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="type">Appointment Type</Label>
-            <Select value={type} onValueChange={setType} required>
-              <SelectTrigger>
-                <SelectValue placeholder="Select appointment type" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="consultation">Consultation</SelectItem>
-                <SelectItem value="follow-up">Follow-up</SelectItem>
-                <SelectItem value="checkup">Checkup</SelectItem>
-                <SelectItem value="surgery">Surgery</SelectItem>
-                <SelectItem value="emergency">Emergency</SelectItem>
-              </SelectContent>
-            </Select>
+            <Label htmlFor="testName">Test Name</Label>
+            <Input
+              id="testName"
+              value={testName}
+              onChange={(e) => setTestName(e.target.value)}
+              placeholder="e.g., Complete Blood Count (CBC)"
+              required
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="testDate">Test Date</Label>
+            <Input
+              id="testDate"
+              type="datetime-local"
+              value={testDate}
+              onChange={(e) => setTestDate(e.target.value)}
+            />
           </div>
 
           <div className="space-y-2">
@@ -137,7 +127,7 @@ export function AppointmentDialog() {
               id="notes"
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              placeholder="Additional notes..."
+              placeholder="Additional instructions..."
             />
           </div>
 
@@ -145,8 +135,8 @@ export function AppointmentDialog() {
             <Button type="button" variant="outline" onClick={() => setOpen(false)}>
               Cancel
             </Button>
-            <Button type="submit" disabled={createAppointment.isPending}>
-              {createAppointment.isPending ? "Creating..." : "Create Appointment"}
+            <Button type="submit" disabled={createLabReport.isPending}>
+              {createLabReport.isPending ? "Creating..." : "Create Lab Order"}
             </Button>
           </div>
         </form>
