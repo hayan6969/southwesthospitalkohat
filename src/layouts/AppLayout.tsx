@@ -3,14 +3,24 @@ import { ReactNode } from "react";
 import { SidebarNav } from "@/components/SidebarNav";
 import { Button } from "@/components/ui/button";
 import { Search, Bell, Settings, User, Home } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 
 export const getCurrentRole = () => {
   return window.localStorage.getItem("hims_role") || "patient";
 };
 
+// New function to get role from current route
+const getRoleFromRoute = (pathname: string): string => {
+  if (pathname.startsWith('/dashboard/admin')) return 'admin';
+  if (pathname.startsWith('/dashboard/doctor')) return 'doctor';
+  if (pathname.startsWith('/dashboard/staff')) return 'staff';
+  if (pathname.startsWith('/dashboard/patient')) return 'patient';
+  return getCurrentRole(); // fallback to localStorage
+};
+
 export default function AppLayout({ children }: { children: ReactNode }) {
-  const role = getCurrentRole();
+  const location = useLocation();
+  const role = getRoleFromRoute(location.pathname);
   
   return (
     <div className="min-h-screen flex flex-col bg-gray-50 font-inter">
