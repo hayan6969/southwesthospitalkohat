@@ -1,6 +1,7 @@
 
 import { useState } from "react";
 import { useCreateDoctor, useDepartments } from "@/hooks/useDatabase";
+import { useAuditLogger } from "@/hooks/useAuditLogger";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,6 +23,7 @@ export function DoctorDialog() {
 
   const createDoctor = useCreateDoctor();
   const { data: departments } = useDepartments();
+  const { logAction } = useAuditLogger();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -46,7 +48,13 @@ export function DoctorDialog() {
         experience_years: experienceYears ? parseInt(experienceYears) : undefined
       });
       
-      toast.success("Doctor added successfully");
+      // Log the audit event
+      await logAction(
+        "Created doctor",
+        `Dr. ${firstName.trim()} ${lastName.trim()} - ${specialization.trim()}`
+      );
+      
+      toast.success("Doctor created successfully");
       setOpen(false);
       
       // Reset form
@@ -59,7 +67,7 @@ export function DoctorDialog() {
       setExperienceYears("");
       setDepartmentId("");
     } catch (error) {
-      toast.error("Failed to add doctor");
+      toast.error("Failed to create doctor");
       console.error("Error creating doctor:", error);
     }
   };
@@ -76,7 +84,7 @@ export function DoctorDialog() {
         <DialogHeader>
           <DialogTitle>Add New Doctor</DialogTitle>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4 max-h-[70vh] overflow-y-auto">
+        <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="firstName">First Name</Label>
@@ -87,7 +95,6 @@ export function DoctorDialog() {
                 required
               />
             </div>
-            
             <div className="space-y-2">
               <Label htmlFor="lastName">Last Name</Label>
               <Input
@@ -114,7 +121,6 @@ export function DoctorDialog() {
             <Label htmlFor="phone">Phone (Optional)</Label>
             <Input
               id="phone"
-              type="tel"
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
             />
@@ -126,7 +132,7 @@ export function DoctorDialog() {
               id="specialization"
               value={specialization}
               onChange={(e) => setSpecialization(e.target.value)}
-              placeholder="e.g., Cardiology, Neurology"
+              placeholder="e.g., Cardiology, Pediatrics"
               required
             />
           </div>
@@ -138,9 +144,9 @@ export function DoctorDialog() {
                 <SelectValue placeholder="Select a department" />
               </SelectTrigger>
               <SelectContent>
-                {departments?.map((dept) => (
-                  <SelectItem key={dept.id} value={dept.id}>
-                    {dept.name}
+                {departments?.map((department) => (
+                  <SelectItem key={department.id} value={department.id}>
+                    {department.name}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -156,7 +162,6 @@ export function DoctorDialog() {
                 onChange={(e) => setLicenseNumber(e.target.value)}
               />
             </div>
-            
             <div className="space-y-2">
               <Label htmlFor="experienceYears">Experience (Years)</Label>
               <Input
@@ -174,7 +179,7 @@ export function DoctorDialog() {
               Cancel
             </Button>
             <Button type="submit" disabled={createDoctor.isPending}>
-              {createDoctor.isPending ? "Adding..." : "Add Doctor"}
+              {createDoctor.isPending ? "Creating..." : "Add Doctor"}
             </Button>
           </div>
         </form>

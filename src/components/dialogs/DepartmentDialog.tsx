@@ -1,6 +1,7 @@
 
 import { useState } from "react";
 import { useCreateDepartment } from "@/hooks/useDatabase";
+import { useAuditLogger } from "@/hooks/useAuditLogger";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,6 +16,7 @@ export function DepartmentDialog() {
   const [description, setDescription] = useState("");
 
   const createDepartment = useCreateDepartment();
+  const { logAction } = useAuditLogger();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -29,6 +31,12 @@ export function DepartmentDialog() {
         name: name.trim(),
         description: description.trim() || undefined
       });
+      
+      // Log the audit event
+      await logAction(
+        "Created department",
+        `Department "${name.trim()}" was created`
+      );
       
       toast.success("Department created successfully");
       setOpen(false);

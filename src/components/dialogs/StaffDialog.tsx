@@ -1,6 +1,7 @@
 
 import { useState } from "react";
 import { useCreateUser, useDepartments } from "@/hooks/useDatabase";
+import { useAuditLogger } from "@/hooks/useAuditLogger";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,16 +16,16 @@ export function StaffDialog() {
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
-  const [role, setRole] = useState("");
   const [departmentId, setDepartmentId] = useState("");
 
   const createUser = useCreateUser();
   const { data: departments } = useDepartments();
+  const { logAction } = useAuditLogger();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!firstName.trim() || !lastName.trim() || !email.trim() || !role) {
+    if (!firstName.trim() || !lastName.trim() || !email.trim()) {
       toast.error("Please fill in all required fields");
       return;
     }
@@ -35,11 +36,17 @@ export function StaffDialog() {
         last_name: lastName.trim(),
         email: email.trim(),
         phone: phone.trim() || undefined,
-        role: role as 'staff' | 'admin',
+        role: 'staff',
         department_id: departmentId || undefined
       });
       
-      toast.success("Staff member added successfully");
+      // Log the audit event
+      await logAction(
+        "Created staff member",
+        `${firstName.trim()} ${lastName.trim()} added to staff`
+      );
+      
+      toast.success("Staff member created successfully");
       setOpen(false);
       
       // Reset form
@@ -47,10 +54,9 @@ export function StaffDialog() {
       setLastName("");
       setEmail("");
       setPhone("");
-      setRole("");
       setDepartmentId("");
     } catch (error) {
-      toast.error("Failed to add staff member");
+      toast.error("Failed to create staff member");
       console.error("Error creating staff member:", error);
     }
   };
@@ -60,10 +66,10 @@ export function StaffDialog() {
       <DialogTrigger asChild>
         <Button className="bg-blue-600 hover:bg-blue-700">
           <Plus className="w-4 h-4 mr-2" />
-          Add Staff Member
+          Add Staff
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>Add New Staff Member</DialogTitle>
         </DialogHeader>
@@ -78,7 +84,6 @@ export function StaffDialog() {
                 required
               />
             </div>
-            
             <div className="space-y-2">
               <Label htmlFor="lastName">Last Name</Label>
               <Input
@@ -105,23 +110,9 @@ export function StaffDialog() {
             <Label htmlFor="phone">Phone (Optional)</Label>
             <Input
               id="phone"
-              type="tel"
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
             />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="role">Role</Label>
-            <Select value={role} onValueChange={setRole} required>
-              <SelectTrigger>
-                <SelectValue placeholder="Select a role" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="staff">Staff</SelectItem>
-                <SelectItem value="admin">Admin</SelectItem>
-              </SelectContent>
-            </Select>
           </div>
 
           <div className="space-y-2">
@@ -131,9 +122,9 @@ export function StaffDialog() {
                 <SelectValue placeholder="Select a department" />
               </SelectTrigger>
               <SelectContent>
-                {departments?.map((dept) => (
-                  <SelectItem key={dept.id} value={dept.id}>
-                    {dept.name}
+                {departments?.map((department) => (
+                  <SelectItem key={department.id} value={department.id}>
+                    {department.name}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -145,7 +136,7 @@ export function StaffDialog() {
               Cancel
             </Button>
             <Button type="submit" disabled={createUser.isPending}>
-              {createUser.isPending ? "Adding..." : "Add Staff Member"}
+              {createUser.isPending ? "Creating..." : "Add Staff"}
             </Button>
           </div>
         </form>
