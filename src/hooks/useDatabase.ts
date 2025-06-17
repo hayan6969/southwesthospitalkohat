@@ -579,3 +579,24 @@ export const useCreateLabReport = () => {
     }
   });
 };
+
+// Add missing audit log creation hook
+export const useCreateAuditLog = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async (auditLog: Omit<AuditLog, 'id' | 'created_at'>) => {
+      const { data, error } = await supabase
+        .from('audit_logs')
+        .insert([auditLog])
+        .select()
+        .single();
+      
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['audit_logs'] });
+    }
+  });
+};

@@ -1,11 +1,13 @@
 
 import { useState } from "react";
 import { useCreatePatient } from "@/hooks/useDatabase";
+import { useAuditLogger } from "@/hooks/useAuditLogger";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { Plus } from "lucide-react";
 
@@ -21,6 +23,7 @@ export function PatientDialog() {
   const [allergies, setAllergies] = useState("");
 
   const createPatient = useCreatePatient();
+  const { logAction } = useAuditLogger();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -31,7 +34,7 @@ export function PatientDialog() {
     }
 
     try {
-      await createPatient.mutateAsync({
+      const newPatient = await createPatient.mutateAsync({
         user: {
           first_name: firstName.trim(),
           last_name: lastName.trim(),
@@ -44,6 +47,12 @@ export function PatientDialog() {
         blood_type: bloodType || undefined,
         allergies: allergies.trim() || undefined
       });
+      
+      // Log the audit event
+      await logAction(
+        "Registered new patient",
+        `Patient: ${firstName} ${lastName} (${email})`
+      );
       
       toast.success("Patient registered successfully");
       setOpen(false);
@@ -71,56 +80,60 @@ export function PatientDialog() {
           Register Patient
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Register New Patient</DialogTitle>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4 max-h-[70vh] overflow-y-auto">
+        <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="firstName">First Name</Label>
+              <Label htmlFor="firstName">First Name *</Label>
               <Input
                 id="firstName"
                 value={firstName}
                 onChange={(e) => setFirstName(e.target.value)}
+                placeholder="John"
                 required
               />
             </div>
-            
+
             <div className="space-y-2">
-              <Label htmlFor="lastName">Last Name</Label>
+              <Label htmlFor="lastName">Last Name *</Label>
               <Input
                 id="lastName"
                 value={lastName}
                 onChange={(e) => setLastName(e.target.value)}
+                placeholder="Doe"
                 required
               />
             </div>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
+            <Label htmlFor="email">Email *</Label>
             <Input
               id="email"
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
+              placeholder="john.doe@example.com"
               required
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="phone">Phone (Optional)</Label>
+            <Label htmlFor="phone">Phone</Label>
             <Input
               id="phone"
               type="tel"
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
+              placeholder="+1 (555) 123-4567"
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="dateOfBirth">Date of Birth (Optional)</Label>
+            <Label htmlFor="dateOfBirth">Date of Birth</Label>
             <Input
               id="dateOfBirth"
               type="date"
@@ -130,43 +143,41 @@ export function PatientDialog() {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="address">Address (Optional)</Label>
-            <Input
+            <Label htmlFor="address">Address</Label>
+            <Textarea
               id="address"
               value={address}
               onChange={(e) => setAddress(e.target.value)}
-              placeholder="Full address"
+              placeholder="123 Main St, City, State, ZIP"
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="bloodType">Blood Type (Optional)</Label>
-              <Select value={bloodType} onValueChange={setBloodType}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select blood type" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="A+">A+</SelectItem>
-                  <SelectItem value="A-">A-</SelectItem>
-                  <SelectItem value="B+">B+</SelectItem>
-                  <SelectItem value="B-">B-</SelectItem>
-                  <SelectItem value="AB+">AB+</SelectItem>
-                  <SelectItem value="AB-">AB-</SelectItem>
-                  <SelectItem value="O+">O+</SelectItem>
-                  <SelectItem value="O-">O-</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+          <div className="space-y-2">
+            <Label htmlFor="bloodType">Blood Type</Label>
+            <Select value={bloodType} onValueChange={setBloodType}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select blood type" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="A+">A+</SelectItem>
+                <SelectItem value="A-">A-</SelectItem>
+                <SelectItem value="B+">B+</SelectItem>
+                <SelectItem value="B-">B-</SelectItem>
+                <SelectItem value="AB+">AB+</SelectItem>
+                <SelectItem value="AB-">AB-</SelectItem>
+                <SelectItem value="O+">O+</SelectItem>
+                <SelectItem value="O-">O-</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="allergies">Allergies (Optional)</Label>
-            <Input
+            <Label htmlFor="allergies">Allergies</Label>
+            <Textarea
               id="allergies"
               value={allergies}
               onChange={(e) => setAllergies(e.target.value)}
-              placeholder="List any known allergies"
+              placeholder="List any known allergies..."
             />
           </div>
 

@@ -2,7 +2,8 @@
 import { ReactNode } from "react";
 import { SidebarNav } from "@/components/SidebarNav";
 import { Button } from "@/components/ui/button";
-import { Search, Bell, Settings, User } from "lucide-react";
+import { Search, Bell, Settings, User, Home } from "lucide-react";
+import { Link } from "react-router-dom";
 
 export const getCurrentRole = () => {
   return window.localStorage.getItem("hims_role") || "patient";
@@ -15,9 +16,36 @@ export default function AppLayout({ children }: { children: ReactNode }) {
     <div className="min-h-screen flex flex-col bg-gray-50 font-inter">
       <header className="h-16 flex items-center justify-between px-6 border-b bg-white shadow-sm">
         <div className="flex items-center gap-4">
-          <div className="font-bold tracking-tight text-xl text-blue-600">
+          <Link to="/" className="font-bold tracking-tight text-xl text-blue-600 hover:text-blue-700 transition-colors">
             🏥 HIMS Dashboard
-          </div>
+          </Link>
+          
+          <nav className="hidden md:flex items-center gap-1 ml-8">
+            <Link 
+              to="/dashboard/patient" 
+              className="px-3 py-2 text-sm text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
+            >
+              Patient
+            </Link>
+            <Link 
+              to="/dashboard/doctor" 
+              className="px-3 py-2 text-sm text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
+            >
+              Doctor
+            </Link>
+            <Link 
+              to="/dashboard/staff" 
+              className="px-3 py-2 text-sm text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
+            >
+              Staff
+            </Link>
+            <Link 
+              to="/dashboard/admin" 
+              className="px-3 py-2 text-sm text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
+            >
+              Admin
+            </Link>
+          </nav>
         </div>
         
         <div className="flex items-center gap-4">
@@ -38,6 +66,12 @@ export default function AppLayout({ children }: { children: ReactNode }) {
           <Button variant="ghost" size="sm">
             <Settings className="w-4 h-4" />
           </Button>
+          
+          <Link to="/">
+            <Button variant="ghost" size="sm">
+              <Home className="w-4 h-4" />
+            </Button>
+          </Link>
           
           <div className="flex items-center gap-3">
             <span className="inline-block rounded-full bg-blue-100 text-blue-700 px-3 py-1 text-xs font-semibold uppercase tracking-wide">

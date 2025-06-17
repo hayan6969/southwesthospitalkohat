@@ -67,7 +67,7 @@ const Index = () => {
         </div>
       </div>
       <footer className="w-full mt-12 mb-3 text-center text-xs text-muted-foreground">
-        &copy; {new Date().getFullYear()} HIMS by Lovable. All rights reserved.
+        &copy; {new Date().getFullYear()} HIMS by Inostrik. All rights reserved.
       </footer>
     </div>
   );

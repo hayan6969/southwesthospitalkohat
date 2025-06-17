@@ -1,7 +1,7 @@
 
 import { useState } from "react";
 import { useCreateAppointment, useDoctors, usePatients } from "@/hooks/useDatabase";
-import { PatientDialog } from "./PatientDialog";
+import { useAuditLogger } from "@/hooks/useAuditLogger";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,41 +13,52 @@ import { Plus } from "lucide-react";
 
 export function AppointmentDialog() {
   const [open, setOpen] = useState(false);
-  const [appointmentDate, setAppointmentDate] = useState("");
   const [patientId, setPatientId] = useState("");
   const [doctorId, setDoctorId] = useState("");
+  const [appointmentDate, setAppointmentDate] = useState("");
+  const [appointmentTime, setAppointmentTime] = useState("");
   const [type, setType] = useState("");
   const [notes, setNotes] = useState("");
 
   const createAppointment = useCreateAppointment();
   const { data: doctors } = useDoctors();
   const { data: patients } = usePatients();
+  const { logAction } = useAuditLogger();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!appointmentDate || !patientId || !doctorId || !type) {
+    if (!patientId || !doctorId || !appointmentDate || !appointmentTime || !type.trim()) {
       toast.error("Please fill in all required fields");
       return;
     }
 
+    const fullDateTime = `${appointmentDate}T${appointmentTime}:00`;
+
     try {
-      await createAppointment.mutateAsync({
-        appointment_date: new Date(appointmentDate).toISOString(),
+      const newAppointment = await createAppointment.mutateAsync({
         patient_id: patientId,
         doctor_id: doctorId,
-        type,
-        status: 'scheduled',
-        notes: notes || undefined
+        appointment_date: fullDateTime,
+        type: type.trim(),
+        notes: notes.trim() || undefined,
+        status: 'scheduled'
       });
+      
+      // Log the audit event
+      await logAction(
+        "Created appointment",
+        `Appointment scheduled for ${appointmentDate} at ${appointmentTime}`
+      );
       
       toast.success("Appointment created successfully");
       setOpen(false);
       
       // Reset form
-      setAppointmentDate("");
       setPatientId("");
       setDoctorId("");
+      setAppointmentDate("");
+      setAppointmentTime("");
       setType("");
       setNotes("");
     } catch (error) {
@@ -61,30 +72,16 @@ export function AppointmentDialog() {
       <DialogTrigger asChild>
         <Button className="bg-blue-600 hover:bg-blue-700">
           <Plus className="w-4 h-4 mr-2" />
-          New Appointment
+          Schedule Appointment
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Create New Appointment</DialogTitle>
+          <DialogTitle>Schedule New Appointment</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="date">Date & Time</Label>
-            <Input
-              id="date"
-              type="datetime-local"
-              value={appointmentDate}
-              onChange={(e) => setAppointmentDate(e.target.value)}
-              required
-            />
-          </div>
-          
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <Label htmlFor="patient">Patient</Label>
-              <PatientDialog />
-            </div>
+            <Label htmlFor="patient">Patient</Label>
             <Select value={patientId} onValueChange={setPatientId} required>
               <SelectTrigger>
                 <SelectValue placeholder="Select a patient" />
@@ -115,20 +112,39 @@ export function AppointmentDialog() {
             </Select>
           </div>
 
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="date">Date</Label>
+              <Input
+                id="date"
+                type="date"
+                value={appointmentDate}
+                onChange={(e) => setAppointmentDate(e.target.value)}
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="time">Time</Label>
+              <Input
+                id="time"
+                type="time"
+                value={appointmentTime}
+                onChange={(e) => setAppointmentTime(e.target.value)}
+                required
+              />
+            </div>
+          </div>
+
           <div className="space-y-2">
             <Label htmlFor="type">Appointment Type</Label>
-            <Select value={type} onValueChange={setType} required>
-              <SelectTrigger>
-                <SelectValue placeholder="Select appointment type" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="consultation">Consultation</SelectItem>
-                <SelectItem value="follow-up">Follow-up</SelectItem>
-                <SelectItem value="checkup">Checkup</SelectItem>
-                <SelectItem value="surgery">Surgery</SelectItem>
-                <SelectItem value="emergency">Emergency</SelectItem>
-              </SelectContent>
-            </Select>
+            <Input
+              id="type"
+              value={type}
+              onChange={(e) => setType(e.target.value)}
+              placeholder="e.g., Consultation, Check-up, Follow-up"
+              required
+            />
           </div>
 
           <div className="space-y-2">
@@ -146,7 +162,7 @@ export function AppointmentDialog() {
               Cancel
             </Button>
             <Button type="submit" disabled={createAppointment.isPending}>
-              {createAppointment.isPending ? "Creating..." : "Create Appointment"}
+              {createAppointment.isPending ? "Scheduling..." : "Schedule Appointment"}
             </Button>
           </div>
         </form>
