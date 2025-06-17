@@ -117,7 +117,7 @@ export default function AdminAuditLogs() {
                       </TableCell>
                       <TableCell>
                         <span className="text-sm font-mono text-gray-500">
-                          192.168.1.100
+                          {log.ip_address || 'Unknown'}
                         </span>
                       </TableCell>
                     </TableRow>

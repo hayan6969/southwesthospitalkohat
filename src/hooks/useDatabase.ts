@@ -1,3 +1,4 @@
+
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -105,6 +106,7 @@ export type AuditLog = {
   user_id?: string;
   action: string;
   details?: string;
+  ip_address?: string;
   created_at: string;
   user?: User;
 };
