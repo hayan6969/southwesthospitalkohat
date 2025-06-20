@@ -578,6 +578,26 @@ export const useAuditLogs = () => {
   });
 };
 
+export const useCreateAuditLog = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async (auditLog: Omit<AuditLog, 'id' | 'created_at'>) => {
+      const { data, error } = await supabase
+        .from('audit_logs')
+        .insert([auditLog])
+        .select()
+        .single();
+      
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['audit_logs'] });
+    }
+  });
+};
+
 // Stats hooks
 export const useStats = () => {
   return useQuery({
@@ -618,27 +638,6 @@ export const useCreateLabReport = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['lab_reports'] });
-    }
-  });
-};
-
-// Add missing audit log creation hook
-export const useCreateAuditLog = () => {
-  const queryClient = useQueryClient();
-  
-  return useMutation({
-    mutationFn: async (auditLog: Omit<AuditLog, 'id' | 'created_at'>) => {
-      const { data, error } = await supabase
-        .from('audit_logs')
-        .insert([auditLog])
-        .select()
-        .single();
-      
-      if (error) throw error;
-      return data;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['audit_logs'] });
     }
   });
 };
@@ -776,25 +775,17 @@ export const useCreatePharmacyInvoice = () => {
       
       // Update medicine stock quantities
       for (const item of invoice.items) {
-        const { error: stockError } = await supabase.rpc('update_medicine_stock', {
-          medicine_id: item.medicine_id,
-          quantity_sold: item.quantity
-        });
+        const { data: medicine } = await supabase
+          .from('medicines')
+          .select('stock_quantity')
+          .eq('id', item.medicine_id)
+          .single();
         
-        if (stockError) {
-          // If RPC doesn't exist, update manually
-          const { data: medicine } = await supabase
+        if (medicine) {
+          await supabase
             .from('medicines')
-            .select('stock_quantity')
-            .eq('id', item.medicine_id)
-            .single();
-          
-          if (medicine) {
-            await supabase
-              .from('medicines')
-              .update({ stock_quantity: medicine.stock_quantity - item.quantity })
-              .eq('id', item.medicine_id);
-          }
+            .update({ stock_quantity: medicine.stock_quantity - item.quantity })
+            .eq('id', item.medicine_id);
         }
       }
       
@@ -852,25 +843,6 @@ export const useExpiringMedicines = () => {
         ...medicine,
         daysLeft: Math.ceil((new Date(medicine.expiry_date).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))
       }));
-    }
-  });
-};
-
-// Audit Logs hooks - update to include ip_address
-export const useAuditLogs = () => {
-  return useQuery({
-    queryKey: ['audit_logs'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('audit_logs')
-        .select(`
-          *,
-          user:users(first_name, last_name, email)
-        `)
-        .order('created_at', { ascending: false });
-      
-      if (error) throw error;
-      return data;
     }
   });
 };
