@@ -1,0 +1,138 @@
+
+import AppLayout from "@/layouts/AppLayout";
+import { StatsCard } from "@/components/StatsCard";
+import { usePharmacyStats, useExpiringMedicines } from "@/hooks/useDatabase";
+import { Pill, ShoppingCart, DollarSign, AlertTriangle, TrendingUp } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+
+export default function DashboardPharmacy() {
+  const { data: stats, isLoading: statsLoading } = usePharmacyStats();
+  const { data: expiringMedicines, isLoading: expiringLoading } = useExpiringMedicines();
+
+  const urgentExpiring = expiringMedicines?.filter(med => med.daysLeft <= 7) || [];
+
+  return (
+    <AppLayout>
+      <div className="space-y-8">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Pharmacy Dashboard</h1>
+          <p className="text-gray-600 mt-1">Manage medicines, inventory, and sales</p>
+        </div>
+
+        {urgentExpiring.length > 0 && (
+          <Alert className="border-red-200 bg-red-50">
+            <AlertTriangle className="h-4 w-4 text-red-600" />
+            <AlertDescription className="text-red-800">
+              <strong>{urgentExpiring.length}</strong> medicine(s) expire within 7 days! 
+              Check the expiry section for details.
+            </AlertDescription>
+          </Alert>
+        )}
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <StatsCard
+            title="Total Medicines"
+            value={stats?.totalMedicines || 0}
+            icon={<Pill className="w-5 h-5 text-blue-600" />}
+            loading={statsLoading}
+          />
+          <StatsCard
+            title="Total Sales"
+            value={stats?.totalInvoices || 0}
+            icon={<ShoppingCart className="w-5 h-5 text-green-600" />}
+            loading={statsLoading}
+          />
+          <StatsCard
+            title="Total Revenue"
+            value={`$${stats?.totalRevenue?.toFixed(2) || '0.00'}`}
+            icon={<DollarSign className="w-5 h-5 text-purple-600" />}
+            loading={statsLoading}
+          />
+          <StatsCard
+            title="Low Stock Items"
+            value={stats?.lowStockCount || 0}
+            icon={<AlertTriangle className="w-5 h-5 text-red-600" />}
+            loading={statsLoading}
+          />
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+            <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center gap-2">
+              <AlertTriangle className="w-5 h-5 text-orange-500" />
+              Medicines Expiring Soon
+            </h2>
+            <div className="space-y-3">
+              {expiringLoading ? (
+                <div className="animate-pulse space-y-2">
+                  {Array.from({ length: 3 }).map((_, i) => (
+                    <div key={i} className="h-16 bg-gray-100 rounded"></div>
+                  ))}
+                </div>
+              ) : expiringMedicines && expiringMedicines.length > 0 ? (
+                expiringMedicines.slice(0, 5).map((medicine) => (
+                  <div key={medicine.id} className="flex items-center justify-between p-3 bg-orange-50 rounded-lg border border-orange-200">
+                    <div>
+                      <p className="font-medium text-gray-900">{medicine.name}</p>
+                      <p className="text-sm text-gray-600">Stock: {medicine.stock_quantity}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className={`text-sm font-medium ${
+                        medicine.daysLeft <= 7 ? 'text-red-600' : 
+                        medicine.daysLeft <= 30 ? 'text-orange-600' : 'text-yellow-600'
+                      }`}>
+                        {medicine.daysLeft} days left
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        Expires: {new Date(medicine.expiry_date).toLocaleDateString()}
+                      </p>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <p className="text-gray-500 text-center py-4">No medicines expiring soon</p>
+              )}
+            </div>
+          </div>
+
+          <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+            <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center gap-2">
+              <TrendingUp className="w-5 h-5 text-green-500" />
+              Quick Actions
+            </h2>
+            <div className="grid grid-cols-2 gap-4">
+              <a
+                href="/dashboard/pharmacy/medicines"
+                className="p-4 bg-blue-50 rounded-lg border border-blue-200 hover:bg-blue-100 transition-colors text-center"
+              >
+                <Pill className="w-8 h-8 text-blue-600 mx-auto mb-2" />
+                <p className="font-medium text-blue-900">Manage Medicines</p>
+              </a>
+              <a
+                href="/dashboard/pharmacy/invoices"
+                className="p-4 bg-green-50 rounded-lg border border-green-200 hover:bg-green-100 transition-colors text-center"
+              >
+                <ShoppingCart className="w-8 h-8 text-green-600 mx-auto mb-2" />
+                <p className="font-medium text-green-900">Create Invoice</p>
+              </a>
+              <a
+                href="/dashboard/pharmacy/expiry"
+                className="p-4 bg-orange-50 rounded-lg border border-orange-200 hover:bg-orange-100 transition-colors text-center"
+              >
+                <AlertTriangle className="w-8 h-8 text-orange-600 mx-auto mb-2" />
+                <p className="font-medium text-orange-900">Expiry Tracker</p>
+              </a>
+              <a
+                href="/dashboard/pharmacy/analytics"
+                className="p-4 bg-purple-50 rounded-lg border border-purple-200 hover:bg-purple-100 transition-colors text-center"
+              >
+                <TrendingUp className="w-8 h-8 text-purple-600 mx-auto mb-2" />
+                <p className="font-medium text-purple-900">Analytics</p>
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </AppLayout>
+  );
+}

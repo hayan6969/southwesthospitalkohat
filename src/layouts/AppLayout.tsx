@@ -15,6 +15,7 @@ const getRoleFromRoute = (pathname: string): string => {
   if (pathname.startsWith('/dashboard/doctor')) return 'doctor';
   if (pathname.startsWith('/dashboard/staff')) return 'staff';
   if (pathname.startsWith('/dashboard/patient')) return 'patient';
+  if (pathname.startsWith('/dashboard/pharmacy')) return 'pharmacy';
   return getCurrentRole(); // fallback to localStorage
 };
 
@@ -54,6 +55,12 @@ export default function AppLayout({ children }: { children: ReactNode }) {
               className="px-3 py-2 text-sm text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
             >
               Admin
+            </Link>
+            <Link 
+              to="/dashboard/pharmacy" 
+              className="px-3 py-2 text-sm text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
+            >
+              Pharmacy
             </Link>
           </nav>
         </div>

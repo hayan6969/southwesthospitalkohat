@@ -1,6 +1,6 @@
 
 import { NavLink } from "react-router-dom";
-import { User, Users, Calendar, FileText, Inbox, Info, Activity, Building2, Shield } from "lucide-react";
+import { User, Users, Calendar, FileText, Inbox, Info, Activity, Building2, Shield, Pill } from "lucide-react";
 
 type SidebarNavProps = {
   role: string;
@@ -33,6 +33,13 @@ const navsByRole: Record<string, { label: string; to: string; icon: React.Elemen
     { label: "Staff Management", to: "/dashboard/admin/staff", icon: User },
     { label: "Doctors", to: "/dashboard/admin/doctors", icon: Users },
     { label: "Audit Logs", to: "/dashboard/admin/audit-logs", icon: Shield },
+  ],
+  pharmacy: [
+    { label: "Dashboard", to: "/dashboard/pharmacy", icon: Info },
+    { label: "Medicines", to: "/dashboard/pharmacy/medicines", icon: Pill },
+    { label: "Invoices", to: "/dashboard/pharmacy/invoices", icon: Inbox },
+    { label: "Expiry Tracker", to: "/dashboard/pharmacy/expiry", icon: Calendar },
+    { label: "Analytics", to: "/dashboard/pharmacy/analytics", icon: Activity },
   ],
 };
 

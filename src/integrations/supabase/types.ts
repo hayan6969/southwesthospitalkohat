@@ -66,6 +66,7 @@ export type Database = {
           created_at: string | null
           details: string | null
           id: string
+          ip_address: string | null
           user_id: string | null
         }
         Insert: {
@@ -73,6 +74,7 @@ export type Database = {
           created_at?: string | null
           details?: string | null
           id?: string
+          ip_address?: string | null
           user_id?: string | null
         }
         Update: {
@@ -80,6 +82,7 @@ export type Database = {
           created_at?: string | null
           details?: string | null
           id?: string
+          ip_address?: string | null
           user_id?: string | null
         }
         Relationships: [
@@ -288,6 +291,57 @@ export type Database = {
           },
         ]
       }
+      medicines: {
+        Row: {
+          batch_number: string | null
+          company_name: string | null
+          created_at: string | null
+          description: string | null
+          expiry_date: string
+          formula: string | null
+          id: string
+          manufacturing_date: string | null
+          minimum_stock_level: number | null
+          name: string
+          purchase_price: number
+          selling_price: number
+          stock_quantity: number
+          updated_at: string | null
+        }
+        Insert: {
+          batch_number?: string | null
+          company_name?: string | null
+          created_at?: string | null
+          description?: string | null
+          expiry_date: string
+          formula?: string | null
+          id?: string
+          manufacturing_date?: string | null
+          minimum_stock_level?: number | null
+          name: string
+          purchase_price: number
+          selling_price: number
+          stock_quantity?: number
+          updated_at?: string | null
+        }
+        Update: {
+          batch_number?: string | null
+          company_name?: string | null
+          created_at?: string | null
+          description?: string | null
+          expiry_date?: string
+          formula?: string | null
+          id?: string
+          manufacturing_date?: string | null
+          minimum_stock_level?: number | null
+          name?: string
+          purchase_price?: number
+          selling_price?: number
+          stock_quantity?: number
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       patients: {
         Row: {
           address: string | null
@@ -325,6 +379,87 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      pharmacy_invoice_items: {
+        Row: {
+          created_at: string | null
+          id: string
+          invoice_id: string | null
+          medicine_id: string | null
+          quantity: number
+          total_price: number
+          unit_price: number
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          invoice_id?: string | null
+          medicine_id?: string | null
+          quantity: number
+          total_price: number
+          unit_price: number
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          invoice_id?: string | null
+          medicine_id?: string | null
+          quantity?: number
+          total_price?: number
+          unit_price?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pharmacy_invoice_items_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "pharmacy_invoices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pharmacy_invoice_items_medicine_id_fkey"
+            columns: ["medicine_id"]
+            isOneToOne: false
+            referencedRelation: "medicines"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pharmacy_invoices: {
+        Row: {
+          created_at: string | null
+          customer_name: string | null
+          customer_phone: string | null
+          discount_amount: number | null
+          final_amount: number
+          id: string
+          invoice_number: string
+          status: string | null
+          total_amount: number
+        }
+        Insert: {
+          created_at?: string | null
+          customer_name?: string | null
+          customer_phone?: string | null
+          discount_amount?: number | null
+          final_amount: number
+          id?: string
+          invoice_number: string
+          status?: string | null
+          total_amount: number
+        }
+        Update: {
+          created_at?: string | null
+          customer_name?: string | null
+          customer_phone?: string | null
+          discount_amount?: number | null
+          final_amount?: number
+          id?: string
+          invoice_number?: string
+          status?: string | null
+          total_amount?: number
+        }
+        Relationships: []
       }
       users: {
         Row: {

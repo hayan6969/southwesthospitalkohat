@@ -1,4 +1,3 @@
-
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -99,6 +98,47 @@ export type Department = {
   name: string;
   description?: string;
   created_at: string;
+};
+
+export type Medicine = {
+  id: string;
+  name: string;
+  formula?: string;
+  company_name?: string;
+  batch_number?: string;
+  manufacturing_date?: string;
+  expiry_date: string;
+  purchase_price: number;
+  selling_price: number;
+  stock_quantity: number;
+  minimum_stock_level?: number;
+  description?: string;
+  created_at: string;
+  updated_at: string;
+};
+
+export type PharmacyInvoice = {
+  id: string;
+  invoice_number: string;
+  customer_name?: string;
+  customer_phone?: string;
+  total_amount: number;
+  discount_amount?: number;
+  final_amount: number;
+  status?: string;
+  created_at: string;
+  items?: PharmacyInvoiceItem[];
+};
+
+export type PharmacyInvoiceItem = {
+  id: string;
+  invoice_id: string;
+  medicine_id: string;
+  quantity: number;
+  unit_price: number;
+  total_price: number;
+  created_at: string;
+  medicine?: Medicine;
 };
 
 export type AuditLog = {
@@ -599,6 +639,238 @@ export const useCreateAuditLog = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['audit_logs'] });
+    }
+  });
+};
+
+// Medicines hooks
+export const useMedicines = () => {
+  return useQuery({
+    queryKey: ['medicines'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('medicines')
+        .select('*')
+        .order('name');
+      
+      if (error) throw error;
+      return data;
+    }
+  });
+};
+
+export const useCreateMedicine = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async (medicine: Omit<Medicine, 'id' | 'created_at' | 'updated_at'>) => {
+      const { data, error } = await supabase
+        .from('medicines')
+        .insert([medicine])
+        .select()
+        .single();
+      
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['medicines'] });
+    }
+  });
+};
+
+export const useUpdateMedicine = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async ({ id, ...updates }: Partial<Medicine> & { id: string }) => {
+      const { data, error } = await supabase
+        .from('medicines')
+        .update(updates)
+        .eq('id', id)
+        .select()
+        .single();
+      
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['medicines'] });
+    }
+  });
+};
+
+export const useDeleteMedicine = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from('medicines')
+        .delete()
+        .eq('id', id);
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['medicines'] });
+    }
+  });
+};
+
+// Pharmacy invoices hooks
+export const usePharmacyInvoices = () => {
+  return useQuery({
+    queryKey: ['pharmacy_invoices'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('pharmacy_invoices')
+        .select(`
+          *,
+          pharmacy_invoice_items(
+            *,
+            medicines(name, selling_price)
+          )
+        `)
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      return data;
+    }
+  });
+};
+
+export const useCreatePharmacyInvoice = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async (invoice: { 
+      invoice: Omit<PharmacyInvoice, 'id' | 'created_at'>;
+      items: Array<{
+        medicine_id: string;
+        quantity: number;
+        unit_price: number;
+        total_price: number;
+      }>;
+    }) => {
+      // Create invoice
+      const { data: invoiceData, error: invoiceError } = await supabase
+        .from('pharmacy_invoices')
+        .insert([invoice.invoice])
+        .select()
+        .single();
+      
+      if (invoiceError) throw invoiceError;
+      
+      // Create invoice items
+      const itemsWithInvoiceId = invoice.items.map(item => ({
+        ...item,
+        invoice_id: invoiceData.id
+      }));
+      
+      const { error: itemsError } = await supabase
+        .from('pharmacy_invoice_items')
+        .insert(itemsWithInvoiceId);
+      
+      if (itemsError) throw itemsError;
+      
+      // Update medicine stock quantities
+      for (const item of invoice.items) {
+        const { error: stockError } = await supabase.rpc('update_medicine_stock', {
+          medicine_id: item.medicine_id,
+          quantity_sold: item.quantity
+        });
+        
+        if (stockError) {
+          // If RPC doesn't exist, update manually
+          const { data: medicine } = await supabase
+            .from('medicines')
+            .select('stock_quantity')
+            .eq('id', item.medicine_id)
+            .single();
+          
+          if (medicine) {
+            await supabase
+              .from('medicines')
+              .update({ stock_quantity: medicine.stock_quantity - item.quantity })
+              .eq('id', item.medicine_id);
+          }
+        }
+      }
+      
+      return invoiceData;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['pharmacy_invoices'] });
+      queryClient.invalidateQueries({ queryKey: ['medicines'] });
+    }
+  });
+};
+
+// Pharmacy analytics hooks
+export const usePharmacyStats = () => {
+  return useQuery({
+    queryKey: ['pharmacy_stats'],
+    queryFn: async () => {
+      const [medicinesRes, invoicesRes, lowStockRes, expiringRes] = await Promise.all([
+        supabase.from('medicines').select('*'),
+        supabase.from('pharmacy_invoices').select('*'),
+        supabase.from('medicines').select('*').lte('stock_quantity', 10),
+        supabase.from('medicines').select('*').lte('expiry_date', new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0])
+      ]);
+
+      const totalRevenue = invoicesRes.data?.reduce((sum, inv) => sum + (inv.final_amount || 0), 0) || 0;
+      const totalMedicines = medicinesRes.data?.length || 0;
+      const lowStockCount = lowStockRes.data?.length || 0;
+      const expiringCount = expiringRes.data?.length || 0;
+
+      return {
+        totalMedicines,
+        totalInvoices: invoicesRes.data?.length || 0,
+        totalRevenue,
+        lowStockCount,
+        expiringCount
+      };
+    }
+  });
+};
+
+export const useExpiringMedicines = () => {
+  return useQuery({
+    queryKey: ['expiring_medicines'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('medicines')
+        .select('*')
+        .gte('expiry_date', new Date().toISOString().split('T')[0])
+        .lte('expiry_date', new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0])
+        .order('expiry_date');
+      
+      if (error) throw error;
+      
+      return data?.map(medicine => ({
+        ...medicine,
+        daysLeft: Math.ceil((new Date(medicine.expiry_date).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))
+      }));
+    }
+  });
+};
+
+// Audit Logs hooks - update to include ip_address
+export const useAuditLogs = () => {
+  return useQuery({
+    queryKey: ['audit_logs'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('audit_logs')
+        .select(`
+          *,
+          user:users(first_name, last_name, email)
+        `)
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      return data;
     }
   });
 };

@@ -12,6 +12,7 @@ import DashboardPatient from "./pages/dashboard/DashboardPatient";
 import DashboardDoctor from "./pages/dashboard/DashboardDoctor";
 import DashboardStaff from "./pages/dashboard/DashboardStaff";
 import DashboardAdmin from "./pages/dashboard/DashboardAdmin";
+import DashboardPharmacy from "./pages/dashboard/DashboardPharmacy";
 
 // Doctor pages
 import DoctorSchedule from "./pages/dashboard/doctor/DoctorSchedule";
@@ -35,6 +36,11 @@ import AdminDepartments from "./pages/dashboard/admin/AdminDepartments";
 import AdminStaff from "./pages/dashboard/admin/AdminStaff";
 import AdminDoctors from "./pages/dashboard/admin/AdminDoctors";
 import AdminAuditLogs from "./pages/dashboard/admin/AdminAuditLogs";
+
+// Pharmacy pages
+import PharmacyMedicines from "./pages/dashboard/pharmacy/PharmacyMedicines";
+import PharmacyInvoices from "./pages/dashboard/pharmacy/PharmacyInvoices";
+import PharmacyExpiry from "./pages/dashboard/pharmacy/PharmacyExpiry";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -80,6 +86,12 @@ const App = () => (
           <Route path="/dashboard/admin/staff" element={<AdminStaff />} />
           <Route path="/dashboard/admin/doctors" element={<AdminDoctors />} />
           <Route path="/dashboard/admin/audit-logs" element={<AdminAuditLogs />} />
+
+          {/* Pharmacy dashboard routes */}
+          <Route path="/dashboard/pharmacy" element={<DashboardPharmacy />} />
+          <Route path="/dashboard/pharmacy/medicines" element={<PharmacyMedicines />} />
+          <Route path="/dashboard/pharmacy/invoices" element={<PharmacyInvoices />} />
+          <Route path="/dashboard/pharmacy/expiry" element={<PharmacyExpiry />} />
           
           {/* Redirect for unknown dashboard routes */}
           <Route path="/dashboard" element={<Navigate to="/" replace />} />
