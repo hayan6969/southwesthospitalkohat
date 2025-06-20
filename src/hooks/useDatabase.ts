@@ -833,7 +833,6 @@ export const useExpiringMedicines = () => {
       const { data, error } = await supabase
         .from('medicines')
         .select('*')
-        .gte('expiry_date', new Date().toISOString().split('T')[0])
         .lte('expiry_date', new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0])
         .order('expiry_date');
       

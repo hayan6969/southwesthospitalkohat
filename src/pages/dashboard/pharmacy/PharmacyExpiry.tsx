@@ -3,24 +3,26 @@ import AppLayout from "@/layouts/AppLayout";
 import { useExpiringMedicines } from "@/hooks/useDatabase";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { AlertTriangle, Calendar, Clock } from "lucide-react";
+import { AlertTriangle, Calendar, Clock, XCircle } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export default function PharmacyExpiry() {
   const { data: expiringMedicines, isLoading } = useExpiringMedicines();
 
-  const urgentExpiring = expiringMedicines?.filter(med => med.daysLeft <= 7) || [];
+  const expiredMedicines = expiringMedicines?.filter(med => med.daysLeft < 0) || [];
+  const urgentExpiring = expiringMedicines?.filter(med => med.daysLeft >= 0 && med.daysLeft <= 7) || [];
   const soonExpiring = expiringMedicines?.filter(med => med.daysLeft > 7 && med.daysLeft <= 30) || [];
   const futureExpiring = expiringMedicines?.filter(med => med.daysLeft > 30) || [];
 
   const getExpiryColor = (daysLeft: number) => {
+    if (daysLeft < 0) return 'text-red-800 bg-red-100';
     if (daysLeft <= 7) return 'text-red-600 bg-red-50';
     if (daysLeft <= 30) return 'text-orange-600 bg-orange-50';
     return 'text-yellow-600 bg-yellow-50';
   };
 
   const getExpiryBadge = (daysLeft: number) => {
-    if (daysLeft <= 0) return 'EXPIRED';
+    if (daysLeft < 0) return 'EXPIRED';
     if (daysLeft <= 7) return 'URGENT';
     if (daysLeft <= 30) return 'SOON';
     return 'WATCH';
@@ -76,12 +78,12 @@ export default function PharmacyExpiry() {
                   </TableCell>
                   <TableCell>
                     <span className={`px-2 py-1 rounded-full text-xs font-medium ${getExpiryColor(medicine.daysLeft)}`}>
-                      {medicine.daysLeft > 0 ? `${medicine.daysLeft} days` : 'EXPIRED'}
+                      {medicine.daysLeft < 0 ? `${Math.abs(medicine.daysLeft)} days ago` : `${medicine.daysLeft} days left`}
                     </span>
                   </TableCell>
                   <TableCell>
                     <span className={`px-2 py-1 rounded-full text-xs font-bold ${
-                      medicine.daysLeft <= 0 ? 'bg-red-100 text-red-800' :
+                      medicine.daysLeft < 0 ? 'bg-red-200 text-red-900' :
                       medicine.daysLeft <= 7 ? 'bg-red-100 text-red-800' :
                       medicine.daysLeft <= 30 ? 'bg-orange-100 text-orange-800' :
                       'bg-yellow-100 text-yellow-800'
@@ -112,17 +114,31 @@ export default function PharmacyExpiry() {
           <p className="text-gray-600 mt-1">Monitor medicines approaching expiration dates</p>
         </div>
 
-        {urgentExpiring.length > 0 && (
+        {(urgentExpiring.length > 0 || expiredMedicines.length > 0) && (
           <Alert className="border-red-200 bg-red-50">
             <AlertTriangle className="h-4 w-4 text-red-600" />
             <AlertDescription className="text-red-800">
-              <strong>URGENT:</strong> {urgentExpiring.length} medicine(s) expire within 7 days!
+              <strong>ALERT:</strong> {expiredMedicines.length > 0 && `${expiredMedicines.length} medicine(s) already expired!`}
+              {expiredMedicines.length > 0 && urgentExpiring.length > 0 && ' '}
+              {urgentExpiring.length > 0 && `${urgentExpiring.length} medicine(s) expire within 7 days!`}
               Take immediate action to prevent losses.
             </AlertDescription>
           </Alert>
         )}
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+          <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+            <div className="flex items-center gap-3 mb-2">
+              <div className="p-2 rounded-lg bg-red-200">
+                <XCircle className="w-5 h-5 text-red-800" />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-gray-600">Expired</p>
+                <p className="text-2xl font-bold text-red-800">{expiredMedicines.length}</p>
+              </div>
+            </div>
+          </div>
+
           <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
             <div className="flex items-center gap-3 mb-2">
               <div className="p-2 rounded-lg bg-red-100">
@@ -160,8 +176,12 @@ export default function PharmacyExpiry() {
           </div>
         </div>
 
-        <Tabs defaultValue="urgent" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4">
+        <Tabs defaultValue="expired" className="space-y-6">
+          <TabsList className="grid w-full grid-cols-5">
+            <TabsTrigger value="expired" className="flex items-center gap-2">
+              <XCircle className="w-4 h-4" />
+              Expired ({expiredMedicines.length})
+            </TabsTrigger>
             <TabsTrigger value="urgent" className="flex items-center gap-2">
               <AlertTriangle className="w-4 h-4" />
               Urgent ({urgentExpiring.length})
@@ -178,6 +198,10 @@ export default function PharmacyExpiry() {
               All ({expiringMedicines?.length || 0})
             </TabsTrigger>
           </TabsList>
+
+          <TabsContent value="expired">
+            <MedicineTable medicines={expiredMedicines} title="Expired Medicines" />
+          </TabsContent>
 
           <TabsContent value="urgent">
             <MedicineTable medicines={urgentExpiring} title="Urgent - Expires Within 7 Days" />
