@@ -28,32 +28,44 @@ export const generateInvoicePDF = (invoice: any) => {
   
   doc.setFontSize(12);
   doc.setTextColor(60, 60, 60);
-  doc.text(`${invoice.patient?.users?.first_name} ${invoice.patient?.users?.last_name}`, 20, 95);
-  doc.text(`${invoice.patient?.users?.email}`, 20, 105);
+  doc.text(`${invoice.patient?.users?.first_name || ''} ${invoice.patient?.users?.last_name || ''}`, 20, 95);
+  if (invoice.patient?.users?.email) {
+    doc.text(`Email: ${invoice.patient.users.email}`, 20, 105);
+  }
   
-  // Invoice details
+  // Description
   doc.setFontSize(14);
   doc.setTextColor(40, 40, 40);
-  doc.text('Invoice Details:', 20, 125);
+  doc.text('Description:', 20, 125);
   
   doc.setFontSize(12);
   doc.setTextColor(60, 60, 60);
-  doc.text(`Description: ${invoice.description}`, 20, 140);
-  doc.text(`Amount: $${invoice.amount}`, 20, 150);
-  doc.text(`Status: ${invoice.status.toUpperCase()}`, 20, 160);
-  doc.text(`Due Date: ${invoice.due_date ? new Date(invoice.due_date).toLocaleDateString() : 'N/A'}`, 20, 170);
+  doc.text(invoice.description || 'Medical services', 20, 140);
   
-  // Payment information if paid
-  if (invoice.status === 'paid' && invoice.paid_at) {
-    doc.text(`Paid on: ${new Date(invoice.paid_at).toLocaleDateString()}`, 20, 180);
+  // Amount
+  doc.setFontSize(16);
+  doc.setTextColor(40, 40, 40);
+  doc.text(`Amount: $${invoice.amount}`, 20, 170);
+  
+  // Due date
+  if (invoice.due_date) {
+    doc.setFontSize(12);
+    doc.setTextColor(60, 60, 60);
+    doc.text(`Due Date: ${new Date(invoice.due_date).toLocaleDateString()}`, 20, 190);
   }
+  
+  // Status
+  doc.setFontSize(12);
+  doc.text(`Status: ${invoice.status}`, 20, 210);
   
   // Footer
   doc.setFontSize(10);
   doc.setTextColor(100, 100, 100);
-  doc.text('Thank you for your business!', 20, 200);
-  doc.text('HIMS by Inostrik', 20, 210);
+  doc.text('Thank you for choosing our medical services!', 20, 250);
+  doc.text('HIMS Medical Center', 20, 260);
   
-  // Save the PDF
-  doc.save(`invoice-${invoice.invoice_number}.pdf`);
+  // Open PDF in new tab instead of downloading
+  const pdfBlob = doc.output('blob');
+  const pdfUrl = URL.createObjectURL(pdfBlob);
+  window.open(pdfUrl, '_blank');
 };

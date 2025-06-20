@@ -85,6 +85,8 @@ export const generatePharmacyInvoicePDF = (invoice: any) => {
   doc.text('Thank you for your business!', 20, yPosition + 30);
   doc.text('HIMS Pharmacy', 20, yPosition + 40);
   
-  // Save the PDF
-  doc.save(`pharmacy-invoice-${invoice.invoice_number}.pdf`);
+  // Open PDF in new tab instead of downloading
+  const pdfBlob = doc.output('blob');
+  const pdfUrl = URL.createObjectURL(pdfBlob);
+  window.open(pdfUrl, '_blank');
 };
