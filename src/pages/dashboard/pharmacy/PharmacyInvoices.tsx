@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import AppLayout from "@/layouts/AppLayout";
 import { useMedicines, usePharmacyInvoices, useCreatePharmacyInvoice } from "@/hooks/useDatabase";
@@ -8,8 +7,9 @@ import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ShoppingCart, Plus, Trash2, Receipt } from "lucide-react";
+import { ShoppingCart, Plus, Trash2, Receipt, Download } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { generatePharmacyInvoicePDF } from "@/utils/pharmacyPdfGenerator";
 
 type InvoiceItem = {
   medicine_id: string;
@@ -39,12 +39,34 @@ export default function PharmacyInvoices() {
     const medicine = medicines?.find(m => m.id === selectedMedicineId);
     if (!medicine) return;
 
+    // Check if there's enough stock
+    if (medicine.stock_quantity < quantity) {
+      toast({ 
+        title: "Insufficient Stock", 
+        description: `Only ${medicine.stock_quantity} units available for ${medicine.name}`,
+        variant: "destructive" 
+      });
+      return;
+    }
+
     const existingItemIndex = items.findIndex(item => item.medicine_id === selectedMedicineId);
     
     if (existingItemIndex >= 0) {
       const updatedItems = [...items];
-      updatedItems[existingItemIndex].quantity += quantity;
-      updatedItems[existingItemIndex].total_price = updatedItems[existingItemIndex].quantity * medicine.selling_price;
+      const newQuantity = updatedItems[existingItemIndex].quantity + quantity;
+      
+      // Check total quantity against stock
+      if (newQuantity > medicine.stock_quantity) {
+        toast({ 
+          title: "Insufficient Stock", 
+          description: `Only ${medicine.stock_quantity} units available for ${medicine.name}`,
+          variant: "destructive" 
+        });
+        return;
+      }
+      
+      updatedItems[existingItemIndex].quantity = newQuantity;
+      updatedItems[existingItemIndex].total_price = newQuantity * medicine.selling_price;
       setItems(updatedItems);
     } else {
       const newItem: InvoiceItem = {
@@ -67,6 +89,18 @@ export default function PharmacyInvoices() {
 
   const updateQuantity = (index: number, newQuantity: number) => {
     if (newQuantity <= 0) return;
+    
+    const item = items[index];
+    const medicine = medicines?.find(m => m.id === item.medicine_id);
+    
+    if (medicine && newQuantity > medicine.stock_quantity) {
+      toast({ 
+        title: "Insufficient Stock", 
+        description: `Only ${medicine.stock_quantity} units available for ${medicine.name}`,
+        variant: "destructive" 
+      });
+      return;
+    }
     
     const updatedItems = [...items];
     updatedItems[index].quantity = newQuantity;
@@ -115,6 +149,10 @@ export default function PharmacyInvoices() {
     } catch (error) {
       toast({ title: "Error", description: "Failed to create invoice", variant: "destructive" });
     }
+  };
+
+  const handleDownloadPDF = (invoice: any) => {
+    generatePharmacyInvoicePDF(invoice);
   };
 
   return (
@@ -298,13 +336,14 @@ export default function PharmacyInvoices() {
                   <TableHead>Items</TableHead>
                   <TableHead>Total</TableHead>
                   <TableHead>Status</TableHead>
+                  <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {isLoading ? (
                   Array.from({ length: 5 }).map((_, i) => (
                     <TableRow key={i}>
-                      {Array.from({ length: 6 }).map((_, j) => (
+                      {Array.from({ length: 7 }).map((_, j) => (
                         <TableCell key={j}>
                           <div className="h-4 bg-gray-200 rounded animate-pulse"></div>
                         </TableCell>
@@ -337,11 +376,22 @@ export default function PharmacyInvoices() {
                           {invoice.status || 'Completed'}
                         </span>
                       </TableCell>
+                      <TableCell>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDownloadPDF(invoice)}
+                          className="flex items-center gap-1 text-blue-600 hover:text-blue-700"
+                        >
+                          <Download className="w-4 h-4" />
+                          PDF
+                        </Button>
+                      </TableCell>
                     </TableRow>
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center text-gray-500 py-12">
+                    <TableCell colSpan={7} className="text-center text-gray-500 py-12">
                       No invoices found
                     </TableCell>
                   </TableRow>
