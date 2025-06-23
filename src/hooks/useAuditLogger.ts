@@ -30,7 +30,7 @@ export const useAuditLogger = () => {
     }
   };
 
-  // Specific logging methods for different actions
+  // Specific logging methods for important actions only
   const logLogin = (userId: string, userEmail: string) => 
     logAction('User Login', `User ${userEmail} logged in`, userId);
 
@@ -46,9 +46,6 @@ export const useAuditLogger = () => {
   const logDelete = (entity: string, details: string, userId?: string) => 
     logAction(`Delete ${entity}`, details, userId);
 
-  const logView = (entity: string, details: string, userId?: string) => 
-    logAction(`View ${entity}`, details, userId);
-
   const logDownload = (entity: string, details: string, userId?: string) => 
     logAction(`Download ${entity}`, details, userId);
 
@@ -58,11 +55,14 @@ export const useAuditLogger = () => {
   const logSearch = (searchTerm: string, results: number, userId?: string) => 
     logAction('Search', `Searched for "${searchTerm}" - ${results} results found`, userId);
 
-  const logPageView = (page: string, userId?: string) => 
-    logAction('Page View', `Visited ${page}`, userId);
-
   const logError = (error: string, details?: string, userId?: string) => 
     logAction('Error', `${error}${details ? ` - ${details}` : ''}`, userId);
+
+  const logStatusChange = (entity: string, details: string, userId?: string) => 
+    logAction(`Status Change ${entity}`, details, userId);
+
+  const logPayment = (details: string, userId?: string) => 
+    logAction('Payment Processed', details, userId);
 
   return { 
     logAction,
@@ -71,11 +71,11 @@ export const useAuditLogger = () => {
     logCreate,
     logUpdate,
     logDelete,
-    logView,
     logDownload,
     logPrint,
     logSearch,
-    logPageView,
-    logError
+    logError,
+    logStatusChange,
+    logPayment
   };
 };

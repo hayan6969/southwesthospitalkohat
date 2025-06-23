@@ -8,7 +8,6 @@ import { AuditLog } from "@/components/AuditLog";
 import { PharmacyOverview } from "@/components/PharmacyOverview";
 import { AppointmentDialog } from "@/components/dialogs/AppointmentDialog";
 import { useStats } from "@/hooks/useDatabase";
-import { useAuditLogger } from "@/hooks/useAuditLogger";
 import { Users, UserCheck, Calendar, DollarSign } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -23,11 +22,6 @@ const chartData = {
 
 export default function DashboardAdmin() {
   const { data: stats, isLoading } = useStats();
-  const { logPageView } = useAuditLogger();
-
-  useEffect(() => {
-    logPageView('Admin Dashboard');
-  }, [logPageView]);
 
   return (
     <AppLayout>

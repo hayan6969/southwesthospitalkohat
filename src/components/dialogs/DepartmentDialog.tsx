@@ -16,7 +16,7 @@ export function DepartmentDialog() {
   const [description, setDescription] = useState("");
 
   const createDepartment = useCreateDepartment();
-  const { logAction } = useAuditLogger();
+  const { logCreate } = useAuditLogger();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -33,8 +33,8 @@ export function DepartmentDialog() {
       });
       
       // Log the audit event
-      await logAction(
-        "Created department",
+      await logCreate(
+        "Department",
         `Department "${name.trim()}" was created`
       );
       

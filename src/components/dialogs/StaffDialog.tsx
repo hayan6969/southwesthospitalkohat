@@ -20,7 +20,7 @@ export function StaffDialog() {
 
   const createUser = useCreateUser();
   const { data: departments } = useDepartments();
-  const { logAction } = useAuditLogger();
+  const { logCreate } = useAuditLogger();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -41,8 +41,8 @@ export function StaffDialog() {
       });
       
       // Log the audit event
-      await logAction(
-        "Created staff member",
+      await logCreate(
+        "Staff Member",
         `${firstName.trim()} ${lastName.trim()} added to staff`
       );
       

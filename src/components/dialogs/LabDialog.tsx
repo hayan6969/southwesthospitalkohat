@@ -1,6 +1,7 @@
 
 import { useState } from "react";
 import { useCreateLabReport, usePatients, useDoctors } from "@/hooks/useDatabase";
+import { useAuditLogger } from "@/hooks/useAuditLogger";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,6 +22,7 @@ export function LabDialog() {
   const createLabReport = useCreateLabReport();
   const { data: patients } = usePatients();
   const { data: doctors } = useDoctors();
+  const { logCreate } = useAuditLogger();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -31,6 +33,9 @@ export function LabDialog() {
     }
 
     try {
+      const patient = patients?.find(p => p.id === patientId);
+      const doctor = doctors?.find(d => d.id === doctorId);
+      
       await createLabReport.mutateAsync({
         patient_id: patientId,
         doctor_id: doctorId,
@@ -39,6 +44,12 @@ export function LabDialog() {
         status: 'pending',
         notes: notes.trim() || undefined
       });
+      
+      // Log the audit event
+      await logCreate(
+        "Lab Order",
+        `${testName.trim()} ordered for ${patient?.users?.first_name} ${patient?.users?.last_name} by Dr. ${doctor?.users?.first_name} ${doctor?.users?.last_name}`
+      );
       
       toast.success("Lab order created successfully");
       setOpen(false);
