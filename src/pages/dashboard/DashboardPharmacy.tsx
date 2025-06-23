@@ -3,7 +3,6 @@ import { useEffect } from "react";
 import AppLayout from "@/layouts/AppLayout";
 import { StatsCard } from "@/components/StatsCard";
 import { usePharmacyStats, useExpiringMedicines } from "@/hooks/useDatabase";
-import { useAuditLogger } from "@/hooks/useAuditLogger";
 import { Pill, ShoppingCart, DollarSign, AlertTriangle, TrendingUp } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { formatPkrCurrency } from "@/utils/currency";
@@ -11,13 +10,8 @@ import { formatPkrCurrency } from "@/utils/currency";
 export default function DashboardPharmacy() {
   const { data: stats, isLoading: statsLoading } = usePharmacyStats();
   const { data: expiringMedicines, isLoading: expiringLoading } = useExpiringMedicines();
-  const { logPageView } = useAuditLogger();
 
   const urgentExpiring = expiringMedicines?.filter(med => med.daysLeft <= 7) || [];
-
-  useEffect(() => {
-    logPageView('Pharmacy Dashboard');
-  }, [logPageView]);
 
   return (
     <AppLayout>

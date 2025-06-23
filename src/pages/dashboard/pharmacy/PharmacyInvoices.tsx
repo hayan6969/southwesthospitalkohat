@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import AppLayout from "@/layouts/AppLayout";
 import { useMedicines, usePharmacyInvoices, useCreatePharmacyInvoice } from "@/hooks/useDatabase";
@@ -26,7 +27,7 @@ export default function PharmacyInvoices() {
   const { data: invoices, isLoading } = usePharmacyInvoices();
   const createInvoice = useCreatePharmacyInvoice();
   const { toast } = useToast();
-  const { logPageView, logCreate, logDownload, logView } = useAuditLogger();
+  const { logCreate, logDownload } = useAuditLogger();
 
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [customerName, setCustomerName] = useState("");
@@ -35,10 +36,6 @@ export default function PharmacyInvoices() {
   const [items, setItems] = useState<InvoiceItem[]>([]);
   const [selectedMedicineId, setSelectedMedicineId] = useState("");
   const [quantity, setQuantity] = useState(1);
-
-  useEffect(() => {
-    logPageView('Pharmacy Invoices');
-  }, [logPageView]);
 
   const addItem = () => {
     if (!selectedMedicineId) return;
@@ -84,7 +81,6 @@ export default function PharmacyInvoices() {
         total_price: quantity * convertUsdToPkr(medicine.selling_price)
       };
       setItems([...items, newItem]);
-      logView('Medicine', `Added ${medicine.name} (${quantity} units) to invoice`);
     }
     
     setSelectedMedicineId("");
