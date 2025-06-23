@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { format } from "date-fns";
 import { toast } from "sonner";
+import { formatPkrCurrency } from "@/utils/currency";
 
 export default function StaffInvoices() {
   const { data: invoices, isLoading } = useInvoices();
@@ -104,7 +105,7 @@ export default function StaffInvoices() {
                         </div>
                       </TableCell>
                       <TableCell>
-                        <span className="font-medium text-lg">${invoice.amount}</span>
+                        <span className="font-medium text-lg">{formatPkrCurrency(invoice.amount)}</span>
                       </TableCell>
                       <TableCell>
                         {invoice.due_date ? format(new Date(invoice.due_date), 'MMM d, yyyy') : 'N/A'}

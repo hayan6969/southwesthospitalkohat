@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ShoppingCart, Plus, Trash2, Receipt, Download } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { generatePharmacyInvoicePDF } from "@/utils/pharmacyPdfGenerator";
+import { formatPkrCurrency, convertUsdToPkr } from "@/utils/currency";
 
 type InvoiceItem = {
   medicine_id: string;
@@ -72,15 +73,15 @@ export default function PharmacyInvoices() {
       }
       
       updatedItems[existingItemIndex].quantity = newQuantity;
-      updatedItems[existingItemIndex].total_price = newQuantity * medicine.selling_price;
+      updatedItems[existingItemIndex].total_price = newQuantity * convertUsdToPkr(medicine.selling_price);
       setItems(updatedItems);
     } else {
       const newItem: InvoiceItem = {
         medicine_id: selectedMedicineId,
         medicine_name: medicine.name,
         quantity,
-        unit_price: medicine.selling_price,
-        total_price: quantity * medicine.selling_price
+        unit_price: convertUsdToPkr(medicine.selling_price),
+        total_price: quantity * convertUsdToPkr(medicine.selling_price)
       };
       setItems([...items, newItem]);
       logView('Medicine', `Added ${medicine.name} (${quantity} units) to invoice`);
@@ -140,12 +141,12 @@ export default function PharmacyInvoices() {
         items: items.map(item => ({
           medicine_id: item.medicine_id,
           quantity: item.quantity,
-          unit_price: item.unit_price,
-          total_price: item.total_price
+          unit_price: item.unit_price / convertUsdToPkr(1), // Convert back to USD for storage
+          total_price: item.total_price / convertUsdToPkr(1) // Convert back to USD for storage
         }))
       });
 
-      logCreate('Pharmacy Invoice', `Invoice ${invoiceNumber} created for ${customerName || 'Walk-in Customer'} - Total: $${total.toFixed(2)}`);
+      logCreate('Pharmacy Invoice', `Invoice ${invoiceNumber} created for ${customerName || 'Walk-in Customer'} - Total: ${formatPkrCurrency(total / convertUsdToPkr(1))}`);
       toast({ title: "Invoice created successfully" });
       
       // Reset form
@@ -224,7 +225,7 @@ export default function PharmacyInvoices() {
                       <SelectContent>
                         {medicines?.map((medicine) => (
                           <SelectItem key={medicine.id} value={medicine.id}>
-                            {medicine.name} - ${medicine.selling_price.toFixed(2)} (Stock: {medicine.stock_quantity})
+                            {medicine.name} - {formatPkrCurrency(medicine.selling_price)} (Stock: {medicine.stock_quantity})
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -262,7 +263,7 @@ export default function PharmacyInvoices() {
                       {items.map((item, index) => (
                         <TableRow key={index}>
                           <TableCell>{item.medicine_name}</TableCell>
-                          <TableCell>${item.unit_price.toFixed(2)}</TableCell>
+                          <TableCell>{formatPkrCurrency(item.unit_price / convertUsdToPkr(1))}</TableCell>
                           <TableCell>
                             <Input
                               type="number"
@@ -272,7 +273,7 @@ export default function PharmacyInvoices() {
                               className="w-20"
                             />
                           </TableCell>
-                          <TableCell>${item.total_price.toFixed(2)}</TableCell>
+                          <TableCell>{formatPkrCurrency(item.total_price / convertUsdToPkr(1))}</TableCell>
                           <TableCell>
                             <Button
                               variant="ghost"
@@ -304,11 +305,11 @@ export default function PharmacyInvoices() {
                   />
                 </div>
                 <div className="text-right">
-                  <div className="text-sm text-gray-600">Subtotal: ${subtotal.toFixed(2)}</div>
+                  <div className="text-sm text-gray-600">Subtotal: {formatPkrCurrency(subtotal / convertUsdToPkr(1))}</div>
                   {discount > 0 && (
-                    <div className="text-sm text-gray-600">Discount: -${discountAmount.toFixed(2)}</div>
+                    <div className="text-sm text-gray-600">Discount: -{formatPkrCurrency(discountAmount / convertUsdToPkr(1))}</div>
                   )}
-                  <div className="text-lg font-bold">Total: ${total.toFixed(2)}</div>
+                  <div className="text-lg font-bold">Total: {formatPkrCurrency(total / convertUsdToPkr(1))}</div>
                 </div>
               </div>
 
@@ -378,7 +379,7 @@ export default function PharmacyInvoices() {
                         {invoice.pharmacy_invoice_items?.length || 0} items
                       </TableCell>
                       <TableCell className="font-medium">
-                        ${invoice.final_amount.toFixed(2)}
+                        {formatPkrCurrency(invoice.final_amount)}
                       </TableCell>
                       <TableCell>
                         <span className="px-2 py-1 rounded-full text-xs bg-green-100 text-green-800">

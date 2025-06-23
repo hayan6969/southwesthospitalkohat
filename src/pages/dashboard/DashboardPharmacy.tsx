@@ -6,6 +6,7 @@ import { usePharmacyStats, useExpiringMedicines } from "@/hooks/useDatabase";
 import { useAuditLogger } from "@/hooks/useAuditLogger";
 import { Pill, ShoppingCart, DollarSign, AlertTriangle, TrendingUp } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { formatPkrCurrency } from "@/utils/currency";
 
 export default function DashboardPharmacy() {
   const { data: stats, isLoading: statsLoading } = usePharmacyStats();
@@ -51,7 +52,7 @@ export default function DashboardPharmacy() {
           />
           <StatsCard
             title="Total Revenue"
-            value={`$${stats?.totalRevenue?.toFixed(2) || '0.00'}`}
+            value={formatPkrCurrency(stats?.totalRevenue || 0)}
             icon={<DollarSign className="w-5 h-5 text-purple-600" />}
             loading={statsLoading}
           />

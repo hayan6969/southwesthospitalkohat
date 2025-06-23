@@ -5,6 +5,7 @@ import { DollarSign, FileText, Calendar, CreditCard } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { format } from "date-fns";
+import { formatPkrCurrency } from "@/utils/currency";
 
 export default function PatientInvoices() {
   const { data: invoices, isLoading } = useInvoices();
@@ -73,7 +74,7 @@ export default function PatientInvoices() {
                         <span className="text-sm">{invoice.description}</span>
                       </TableCell>
                       <TableCell>
-                        <span className="font-medium text-lg">${invoice.amount}</span>
+                        <span className="font-medium text-lg">{formatPkrCurrency(invoice.amount)}</span>
                       </TableCell>
                       <TableCell>
                         {invoice.due_date ? format(new Date(invoice.due_date), 'MMM d, yyyy') : 'N/A'}

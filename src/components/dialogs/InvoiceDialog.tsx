@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { Plus } from "lucide-react";
+import { convertUsdToPkr } from "@/utils/currency";
 
 export function InvoiceDialog() {
   const [open, setOpen] = useState(false);
@@ -40,10 +41,13 @@ export function InvoiceDialog() {
     }
 
     try {
+      // Convert PKR to USD for storage
+      const usdAmount = amountNumber / convertUsdToPkr(1);
+      
       await createInvoice.mutateAsync({
         patient_id: patientId,
         invoice_number: generateInvoiceNumber(),
-        amount: amountNumber,
+        amount: usdAmount,
         description: description.trim(),
         due_date: dueDate || undefined,
         status: 'pending'
@@ -93,7 +97,7 @@ export function InvoiceDialog() {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="amount">Amount ($)</Label>
+            <Label htmlFor="amount">Amount (PKR)</Label>
             <Input
               id="amount"
               type="number"

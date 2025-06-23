@@ -1,4 +1,3 @@
-
 import { useEffect } from "react";
 import AppLayout from "@/layouts/AppLayout";
 import { StatsCard } from "@/components/StatsCard";
@@ -13,6 +12,7 @@ import { useAuditLogger } from "@/hooks/useAuditLogger";
 import { Users, UserCheck, Calendar, DollarSign } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { formatPkrCurrency } from "@/utils/currency";
 
 const chartData = {
   doctors: [{ value: 180 }, { value: 200 }, { value: 247 }, { value: 230 }, { value: 247 }],
@@ -76,7 +76,7 @@ export default function DashboardAdmin() {
             />
             <StatsCard
               title="Revenue"
-              value={`$${stats?.totalRevenue?.toLocaleString() || "0"}`}
+              value={formatPkrCurrency(stats?.totalRevenue || 0)}
               change="+23%"
               changeType="positive"
               icon={<DollarSign className="w-5 h-5 text-green-600" />}

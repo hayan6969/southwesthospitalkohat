@@ -1,5 +1,6 @@
 
 import jsPDF from 'jspdf';
+import { formatPkrCurrency } from './currency';
 
 export const generateInvoicePDF = (invoice: any) => {
   // Create new PDF document
@@ -45,7 +46,7 @@ export const generateInvoicePDF = (invoice: any) => {
   // Amount
   doc.setFontSize(16);
   doc.setTextColor(40, 40, 40);
-  doc.text(`Amount: $${invoice.amount}`, 20, 170);
+  doc.text(`Amount: ${formatPkrCurrency(invoice.amount)}`, 20, 170);
   
   // Due date
   if (invoice.due_date) {
