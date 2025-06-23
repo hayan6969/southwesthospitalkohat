@@ -1,4 +1,4 @@
-
+import { useEffect } from "react";
 import AppLayout from "@/layouts/AppLayout";
 import { StatsCard } from "@/components/StatsCard";
 import { AppointmentChart } from "@/components/AppointmentChart";
@@ -7,6 +7,7 @@ import { DemoTable } from "@/components/DemoTable";
 import { AuditLog } from "@/components/AuditLog";
 import { AppointmentDialog } from "@/components/dialogs/AppointmentDialog";
 import { useStats } from "@/hooks/useDatabase";
+import { useAuditLogger } from "@/hooks/useAuditLogger";
 import { Users, UserCheck, Calendar, DollarSign } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -19,6 +20,11 @@ const chartData = {
 
 export default function DashboardAdmin() {
   const { data: stats, isLoading } = useStats();
+  const { logPageView } = useAuditLogger();
+
+  useEffect(() => {
+    logPageView('Admin Dashboard');
+  }, [logPageView]);
 
   return (
     <AppLayout>

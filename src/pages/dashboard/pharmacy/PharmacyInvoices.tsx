@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import AppLayout from "@/layouts/AppLayout";
 import { useMedicines, usePharmacyInvoices, useCreatePharmacyInvoice } from "@/hooks/useDatabase";
+import { useAuditLogger } from "@/hooks/useAuditLogger";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -24,6 +25,7 @@ export default function PharmacyInvoices() {
   const { data: invoices, isLoading } = usePharmacyInvoices();
   const createInvoice = useCreatePharmacyInvoice();
   const { toast } = useToast();
+  const { logPageView, logCreate, logDownload, logView } = useAuditLogger();
 
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [customerName, setCustomerName] = useState("");
@@ -32,6 +34,10 @@ export default function PharmacyInvoices() {
   const [items, setItems] = useState<InvoiceItem[]>([]);
   const [selectedMedicineId, setSelectedMedicineId] = useState("");
   const [quantity, setQuantity] = useState(1);
+
+  useEffect(() => {
+    logPageView('Pharmacy Invoices');
+  }, [logPageView]);
 
   const addItem = () => {
     if (!selectedMedicineId) return;
@@ -77,6 +83,7 @@ export default function PharmacyInvoices() {
         total_price: quantity * medicine.selling_price
       };
       setItems([...items, newItem]);
+      logView('Medicine', `Added ${medicine.name} (${quantity} units) to invoice`);
     }
     
     setSelectedMedicineId("");
@@ -138,6 +145,7 @@ export default function PharmacyInvoices() {
         }))
       });
 
+      logCreate('Pharmacy Invoice', `Invoice ${invoiceNumber} created for ${customerName || 'Walk-in Customer'} - Total: $${total.toFixed(2)}`);
       toast({ title: "Invoice created successfully" });
       
       // Reset form
@@ -153,6 +161,7 @@ export default function PharmacyInvoices() {
 
   const handleDownloadPDF = (invoice: any) => {
     generatePharmacyInvoicePDF(invoice);
+    logDownload('Pharmacy Invoice PDF', `Downloaded PDF for invoice ${invoice.invoice_number}`);
   };
 
   return (
