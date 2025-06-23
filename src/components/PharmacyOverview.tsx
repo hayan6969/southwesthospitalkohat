@@ -1,12 +1,15 @@
 
-import { usePharmacyStats, useRecentPharmacyInvoices } from "@/hooks/useDatabase";
+import { usePharmacyStats, usePharmacyInvoices } from "@/hooks/useDatabase";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Pill, ShoppingCart, DollarSign, TrendingUp, Calendar } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export function PharmacyOverview() {
   const { data: stats, isLoading: statsLoading } = usePharmacyStats();
-  const { data: recentInvoices, isLoading: invoicesLoading } = useRecentPharmacyInvoices();
+  const { data: allInvoices, isLoading: invoicesLoading } = usePharmacyInvoices();
+
+  // Get recent invoices (last 5)
+  const recentInvoices = allInvoices?.slice(0, 5) || [];
 
   return (
     <div className="space-y-6">
@@ -91,7 +94,7 @@ export function PharmacyOverview() {
             </div>
           ) : recentInvoices && recentInvoices.length > 0 ? (
             <div className="space-y-3">
-              {recentInvoices.slice(0, 5).map((invoice) => (
+              {recentInvoices.map((invoice) => (
                 <div key={invoice.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                   <div>
                     <p className="font-medium">#{invoice.invoice_number}</p>
