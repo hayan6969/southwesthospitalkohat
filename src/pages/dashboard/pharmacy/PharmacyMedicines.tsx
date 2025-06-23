@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import AppLayout from "@/layouts/AppLayout";
 import { useMedicines, useCreateMedicine, useUpdateMedicine, useDeleteMedicine } from "@/hooks/useDatabase";
@@ -10,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Pill, Plus, Edit, Trash2, Search } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { formatPkrCurrency } from "@/utils/currency";
 
 type Medicine = {
   id?: string;
@@ -155,6 +155,7 @@ export default function PharmacyMedicines() {
               </DialogHeader>
               
               <form onSubmit={handleSubmit} className="space-y-4">
+                
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <Label htmlFor="name">Medicine Name *</Label>
@@ -218,7 +219,7 @@ export default function PharmacyMedicines() {
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <Label htmlFor="purchase_price">Purchase Price *</Label>
+                    <Label htmlFor="purchase_price">Purchase Price (USD) *</Label>
                     <Input
                       id="purchase_price"
                       type="number"
@@ -229,7 +230,7 @@ export default function PharmacyMedicines() {
                     />
                   </div>
                   <div>
-                    <Label htmlFor="selling_price">Selling Price *</Label>
+                    <Label htmlFor="selling_price">Selling Price (USD) *</Label>
                     <Input
                       id="selling_price"
                       type="number"
@@ -358,8 +359,8 @@ export default function PharmacyMedicines() {
                           {new Date(medicine.expiry_date).toLocaleDateString()}
                         </div>
                       </TableCell>
-                      <TableCell>${medicine.purchase_price.toFixed(2)}</TableCell>
-                      <TableCell>${medicine.selling_price.toFixed(2)}</TableCell>
+                      <TableCell>{formatPkrCurrency(medicine.purchase_price)}</TableCell>
+                      <TableCell>{formatPkrCurrency(medicine.selling_price)}</TableCell>
                       <TableCell>
                         <span className={`px-2 py-1 rounded-full text-xs ${
                           medicine.stock_quantity <= (medicine.minimum_stock_level || 10)

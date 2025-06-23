@@ -3,9 +3,39 @@ import { useCreateAuditLog } from "./useDatabase";
 
 const getUserIP = async (): Promise<string> => {
   try {
-    const response = await fetch('https://api.ipify.org?format=json');
-    const data = await response.json();
-    return data.ip;
+    // Try multiple IP detection services for better reliability
+    const ipServices = [
+      'https://api.ipify.org?format=json',
+      'https://httpbin.org/ip',
+      'https://api.my-ip.io/ip.json'
+    ];
+
+    for (const service of ipServices) {
+      try {
+        const response = await fetch(service, { timeout: 5000 } as any);
+        if (response.ok) {
+          const data = await response.json();
+          
+          // Handle different response formats
+          const ip = data.ip || data.origin || data.query;
+          if (ip && typeof ip === 'string') {
+            return ip;
+          }
+        }
+      } catch (serviceError) {
+        console.warn(`Failed to get IP from ${service}:`, serviceError);
+        continue;
+      }
+    }
+
+    // Fallback: try to get IP from browser's network info (limited)
+    const connection = (navigator as any).connection;
+    if (connection && connection.effectiveType) {
+      console.log('Using fallback IP detection method');
+      return 'Client-side';
+    }
+
+    return 'Unknown';
   } catch (error) {
     console.error('Failed to get IP address:', error);
     return 'Unknown';
@@ -24,7 +54,7 @@ export const useAuditLogger = () => {
         details,
         ip_address: ipAddress
       });
-      console.log(`Audit log: ${action}`, details);
+      console.log(`Audit log: ${action}`, details, `IP: ${ipAddress}`);
     } catch (error) {
       console.error("Failed to log audit action:", error);
     }
