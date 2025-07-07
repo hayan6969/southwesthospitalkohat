@@ -114,7 +114,7 @@ export const usePatients = () => {
         .from('patients')
         .select(`
           *,
-          profiles!inner(*)
+          profile:profiles(*)
         `);
 
       if (error) {
@@ -122,10 +122,7 @@ export const usePatients = () => {
         throw error;
       }
 
-      return data?.map(patient => ({
-        ...patient,
-        users: patient.profiles // Map profiles to users for compatibility
-      })) || [];
+      return data || [];
     },
   });
 };
@@ -138,7 +135,7 @@ export const useDoctors = () => {
         .from('doctors')
         .select(`
           *,
-          profiles!inner(*)
+          profile:profiles(*)
         `);
 
       if (error) {
@@ -146,10 +143,7 @@ export const useDoctors = () => {
         throw error;
       }
 
-      return data?.map(doctor => ({
-        ...doctor,
-        users: doctor.profiles // Map profiles to users for compatibility
-      })) || [];
+      return data || [];
     },
   });
 };
@@ -162,13 +156,13 @@ export const useAppointments = () => {
         .from('appointments')
         .select(`
           *,
-          patient:patients!inner(
+          patient:patients(
             *,
-            profiles!inner(*)
+            profile:profiles(*)
           ),
-          doctor:doctors!inner(
+          doctor:doctors(
             *,
-            profiles!inner(*)
+            profile:profiles(*)
           )
         `)
         .order('appointment_date', { ascending: true });
@@ -178,17 +172,7 @@ export const useAppointments = () => {
         throw error;
       }
 
-      return data?.map(appointment => ({
-        ...appointment,
-        patient: appointment.patient ? {
-          ...appointment.patient,
-          users: appointment.patient.profiles
-        } : null,
-        doctor: appointment.doctor ? {
-          ...appointment.doctor,
-          users: appointment.doctor.profiles
-        } : null
-      })) || [];
+      return data || [];
     },
   });
 };
@@ -201,9 +185,9 @@ export const useInvoices = () => {
         .from('invoices')
         .select(`
           *,
-          patient:patients!inner(
+          patient:patients(
             *,
-            profiles!inner(*)
+            profile:profiles(*)
           )
         `)
         .order('created_at', { ascending: false });
@@ -213,13 +197,7 @@ export const useInvoices = () => {
         throw error;
       }
 
-      return data?.map(invoice => ({
-        ...invoice,
-        patient: invoice.patient ? {
-          ...invoice.patient,
-          users: invoice.patient.profiles
-        } : null
-      })) || [];
+      return data || [];
     },
   });
 };
@@ -232,11 +210,14 @@ export const useLabReports = () => {
         .from('lab_reports')
         .select(`
           *,
-          patient:patients!inner(
+          patient:patients(
             *,
-            profiles!inner(*)
+            profile:profiles(*)
           ),
-          doctor:doctors!inner(*)
+          doctor:doctors(
+            *,
+            profile:profiles(*)
+          )
         `)
         .order('test_date', { ascending: false });
 
@@ -245,17 +226,7 @@ export const useLabReports = () => {
         throw error;
       }
 
-      return data?.map(report => ({
-        ...report,
-        patient: report.patient ? {
-          ...report.patient,
-          users: report.patient.profiles
-        } : null,
-        doctor: report.doctor ? {
-          ...report.doctor,
-          users: report.doctor.profiles
-        } : null
-      })) || [];
+      return data || [];
     },
   });
 };
@@ -268,11 +239,14 @@ export const useMedicalRecords = () => {
         .from('medical_records')
         .select(`
           *,
-          patient:patients!inner(
+          patient:patients(
             *,
-            profiles!inner(*)
+            profile:profiles(*)
           ),
-          doctor:doctors!inner(*)
+          doctor:doctors(
+            *,
+            profile:profiles(*)
+          )
         `)
         .order('visit_date', { ascending: false });
 
@@ -281,17 +255,7 @@ export const useMedicalRecords = () => {
         throw error;
       }
 
-      return data?.map(record => ({
-        ...record,
-        patient: record.patient ? {
-          ...record.patient,
-          users: record.patient.profiles
-        } : null,
-        doctor: record.doctor ? {
-          ...record.doctor,
-          users: record.doctor.profiles
-        } : null
-      })) || [];
+      return data || [];
     },
   });
 };

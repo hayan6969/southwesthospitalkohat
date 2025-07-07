@@ -34,10 +34,7 @@ const navsByRole: Record<string, { label: string; to: string; icon: React.Elemen
   ],
   admin: [
     { label: "Dashboard", to: "/dashboard/admin", icon: Info },
-    { label: "Account Management", to: "/dashboard/admin/accounts", icon: User },
-    { label: "Staff & Doctors", to: "/dashboard/admin/staff", icon: Users },
-    { label: "Analytics", to: "/dashboard/admin/analytics", icon: ChartBar },
-    { label: "Pharmacy Overview", to: "/dashboard/admin/pharmacy", icon: Pill },
+    { label: "Account Management", to: "/dashboard/admin/accounts", icon: Users },
     { label: "System Settings", to: "/dashboard/admin/settings", icon: Settings },
   ],
   pharmacy: [
