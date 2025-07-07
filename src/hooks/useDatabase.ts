@@ -1,4 +1,5 @@
-import { useQuery } from "@tanstack/react-query";
+
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
 export const useDepartments = () => {
@@ -51,24 +52,25 @@ type CreateUserParams = {
 };
 
 export const useCreateUser = () => {
-  return {
-    mutateAsync: async (params: CreateUserParams) => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async (params: CreateUserParams) => {
       const { first_name, last_name, email, phone, role, department_id } = params;
 
       console.log('Creating user...', params);
 
+      // Create user record without id (let database generate it)
       const { data, error } = await supabase
         .from('profiles')
-        .insert([
-          {
-            first_name,
-            last_name,
-            email,
-            phone,
-            role,
-            department_id,
-          },
-        ])
+        .insert({
+          first_name,
+          last_name,
+          email,
+          phone: phone || null,
+          role,
+          department_id: department_id || null,
+        })
         .select();
 
       if (error) {
@@ -79,8 +81,688 @@ export const useCreateUser = () => {
       console.log('User created:', data);
       return data;
     },
-    isPending: false, // Placeholder, replace with actual state if needed
-  };
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+    },
+  });
+};
+
+export const usePatients = () => {
+  return useQuery({
+    queryKey: ['patients'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('patients')
+        .select(`
+          *,
+          users:profiles(*)
+        `)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching patients:', error);
+        throw error;
+      }
+
+      return data || [];
+    },
+  });
+};
+
+export const useDoctors = () => {
+  return useQuery({
+    queryKey: ['doctors'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('doctors')
+        .select(`
+          *,
+          users:profiles(*)
+        `)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching doctors:', error);
+        throw error;
+      }
+
+      return data || [];
+    },
+  });
+};
+
+export const useAppointments = () => {
+  return useQuery({
+    queryKey: ['appointments'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('appointments')
+        .select(`
+          *,
+          patient:patients(
+            *,
+            users:profiles(*)
+          ),
+          doctor:doctors(
+            *,
+            users:profiles(*)
+          )
+        `)
+        .order('appointment_date', { ascending: true });
+
+      if (error) {
+        console.error('Error fetching appointments:', error);
+        throw error;
+      }
+
+      return data || [];
+    },
+  });
+};
+
+export const useInvoices = () => {
+  return useQuery({
+    queryKey: ['invoices'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('invoices')
+        .select(`
+          *,
+          patient:patients(
+            *,
+            users:profiles(*)
+          )
+        `)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching invoices:', error);
+        throw error;
+      }
+
+      return data || [];
+    },
+  });
+};
+
+export const useLabReports = () => {
+  return useQuery({
+    queryKey: ['lab_reports'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('lab_reports')
+        .select(`
+          *,
+          patient:patients(
+            *,
+            users:profiles(*)
+          ),
+          doctor:doctors(
+            *,
+            users:profiles(*)
+          )
+        `)
+        .order('test_date', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching lab reports:', error);
+        throw error;
+      }
+
+      return data || [];
+    },
+  });
+};
+
+export const useMedicalRecords = () => {
+  return useQuery({
+    queryKey: ['medical_records'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('medical_records')
+        .select(`
+          *,
+          patient:patients(
+            *,
+            users:profiles(*)
+          ),
+          doctor:doctors(
+            *,
+            users:profiles(*)
+          )
+        `)
+        .order('visit_date', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching medical records:', error);
+        throw error;
+      }
+
+      return data || [];
+    },
+  });
+};
+
+export const useMedicines = () => {
+  return useQuery({
+    queryKey: ['medicines'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('medicines')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching medicines:', error);
+        throw error;
+      }
+
+      return data || [];
+    },
+  });
+};
+
+export const usePharmacyInvoices = () => {
+  return useQuery({
+    queryKey: ['pharmacy_invoices'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('pharmacy_invoices')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching pharmacy invoices:', error);
+        throw error;
+      }
+
+      return data || [];
+    },
+  });
+};
+
+export const useAuditLogs = () => {
+  return useQuery({
+    queryKey: ['audit_logs'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('audit_logs')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching audit logs:', error);
+        throw error;
+      }
+
+      return data || [];
+    },
+  });
+};
+
+export const useExpiringMedicines = () => {
+  return useQuery({
+    queryKey: ['expiring_medicines'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('medicines')
+        .select('*')
+        .order('expiry_date', { ascending: true });
+
+      if (error) {
+        console.error('Error fetching expiring medicines:', error);
+        throw error;
+      }
+
+      // Add days left calculation
+      const medicinesWithDaysLeft = data?.map(medicine => ({
+        ...medicine,
+        daysLeft: Math.floor((new Date(medicine.expiry_date).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))
+      })) || [];
+
+      return medicinesWithDaysLeft;
+    },
+  });
+};
+
+export const usePharmacyStats = () => {
+  return useQuery({
+    queryKey: ['pharmacy_stats'],
+    queryFn: async () => {
+      try {
+        // Get total medicines
+        const { data: medicinesData, error: medicinesError } = await supabase
+          .from('medicines')
+          .select('*');
+
+        if (medicinesError) throw medicinesError;
+
+        // Get total pharmacy invoices
+        const { data: invoicesData, error: invoicesError } = await supabase
+          .from('pharmacy_invoices')
+          .select('*');
+
+        if (invoicesError) throw invoicesError;
+
+        // Calculate total revenue
+        const totalRevenue = invoicesData?.reduce((sum, invoice) => sum + Number(invoice.final_amount || 0), 0) || 0;
+
+        // Count low stock medicines
+        const lowStockCount = medicinesData?.filter(med => med.stock_quantity <= (med.minimum_stock_level || 10)).length || 0;
+
+        return {
+          totalMedicines: medicinesData?.length || 0,
+          totalInvoices: invoicesData?.length || 0,
+          totalRevenue,
+          lowStockCount
+        };
+      } catch (error) {
+        console.error('Error fetching pharmacy stats:', error);
+        return {
+          totalMedicines: 0,
+          totalInvoices: 0,
+          totalRevenue: 0,
+          lowStockCount: 0
+        };
+      }
+    },
+  });
+};
+
+// Create/Update/Delete mutations
+export const useCreateDepartment = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async (params: { name: string; description?: string }) => {
+      const { data, error } = await supabase
+        .from('departments')
+        .insert(params)
+        .select();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['departments'] });
+    },
+  });
+};
+
+export const useCreateDoctor = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async (params: { 
+      user: CreateUserParams;
+      specialization: string;
+      license_number?: string;
+      experience_years?: number;
+    }) => {
+      // First create the user profile
+      const { data: userData, error: userError } = await supabase
+        .from('profiles')
+        .insert({
+          first_name: params.user.first_name,
+          last_name: params.user.last_name,
+          email: params.user.email,
+          phone: params.user.phone || null,
+          role: params.user.role,
+          department_id: params.user.department_id || null,
+        })
+        .select()
+        .single();
+
+      if (userError) throw userError;
+
+      // Then create the doctor record
+      const { data: doctorData, error: doctorError } = await supabase
+        .from('doctors')
+        .insert({
+          id: userData.id,
+          specialization: params.specialization,
+          license_number: params.license_number || null,
+          experience_years: params.experience_years || 0,
+        })
+        .select();
+
+      if (doctorError) throw doctorError;
+      return doctorData;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['doctors'] });
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+    },
+  });
+};
+
+export const useCreatePatient = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async (params: { 
+      user: CreateUserParams;
+      date_of_birth?: string;
+      address?: string;
+      blood_type?: string;
+      allergies?: string;
+    }) => {
+      // First create the user profile
+      const { data: userData, error: userError } = await supabase
+        .from('profiles')
+        .insert({
+          first_name: params.user.first_name,
+          last_name: params.user.last_name,
+          email: params.user.email,
+          phone: params.user.phone || null,
+          role: params.user.role,
+        })
+        .select()
+        .single();
+
+      if (userError) throw userError;
+
+      // Then create the patient record
+      const { data: patientData, error: patientError } = await supabase
+        .from('patients')
+        .insert({
+          id: userData.id,
+          date_of_birth: params.date_of_birth || null,
+          address: params.address || null,
+          blood_type: params.blood_type || null,
+          allergies: params.allergies || null,
+        })
+        .select();
+
+      if (patientError) throw patientError;
+      return patientData;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['patients'] });
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+    },
+  });
+};
+
+export const useCreateAppointment = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async (params: {
+      patient_id: string;
+      doctor_id: string;
+      appointment_date: string;
+      type: string;
+      notes?: string;
+      status?: string;
+    }) => {
+      const { data, error } = await supabase
+        .from('appointments')
+        .insert(params)
+        .select();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['appointments'] });
+    },
+  });
+};
+
+export const useCreateInvoice = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async (params: {
+      patient_id: string;
+      invoice_number: string;
+      amount: number;
+      description?: string;
+      due_date?: string;
+      status?: string;
+    }) => {
+      const { data, error } = await supabase
+        .from('invoices')
+        .insert(params)
+        .select();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['invoices'] });
+    },
+  });
+};
+
+export const useCreateLabReport = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async (params: {
+      patient_id: string;
+      doctor_id: string;
+      test_name: string;
+      test_date?: string;
+      status?: string;
+      notes?: string;
+    }) => {
+      const { data, error } = await supabase
+        .from('lab_reports')
+        .insert(params)
+        .select();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['lab_reports'] });
+    },
+  });
+};
+
+export const useCreateMedicalRecord = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async (params: {
+      patient_id: string;
+      doctor_id: string;
+      diagnosis?: string;
+      treatment?: string;
+      prescription?: string;
+      notes?: string;
+      visit_date?: string;
+    }) => {
+      const { data, error } = await supabase
+        .from('medical_records')
+        .insert(params)
+        .select();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['medical_records'] });
+    },
+  });
+};
+
+export const useCreateMedicine = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async (params: {
+      name: string;
+      formula?: string;
+      company_name?: string;
+      batch_number?: string;
+      manufacturing_date?: string;
+      expiry_date: string;
+      purchase_price: number;
+      selling_price: number;
+      stock_quantity: number;
+      minimum_stock_level?: number;
+      description?: string;
+    }) => {
+      const { data, error } = await supabase
+        .from('medicines')
+        .insert(params)
+        .select();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['medicines'] });
+    },
+  });
+};
+
+export const useCreatePharmacyInvoice = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async (params: {
+      invoice_number: string;
+      customer_name?: string;
+      customer_phone?: string;
+      total_amount: number;
+      discount_amount?: number;
+      final_amount: number;
+      status?: string;
+    }) => {
+      const { data, error } = await supabase
+        .from('pharmacy_invoices')
+        .insert(params)
+        .select();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['pharmacy_invoices'] });
+    },
+  });
+};
+
+export const useCreateAuditLog = () => {
+  return useMutation({
+    mutationFn: async (params: {
+      user_id?: string;
+      action: string;
+      details?: string;
+      ip_address?: string;
+    }) => {
+      const { data, error } = await supabase
+        .from('audit_logs')
+        .insert(params)
+        .select();
+
+      if (error) throw error;
+      return data;
+    },
+  });
+};
+
+export const useUpdateAppointment = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async (params: { id: string; status?: string; updated_at?: string }) => {
+      const { data, error } = await supabase
+        .from('appointments')
+        .update(params)
+        .eq('id', params.id)
+        .select();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['appointments'] });
+    },
+  });
+};
+
+export const useUpdateInvoice = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async (params: { id: string; status?: string; paid_at?: string }) => {
+      const { data, error } = await supabase
+        .from('invoices')
+        .update(params)
+        .eq('id', params.id)
+        .select();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['invoices'] });
+    },
+  });
+};
+
+export const useUpdateLabReport = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async (params: { id: string; status?: string; results?: string }) => {
+      const { data, error } = await supabase
+        .from('lab_reports')
+        .update(params)
+        .eq('id', params.id)
+        .select();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['lab_reports'] });
+    },
+  });
+};
+
+export const useUpdateMedicine = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async (params: { id: string; [key: string]: any }) => {
+      const { id, ...updateData } = params;
+      const { data, error } = await supabase
+        .from('medicines')
+        .update(updateData)
+        .eq('id', id)
+        .select();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['medicines'] });
+    },
+  });
+};
+
+export const useDeleteMedicine = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from('medicines')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['medicines'] });
+    },
+  });
 };
 
 type Stats = {
