@@ -60,7 +60,7 @@ export const useAuditLogs = () => {
         .from('audit_logs')
         .select(`
           *,
-          user:profiles!audit_logs_user_id_fkey(*)
+          user:profiles(*)
         `)
         .order('created_at', { ascending: false })
         .limit(100);
@@ -79,7 +79,7 @@ export const usePatients = () => {
         .from('patients')
         .select(`
           *,
-          user:profiles!patients_id_fkey(*)
+          user:profiles(*)
         `)
         .order('id');
 
@@ -97,7 +97,7 @@ export const useDoctors = () => {
         .from('doctors')
         .select(`
           *,
-          user:profiles!doctors_id_fkey(*)
+          user:profiles(*)
         `)
         .order('id');
 
@@ -115,13 +115,13 @@ export const useAppointments = () => {
         .from('appointments')
         .select(`
           *,
-          patient:patients!appointments_patient_id_fkey(
+          patient:patients(
             *,
-            user:profiles!patients_id_fkey(*)
+            user:profiles(*)
           ),
-          doctor:doctors!appointments_doctor_id_fkey(
+          doctor:doctors(
             *,
-            user:profiles!doctors_id_fkey(*)
+            user:profiles(*)
           )
         `)
         .order('appointment_date', { ascending: false });
@@ -140,13 +140,13 @@ export const useLabReports = () => {
         .from('lab_reports')
         .select(`
           *,
-          patient:patients!lab_reports_patient_id_fkey(
+          patient:patients(
             *,
-            user:profiles!patients_id_fkey(*)
+            user:profiles(*)
           ),
-          doctor:doctors!lab_reports_doctor_id_fkey(
+          doctor:doctors(
             *,
-            user:profiles!doctors_id_fkey(*)
+            user:profiles(*)
           )
         `)
         .order('created_at', { ascending: false });
@@ -165,13 +165,13 @@ export const useMedicalRecords = () => {
         .from('medical_records')
         .select(`
           *,
-          patient:patients!medical_records_patient_id_fkey(
+          patient:patients(
             *,
-            user:profiles!patients_id_fkey(*)
+            user:profiles(*)
           ),
-          doctor:doctors!medical_records_doctor_id_fkey(
+          doctor:doctors(
             *,
-            user:profiles!doctors_id_fkey(*)
+            user:profiles(*)
           )
         `)
         .order('created_at', { ascending: false });
@@ -190,9 +190,9 @@ export const useInvoices = () => {
         .from('invoices')
         .select(`
           *,
-          patient:patients!invoices_patient_id_fkey(
+          patient:patients(
             *,
-            user:profiles!patients_id_fkey(*)
+            user:profiles(*)
           )
         `)
         .order('created_at', { ascending: false });
@@ -470,6 +470,27 @@ export const useUpdateAppointment = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['appointments'] });
+    },
+  });
+};
+
+export const useUpdateInvoice = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async ({ id, ...updates }: any) => {
+      const { data, error } = await supabase
+        .from('invoices')
+        .update(updates)
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['invoices'] });
     },
   });
 };
