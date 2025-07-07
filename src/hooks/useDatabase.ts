@@ -389,7 +389,6 @@ export const usePharmacyStats = () => {
   });
 };
 
-// Create/Update/Delete mutations
 export const useCreateDepartment = () => {
   const queryClient = useQueryClient();
   
