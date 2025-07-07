@@ -58,10 +58,12 @@ export const useCreateUser = () => {
     mutationFn: async (params: CreateUserParams) => {
       console.log('Creating user...', params);
 
-      // First create auth user
+      // Create auth user with a temporary password
+      const tempPassword = `TempPass${Math.random().toString(36).slice(-8)}!`;
+      
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: params.email,
-        password: 'TempPassword123!', // Temporary password - admin will set real one
+        password: tempPassword,
         options: {
           data: {
             first_name: params.first_name,
@@ -76,30 +78,27 @@ export const useCreateUser = () => {
         throw authError;
       }
 
-      // The profile should be created automatically by the trigger
-      // But let's manually create it to ensure it exists
-      if (authData.user) {
+      if (authData.user && authData.user.id) {
+        // Update the profile that was automatically created by the trigger
         const { data: profileData, error: profileError } = await supabase
           .from('profiles')
-          .upsert({
-            id: authData.user.id,
-            first_name: params.first_name,
-            last_name: params.last_name,
-            email: params.email,
+          .update({
             phone: params.phone || null,
-            role: params.role,
             department_id: params.department_id || null,
           })
+          .eq('id', authData.user.id)
           .select();
 
         if (profileError) {
-          console.error('Error creating profile:', profileError);
+          console.error('Error updating profile:', profileError);
           throw profileError;
         }
 
         console.log('User created:', profileData);
         return profileData;
       }
+
+      throw new Error('Failed to create user');
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['users'] });
@@ -237,10 +236,7 @@ export const useLabReports = () => {
             *,
             profiles!inner(*)
           ),
-          doctor:doctors!inner(
-            *,
-            profiles!inner(*)
-          )
+          doctor:doctors!inner(*)
         `)
         .order('test_date', { ascending: false });
 
@@ -276,10 +272,7 @@ export const useMedicalRecords = () => {
             *,
             profiles!inner(*)
           ),
-          doctor:doctors!inner(
-            *,
-            profiles!inner(*)
-          )
+          doctor:doctors!inner(*)
         `)
         .order('visit_date', { ascending: false });
 
@@ -462,10 +455,12 @@ export const useCreateDoctor = () => {
       license_number?: string;
       experience_years?: number;
     }) => {
-      // First create auth user and profile
+      // Create auth user with a temporary password
+      const tempPassword = `TempPass${Math.random().toString(36).slice(-8)}!`;
+      
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: params.user.email,
-        password: 'TempPassword123!',
+        password: tempPassword,
         options: {
           data: {
             first_name: params.user.first_name,
@@ -477,25 +472,19 @@ export const useCreateDoctor = () => {
 
       if (authError) throw authError;
 
-      if (authData.user) {
-        // Create profile
-        const { data: profileData, error: profileError } = await supabase
+      if (authData.user && authData.user.id) {
+        // Update profile
+        const { error: profileError } = await supabase
           .from('profiles')
-          .upsert({
-            id: authData.user.id,
-            first_name: params.user.first_name,
-            last_name: params.user.last_name,
-            email: params.user.email,
+          .update({
             phone: params.user.phone || null,
-            role: params.user.role,
             department_id: params.user.department_id || null,
           })
-          .select()
-          .single();
+          .eq('id', authData.user.id);
 
         if (profileError) throw profileError;
 
-        // Then create the doctor record
+        // Create the doctor record
         const { data: doctorData, error: doctorError } = await supabase
           .from('doctors')
           .insert({
@@ -509,6 +498,8 @@ export const useCreateDoctor = () => {
         if (doctorError) throw doctorError;
         return doctorData;
       }
+
+      throw new Error('Failed to create doctor');
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['doctors'] });
@@ -528,10 +519,12 @@ export const useCreatePatient = () => {
       blood_type?: string;
       allergies?: string;
     }) => {
-      // First create auth user and profile
+      // Create auth user with a temporary password
+      const tempPassword = `TempPass${Math.random().toString(36).slice(-8)}!`;
+      
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: params.user.email,
-        password: 'TempPassword123!',
+        password: tempPassword,
         options: {
           data: {
             first_name: params.user.first_name,
@@ -543,24 +536,18 @@ export const useCreatePatient = () => {
 
       if (authError) throw authError;
 
-      if (authData.user) {
-        // Create profile
-        const { data: profileData, error: profileError } = await supabase
+      if (authData.user && authData.user.id) {
+        // Update profile
+        const { error: profileError } = await supabase
           .from('profiles')
-          .upsert({
-            id: authData.user.id,
-            first_name: params.user.first_name,
-            last_name: params.user.last_name,
-            email: params.user.email,
+          .update({
             phone: params.user.phone || null,
-            role: params.user.role,
           })
-          .select()
-          .single();
+          .eq('id', authData.user.id);
 
         if (profileError) throw profileError;
 
-        // Then create the patient record
+        // Create the patient record
         const { data: patientData, error: patientError } = await supabase
           .from('patients')
           .insert({
@@ -575,6 +562,8 @@ export const useCreatePatient = () => {
         if (patientError) throw patientError;
         return patientData;
       }
+
+      throw new Error('Failed to create patient');
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['patients'] });

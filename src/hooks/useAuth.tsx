@@ -225,22 +225,25 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     department_id?: string 
   }) => {
     try {
-      // First create the auth user
-      const { data, error } = await supabase.auth.admin.createUser({
+      // Use regular sign up instead of admin API
+      const tempPassword = userData.password || `TempPass${Math.random().toString(36).slice(-8)}!`;
+      
+      const { data, error } = await supabase.auth.signUp({
         email: userData.email,
-        password: userData.password,
-        email_confirm: true,
-        user_metadata: {
-          first_name: userData.first_name,
-          last_name: userData.last_name,
-          role: userData.role
+        password: tempPassword,
+        options: {
+          data: {
+            first_name: userData.first_name,
+            last_name: userData.last_name,
+            role: userData.role
+          }
         }
       });
 
       if (error) return { error };
 
-      // Then update the profile with additional data
-      if (data.user) {
+      // Update the profile with additional data
+      if (data.user && data.user.id) {
         const { error: profileError } = await supabase
           .from('profiles')
           .update({
