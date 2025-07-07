@@ -1,6 +1,8 @@
 
 import { useState } from "react";
-import { useCreateAppointment, useDoctors, usePatients } from "@/hooks/useDatabase";
+import { useCreateAppointment } from "@/hooks/useAppointments";
+import { useDoctors } from "@/hooks/useDoctors";
+import { usePatients } from "@/hooks/usePatients";
 import { useAuditLogger } from "@/hooks/useAuditLogger";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -89,7 +91,7 @@ export function AppointmentDialog() {
               <SelectContent>
                 {patients?.map((patient) => (
                   <SelectItem key={patient.id} value={patient.id}>
-                    {patient.users?.first_name} {patient.users?.last_name}
+                    {patient.user?.first_name} {patient.user?.last_name}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -105,7 +107,7 @@ export function AppointmentDialog() {
               <SelectContent>
                 {doctors?.map((doctor) => (
                   <SelectItem key={doctor.id} value={doctor.id}>
-                    Dr. {doctor.users?.first_name} {doctor.users?.last_name} - {doctor.specialization}
+                    Dr. {doctor.user?.first_name} {doctor.user?.last_name} - {doctor.specialization}
                   </SelectItem>
                 ))}
               </SelectContent>
