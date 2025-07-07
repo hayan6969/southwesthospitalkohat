@@ -1,7 +1,6 @@
 
 import { useState } from "react";
-import { useCreateInvoice } from "@/hooks/useInvoices";
-import { usePatients } from "@/hooks/usePatients";
+import { useCreateInvoice, usePatients } from "@/hooks/useDatabase";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -90,7 +89,7 @@ export function InvoiceDialog() {
               <SelectContent>
                 {patients?.map((patient) => (
                   <SelectItem key={patient.id} value={patient.id}>
-                    {patient.user?.first_name} {patient.user?.last_name}
+                    {patient.users?.first_name} {patient.users?.last_name}
                   </SelectItem>
                 ))}
               </SelectContent>

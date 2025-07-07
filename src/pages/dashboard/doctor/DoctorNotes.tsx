@@ -1,10 +1,9 @@
 
 import AppLayout from "@/layouts/AppLayout";
-import { useMedicalRecords } from "@/hooks/useMedicalRecords";
-import { FileText, Plus, Search } from "lucide-react";
+import { useMedicalRecords } from "@/hooks/useDatabase";
+import { FileText, Plus, User, Calendar } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { format } from "date-fns";
 
 export default function DoctorNotes() {
@@ -16,98 +15,95 @@ export default function DoctorNotes() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold text-gray-900">Medical Notes</h1>
-            <p className="text-gray-600 mt-1">Patient medical records and notes</p>
+            <p className="text-gray-600 mt-1">View and manage patient medical records</p>
           </div>
           <Button className="bg-blue-600 hover:bg-blue-700">
             <Plus className="w-4 h-4 mr-2" />
-            New Note
+            New Record
           </Button>
         </div>
 
-        <div className="flex items-center space-x-4">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-            <Input
-              placeholder="Search medical records..."
-              className="pl-10"
-            />
+        <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
+          <div className="p-6 border-b border-gray-200">
+            <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
+              <FileText className="w-5 h-5" />
+              Medical Records
+            </h2>
           </div>
-        </div>
-
-        <div className="grid grid-cols-1 gap-6">
-          {isLoading ? (
-            Array.from({ length: 5 }).map((_, i) => (
-              <Card key={i}>
-                <CardHeader>
-                  <div className="h-4 bg-gray-200 rounded animate-pulse w-1/3"></div>
-                  <div className="h-3 bg-gray-200 rounded animate-pulse w-1/4"></div>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-2">
-                    <div className="h-3 bg-gray-200 rounded animate-pulse"></div>
-                    <div className="h-3 bg-gray-200 rounded animate-pulse w-2/3"></div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))
-          ) : medicalRecords && medicalRecords.length > 0 ? (
-            medicalRecords.map((record) => (
-              <Card key={record.id}>
-                <CardHeader>
-                  <CardTitle className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <FileText className="w-5 h-5" />
-                      <span>
-                        {record.patient?.user?.first_name} {record.patient?.user?.last_name}
-                      </span>
-                    </div>
-                    <span className="text-sm text-gray-500">
-                      {record.visit_date ? format(new Date(record.visit_date), 'MMM d, yyyy') : 'N/A'}
-                    </span>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    {record.diagnosis && (
-                      <div>
-                        <h4 className="font-semibold text-sm text-gray-700">Diagnosis</h4>
-                        <p className="text-sm text-gray-600">{record.diagnosis}</p>
-                      </div>
-                    )}
-                    
-                    {record.treatment && (
-                      <div>
-                        <h4 className="font-semibold text-sm text-gray-700">Treatment</h4>
-                        <p className="text-sm text-gray-600">{record.treatment}</p>
-                      </div>
-                    )}
-                    
-                    {record.prescription && (
-                      <div>
-                        <h4 className="font-semibold text-sm text-gray-700">Prescription</h4>
-                        <p className="text-sm text-gray-600">{record.prescription}</p>
-                      </div>
-                    )}
-                    
-                    {record.notes && (
-                      <div>
-                        <h4 className="font-semibold text-sm text-gray-700">Notes</h4>
-                        <p className="text-sm text-gray-600">{record.notes}</p>
-                      </div>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            ))
-          ) : (
-            <div className="text-center py-12">
-              <FileText className="mx-auto h-12 w-12 text-gray-400" />
-              <h3 className="mt-2 text-sm font-medium text-gray-900">No medical records</h3>
-              <p className="mt-1 text-sm text-gray-500">
-                Get started by creating a new medical record.
-              </p>
-            </div>
-          )}
+          
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Date</TableHead>
+                  <TableHead>Patient</TableHead>
+                  <TableHead>Diagnosis</TableHead>
+                  <TableHead>Treatment</TableHead>
+                  <TableHead>Prescription</TableHead>
+                  <TableHead>Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {isLoading ? (
+                  Array.from({ length: 5 }).map((_, i) => (
+                    <TableRow key={i}>
+                      {Array.from({ length: 6 }).map((_, j) => (
+                        <TableCell key={j}>
+                          <div className="h-4 bg-gray-200 rounded animate-pulse"></div>
+                        </TableCell>
+                      ))}
+                    </TableRow>
+                  ))
+                ) : medicalRecords && medicalRecords.length > 0 ? (
+                  medicalRecords.map((record) => (
+                    <TableRow key={record.id}>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <Calendar className="w-4 h-4 text-gray-400" />
+                          <span className="font-medium">
+                            {format(new Date(record.visit_date), 'MMM d, yyyy')}
+                          </span>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <User className="w-4 h-4 text-gray-400" />
+                          <div>
+                            <div className="font-medium">
+                              {record.patient?.users?.first_name} {record.patient?.users?.last_name}
+                            </div>
+                            <div className="text-sm text-gray-500">
+                              {record.patient?.users?.email}
+                            </div>
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <span className="text-sm">{record.diagnosis || 'No diagnosis'}</span>
+                      </TableCell>
+                      <TableCell>
+                        <span className="text-sm">{record.treatment || 'No treatment'}</span>
+                      </TableCell>
+                      <TableCell>
+                        <span className="text-sm">{record.prescription || 'No prescription'}</span>
+                      </TableCell>
+                      <TableCell>
+                        <Button size="sm" variant="outline">
+                          Edit
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={6} className="text-center text-gray-500 py-12">
+                      No medical records found
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </div>
         </div>
       </div>
     </AppLayout>

@@ -1,6 +1,7 @@
 
 import { useState } from "react";
-import { useCreateDepartment } from "@/hooks/useDepartments";
+import { useCreateDepartment } from "@/hooks/useDatabase";
+import { useAuditLogger } from "@/hooks/useAuditLogger";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,6 +16,7 @@ export function DepartmentDialog() {
   const [description, setDescription] = useState("");
 
   const createDepartment = useCreateDepartment();
+  const { logCreate } = useAuditLogger();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -27,8 +29,14 @@ export function DepartmentDialog() {
     try {
       await createDepartment.mutateAsync({
         name: name.trim(),
-        description: description.trim() || null
+        description: description.trim() || undefined
       });
+      
+      // Log the audit event
+      await logCreate(
+        "Department",
+        `Department "${name.trim()}" was created`
+      );
       
       toast.success("Department created successfully");
       setOpen(false);
@@ -61,11 +69,11 @@ export function DepartmentDialog() {
               id="name"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="Emergency Medicine"
+              placeholder="e.g., Cardiology, Emergency"
               required
             />
           </div>
-
+          
           <div className="space-y-2">
             <Label htmlFor="description">Description (Optional)</Label>
             <Textarea

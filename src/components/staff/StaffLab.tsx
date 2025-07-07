@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useLabReports, useCreateLabReport } from "@/hooks/useLabReports";
+import { useLabReports, useCreateLabReport } from "@/hooks/useDatabase";
 import { TestTube, Upload, Clock, CheckCircle, FileText, Plus, CreditCard } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { format } from "date-fns";
@@ -47,7 +47,7 @@ export function StaffLab() {
           <CardContent>
             <div className="text-2xl font-bold">
               {completedReports.filter(report => 
-                report.test_date?.startsWith(new Date().toISOString().split('T')[0])
+                report.test_date.startsWith(new Date().toISOString().split('T')[0])
               ).length}
             </div>
             <p className="text-xs text-muted-foreground">Reports completed</p>
@@ -123,14 +123,14 @@ export function StaffLab() {
                     pendingReports.map((report) => (
                       <TableRow key={report.id}>
                         <TableCell>
-                          {report.patient?.user?.first_name} {report.patient?.user?.last_name}
+                          {report.patient?.users?.first_name} {report.patient?.users?.last_name}
                         </TableCell>
                         <TableCell>{report.test_name}</TableCell>
                         <TableCell>
-                          Dr. {report.doctor?.user?.first_name} {report.doctor?.user?.last_name}
+                          Dr. {report.doctor?.users?.first_name} {report.doctor?.users?.last_name}
                         </TableCell>
                         <TableCell>
-                          {report.test_date && format(new Date(report.test_date), 'MMM d, yyyy')}
+                          {format(new Date(report.test_date), 'MMM d, yyyy')}
                         </TableCell>
                         <TableCell>
                           <div className="flex gap-2">
@@ -180,14 +180,14 @@ export function StaffLab() {
                 <div key={report.id} className="flex items-center justify-between p-3 bg-green-50 rounded-lg border border-green-200">
                   <div>
                     <p className="font-medium">
-                      {report.patient?.user?.first_name} {report.patient?.user?.last_name}
+                      {report.patient?.users?.first_name} {report.patient?.users?.last_name}
                     </p>
                     <p className="text-sm text-gray-600">{report.test_name}</p>
                   </div>
                   <div className="text-right">
                     <p className="text-sm font-medium text-green-600">Completed</p>
                     <p className="text-xs text-gray-500">
-                      {report.test_date && format(new Date(report.test_date), 'MMM d')}
+                      {format(new Date(report.test_date), 'MMM d')}
                     </p>
                   </div>
                 </div>

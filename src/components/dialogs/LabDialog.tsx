@@ -1,8 +1,6 @@
 
 import { useState } from "react";
-import { useCreateLabReport } from "@/hooks/useLabReports";
-import { usePatients } from "@/hooks/usePatients";
-import { useDoctors } from "@/hooks/useDoctors";
+import { useCreateLabReport, usePatients, useDoctors } from "@/hooks/useDatabase";
 import { useAuditLogger } from "@/hooks/useAuditLogger";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -50,7 +48,7 @@ export function LabDialog() {
       // Log the audit event
       await logCreate(
         "Lab Order",
-        `${testName.trim()} ordered for ${patient?.user?.first_name} ${patient?.user?.last_name} by Dr. ${doctor?.user?.first_name} ${doctor?.user?.last_name}`
+        `${testName.trim()} ordered for ${patient?.users?.first_name} ${patient?.users?.last_name} by Dr. ${doctor?.users?.first_name} ${doctor?.users?.last_name}`
       );
       
       toast.success("Lab order created successfully");
@@ -90,7 +88,7 @@ export function LabDialog() {
               <SelectContent>
                 {patients?.map((patient) => (
                   <SelectItem key={patient.id} value={patient.id}>
-                    {patient.user?.first_name} {patient.user?.last_name}
+                    {patient.users?.first_name} {patient.users?.last_name}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -106,7 +104,7 @@ export function LabDialog() {
               <SelectContent>
                 {doctors?.map((doctor) => (
                   <SelectItem key={doctor.id} value={doctor.id}>
-                    Dr. {doctor.user?.first_name} {doctor.user?.last_name} - {doctor.specialization}
+                    Dr. {doctor.users?.first_name} {doctor.users?.last_name} - {doctor.specialization}
                   </SelectItem>
                 ))}
               </SelectContent>

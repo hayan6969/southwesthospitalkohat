@@ -5,9 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AppointmentDialog } from "@/components/dialogs/AppointmentDialog";
 import { PatientDialog } from "@/components/dialogs/PatientDialog";
 import { InvoiceDialog } from "@/components/dialogs/InvoiceDialog";
-import { useAppointments } from "@/hooks/useAppointments";
-import { usePatients } from "@/hooks/usePatients";
-import { useDoctors } from "@/hooks/useDoctors";
+import { useAppointments, usePatients, useDoctors } from "@/hooks/useDatabase";
 import { Calendar, UserPlus, Receipt, Users, Clock, Edit, CreditCard, Printer } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { format } from "date-fns";
@@ -111,10 +109,10 @@ export function StaffCounter() {
                       <TableRow key={appointment.id}>
                         <TableCell className="font-bold">#{index + 1}</TableCell>
                         <TableCell>
-                          {appointment.patient?.user?.first_name} {appointment.patient?.user?.last_name}
+                          {appointment.patient?.users?.first_name} {appointment.patient?.users?.last_name}
                         </TableCell>
                         <TableCell>
-                          Dr. {appointment.doctor?.user?.first_name} {appointment.doctor?.user?.last_name}
+                          Dr. {appointment.doctor?.users?.first_name} {appointment.doctor?.users?.last_name}
                         </TableCell>
                         <TableCell>
                           {format(new Date(appointment.appointment_date), 'h:mm a')}
@@ -166,7 +164,7 @@ export function StaffCounter() {
                   <div key={doctor.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                     <div>
                       <p className="font-medium">
-                        Dr. {doctor.user?.first_name} {doctor.user?.last_name}
+                        Dr. {doctor.users?.first_name} {doctor.users?.last_name}
                       </p>
                       <p className="text-sm text-gray-600">{doctor.specialization}</p>
                     </div>
