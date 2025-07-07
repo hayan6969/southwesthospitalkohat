@@ -44,6 +44,7 @@ import AdminAuditLogs from "./pages/dashboard/admin/AdminAuditLogs";
 import PharmacyMedicines from "./pages/dashboard/pharmacy/PharmacyMedicines";
 import PharmacyInvoices from "./pages/dashboard/pharmacy/PharmacyInvoices";
 import PharmacyExpiry from "./pages/dashboard/pharmacy/PharmacyExpiry";
+import PharmacyAnalytics from "./pages/dashboard/pharmacy/PharmacyAnalytics";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -174,23 +175,28 @@ const App = () => (
 
             {/* Pharmacy dashboard routes */}
             <Route path="/dashboard/pharmacy" element={
-              <ProtectedRoute allowedRoles={['pharmacy']}>
+              <ProtectedRoute allowedRoles={['admin', 'staff']}>
                 <DashboardPharmacy />
               </ProtectedRoute>
             } />
             <Route path="/dashboard/pharmacy/medicines" element={
-              <ProtectedRoute allowedRoles={['pharmacy']}>
+              <ProtectedRoute allowedRoles={['admin', 'staff']}>
                 <PharmacyMedicines />
               </ProtectedRoute>
             } />
             <Route path="/dashboard/pharmacy/invoices" element={
-              <ProtectedRoute allowedRoles={['pharmacy']}>
+              <ProtectedRoute allowedRoles={['admin', 'staff']}>
                 <PharmacyInvoices />
               </ProtectedRoute>
             } />
             <Route path="/dashboard/pharmacy/expiry" element={
-              <ProtectedRoute allowedRoles={['pharmacy']}>
+              <ProtectedRoute allowedRoles={['admin', 'staff']}>
                 <PharmacyExpiry />
+              </ProtectedRoute>
+            } />
+            <Route path="/dashboard/pharmacy/analytics" element={
+              <ProtectedRoute allowedRoles={['admin', 'staff']}>
+                <PharmacyAnalytics />
               </ProtectedRoute>
             } />
 
