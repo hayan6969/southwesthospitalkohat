@@ -1,7 +1,7 @@
 
 import { useState } from "react";
-import { useCreateUser, useDepartments } from "@/hooks/useDatabase";
-import { useAuditLogger } from "@/hooks/useAuditLogger";
+import { useUsers, useCreateUser } from "@/hooks/useUsers";
+import { useDepartments } from "@/hooks/useDepartments";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,7 +20,6 @@ export function StaffDialog() {
 
   const createUser = useCreateUser();
   const { data: departments } = useDepartments();
-  const { logCreate } = useAuditLogger();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -35,16 +34,11 @@ export function StaffDialog() {
         first_name: firstName.trim(),
         last_name: lastName.trim(),
         email: email.trim(),
-        phone: phone.trim() || undefined,
+        phone: phone.trim() || null,
         role: 'staff',
-        department_id: departmentId || undefined
+        department_id: departmentId || null,
+        is_active: true
       });
-      
-      // Log the audit event
-      await logCreate(
-        "Staff Member",
-        `${firstName.trim()} ${lastName.trim()} added to staff`
-      );
       
       toast.success("Staff member created successfully");
       setOpen(false);
@@ -57,7 +51,7 @@ export function StaffDialog() {
       setDepartmentId("");
     } catch (error) {
       toast.error("Failed to create staff member");
-      console.error("Error creating staff member:", error);
+      console.error("Error creating staff:", error);
     }
   };
 
@@ -81,6 +75,7 @@ export function StaffDialog() {
                 id="firstName"
                 value={firstName}
                 onChange={(e) => setFirstName(e.target.value)}
+                placeholder="John"
                 required
               />
             </div>
@@ -90,6 +85,7 @@ export function StaffDialog() {
                 id="lastName"
                 value={lastName}
                 onChange={(e) => setLastName(e.target.value)}
+                placeholder="Doe"
                 required
               />
             </div>
@@ -102,6 +98,7 @@ export function StaffDialog() {
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
+              placeholder="john.doe@hospital.com"
               required
             />
           </div>
@@ -110,8 +107,10 @@ export function StaffDialog() {
             <Label htmlFor="phone">Phone (Optional)</Label>
             <Input
               id="phone"
+              type="tel"
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
+              placeholder="+1 (555) 123-4567"
             />
           </div>
 

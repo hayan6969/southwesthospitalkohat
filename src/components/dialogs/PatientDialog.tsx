@@ -1,7 +1,7 @@
 
 import { useState } from "react";
-import { useCreatePatient } from "@/hooks/useDatabase";
-import { useAuditLogger } from "@/hooks/useAuditLogger";
+import { useCreatePatient } from "@/hooks/usePatients";
+import { useUsers } from "@/hooks/useUsers";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,61 +13,51 @@ import { Plus } from "lucide-react";
 
 export function PatientDialog() {
   const [open, setOpen] = useState(false);
-  const [firstName, setFirstName] = useState("");
-  const [lastName, setLastName] = useState("");
-  const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
+  const [userId, setUserId] = useState("");
   const [dateOfBirth, setDateOfBirth] = useState("");
   const [address, setAddress] = useState("");
   const [bloodType, setBloodType] = useState("");
   const [allergies, setAllergies] = useState("");
+  const [emergencyContactName, setEmergencyContactName] = useState("");
+  const [emergencyContactPhone, setEmergencyContactPhone] = useState("");
 
   const createPatient = useCreatePatient();
-  const { logAction } = useAuditLogger();
+  const { data: users } = useUsers();
+
+  const availableUsers = users?.filter(user => user.role === 'patient') || [];
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!firstName.trim() || !lastName.trim() || !email.trim()) {
-      toast.error("Please fill in all required fields");
+    if (!userId) {
+      toast.error("Please select a user");
       return;
     }
 
     try {
-      const newPatient = await createPatient.mutateAsync({
-        user: {
-          first_name: firstName.trim(),
-          last_name: lastName.trim(),
-          email: email.trim(),
-          phone: phone.trim() || undefined,
-          role: 'patient'
-        },
-        date_of_birth: dateOfBirth || undefined,
-        address: address.trim() || undefined,
-        blood_type: bloodType || undefined,
-        allergies: allergies.trim() || undefined
+      await createPatient.mutateAsync({
+        id: userId,
+        date_of_birth: dateOfBirth || null,
+        address: address.trim() || null,
+        blood_type: bloodType || null,
+        allergies: allergies.trim() || null,
+        emergency_contact_name: emergencyContactName.trim() || null,
+        emergency_contact_phone: emergencyContactPhone.trim() || null
       });
       
-      // Log the audit event
-      await logAction(
-        "Registered new patient",
-        `Patient: ${firstName} ${lastName} (${email})`
-      );
-      
-      toast.success("Patient registered successfully");
+      toast.success("Patient profile created successfully");
       setOpen(false);
       
       // Reset form
-      setFirstName("");
-      setLastName("");
-      setEmail("");
-      setPhone("");
+      setUserId("");
       setDateOfBirth("");
       setAddress("");
       setBloodType("");
       setAllergies("");
+      setEmergencyContactName("");
+      setEmergencyContactPhone("");
     } catch (error) {
-      toast.error("Failed to register patient");
+      toast.error("Failed to create patient profile");
       console.error("Error creating patient:", error);
     }
   };
@@ -80,56 +70,25 @@ export function PatientDialog() {
           Register Patient
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle>Register New Patient</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="firstName">First Name *</Label>
-              <Input
-                id="firstName"
-                value={firstName}
-                onChange={(e) => setFirstName(e.target.value)}
-                placeholder="John"
-                required
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="lastName">Last Name *</Label>
-              <Input
-                id="lastName"
-                value={lastName}
-                onChange={(e) => setLastName(e.target.value)}
-                placeholder="Doe"
-                required
-              />
-            </div>
-          </div>
-
           <div className="space-y-2">
-            <Label htmlFor="email">Email *</Label>
-            <Input
-              id="email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="john.doe@example.com"
-              required
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="phone">Phone</Label>
-            <Input
-              id="phone"
-              type="tel"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              placeholder="+1 (555) 123-4567"
-            />
+            <Label htmlFor="user">Select User</Label>
+            <Select value={userId} onValueChange={setUserId} required>
+              <SelectTrigger>
+                <SelectValue placeholder="Select a user with patient role" />
+              </SelectTrigger>
+              <SelectContent>
+                {availableUsers.map((user) => (
+                  <SelectItem key={user.id} value={user.id}>
+                    {user.first_name} {user.last_name} ({user.email})
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="space-y-2">
@@ -148,27 +107,51 @@ export function PatientDialog() {
               id="address"
               value={address}
               onChange={(e) => setAddress(e.target.value)}
-              placeholder="123 Main St, City, State, ZIP"
+              placeholder="123 Main St, City, State"
+              rows={2}
             />
           </div>
 
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="bloodType">Blood Type</Label>
+              <Select value={bloodType} onValueChange={setBloodType}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select blood type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="A+">A+</SelectItem>
+                  <SelectItem value="A-">A-</SelectItem>
+                  <SelectItem value="B+">B+</SelectItem>
+                  <SelectItem value="B-">B-</SelectItem>
+                  <SelectItem value="AB+">AB+</SelectItem>
+                  <SelectItem value="AB-">AB-</SelectItem>
+                  <SelectItem value="O+">O+</SelectItem>
+                  <SelectItem value="O-">O-</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="emergencyContactName">Emergency Contact</Label>
+              <Input
+                id="emergencyContactName"
+                value={emergencyContactName}
+                onChange={(e) => setEmergencyContactName(e.target.value)}
+                placeholder="Contact name"
+              />
+            </div>
+          </div>
+
           <div className="space-y-2">
-            <Label htmlFor="bloodType">Blood Type</Label>
-            <Select value={bloodType} onValueChange={setBloodType}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select blood type" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="A+">A+</SelectItem>
-                <SelectItem value="A-">A-</SelectItem>
-                <SelectItem value="B+">B+</SelectItem>
-                <SelectItem value="B-">B-</SelectItem>
-                <SelectItem value="AB+">AB+</SelectItem>
-                <SelectItem value="AB-">AB-</SelectItem>
-                <SelectItem value="O+">O+</SelectItem>
-                <SelectItem value="O-">O-</SelectItem>
-              </SelectContent>
-            </Select>
+            <Label htmlFor="emergencyContactPhone">Emergency Contact Phone</Label>
+            <Input
+              id="emergencyContactPhone"
+              type="tel"
+              value={emergencyContactPhone}
+              onChange={(e) => setEmergencyContactPhone(e.target.value)}
+              placeholder="+1 (555) 123-4567"
+            />
           </div>
 
           <div className="space-y-2">
@@ -178,6 +161,7 @@ export function PatientDialog() {
               value={allergies}
               onChange={(e) => setAllergies(e.target.value)}
               placeholder="List any known allergies..."
+              rows={2}
             />
           </div>
 
@@ -186,7 +170,7 @@ export function PatientDialog() {
               Cancel
             </Button>
             <Button type="submit" disabled={createPatient.isPending}>
-              {createPatient.isPending ? "Registering..." : "Register Patient"}
+              {createPatient.isPending ? "Creating..." : "Register Patient"}
             </Button>
           </div>
         </form>

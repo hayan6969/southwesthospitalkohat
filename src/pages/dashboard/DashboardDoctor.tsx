@@ -1,188 +1,91 @@
 
 import AppLayout from "@/layouts/AppLayout";
 import { StatsCard } from "@/components/StatsCard";
-import { MiniChart } from "@/components/MiniChart";
-import { useAppointments, useStats, useMedicalRecords } from "@/hooks/useDatabase";
-import { Calendar, Users, Clock, CheckCircle, Plus } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { format } from "date-fns";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-
-const chartData = {
-  appointments: [{ value: 8 }, { value: 12 }, { value: 15 }, { value: 10 }, { value: 18 }],
-  patients: [{ value: 45 }, { value: 52 }, { value: 58 }, { value: 55 }, { value: 62 }],
-};
+import { DemoTable } from "@/components/DemoTable";
+import { AuditLog } from "@/components/AuditLog";
+import { useStats } from "@/hooks/useStats";
+import { useAppointments } from "@/hooks/useAppointments";
+import { Calendar, Users, FileText, Clock } from "lucide-react";
 
 export default function DashboardDoctor() {
-  const { data: appointments, isLoading: appointmentsLoading } = useAppointments();
   const { data: stats, isLoading: statsLoading } = useStats();
-  const { data: medicalRecords, isLoading: recordsLoading } = useMedicalRecords();
+  const { data: appointments, isLoading: appointmentsLoading } = useAppointments();
 
-  // Filter today's appointments
-  const today = new Date().toISOString().split('T')[0];
-  const todayAppointments = appointments?.filter(apt => 
-    apt.appointment_date.startsWith(today)
-  ) || [];
-
-  const upcomingAppointments = appointments?.filter(apt => 
-    new Date(apt.appointment_date) > new Date() && apt.status === 'scheduled'
-  ).slice(0, 5) || [];
-
-  const recentRecords = medicalRecords?.slice(0, 5) || [];
+  const todayAppointments = appointments?.filter(apt => {
+    const today = new Date().toDateString();
+    const aptDate = new Date(apt.appointment_date).toDateString();
+    return today === aptDate;
+  }) || [];
 
   return (
     <AppLayout>
       <div className="space-y-8">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">Welcome, Dr. Smith!</h1>
-            <p className="text-gray-600 mt-1">Here's your overview for today</p>
-          </div>
-          <div className="flex gap-3">
-            <Button className="bg-blue-600 hover:bg-blue-700">
-              <Plus className="w-4 h-4 mr-2" />
-              New Appointment
-            </Button>
-            <Button variant="outline">View Schedule</Button>
-          </div>
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Doctor Dashboard</h1>
+          <p className="text-gray-600 mt-1">Welcome back, Dr. Smith!</p>
         </div>
-        
+
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           <StatsCard
             title="Today's Appointments"
             value={todayAppointments.length}
             icon={<Calendar className="w-5 h-5 text-blue-600" />}
-            chart={<MiniChart data={chartData.appointments} type="bar" color="#3b82f6" />}
             loading={appointmentsLoading}
           />
           <StatsCard
             title="Total Patients"
             value={stats?.totalPatients || 0}
-            change="+12%"
-            changeType="positive"
             icon={<Users className="w-5 h-5 text-green-600" />}
-            chart={<MiniChart data={chartData.patients} type="line" color="#10b981" />}
             loading={statsLoading}
           />
           <StatsCard
-            title="Completed Today"
-            value={todayAppointments.filter(apt => apt.status === 'completed').length}
-            icon={<CheckCircle className="w-5 h-5 text-emerald-600" />}
-            loading={appointmentsLoading}
+            title="Pending Reports"
+            value="7"
+            icon={<FileText className="w-5 h-5 text-orange-600" />}
           />
           <StatsCard
-            title="Next Appointment"
-            value={upcomingAppointments[0] ? format(new Date(upcomingAppointments[0].appointment_date), 'h:mm a') : 'None'}
-            icon={<Clock className="w-5 h-5 text-orange-600" />}
-            loading={appointmentsLoading}
+            title="Hours Today"
+            value="6.5"
+            icon={<Clock className="w-5 h-5 text-purple-600" />}
           />
         </div>
 
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
-          <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="font-semibold text-lg text-gray-900">Today's Schedule</h3>
-              <Button variant="outline" size="sm">View All</Button>
-            </div>
-            <div className="overflow-hidden">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Time</TableHead>
-                    <TableHead>Patient</TableHead>
-                    <TableHead>Type</TableHead>
-                    <TableHead>Status</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {appointmentsLoading ? (
-                    Array.from({ length: 3 }).map((_, i) => (
-                      <TableRow key={i}>
-                        <TableCell><div className="h-4 bg-gray-200 rounded animate-pulse"></div></TableCell>
-                        <TableCell><div className="h-4 bg-gray-200 rounded animate-pulse"></div></TableCell>
-                        <TableCell><div className="h-4 bg-gray-200 rounded animate-pulse"></div></TableCell>
-                        <TableCell><div className="h-4 bg-gray-200 rounded animate-pulse"></div></TableCell>
-                      </TableRow>
-                    ))
-                  ) : todayAppointments.length > 0 ? (
-                    todayAppointments.map((appointment) => (
-                      <TableRow key={appointment.id}>
-                        <TableCell className="font-medium">
-                          {format(new Date(appointment.appointment_date), 'h:mm a')}
-                        </TableCell>
-                        <TableCell>
-                          {appointment.patient?.users?.first_name} {appointment.patient?.users?.last_name}
-                        </TableCell>
-                        <TableCell>{appointment.type}</TableCell>
-                        <TableCell>
-                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                            appointment.status === 'completed' ? 'bg-green-100 text-green-700' :
-                            appointment.status === 'scheduled' ? 'bg-blue-100 text-blue-700' :
-                            'bg-gray-100 text-gray-700'
-                          }`}>
-                            {appointment.status}
-                          </span>
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  ) : (
-                    <TableRow>
-                      <TableCell colSpan={4} className="text-center text-gray-500 py-8">
-                        No appointments scheduled for today
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </div>
+          <div className="bg-white rounded-lg border shadow-sm p-6">
+            <h3 className="font-semibold mb-4">Today's Schedule</h3>
+            <DemoTable
+              columns={["Time", "Patient", "Type"]}
+              data={[
+                ["09:00 AM", "John Doe", "Consultation"],
+                ["10:00 AM", "Jane Smith", "Follow-up"],
+                ["11:30 AM", "Bob Johnson", "Check-up"],
+                ["02:00 PM", "Alice Brown", "Consultation"],
+              ]}
+            />
           </div>
+          <div className="bg-white rounded-lg border shadow-sm p-6">
+            <h3 className="font-semibold mb-4">Recent Patients</h3>
+            <DemoTable
+              columns={["Patient", "Last Visit", "Status"]}
+              data={[
+                ["John Doe", "Yesterday", "Stable"],
+                ["Jane Smith", "2 days ago", "Recovering"],
+                ["Bob Johnson", "3 days ago", "Follow-up needed"],
+                ["Alice Brown", "1 week ago", "Stable"],
+              ]}
+            />
+          </div>
+        </div>
 
-          <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="font-semibold text-lg text-gray-900">Recent Medical Records</h3>
-              <Button variant="outline" size="sm">View All</Button>
-            </div>
-            <div className="overflow-hidden">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Patient</TableHead>
-                    <TableHead>Date</TableHead>
-                    <TableHead>Diagnosis</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {recordsLoading ? (
-                    Array.from({ length: 3 }).map((_, i) => (
-                      <TableRow key={i}>
-                        <TableCell><div className="h-4 bg-gray-200 rounded animate-pulse"></div></TableCell>
-                        <TableCell><div className="h-4 bg-gray-200 rounded animate-pulse"></div></TableCell>
-                        <TableCell><div className="h-4 bg-gray-200 rounded animate-pulse"></div></TableCell>
-                      </TableRow>
-                    ))
-                  ) : recentRecords.length > 0 ? (
-                    recentRecords.map((record) => (
-                      <TableRow key={record.id}>
-                        <TableCell className="font-medium">
-                          {record.patient?.users?.first_name} {record.patient?.users?.last_name}
-                        </TableCell>
-                        <TableCell>
-                          {format(new Date(record.visit_date), 'MMM d, yyyy')}
-                        </TableCell>
-                        <TableCell>{record.diagnosis || 'No diagnosis'}</TableCell>
-                      </TableRow>
-                    ))
-                  ) : (
-                    <TableRow>
-                      <TableCell colSpan={3} className="text-center text-gray-500 py-8">
-                        No medical records found
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </div>
-          </div>
+        <div className="mt-8">
+          <AuditLog 
+            title="Recent Activity"
+            events={[
+              { who: "Dr. Smith", when: "2024-06-12 14:30", what: "Patient consultation completed", details: "John Doe - Annual physical" },
+              { who: "Dr. Smith", when: "2024-06-12 13:15", what: "Lab report reviewed", details: "Jane Smith - Blood work results" },
+              { who: "Dr. Smith", when: "2024-06-12 11:45", what: "Prescription updated", details: "Bob Johnson - Medication adjustment" },
+            ]} 
+          />
         </div>
       </div>
     </AppLayout>

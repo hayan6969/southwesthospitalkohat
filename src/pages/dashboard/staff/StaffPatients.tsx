@@ -1,5 +1,6 @@
+
 import AppLayout from "@/layouts/AppLayout";
-import { usePatients } from "@/hooks/useDatabase";
+import { usePatients } from "@/hooks/usePatients";
 import { PatientDialog } from "@/components/dialogs/PatientDialog";
 import { Users, Eye, Edit } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -56,23 +57,23 @@ export default function StaffPatients() {
                     <TableRow key={patient.id}>
                       <TableCell>
                         <div className="font-medium">
-                          {patient.users?.first_name} {patient.users?.last_name}
+                          {patient.user?.first_name} {patient.user?.last_name}
                         </div>
                         <div className="text-sm text-gray-500">
-                          {patient.users?.email}
+                          {patient.user?.email}
                         </div>
                       </TableCell>
                       <TableCell>
                         {patient.date_of_birth ? format(new Date(patient.date_of_birth), 'MMM d, yyyy') : 'N/A'}
                       </TableCell>
-                      <TableCell>{patient.users?.phone || 'N/A'}</TableCell>
+                      <TableCell>{patient.user?.phone || 'N/A'}</TableCell>
                       <TableCell>
                         <span className="px-2 py-1 bg-red-100 text-red-700 rounded-full text-sm font-medium">
                           {patient.blood_type || 'Unknown'}
                         </span>
                       </TableCell>
                       <TableCell>
-                        {format(new Date(patient.users?.created_at || ''), 'MMM d, yyyy')}
+                        {format(new Date(patient.user?.created_at || ''), 'MMM d, yyyy')}
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">

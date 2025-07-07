@@ -4,7 +4,8 @@ import { StatsCard } from "@/components/StatsCard";
 import { Calculator, TrendingUp, Users, Receipt, DollarSign, Minus } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { useInvoices, useStats } from "@/hooks/useDatabase";
+import { useInvoices } from "@/hooks/useInvoices";
+import { useStats } from "@/hooks/useStats";
 import { formatPkrCurrency } from "@/utils/currency";
 
 export default function DashboardFinance() {

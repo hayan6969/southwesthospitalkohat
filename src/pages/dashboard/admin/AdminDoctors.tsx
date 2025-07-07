@@ -1,7 +1,8 @@
+
 import AppLayout from "@/layouts/AppLayout";
-import { useDoctors } from "@/hooks/useDatabase";
+import { useDoctors } from "@/hooks/useDoctors";
 import { DoctorDialog } from "@/components/dialogs/DoctorDialog";
-import { UserCheck, Edit, Mail, Phone, Award } from "lucide-react";
+import { UserCheck, Eye, Edit } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
@@ -14,7 +15,7 @@ export default function AdminDoctors() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold text-gray-900">Doctor Management</h1>
-            <p className="text-gray-600 mt-1">Manage hospital doctors and specialists</p>
+            <p className="text-gray-600 mt-1">Manage doctor profiles and specializations</p>
           </div>
           <DoctorDialog />
         </div>
@@ -23,7 +24,7 @@ export default function AdminDoctors() {
           <div className="p-6 border-b border-gray-200">
             <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
               <UserCheck className="w-5 h-5" />
-              Doctor Directory
+              Doctor Registry
             </h2>
           </div>
           
@@ -32,10 +33,10 @@ export default function AdminDoctors() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Doctor Name</TableHead>
-                  <TableHead>Contact</TableHead>
                   <TableHead>Specialization</TableHead>
                   <TableHead>Experience</TableHead>
-                  <TableHead>License</TableHead>
+                  <TableHead>License Number</TableHead>
+                  <TableHead>Contact</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -54,53 +55,34 @@ export default function AdminDoctors() {
                   doctors.map((doctor) => (
                     <TableRow key={doctor.id}>
                       <TableCell>
-                        <div className="flex items-center gap-2">
-                          <UserCheck className="w-4 h-4 text-gray-400" />
-                          <div>
-                            <div className="font-medium">
-                              Dr. {doctor.users?.first_name} {doctor.users?.last_name}
-                            </div>
-                          </div>
+                        <div className="font-medium">
+                          Dr. {doctor.user?.first_name} {doctor.user?.last_name}
+                        </div>
+                        <div className="text-sm text-gray-500">
+                          {doctor.user?.email}
                         </div>
                       </TableCell>
                       <TableCell>
-                        <div className="space-y-1">
-                          <div className="flex items-center gap-2 text-sm">
-                            <Mail className="w-3 h-3 text-gray-400" />
-                            {doctor.users?.email}
-                          </div>
-                          {doctor.users?.phone && (
-                            <div className="flex items-center gap-2 text-sm">
-                              <Phone className="w-3 h-3 text-gray-400" />
-                              {doctor.users?.phone}
-                            </div>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <span className="px-2 py-1 bg-purple-100 text-purple-700 rounded-full text-sm font-medium">
-                          {doctor.specialization}
+                        <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-medium">
+                          {doctor.specialization || 'General'}
                         </span>
                       </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <Award className="w-4 h-4 text-gray-400" />
-                          <span>{doctor.experience_years} years</span>
-                        </div>
-                      </TableCell>
+                      <TableCell>{doctor.experience_years || 0} years</TableCell>
                       <TableCell>
                         <span className="text-sm font-mono">
-                          {doctor.license_number}
+                          {doctor.license_number || 'N/A'}
                         </span>
                       </TableCell>
+                      <TableCell>{doctor.user?.phone || 'N/A'}</TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
+                          <Button size="sm" variant="outline">
+                            <Eye className="w-3 h-3 mr-1" />
+                            View
+                          </Button>
                           <Button size="sm" variant="outline">
                             <Edit className="w-3 h-3 mr-1" />
                             Edit
-                          </Button>
-                          <Button size="sm" variant="outline">
-                            View Schedule
                           </Button>
                         </div>
                       </TableCell>

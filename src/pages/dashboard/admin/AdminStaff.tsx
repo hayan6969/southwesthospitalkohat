@@ -1,41 +1,23 @@
 
-import { useState } from "react";
 import AppLayout from "@/layouts/AppLayout";
-import { useUsers, useDepartments } from "@/hooks/useDatabase";
-import { AccountManagementDialog } from "@/components/dialogs/AccountManagementDialog";
-import { EditUserDialog } from "@/components/dialogs/EditUserDialog";
-import { Users, Edit, UserCheck, Trash2, Eye } from "lucide-react";
+import { useUsers } from "@/hooks/useUsers";
+import { useDepartments } from "@/hooks/useDepartments";
+import { StaffDialog } from "@/components/dialogs/StaffDialog";
+import { Users, Eye, Edit } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { format } from "date-fns";
 
 export default function AdminStaff() {
-  const { data: users, isLoading, refetch } = useUsers();
+  const { data: users, isLoading: usersLoading } = useUsers();
   const { data: departments } = useDepartments();
-  const [editingUser, setEditingUser] = useState<any>(null);
-  const [editDialogOpen, setEditDialogOpen] = useState(false);
 
-  // Filter for all users except patients
-  const nonPatientUsers = users?.filter(user => user.role !== 'patient') || [];
+  const staffMembers = users?.filter(user => user.role === 'staff') || [];
 
-  const handleEditUser = (user: any) => {
-    setEditingUser(user);
-    setEditDialogOpen(true);
-  };
-
-  const handleUserUpdated = () => {
-    refetch();
-  };
-
-  const getRoleBadgeColor = (role: string) => {
-    switch (role) {
-      case 'admin': return 'bg-purple-100 text-purple-700';
-      case 'doctor': return 'bg-green-100 text-green-700';
-      case 'staff': return 'bg-blue-100 text-blue-700';
-      case 'pharmacy': return 'bg-orange-100 text-orange-700';
-      case 'finance': return 'bg-teal-100 text-teal-700';
-      default: return 'bg-gray-100 text-gray-700';
-    }
+  const getDepartmentName = (departmentId: string | null | undefined) => {
+    if (!departmentId) return 'Unassigned';
+    const department = departments?.find(d => d.id === departmentId);
+    return department?.name || 'Unknown';
   };
 
   return (
@@ -44,16 +26,16 @@ export default function AdminStaff() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold text-gray-900">Staff Management</h1>
-            <p className="text-gray-600 mt-1">Manage hospital staff, doctors, pharmacy, and finance users</p>
+            <p className="text-gray-600 mt-1">Manage hospital staff and assignments</p>
           </div>
-          <AccountManagementDialog />
+          <StaffDialog />
         </div>
 
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
           <div className="p-6 border-b border-gray-200">
             <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
               <Users className="w-5 h-5" />
-              All Staff Members ({nonPatientUsers.length})
+              Staff Directory
             </h2>
           </div>
           
@@ -61,55 +43,61 @@ export default function AdminStaff() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Phone</TableHead>
-                  <TableHead>Role</TableHead>
+                  <TableHead>Staff Name</TableHead>
                   <TableHead>Department</TableHead>
+                  <TableHead>Contact</TableHead>
+                  <TableHead>Status</TableHead>
                   <TableHead>Join Date</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {isLoading ? (
+                {usersLoading ? (
                   Array.from({ length: 5 }).map((_, i) => (
                     <TableRow key={i}>
-                      {Array.from({ length: 7 }).map((_, j) => (
+                      {Array.from({ length: 6 }).map((_, j) => (
                         <TableCell key={j}>
                           <div className="h-4 bg-gray-200 rounded animate-pulse"></div>
                         </TableCell>
                       ))}
                     </TableRow>
                   ))
-                ) : nonPatientUsers && nonPatientUsers.length > 0 ? (
-                  nonPatientUsers.map((user) => (
-                    <TableRow key={user.id}>
+                ) : staffMembers && staffMembers.length > 0 ? (
+                  staffMembers.map((staff) => (
+                    <TableRow key={staff.id}>
                       <TableCell>
-                        <div className="flex items-center gap-2">
-                          <UserCheck className="w-4 h-4 text-gray-400" />
-                          <span className="font-medium">{user.first_name} {user.last_name}</span>
+                        <div className="font-medium">
+                          {staff.first_name} {staff.last_name}
+                        </div>
+                        <div className="text-sm text-gray-500">
+                          {staff.email}
                         </div>
                       </TableCell>
-                      <TableCell>{user.email}</TableCell>
-                      <TableCell>{user.phone || 'N/A'}</TableCell>
                       <TableCell>
-                        <span className={`px-2 py-1 rounded-full text-sm font-medium ${getRoleBadgeColor(user.role)}`}>
-                          {user.role}
+                        <span className="px-2 py-1 bg-purple-100 text-purple-700 rounded-full text-sm font-medium">
+                          {getDepartmentName(staff.department_id)}
+                        </span>
+                      </TableCell>
+                      <TableCell>{staff.phone || 'N/A'}</TableCell>
+                      <TableCell>
+                        <span className={`px-2 py-1 rounded-full text-sm font-medium ${
+                          staff.is_active 
+                            ? 'bg-green-100 text-green-700' 
+                            : 'bg-red-100 text-red-700'
+                        }`}>
+                          {staff.is_active ? 'Active' : 'Inactive'}
                         </span>
                       </TableCell>
                       <TableCell>
-                        {departments?.find(dept => dept.id === user.department_id)?.name || 'N/A'}
-                      </TableCell>
-                      <TableCell>
-                        {format(new Date(user.created_at), 'MMM d, yyyy')}
+                        {staff.created_at ? format(new Date(staff.created_at), 'MMM d, yyyy') : 'N/A'}
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
-                          <Button 
-                            size="sm" 
-                            variant="outline"
-                            onClick={() => handleEditUser(user)}
-                          >
+                          <Button size="sm" variant="outline">
+                            <Eye className="w-3 h-3 mr-1" />
+                            View
+                          </Button>
+                          <Button size="sm" variant="outline">
                             <Edit className="w-3 h-3 mr-1" />
                             Edit
                           </Button>
@@ -119,7 +107,7 @@ export default function AdminStaff() {
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center text-gray-500 py-12">
+                    <TableCell colSpan={6} className="text-center text-gray-500 py-12">
                       No staff members found
                     </TableCell>
                   </TableRow>
@@ -128,13 +116,6 @@ export default function AdminStaff() {
             </Table>
           </div>
         </div>
-
-        <EditUserDialog 
-          user={editingUser}
-          open={editDialogOpen}
-          onOpenChange={setEditDialogOpen}
-          onUserUpdated={handleUserUpdated}
-        />
       </div>
     </AppLayout>
   );

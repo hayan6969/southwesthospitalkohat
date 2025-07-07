@@ -1,7 +1,8 @@
+
 import AppLayout from "@/layouts/AppLayout";
-import { useDepartments } from "@/hooks/useDatabase";
+import { useDepartments } from "@/hooks/useDepartments";
 import { DepartmentDialog } from "@/components/dialogs/DepartmentDialog";
-import { Building2, Edit, Users } from "lucide-react";
+import { Building2, Eye, Edit } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { format } from "date-fns";
@@ -24,7 +25,7 @@ export default function AdminDepartments() {
           <div className="p-6 border-b border-gray-200">
             <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
               <Building2 className="w-5 h-5" />
-              All Departments
+              Departments
             </h2>
           </div>
           
@@ -34,7 +35,6 @@ export default function AdminDepartments() {
                 <TableRow>
                   <TableHead>Department Name</TableHead>
                   <TableHead>Description</TableHead>
-                  <TableHead>Staff Count</TableHead>
                   <TableHead>Created Date</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
@@ -43,7 +43,7 @@ export default function AdminDepartments() {
                 {isLoading ? (
                   Array.from({ length: 5 }).map((_, i) => (
                     <TableRow key={i}>
-                      {Array.from({ length: 5 }).map((_, j) => (
+                      {Array.from({ length: 4 }).map((_, j) => (
                         <TableCell key={j}>
                           <div className="h-4 bg-gray-200 rounded animate-pulse"></div>
                         </TableCell>
@@ -54,9 +54,8 @@ export default function AdminDepartments() {
                   departments.map((department) => (
                     <TableRow key={department.id}>
                       <TableCell>
-                        <div className="flex items-center gap-2">
-                          <Building2 className="w-4 h-4 text-gray-400" />
-                          <span className="font-medium">{department.name}</span>
+                        <div className="font-medium">
+                          {department.name}
                         </div>
                       </TableCell>
                       <TableCell>
@@ -65,22 +64,17 @@ export default function AdminDepartments() {
                         </span>
                       </TableCell>
                       <TableCell>
-                        <div className="flex items-center gap-2">
-                          <Users className="w-4 h-4 text-gray-400" />
-                          <span>5</span>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        {format(new Date(department.created_at), 'MMM d, yyyy')}
+                        {department.created_at ? format(new Date(department.created_at), 'MMM d, yyyy') : 'N/A'}
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
+                          <Button size="sm" variant="outline">
+                            <Eye className="w-3 h-3 mr-1" />
+                            View
+                          </Button>
                           <Button size="sm" variant="outline">
                             <Edit className="w-3 h-3 mr-1" />
                             Edit
-                          </Button>
-                          <Button size="sm" variant="outline">
-                            View Staff
                           </Button>
                         </div>
                       </TableCell>
@@ -88,7 +82,7 @@ export default function AdminDepartments() {
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={5} className="text-center text-gray-500 py-12">
+                    <TableCell colSpan={4} className="text-center text-gray-500 py-12">
                       No departments found
                     </TableCell>
                   </TableRow>
