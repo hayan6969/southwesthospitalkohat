@@ -1,6 +1,7 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { createClient } from '@supabase/supabase-js';
 
 export const useDepartments = () => {
   return useQuery({
@@ -56,30 +57,50 @@ export const useCreateUser = () => {
   
   return useMutation({
     mutationFn: async (params: CreateUserParams) => {
-      const { first_name, last_name, email, phone, role, department_id } = params;
-
       console.log('Creating user...', params);
 
-      // Create user record without id (let database generate it)
-      const { data, error } = await supabase
-        .from('profiles')
-        .insert({
-          first_name,
-          last_name,
-          email,
-          phone: phone || null,
-          role,
-          department_id: department_id || null,
-        })
-        .select();
+      // First create auth user
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email: params.email,
+        password: 'TempPassword123!', // Temporary password - admin will set real one
+        options: {
+          data: {
+            first_name: params.first_name,
+            last_name: params.last_name,
+            role: params.role
+          }
+        }
+      });
 
-      if (error) {
-        console.error('Error creating user:', error);
-        throw error;
+      if (authError) {
+        console.error('Error creating auth user:', authError);
+        throw authError;
       }
 
-      console.log('User created:', data);
-      return data;
+      // The profile should be created automatically by the trigger
+      // But let's manually create it to ensure it exists
+      if (authData.user) {
+        const { data: profileData, error: profileError } = await supabase
+          .from('profiles')
+          .upsert({
+            id: authData.user.id,
+            first_name: params.first_name,
+            last_name: params.last_name,
+            email: params.email,
+            phone: params.phone || null,
+            role: params.role,
+            department_id: params.department_id || null,
+          })
+          .select();
+
+        if (profileError) {
+          console.error('Error creating profile:', profileError);
+          throw profileError;
+        }
+
+        console.log('User created:', profileData);
+        return profileData;
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['users'] });
@@ -95,16 +116,18 @@ export const usePatients = () => {
         .from('patients')
         .select(`
           *,
-          users:profiles(*)
-        `)
-        .order('created_at', { ascending: false });
+          profiles(*)
+        `);
 
       if (error) {
         console.error('Error fetching patients:', error);
         throw error;
       }
 
-      return data || [];
+      return data?.map(patient => ({
+        ...patient,
+        users: patient.profiles // Map profiles to users for compatibility
+      })) || [];
     },
   });
 };
@@ -117,16 +140,18 @@ export const useDoctors = () => {
         .from('doctors')
         .select(`
           *,
-          users:profiles(*)
-        `)
-        .order('created_at', { ascending: false });
+          profiles(*)
+        `);
 
       if (error) {
         console.error('Error fetching doctors:', error);
         throw error;
       }
 
-      return data || [];
+      return data?.map(doctor => ({
+        ...doctor,
+        users: doctor.profiles // Map profiles to users for compatibility
+      })) || [];
     },
   });
 };
@@ -141,11 +166,11 @@ export const useAppointments = () => {
           *,
           patient:patients(
             *,
-            users:profiles(*)
+            profiles(*)
           ),
           doctor:doctors(
             *,
-            users:profiles(*)
+            profiles(*)
           )
         `)
         .order('appointment_date', { ascending: true });
@@ -155,7 +180,17 @@ export const useAppointments = () => {
         throw error;
       }
 
-      return data || [];
+      return data?.map(appointment => ({
+        ...appointment,
+        patient: appointment.patient ? {
+          ...appointment.patient,
+          users: appointment.patient.profiles
+        } : null,
+        doctor: appointment.doctor ? {
+          ...appointment.doctor,
+          users: appointment.doctor.profiles
+        } : null
+      })) || [];
     },
   });
 };
@@ -170,7 +205,7 @@ export const useInvoices = () => {
           *,
           patient:patients(
             *,
-            users:profiles(*)
+            profiles(*)
           )
         `)
         .order('created_at', { ascending: false });
@@ -180,7 +215,13 @@ export const useInvoices = () => {
         throw error;
       }
 
-      return data || [];
+      return data?.map(invoice => ({
+        ...invoice,
+        patient: invoice.patient ? {
+          ...invoice.patient,
+          users: invoice.patient.profiles
+        } : null
+      })) || [];
     },
   });
 };
@@ -195,11 +236,11 @@ export const useLabReports = () => {
           *,
           patient:patients(
             *,
-            users:profiles(*)
+            profiles(*)
           ),
           doctor:doctors(
             *,
-            users:profiles(*)
+            profiles(*)
           )
         `)
         .order('test_date', { ascending: false });
@@ -209,7 +250,17 @@ export const useLabReports = () => {
         throw error;
       }
 
-      return data || [];
+      return data?.map(report => ({
+        ...report,
+        patient: report.patient ? {
+          ...report.patient,
+          users: report.patient.profiles
+        } : null,
+        doctor: report.doctor ? {
+          ...report.doctor,
+          users: report.doctor.profiles
+        } : null
+      })) || [];
     },
   });
 };
@@ -224,11 +275,11 @@ export const useMedicalRecords = () => {
           *,
           patient:patients(
             *,
-            users:profiles(*)
+            profiles(*)
           ),
           doctor:doctors(
             *,
-            users:profiles(*)
+            profiles(*)
           )
         `)
         .order('visit_date', { ascending: false });
@@ -238,7 +289,17 @@ export const useMedicalRecords = () => {
         throw error;
       }
 
-      return data || [];
+      return data?.map(record => ({
+        ...record,
+        patient: record.patient ? {
+          ...record.patient,
+          users: record.patient.profiles
+        } : null,
+        doctor: record.doctor ? {
+          ...record.doctor,
+          users: record.doctor.profiles
+        } : null
+      })) || [];
     },
   });
 };
@@ -399,35 +460,53 @@ export const useCreateDoctor = () => {
       license_number?: string;
       experience_years?: number;
     }) => {
-      // First create the user profile
-      const { data: userData, error: userError } = await supabase
-        .from('profiles')
-        .insert({
-          first_name: params.user.first_name,
-          last_name: params.user.last_name,
-          email: params.user.email,
-          phone: params.user.phone || null,
-          role: params.user.role,
-          department_id: params.user.department_id || null,
-        })
-        .select()
-        .single();
+      // First create auth user and profile
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email: params.user.email,
+        password: 'TempPassword123!',
+        options: {
+          data: {
+            first_name: params.user.first_name,
+            last_name: params.user.last_name,
+            role: params.user.role
+          }
+        }
+      });
 
-      if (userError) throw userError;
+      if (authError) throw authError;
 
-      // Then create the doctor record
-      const { data: doctorData, error: doctorError } = await supabase
-        .from('doctors')
-        .insert({
-          id: userData.id,
-          specialization: params.specialization,
-          license_number: params.license_number || null,
-          experience_years: params.experience_years || 0,
-        })
-        .select();
+      if (authData.user) {
+        // Create profile
+        const { data: profileData, error: profileError } = await supabase
+          .from('profiles')
+          .upsert({
+            id: authData.user.id,
+            first_name: params.user.first_name,
+            last_name: params.user.last_name,
+            email: params.user.email,
+            phone: params.user.phone || null,
+            role: params.user.role,
+            department_id: params.user.department_id || null,
+          })
+          .select()
+          .single();
 
-      if (doctorError) throw doctorError;
-      return doctorData;
+        if (profileError) throw profileError;
+
+        // Then create the doctor record
+        const { data: doctorData, error: doctorError } = await supabase
+          .from('doctors')
+          .insert({
+            id: authData.user.id,
+            specialization: params.specialization,
+            license_number: params.license_number || null,
+            experience_years: params.experience_years || 0,
+          })
+          .select();
+
+        if (doctorError) throw doctorError;
+        return doctorData;
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['doctors'] });
@@ -447,35 +526,53 @@ export const useCreatePatient = () => {
       blood_type?: string;
       allergies?: string;
     }) => {
-      // First create the user profile
-      const { data: userData, error: userError } = await supabase
-        .from('profiles')
-        .insert({
-          first_name: params.user.first_name,
-          last_name: params.user.last_name,
-          email: params.user.email,
-          phone: params.user.phone || null,
-          role: params.user.role,
-        })
-        .select()
-        .single();
+      // First create auth user and profile
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email: params.user.email,
+        password: 'TempPassword123!',
+        options: {
+          data: {
+            first_name: params.user.first_name,
+            last_name: params.user.last_name,
+            role: params.user.role
+          }
+        }
+      });
 
-      if (userError) throw userError;
+      if (authError) throw authError;
 
-      // Then create the patient record
-      const { data: patientData, error: patientError } = await supabase
-        .from('patients')
-        .insert({
-          id: userData.id,
-          date_of_birth: params.date_of_birth || null,
-          address: params.address || null,
-          blood_type: params.blood_type || null,
-          allergies: params.allergies || null,
-        })
-        .select();
+      if (authData.user) {
+        // Create profile
+        const { data: profileData, error: profileError } = await supabase
+          .from('profiles')
+          .upsert({
+            id: authData.user.id,
+            first_name: params.user.first_name,
+            last_name: params.user.last_name,
+            email: params.user.email,
+            phone: params.user.phone || null,
+            role: params.user.role,
+          })
+          .select()
+          .single();
 
-      if (patientError) throw patientError;
-      return patientData;
+        if (profileError) throw profileError;
+
+        // Then create the patient record
+        const { data: patientData, error: patientError } = await supabase
+          .from('patients')
+          .insert({
+            id: authData.user.id,
+            date_of_birth: params.date_of_birth || null,
+            address: params.address || null,
+            blood_type: params.blood_type || null,
+            allergies: params.allergies || null,
+          })
+          .select();
+
+        if (patientError) throw patientError;
+        return patientData;
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['patients'] });
@@ -494,11 +591,14 @@ export const useCreateAppointment = () => {
       appointment_date: string;
       type: string;
       notes?: string;
-      status?: string;
+      status?: 'scheduled' | 'completed' | 'cancelled' | 'rescheduled';
     }) => {
       const { data, error } = await supabase
         .from('appointments')
-        .insert(params)
+        .insert({
+          ...params,
+          status: params.status || 'scheduled'
+        })
         .select();
 
       if (error) throw error;
@@ -520,11 +620,14 @@ export const useCreateInvoice = () => {
       amount: number;
       description?: string;
       due_date?: string;
-      status?: string;
+      status?: 'paid' | 'pending' | 'overdue';
     }) => {
       const { data, error } = await supabase
         .from('invoices')
-        .insert(params)
+        .insert({
+          ...params,
+          status: params.status || 'pending'
+        })
         .select();
 
       if (error) throw error;
@@ -545,12 +648,15 @@ export const useCreateLabReport = () => {
       doctor_id: string;
       test_name: string;
       test_date?: string;
-      status?: string;
+      status?: 'pending' | 'completed' | 'reviewed';
       notes?: string;
     }) => {
       const { data, error } = await supabase
         .from('lab_reports')
-        .insert(params)
+        .insert({
+          ...params,
+          status: params.status || 'pending'
+        })
         .select();
 
       if (error) throw error;
@@ -670,7 +776,7 @@ export const useUpdateAppointment = () => {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: async (params: { id: string; status?: string; updated_at?: string }) => {
+    mutationFn: async (params: { id: string; status?: 'scheduled' | 'completed' | 'cancelled' | 'rescheduled'; updated_at?: string }) => {
       const { data, error } = await supabase
         .from('appointments')
         .update(params)
@@ -690,7 +796,7 @@ export const useUpdateInvoice = () => {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: async (params: { id: string; status?: string; paid_at?: string }) => {
+    mutationFn: async (params: { id: string; status?: 'paid' | 'pending' | 'overdue'; paid_at?: string }) => {
       const { data, error } = await supabase
         .from('invoices')
         .update(params)
@@ -710,7 +816,7 @@ export const useUpdateLabReport = () => {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: async (params: { id: string; status?: string; results?: string }) => {
+    mutationFn: async (params: { id: string; status?: 'pending' | 'completed' | 'reviewed'; results?: string }) => {
       const { data, error } = await supabase
         .from('lab_reports')
         .update(params)
