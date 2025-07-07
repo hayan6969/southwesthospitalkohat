@@ -193,6 +193,13 @@ const App = () => (
                 <PharmacyExpiry />
               </ProtectedRoute>
             } />
+
+            {/* Finance dashboard routes */}
+            <Route path="/dashboard/finance" element={
+              <ProtectedRoute allowedRoles={['finance']}>
+                <DashboardAdmin />
+              </ProtectedRoute>
+            } />
             
             {/* Redirect for unknown dashboard routes */}
             <Route path="/dashboard" element={<Navigate to="/" replace />} />

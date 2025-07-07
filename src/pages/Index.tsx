@@ -1,5 +1,6 @@
 
 import { useAuth } from "@/hooks/useAuth";
+import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import UserAccountDialog from "@/components/UserAccountDialog";
@@ -8,11 +9,21 @@ import { User, LogOut } from "lucide-react";
 const Index = () => {
   const { user, profile, signOut } = useAuth();
 
-  const handleRoleRedirect = () => {
+  useEffect(() => {
+    // Redirect to role-specific dashboard if user has a profile
     if (profile?.role) {
       window.location.href = `/dashboard/${profile.role}`;
     }
-  };
+  }, [profile]);
+
+  // Show loading while checking for profile
+  if (!profile) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
@@ -65,7 +76,7 @@ const Index = () => {
             <CardContent className="space-y-6">
               <div className="text-center">
                 <Button 
-                  onClick={handleRoleRedirect}
+                  onClick={() => window.location.href = `/dashboard/${profile.role}`}
                   className="text-lg px-8 py-3"
                 >
                   Go to My Dashboard

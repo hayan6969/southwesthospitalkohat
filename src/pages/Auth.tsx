@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
@@ -48,8 +47,7 @@ export default function Auth() {
           title: 'Login Successful',
           description: 'Redirecting to your dashboard...',
         });
-        // Redirect will be handled by the auth context
-        window.location.href = '/';
+        // Redirect will be handled by the auth context and Index page
       }
     } catch (error) {
       toast({
