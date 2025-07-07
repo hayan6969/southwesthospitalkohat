@@ -9,6 +9,7 @@ import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell } from "recharts";
 import { TrendingUp, DollarSign, Package, ShoppingCart, AlertTriangle } from "lucide-react";
 import { format, subDays, startOfDay } from "date-fns";
+import { formatPkrCurrency } from "@/utils/currency";
 
 export default function PharmacyAnalytics() {
   const { data: stats, isLoading: statsLoading } = usePharmacyStats();
@@ -117,7 +118,7 @@ export default function PharmacyAnalytics() {
               <DollarSign className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">${stats?.totalRevenue?.toFixed(2) || '0.00'}</div>
+              <div className="text-2xl font-bold">{formatPkrCurrency(stats?.totalRevenue || 0)}</div>
             </CardContent>
           </Card>
           
