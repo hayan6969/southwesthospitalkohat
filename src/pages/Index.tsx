@@ -12,6 +12,7 @@ const Index = () => {
   useEffect(() => {
     // Redirect to role-specific dashboard if user has a profile
     if (profile?.role) {
+      console.log('Redirecting to dashboard for role:', profile.role);
       window.location.href = `/dashboard/${profile.role}`;
     }
   }, [profile]);
