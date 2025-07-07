@@ -348,7 +348,10 @@ export const useAuditLogs = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('audit_logs')
-        .select('*')
+        .select(`
+          *,
+          user:profiles(*)
+        `)
         .order('created_at', { ascending: false });
 
       if (error) {
