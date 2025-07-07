@@ -1,3 +1,4 @@
+
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
@@ -45,7 +46,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         .eq('id', userId)
         .single();
 
-      if (error && error.code !== 'PGRST116') {
+      if (error) {
         console.error('Error fetching user profile:', error);
         return null;
       }
@@ -77,16 +78,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setUser(session?.user ?? null);
         
         if (session?.user) {
-          // Defer profile fetching to avoid potential deadlocks
-          setTimeout(async () => {
-            const profileData = await fetchUserProfile(session.user.id);
-            setProfile(profileData);
-            setLoading(false);
-          }, 0);
+          // Fetch profile data
+          const profileData = await fetchUserProfile(session.user.id);
+          setProfile(profileData);
         } else {
           setProfile(null);
-          setLoading(false);
         }
+        setLoading(false);
       }
     );
 
