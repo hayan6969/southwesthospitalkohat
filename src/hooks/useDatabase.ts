@@ -203,6 +203,21 @@ export const useInvoices = () => {
   });
 };
 
+export const useMedicines = () => {
+  return useQuery({
+    queryKey: ['medicines'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('medicines')
+        .select('*')
+        .order('name');
+
+      if (error) throw error;
+      return data;
+    }
+  });
+};
+
 export const usePharmacyStats = () => {
   return useQuery({
     queryKey: ['pharmacy-stats'],
@@ -453,6 +468,28 @@ export const useCreateMedicalRecord = () => {
   });
 };
 
+export const useCreateMedicine = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async (medicine: any) => {
+      const { data, error } = await supabase
+        .from('medicines')
+        .insert([medicine])
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['medicines'] });
+      queryClient.invalidateQueries({ queryKey: ['pharmacy-stats'] });
+      queryClient.invalidateQueries({ queryKey: ['expiring-medicines'] });
+    },
+  });
+};
+
 export const useUpdateAppointment = () => {
   const queryClient = useQueryClient();
   
@@ -516,6 +553,29 @@ export const useUpdateLabReport = () => {
   });
 };
 
+export const useUpdateMedicine = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async ({ id, ...updates }: any) => {
+      const { data, error } = await supabase
+        .from('medicines')
+        .update(updates)
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['medicines'] });
+      queryClient.invalidateQueries({ queryKey: ['pharmacy-stats'] });
+      queryClient.invalidateQueries({ queryKey: ['expiring-medicines'] });
+    },
+  });
+};
+
 export const useDeleteAppointment = () => {
   const queryClient = useQueryClient();
   
@@ -548,6 +608,26 @@ export const useDeleteLabReport = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['lab-reports'] });
+    },
+  });
+};
+
+export const useDeleteMedicine = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from('medicines')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['medicines'] });
+      queryClient.invalidateQueries({ queryKey: ['pharmacy-stats'] });
+      queryClient.invalidateQueries({ queryKey: ['expiring-medicines'] });
     },
   });
 };
