@@ -33,11 +33,8 @@ const navsByRole: Record<string, { label: string; to: string; icon: React.Elemen
     { label: "OT", to: "/dashboard/staff/ot", icon: Building2 },
   ],
   admin: [
-    { label: "Overview", to: "/dashboard/admin", icon: Info },
-    { label: "Analytics", to: "/dashboard/admin/analytics", icon: ChartBar },
+    { label: "Dashboard", to: "/dashboard/admin", icon: Info },
     { label: "Account Management", to: "/dashboard/admin/accounts", icon: Users },
-    { label: "Pharmacy", to: "/dashboard/admin/pharmacy", icon: Pill },
-    { label: "System Logs", to: "/dashboard/admin/logs", icon: Shield },
     { label: "System Settings", to: "/dashboard/admin/settings", icon: Settings },
   ],
   pharmacy: [
