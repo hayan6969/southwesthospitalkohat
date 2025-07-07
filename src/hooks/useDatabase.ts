@@ -278,7 +278,13 @@ export const usePharmacyInvoices = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('pharmacy_invoices')
-        .select('*')
+        .select(`
+          *,
+          pharmacy_invoice_items(
+            *,
+            medicine:medicines(*)
+          )
+        `)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -486,6 +492,54 @@ export const useCreateMedicine = () => {
       queryClient.invalidateQueries({ queryKey: ['medicines'] });
       queryClient.invalidateQueries({ queryKey: ['pharmacy-stats'] });
       queryClient.invalidateQueries({ queryKey: ['expiring-medicines'] });
+    },
+  });
+};
+
+export const useCreatePharmacyInvoice = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async ({ invoice, items }: { invoice: any, items: any[] }) => {
+      // Create the invoice first
+      const { data: invoiceData, error: invoiceError } = await supabase
+        .from('pharmacy_invoices')
+        .insert([invoice])
+        .select()
+        .single();
+
+      if (invoiceError) throw invoiceError;
+
+      // Create the invoice items
+      const itemsWithInvoiceId = items.map(item => ({
+        ...item,
+        invoice_id: invoiceData.id
+      }));
+
+      const { error: itemsError } = await supabase
+        .from('pharmacy_invoice_items')
+        .insert(itemsWithInvoiceId);
+
+      if (itemsError) throw itemsError;
+
+      // Update medicine stock quantities
+      for (const item of items) {
+        const { error: updateError } = await supabase
+          .from('medicines')
+          .update({ 
+            stock_quantity: supabase.sql`stock_quantity - ${item.quantity}` 
+          })
+          .eq('id', item.medicine_id);
+
+        if (updateError) throw updateError;
+      }
+
+      return invoiceData;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['pharmacy-invoices'] });
+      queryClient.invalidateQueries({ queryKey: ['medicines'] });
+      queryClient.invalidateQueries({ queryKey: ['pharmacy-stats'] });
     },
   });
 };
