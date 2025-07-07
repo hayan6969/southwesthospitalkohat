@@ -118,7 +118,7 @@ const App = () => (
               </ProtectedRoute>
             } />
 
-            {/* Staff dashboard routes */ 
+            {/* Staff dashboard routes */}
             <Route path="/dashboard/staff" element={
               <ProtectedRoute allowedRoles={['staff']}>
                 <DashboardStaff />
