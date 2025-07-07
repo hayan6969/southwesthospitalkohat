@@ -1,74 +1,94 @@
 
-import { useState } from "react";
-import { toast } from "@/hooks/use-toast";
-
-const roles = [
-  { key: "patient", label: "Patient" },
-  { key: "doctor", label: "Doctor" },
-  { key: "staff", label: "Staff" },
-  { key: "admin", label: "Admin" },
-];
+import { useAuth } from "@/hooks/useAuth";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import UserAccountDialog from "@/components/UserAccountDialog";
+import { User, LogOut } from "lucide-react";
 
 const Index = () => {
-  const [selectedRole, setSelectedRole] = useState<string | null>(null);
+  const { user, profile, signOut } = useAuth();
 
-  const handleRoleSelect = (role: string) => {
-    setSelectedRole(role);
-    // In real auth, would be set on login/session.
-    window.localStorage.setItem("hims_role", role);
-    toast({
-      title: "Role selected",
-      description: `Simulating "${role}" dashboard (replace with auth after Supabase setup).`,
-    });
-    window.location.href = `/dashboard/${role}`;
+  const handleRoleRedirect = () => {
+    if (profile?.role) {
+      window.location.href = `/dashboard/${profile.role}`;
+    }
   };
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
-      <div className="flex-1 flex flex-col items-center justify-center">
-        <div className="w-full max-w-xl p-10 shadow-xl rounded-lg bg-white border border-muted">
-          <h1 className="text-3xl font-bold mb-2 text-primary flex items-center gap-2">
-            <span className="inline-block w-2 h-8 bg-blue-500 rounded-full mr-2" />
-            HIMS – Hospital Management System
-          </h1>
-          <p className="text-muted-foreground mb-6">
-            <strong>Get started:</strong> Select your role to view the dashboard demo.<br />
-            <span className="text-xs text-accent-foreground mt-1 block">
-              <em>
-                (Full authentication and RBAC will be powered by Supabase – connect your Supabase project to unlock real data!)
-              </em>
-            </span>
-          </p>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-            {roles.map((role) => (
-              <button
-                key={role.key}
-                className="bg-secondary hover:bg-primary/90 text-primary font-semibold px-4 py-3 rounded transition-all shadow border border-border"
-                onClick={() => handleRoleSelect(role.key)}
-              >
-                {role.label}
-              </button>
-            ))}
-          </div>
-          <div className="text-sm text-accent-foreground mb-2">
-            <b>Demo Note:</b> These dashboards are simulated. Enable Supabase for live features.
-          </div>
-          <div className="rounded bg-blue-50 border border-blue-200 px-4 py-2 mt-2 text-blue-800">
-            <span className="font-semibold">🚀 Pro Tip:</span> Connect Supabase (green button, top right) for full backend features.{" "}
-            <a
-              href="https://docs.lovable.dev/integrations/supabase/"
-              target="_blank"
-              className="underline text-blue-700 ml-1"
-              rel="noopener noreferrer"
-            >
-              Learn more
-            </a>
-          </div>
+      <div className="flex justify-between items-center p-6 border-b">
+        <div className="flex items-center gap-2">
+          <span className="inline-block w-2 h-8 bg-blue-500 rounded-full" />
+          <h1 className="text-2xl font-bold text-primary">HIMS</h1>
+        </div>
+        
+        <div className="flex items-center gap-4">
+          {profile && (
+            <div className="flex items-center gap-2 text-sm text-gray-600">
+              <User className="w-4 h-4" />
+              <span>{profile.first_name} {profile.last_name}</span>
+              <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs">
+                {profile.role}
+              </span>
+            </div>
+          )}
+          
+          <Button variant="outline" onClick={signOut} className="flex items-center gap-2">
+            <LogOut className="w-4 h-4" />
+            Sign Out
+          </Button>
         </div>
       </div>
-      <footer className="w-full mt-12 mb-3 text-center text-xs text-muted-foreground">
-        &copy; {new Date().getFullYear()} HIMS by Inostrik. All rights reserved.
-      </footer>
+
+      <div className="flex-1 flex flex-col items-center justify-center p-10">
+        <div className="w-full max-w-2xl">
+          <Card className="shadow-xl border border-muted">
+            <CardHeader className="text-center">
+              <CardTitle className="text-3xl font-bold text-primary mb-2">
+                Welcome to HIMS
+              </CardTitle>
+              <CardDescription className="text-lg">
+                Hospital Information Management System
+              </CardDescription>
+              {profile && (
+                <div className="mt-4 p-4 bg-blue-50 rounded-lg">
+                  <p className="text-blue-800 font-medium">
+                    Welcome back, {profile.first_name}!
+                  </p>
+                  <p className="text-blue-600 text-sm">
+                    Role: {profile.role} | Email: {profile.email}
+                  </p>
+                </div>
+              )}
+            </CardHeader>
+            
+            <CardContent className="space-y-6">
+              <div className="text-center">
+                <Button 
+                  onClick={handleRoleRedirect}
+                  className="text-lg px-8 py-3"
+                >
+                  Go to My Dashboard
+                </Button>
+              </div>
+              
+              {profile?.role === 'admin' && (
+                <div className="border-t pt-6">
+                  <div className="text-center space-y-4">
+                    <h3 className="text-lg font-semibold">Admin Functions</h3>
+                    <UserAccountDialog />
+                  </div>
+                </div>
+              )}
+              
+              <div className="text-center text-sm text-gray-600 border-t pt-4">
+                <p>Authenticated with Supabase</p>
+                <p>Role-based access control enabled</p>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
     </div>
   );
 };

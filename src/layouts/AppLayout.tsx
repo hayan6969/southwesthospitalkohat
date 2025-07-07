@@ -1,112 +1,58 @@
 
 import { ReactNode } from "react";
 import { SidebarNav } from "@/components/SidebarNav";
+import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
-import { Search, Bell, Settings, User, Home } from "lucide-react";
-import { Link, useLocation } from "react-router-dom";
+import { LogOut, User } from "lucide-react";
 
-export const getCurrentRole = () => {
-  return window.localStorage.getItem("hims_role") || "patient";
-};
+interface AppLayoutProps {
+  children: ReactNode;
+}
 
-// New function to get role from current route
-const getRoleFromRoute = (pathname: string): string => {
-  if (pathname.startsWith('/dashboard/admin')) return 'admin';
-  if (pathname.startsWith('/dashboard/doctor')) return 'doctor';
-  if (pathname.startsWith('/dashboard/staff')) return 'staff';
-  if (pathname.startsWith('/dashboard/patient')) return 'patient';
-  if (pathname.startsWith('/dashboard/pharmacy')) return 'pharmacy';
-  return getCurrentRole(); // fallback to localStorage
-};
+const AppLayout = ({ children }: AppLayoutProps) => {
+  const { profile, signOut } = useAuth();
 
-export default function AppLayout({ children }: { children: ReactNode }) {
-  const location = useLocation();
-  const role = getRoleFromRoute(location.pathname);
-  
+  if (!profile) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen flex flex-col bg-gray-50 font-inter">
-      <header className="h-16 flex items-center justify-between px-6 border-b bg-white shadow-sm">
-        <div className="flex items-center gap-4">
-          <Link to="/" className="font-bold tracking-tight text-xl text-blue-600 hover:text-blue-700 transition-colors">
-            🏥 HIMS Dashboard
-          </Link>
-          
-          <nav className="hidden md:flex items-center gap-1 ml-8">
-            <Link 
-              to="/dashboard/patient" 
-              className="px-3 py-2 text-sm text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
-            >
-              Patient
-            </Link>
-            <Link 
-              to="/dashboard/doctor" 
-              className="px-3 py-2 text-sm text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
-            >
-              Doctor
-            </Link>
-            <Link 
-              to="/dashboard/staff" 
-              className="px-3 py-2 text-sm text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
-            >
-              Staff
-            </Link>
-            <Link 
-              to="/dashboard/admin" 
-              className="px-3 py-2 text-sm text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
-            >
-              Admin
-            </Link>
-            <Link 
-              to="/dashboard/pharmacy" 
-              className="px-3 py-2 text-sm text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
-            >
-              Pharmacy
-            </Link>
-          </nav>
-        </div>
-        
-        <div className="flex items-center gap-4">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-            <input
-              type="text"
-              placeholder="Search..."
-              className="pl-10 pr-4 py-2 border border-gray-200 rounded-lg bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm w-64"
-            />
-          </div>
-          
-          <Button variant="ghost" size="sm" className="relative">
-            <Bell className="w-4 h-4" />
-            <span className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full"></span>
-          </Button>
-          
-          <Button variant="ghost" size="sm">
-            <Settings className="w-4 h-4" />
-          </Button>
-          
-          <Link to="/">
-            <Button variant="ghost" size="sm">
-              <Home className="w-4 h-4" />
-            </Button>
-          </Link>
-          
-          <div className="flex items-center gap-3">
-            <span className="inline-block rounded-full bg-blue-100 text-blue-700 px-3 py-1 text-xs font-semibold uppercase tracking-wide">
-              {role}
-            </span>
-            <div className="w-8 h-8 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center">
-              <User className="w-4 h-4 text-white" />
+    <div className="min-h-screen bg-gray-50 flex">
+      <SidebarNav role={profile.role} />
+      <div className="flex-1 flex flex-col">
+        <header className="bg-white shadow-sm border-b border-gray-200 px-6 py-4">
+          <div className="flex justify-between items-center">
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+                <span className="inline-block w-2 h-8 bg-blue-500 rounded-full" />
+                HIMS
+              </h1>
+            </div>
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2 text-sm text-gray-600">
+                <User className="w-4 h-4" />
+                <span>{profile.first_name} {profile.last_name}</span>
+                <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs">
+                  {profile.role}
+                </span>
+              </div>
+              <Button variant="outline" size="sm" onClick={signOut} className="flex items-center gap-2">
+                <LogOut className="w-4 h-4" />
+                Sign Out
+              </Button>
             </div>
           </div>
-        </div>
-      </header>
-      
-      <div className="flex flex-1 w-full">
-        <SidebarNav role={role} />
-        <main className="flex-1 p-8 overflow-y-auto bg-gray-50">
+        </header>
+        <main className="flex-1 p-6 overflow-auto">
           {children}
         </main>
       </div>
     </div>
   );
-}
+};
+
+export default AppLayout;
