@@ -1,154 +1,157 @@
+
 import AppLayout from "@/layouts/AppLayout";
-import { useLabReports, useUpdateLabReport } from "@/hooks/useDatabase";
+import { useLabReports } from "@/hooks/useLabReports";
 import { LabDialog } from "@/components/dialogs/LabDialog";
-import { Activity, User, Calendar, CheckCircle } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { TestTube, Calendar, FileText, Edit, Upload } from "lucide-react";
 import { format } from "date-fns";
-import { toast } from "sonner";
 
 export default function StaffLabs() {
   const { data: labReports, isLoading } = useLabReports();
-  const updateLabReport = useUpdateLabReport();
 
-  const handleMarkComplete = async (labId: string) => {
-    try {
-      await updateLabReport.mutateAsync({
-        id: labId,
-        status: 'completed',
-        results: 'Results processed by lab staff'
-      });
-      toast.success('Lab report marked as completed');
-    } catch (error) {
-      toast.error('Failed to update lab report');
-    }
-  };
+  const pendingReports = labReports?.filter(report => report.status === 'pending') || [];
+  const completedReports = labReports?.filter(report => report.status === 'completed') || [];
 
   return (
     <AppLayout>
-      <div className="space-y-8">
-        <div className="flex items-center justify-between">
+      <div className="space-y-6">
+        <div className="flex justify-between items-center">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Lab Management</h1>
-            <p className="text-gray-600 mt-1">Process and manage laboratory reports</p>
+            <h1 className="text-3xl font-bold text-gray-900">Lab Reports Management</h1>
+            <p className="text-gray-600 mt-1">Manage laboratory tests and reports</p>
           </div>
           <LabDialog />
         </div>
 
-        <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
-          <div className="p-6 border-b border-gray-200">
-            <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
-              <Activity className="w-5 h-5" />
-              All Lab Reports
-            </h2>
-          </div>
-          
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Test Date</TableHead>
-                  <TableHead>Patient</TableHead>
-                  <TableHead>Test Name</TableHead>
-                  <TableHead>Ordered By</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Results</TableHead>
-                  <TableHead>Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {isLoading ? (
-                  Array.from({ length: 5 }).map((_, i) => (
-                    <TableRow key={i}>
-                      {Array.from({ length: 7 }).map((_, j) => (
-                        <TableCell key={j}>
-                          <div className="h-4 bg-gray-200 rounded animate-pulse"></div>
-                        </TableCell>
-                      ))}
-                    </TableRow>
-                  ))
-                ) : labReports && labReports.length > 0 ? (
-                  labReports.map((lab) => (
-                    <TableRow key={lab.id}>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <Calendar className="w-4 h-4 text-gray-400" />
-                          <span className="font-medium">
-                            {format(new Date(lab.test_date), 'MMM d, yyyy')}
-                          </span>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <User className="w-4 h-4 text-gray-400" />
-                          <div>
-                            <div className="font-medium">
-                              {lab.patient?.users?.first_name} {lab.patient?.users?.last_name}
-                            </div>
-                            <div className="text-sm text-gray-500">
-                              {lab.patient?.users?.email}
-                            </div>
-                          </div>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <span className="font-medium">{lab.test_name}</span>
-                      </TableCell>
-                      <TableCell>
-                        <div>
-                          <div className="font-medium">
-                            Dr. {lab.doctor?.users?.first_name} {lab.doctor?.users?.last_name}
-                          </div>
-                          <div className="text-sm text-gray-500">
-                            {lab.doctor?.specialization}
-                          </div>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <span className={`px-2 py-1 rounded-full text-sm font-medium ${
-                          lab.status === 'completed' ? 'bg-green-100 text-green-700' :
-                          lab.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
-                          'bg-blue-100 text-blue-700'
-                        }`}>
-                          {lab.status}
-                        </span>
-                      </TableCell>
-                      <TableCell>
-                        <span className="text-sm">
-                          {lab.results || 'Pending processing'}
-                        </span>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          {lab.status === 'pending' && (
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => handleMarkComplete(lab.id)}
-                              disabled={updateLabReport.isPending}
-                            >
-                              <CheckCircle className="w-3 h-3 mr-1" />
-                              Complete
-                            </Button>
-                          )}
-                          <Button size="sm" variant="outline">
-                            View Details
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))
-                ) : (
-                  <TableRow>
-                    <TableCell colSpan={7} className="text-center text-gray-500 py-12">
-                      No lab reports found
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </div>
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Total Reports</CardTitle>
+              <FileText className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{labReports?.length || 0}</div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Pending</CardTitle>
+              <Calendar className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{pendingReports.length}</div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Completed</CardTitle>
+              <TestTube className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{completedReports.length}</div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Today's Tests</CardTitle>
+              <TestTube className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">
+                {labReports?.filter(report => 
+                  report.test_date?.startsWith(new Date().toISOString().split('T')[0])
+                ).length || 0}
+              </div>
+            </CardContent>
+          </Card>
         </div>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>All Lab Reports</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Test Name</TableHead>
+                    <TableHead>Patient</TableHead>
+                    <TableHead>Doctor</TableHead>
+                    <TableHead>Test Date</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {isLoading ? (
+                    Array.from({ length: 5 }).map((_, i) => (
+                      <TableRow key={i}>
+                        {Array.from({ length: 6 }).map((_, j) => (
+                          <TableCell key={j}>
+                            <div className="h-4 bg-gray-200 rounded animate-pulse"></div>
+                          </TableCell>
+                        ))}
+                      </TableRow>
+                    ))
+                  ) : labReports && labReports.length > 0 ? (
+                    labReports.map((report) => (
+                      <TableRow key={report.id}>
+                        <TableCell className="font-medium">
+                          {report.test_name}
+                        </TableCell>
+                        <TableCell>
+                          {report.patient?.user?.first_name} {report.patient?.user?.last_name}
+                        </TableCell>
+                        <TableCell>
+                          Dr. {report.doctor?.user?.first_name} {report.doctor?.user?.last_name}
+                        </TableCell>
+                        <TableCell>
+                          {report.test_date && format(new Date(report.test_date), 'MMM d, yyyy')}
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={
+                            report.status === 'completed' ? 'default' :
+                            report.status === 'reviewed' ? 'secondary' :
+                            'outline'
+                          }>
+                            {report.status}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex gap-2">
+                            <Button size="sm" variant="outline">
+                              <Edit className="w-3 h-3 mr-1" />
+                              Edit
+                            </Button>
+                            {report.status === 'pending' && (
+                              <Button size="sm" variant="outline">
+                                <Upload className="w-3 h-3 mr-1" />
+                                Upload Results
+                              </Button>
+                            )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={6} className="text-center text-gray-500 py-8">
+                        No lab reports found
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </AppLayout>
   );

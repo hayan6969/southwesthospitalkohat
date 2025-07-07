@@ -1,234 +1,196 @@
 
 import AppLayout from "@/layouts/AppLayout";
-import { useExpiringMedicines } from "@/hooks/useDatabase";
+import { usePharmacy } from "@/hooks/usePharmacy";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { AlertTriangle, Calendar, Clock, XCircle } from "lucide-react";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { AlertTriangle, Calendar, Package, Trash2 } from "lucide-react";
+import { format, isAfter, isBefore, addMonths } from "date-fns";
 
 export default function PharmacyExpiry() {
-  const { data: expiringMedicines, isLoading } = useExpiringMedicines();
+  const { data: medicines, isLoading } = usePharmacy();
 
-  const expiredMedicines = expiringMedicines?.filter(med => med.daysLeft < 0) || [];
-  const urgentExpiring = expiringMedicines?.filter(med => med.daysLeft >= 0 && med.daysLeft <= 7) || [];
-  const soonExpiring = expiringMedicines?.filter(med => med.daysLeft > 7 && med.daysLeft <= 30) || [];
-  const futureExpiring = expiringMedicines?.filter(med => med.daysLeft > 30) || [];
+  const now = new Date();
+  const oneMonthFromNow = addMonths(now, 1);
 
-  const getExpiryColor = (daysLeft: number) => {
-    if (daysLeft < 0) return 'text-red-800 bg-red-100';
-    if (daysLeft <= 7) return 'text-red-600 bg-red-50';
-    if (daysLeft <= 30) return 'text-orange-600 bg-orange-50';
-    return 'text-yellow-600 bg-yellow-50';
-  };
+  const expiredMedicines = medicines?.filter(medicine => 
+    isBefore(new Date(medicine.expiry_date), now)
+  ) || [];
 
-  const getExpiryBadge = (daysLeft: number) => {
-    if (daysLeft < 0) return 'EXPIRED';
-    if (daysLeft <= 7) return 'URGENT';
-    if (daysLeft <= 30) return 'SOON';
-    return 'WATCH';
-  };
+  const expiringMedicines = medicines?.filter(medicine => {
+    const expiryDate = new Date(medicine.expiry_date);
+    return isAfter(expiryDate, now) && isBefore(expiryDate, oneMonthFromNow);
+  }) || [];
 
-  const MedicineTable = ({ medicines, title }: { medicines: any[], title: string }) => (
-    <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
-      <div className="p-6 border-b border-gray-200">
-        <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
-          <AlertTriangle className="w-5 h-5" />
-          {title} ({medicines.length})
-        </h2>
-      </div>
-      
-      <div className="overflow-x-auto">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Medicine Name</TableHead>
-              <TableHead>Company</TableHead>
-              <TableHead>Batch Number</TableHead>
-              <TableHead>Stock Quantity</TableHead>
-              <TableHead>Expiry Date</TableHead>
-              <TableHead>Days Left</TableHead>
-              <TableHead>Status</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {medicines.length > 0 ? (
-              medicines.map((medicine) => (
-                <TableRow key={medicine.id}>
-                  <TableCell>
-                    <div>
-                      <div className="font-medium">{medicine.name}</div>
-                      {medicine.formula && (
-                        <div className="text-sm text-gray-500">{medicine.formula}</div>
-                      )}
-                    </div>
-                  </TableCell>
-                  <TableCell>{medicine.company_name || '-'}</TableCell>
-                  <TableCell>{medicine.batch_number || '-'}</TableCell>
-                  <TableCell>
-                    <span className={`px-2 py-1 rounded-full text-xs ${
-                      medicine.stock_quantity <= (medicine.minimum_stock_level || 10)
-                        ? 'bg-red-100 text-red-800'
-                        : 'bg-green-100 text-green-800'
-                    }`}>
-                      {medicine.stock_quantity}
-                    </span>
-                  </TableCell>
-                  <TableCell>
-                    {new Date(medicine.expiry_date).toLocaleDateString()}
-                  </TableCell>
-                  <TableCell>
-                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${getExpiryColor(medicine.daysLeft)}`}>
-                      {medicine.daysLeft < 0 ? `${Math.abs(medicine.daysLeft)} days ago` : `${medicine.daysLeft} days left`}
-                    </span>
-                  </TableCell>
-                  <TableCell>
-                    <span className={`px-2 py-1 rounded-full text-xs font-bold ${
-                      medicine.daysLeft < 0 ? 'bg-red-200 text-red-900' :
-                      medicine.daysLeft <= 7 ? 'bg-red-100 text-red-800' :
-                      medicine.daysLeft <= 30 ? 'bg-orange-100 text-orange-800' :
-                      'bg-yellow-100 text-yellow-800'
-                    }`}>
-                      {getExpiryBadge(medicine.daysLeft)}
-                    </span>
-                  </TableCell>
-                </TableRow>
-              ))
-            ) : (
-              <TableRow>
-                <TableCell colSpan={7} className="text-center text-gray-500 py-12">
-                  No medicines in this category
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </div>
-    </div>
-  );
+  const validMedicines = medicines?.filter(medicine => 
+    isAfter(new Date(medicine.expiry_date), oneMonthFromNow)
+  ) || [];
 
   return (
     <AppLayout>
-      <div className="space-y-8">
+      <div className="space-y-6">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Medicine Expiry Tracker</h1>
-          <p className="text-gray-600 mt-1">Monitor medicines approaching expiration dates</p>
+          <h1 className="text-3xl font-bold text-gray-900">Medicine Expiry Management</h1>
+          <p className="text-gray-600 mt-1">Monitor and manage medicine expiry dates</p>
         </div>
-
-        {(urgentExpiring.length > 0 || expiredMedicines.length > 0) && (
-          <Alert className="border-red-200 bg-red-50">
-            <AlertTriangle className="h-4 w-4 text-red-600" />
-            <AlertDescription className="text-red-800">
-              <strong>ALERT:</strong> {expiredMedicines.length > 0 && `${expiredMedicines.length} medicine(s) already expired!`}
-              {expiredMedicines.length > 0 && urgentExpiring.length > 0 && ' '}
-              {urgentExpiring.length > 0 && `${urgentExpiring.length} medicine(s) expire within 7 days!`}
-              Take immediate action to prevent losses.
-            </AlertDescription>
-          </Alert>
-        )}
 
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-          <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
-            <div className="flex items-center gap-3 mb-2">
-              <div className="p-2 rounded-lg bg-red-200">
-                <XCircle className="w-5 h-5 text-red-800" />
-              </div>
-              <div>
-                <p className="text-sm font-medium text-gray-600">Expired</p>
-                <p className="text-2xl font-bold text-red-800">{expiredMedicines.length}</p>
-              </div>
-            </div>
-          </div>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Expired</CardTitle>
+              <AlertTriangle className="h-4 w-4 text-red-500" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-red-600">{expiredMedicines.length}</div>
+              <p className="text-xs text-muted-foreground">Immediate action required</p>
+            </CardContent>
+          </Card>
 
-          <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
-            <div className="flex items-center gap-3 mb-2">
-              <div className="p-2 rounded-lg bg-red-100">
-                <AlertTriangle className="w-5 h-5 text-red-600" />
-              </div>
-              <div>
-                <p className="text-sm font-medium text-gray-600">Urgent (≤7 days)</p>
-                <p className="text-2xl font-bold text-red-600">{urgentExpiring.length}</p>
-              </div>
-            </div>
-          </div>
-          
-          <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
-            <div className="flex items-center gap-3 mb-2">
-              <div className="p-2 rounded-lg bg-orange-100">
-                <Clock className="w-5 h-5 text-orange-600" />
-              </div>
-              <div>
-                <p className="text-sm font-medium text-gray-600">Soon (8-30 days)</p>
-                <p className="text-2xl font-bold text-orange-600">{soonExpiring.length}</p>
-              </div>
-            </div>
-          </div>
-          
-          <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
-            <div className="flex items-center gap-3 mb-2">
-              <div className="p-2 rounded-lg bg-yellow-100">
-                <Calendar className="w-5 h-5 text-yellow-600" />
-              </div>
-              <div>
-                <p className="text-sm font-medium text-gray-600">Watch (31-90 days)</p>
-                <p className="text-2xl font-bold text-yellow-600">{futureExpiring.length}</p>
-              </div>
-            </div>
-          </div>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Expiring Soon</CardTitle>
+              <Calendar className="h-4 w-4 text-orange-500" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-orange-600">{expiringMedicines.length}</div>
+              <p className="text-xs text-muted-foreground">Within 30 days</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Valid Stock</CardTitle>
+              <Package className="h-4 w-4 text-green-500" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-green-600">{validMedicines.length}</div>
+              <p className="text-xs text-muted-foreground">Good condition</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Total Medicines</CardTitle>
+              <Package className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{medicines?.length || 0}</div>
+              <p className="text-xs text-muted-foreground">All inventory</p>
+            </CardContent>
+          </Card>
         </div>
 
-        <Tabs defaultValue="expired" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-5">
-            <TabsTrigger value="expired" className="flex items-center gap-2">
-              <XCircle className="w-4 h-4" />
-              Expired ({expiredMedicines.length})
-            </TabsTrigger>
-            <TabsTrigger value="urgent" className="flex items-center gap-2">
-              <AlertTriangle className="w-4 h-4" />
-              Urgent ({urgentExpiring.length})
-            </TabsTrigger>
-            <TabsTrigger value="soon" className="flex items-center gap-2">
-              <Clock className="w-4 h-4" />
-              Soon ({soonExpiring.length})
-            </TabsTrigger>
-            <TabsTrigger value="future" className="flex items-center gap-2">
-              <Calendar className="w-4 h-4" />
-              Watch ({futureExpiring.length})
-            </TabsTrigger>
-            <TabsTrigger value="all" className="flex items-center gap-2">
-              All ({expiringMedicines?.length || 0})
-            </TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="expired">
-            <MedicineTable medicines={expiredMedicines} title="Expired Medicines" />
-          </TabsContent>
-
-          <TabsContent value="urgent">
-            <MedicineTable medicines={urgentExpiring} title="Urgent - Expires Within 7 Days" />
-          </TabsContent>
-
-          <TabsContent value="soon">
-            <MedicineTable medicines={soonExpiring} title="Soon - Expires Within 8-30 Days" />
-          </TabsContent>
-
-          <TabsContent value="future">
-            <MedicineTable medicines={futureExpiring} title="Watch - Expires Within 31-90 Days" />
-          </TabsContent>
-
-          <TabsContent value="all">
-            {isLoading ? (
-              <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
-                <div className="animate-pulse space-y-4">
-                  {Array.from({ length: 5 }).map((_, i) => (
-                    <div key={i} className="h-16 bg-gray-100 rounded"></div>
-                  ))}
-                </div>
+        {expiredMedicines.length > 0 && (
+          <Card className="border-red-200">
+            <CardHeader>
+              <CardTitle className="text-red-700 flex items-center gap-2">
+                <AlertTriangle className="w-5 h-5" />
+                Expired Medicines - Immediate Action Required
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Medicine Name</TableHead>
+                      <TableHead>Company</TableHead>
+                      <TableHead>Batch</TableHead>
+                      <TableHead>Expiry Date</TableHead>
+                      <TableHead>Stock</TableHead>
+                      <TableHead>Value Lost</TableHead>
+                      <TableHead>Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {expiredMedicines.map((medicine) => (
+                      <TableRow key={medicine.id} className="bg-red-50">
+                        <TableCell className="font-medium">{medicine.name}</TableCell>
+                        <TableCell>{medicine.company_name || '-'}</TableCell>
+                        <TableCell>{medicine.batch_number || '-'}</TableCell>
+                        <TableCell>
+                          <Badge variant="destructive">
+                            {format(new Date(medicine.expiry_date), 'MMM d, yyyy')}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>{medicine.stock_quantity}</TableCell>
+                        <TableCell>
+                          ${(medicine.purchase_price * medicine.stock_quantity).toFixed(2)}
+                        </TableCell>
+                        <TableCell>
+                          <Button size="sm" variant="destructive">
+                            <Trash2 className="w-3 h-3 mr-1" />
+                            Remove
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
               </div>
-            ) : (
-              <MedicineTable medicines={expiringMedicines || []} title="All Medicines" />
-            )}
-          </TabsContent>
-        </Tabs>
+            </CardContent>
+          </Card>
+        )}
+
+        {expiringMedicines.length > 0 && (
+          <Card className="border-orange-200">
+            <CardHeader>
+              <CardTitle className="text-orange-700 flex items-center gap-2">
+                <Calendar className="w-5 h-5" />
+                Medicines Expiring Within 30 Days
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Medicine Name</TableHead>
+                      <TableHead>Company</TableHead>
+                      <TableHead>Batch</TableHead>
+                      <TableHead>Expiry Date</TableHead>
+                      <TableHead>Stock</TableHead>
+                      <TableHead>Days Left</TableHead>
+                      <TableHead>Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {expiringMedicines.map((medicine) => {
+                      const daysLeft = Math.ceil(
+                        (new Date(medicine.expiry_date).getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
+                      );
+                      
+                      return (
+                        <TableRow key={medicine.id} className="bg-orange-50">
+                          <TableCell className="font-medium">{medicine.name}</TableCell>
+                          <TableCell>{medicine.company_name || '-'}</TableCell>
+                          <TableCell>{medicine.batch_number || '-'}</TableCell>
+                          <TableCell>
+                            <Badge variant="secondary">
+                              {format(new Date(medicine.expiry_date), 'MMM d, yyyy')}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>{medicine.stock_quantity}</TableCell>
+                          <TableCell>
+                            <Badge variant={daysLeft <= 7 ? 'destructive' : 'secondary'}>
+                              {daysLeft} days
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <Button size="sm" variant="outline">
+                              Mark for Sale
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </div>
     </AppLayout>
   );

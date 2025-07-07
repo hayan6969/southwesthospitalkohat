@@ -1,108 +1,98 @@
 
 import { useAuth } from "@/hooks/useAuth";
-import { useEffect } from "react";
+import { UserAccountDialog } from "@/components/UserAccountDialog";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import UserAccountDialog from "@/components/UserAccountDialog";
-import { User, LogOut } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ArrowRight, Users, Calendar, FileText, Activity } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
-const Index = () => {
-  const { user, profile, signOut } = useAuth();
+export default function Index() {
+  const { user } = useAuth();
+  const navigate = useNavigate();
 
-  useEffect(() => {
-    // Redirect to role-specific dashboard if user has a profile
-    if (profile?.role) {
-      console.log('Redirecting to dashboard for role:', profile.role);
-      window.location.href = `/dashboard/${profile.role}`;
-    }
-  }, [profile]);
-
-  // Show loading while checking for profile
-  if (!profile) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
-      </div>
-    );
+  if (user) {
+    navigate('/dashboard');
+    return null;
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-background">
-      <div className="flex justify-between items-center p-6 border-b">
-        <div className="flex items-center gap-2">
-          <span className="inline-block w-2 h-8 bg-blue-500 rounded-full" />
-          <h1 className="text-2xl font-bold text-primary">HIMS</h1>
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+      <div className="container mx-auto px-4 py-16">
+        <div className="text-center mb-16">
+          <h1 className="text-5xl font-bold text-gray-900 mb-6">
+            Hospital Management System
+          </h1>
+          <p className="text-xl text-gray-600 mb-8 max-w-2xl mx-auto">
+            Streamline your healthcare operations with our comprehensive management solution. 
+            Manage patients, appointments, staff, and more - all in one place.
+          </p>
+          <div className="flex gap-4 justify-center">
+            <Button size="lg" onClick={() => navigate('/auth')}>
+              Get Started <ArrowRight className="ml-2 w-4 h-4" />
+            </Button>
+            <UserAccountDialog />
+          </div>
         </div>
-        
-        <div className="flex items-center gap-4">
-          {profile && (
-            <div className="flex items-center gap-2 text-sm text-gray-600">
-              <User className="w-4 h-4" />
-              <span>{profile.first_name} {profile.last_name}</span>
-              <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs">
-                {profile.role}
-              </span>
-            </div>
-          )}
-          
-          <Button variant="outline" onClick={signOut} className="flex items-center gap-2">
-            <LogOut className="w-4 h-4" />
-            Sign Out
-          </Button>
-        </div>
-      </div>
 
-      <div className="flex-1 flex flex-col items-center justify-center p-10">
-        <div className="w-full max-w-2xl">
-          <Card className="shadow-xl border border-muted">
-            <CardHeader className="text-center">
-              <CardTitle className="text-3xl font-bold text-primary mb-2">
-                Welcome to HIMS
-              </CardTitle>
-              <CardDescription className="text-lg">
-                Hospital Information Management System
-              </CardDescription>
-              {profile && (
-                <div className="mt-4 p-4 bg-blue-50 rounded-lg">
-                  <p className="text-blue-800 font-medium">
-                    Welcome back, {profile.first_name}!
-                  </p>
-                  <p className="text-blue-600 text-sm">
-                    Role: {profile.role} | Email: {profile.email}
-                  </p>
-                </div>
-              )}
+        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8 mb-16">
+          <Card className="text-center">
+            <CardHeader>
+              <Users className="w-12 h-12 text-blue-600 mx-auto mb-4" />
+              <CardTitle>Patient Management</CardTitle>
             </CardHeader>
-            
-            <CardContent className="space-y-6">
-              <div className="text-center">
-                <Button 
-                  onClick={() => window.location.href = `/dashboard/${profile.role}`}
-                  className="text-lg px-8 py-3"
-                >
-                  Go to My Dashboard
-                </Button>
-              </div>
-              
-              {profile?.role === 'admin' && (
-                <div className="border-t pt-6">
-                  <div className="text-center space-y-4">
-                    <h3 className="text-lg font-semibold">Admin Functions</h3>
-                    <UserAccountDialog />
-                  </div>
-                </div>
-              )}
-              
-              <div className="text-center text-sm text-gray-600 border-t pt-4">
-                <p>Authenticated with Supabase</p>
-                <p>Role-based access control enabled</p>
-              </div>
+            <CardContent>
+              <p className="text-gray-600">
+                Comprehensive patient records, medical history, and profile management
+              </p>
             </CardContent>
           </Card>
+
+          <Card className="text-center">
+            <CardHeader>
+              <Calendar className="w-12 h-12 text-green-600 mx-auto mb-4" />
+              <CardTitle>Appointment Scheduling</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-600">
+                Efficient appointment booking and schedule management system
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card className="text-center">
+            <CardHeader>
+              <FileText className="w-12 h-12 text-purple-600 mx-auto mb-4" />
+              <CardTitle>Medical Records</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-600">
+                Digital medical records, lab reports, and prescription management
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card className="text-center">
+            <CardHeader>
+              <Activity className="w-12 h-12 text-orange-600 mx-auto mb-4" />
+              <CardTitle>Analytics & Reports</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-600">
+                Comprehensive reporting and analytics for better decision making
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="text-center">
+          <h2 className="text-3xl font-bold text-gray-900 mb-8">
+            Ready to transform your healthcare management?
+          </h2>
+          <Button size="lg" onClick={() => navigate('/auth')}>
+            Start Your Journey Today
+          </Button>
         </div>
       </div>
     </div>
   );
-};
-
-export default Index;
+}

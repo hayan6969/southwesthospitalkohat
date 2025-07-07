@@ -9,7 +9,7 @@ export const useAuditLogger = () => {
       await createAuditLog.mutateAsync({
         action,
         details,
-        ip_address: null // Could be populated from client if needed
+        ip_address: null
       });
     } catch (error) {
       console.error('Failed to log audit action:', error);

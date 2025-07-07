@@ -10,7 +10,7 @@ export const usePatients = () => {
         .from('patients')
         .select(`
           *,
-          user:profiles(*)
+          user:users(*)
         `)
         .order('id');
 
@@ -28,6 +28,27 @@ export const useCreatePatient = () => {
       const { data, error } = await supabase
         .from('patients')
         .insert([patient])
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['patients'] });
+    },
+  });
+};
+
+export const useUpdatePatient = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async ({ id, ...updates }: any) => {
+      const { data, error } = await supabase
+        .from('patients')
+        .update(updates)
+        .eq('id', id)
         .select()
         .single();
 

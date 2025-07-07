@@ -10,10 +10,9 @@ export const useAuditLogs = () => {
         .from('audit_logs')
         .select(`
           *,
-          user:profiles(*)
+          user:users(*)
         `)
-        .order('created_at', { ascending: false })
-        .limit(100);
+        .order('created_at', { ascending: false });
 
       if (error) throw error;
       return data;
@@ -26,9 +25,14 @@ export const useCreateAuditLog = () => {
   
   return useMutation({
     mutationFn: async (auditLog: any) => {
+      const { data: { user } } = await supabase.auth.getUser();
+      
       const { data, error } = await supabase
         .from('audit_logs')
-        .insert([auditLog])
+        .insert([{
+          ...auditLog,
+          user_id: user?.id
+        }])
         .select()
         .single();
 
