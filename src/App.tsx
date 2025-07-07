@@ -45,6 +45,8 @@ import PharmacyMedicines from "./pages/dashboard/pharmacy/PharmacyMedicines";
 import PharmacyInvoices from "./pages/dashboard/pharmacy/PharmacyInvoices";
 import PharmacyExpiry from "./pages/dashboard/pharmacy/PharmacyExpiry";
 import PharmacyAnalytics from "./pages/dashboard/pharmacy/PharmacyAnalytics";
+import PharmacySell from "./pages/dashboard/pharmacy/PharmacySell";
+import PharmacyStock from "./pages/dashboard/pharmacy/PharmacyStock";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -197,6 +199,16 @@ const App = () => (
             <Route path="/dashboard/pharmacy/analytics" element={
               <ProtectedRoute allowedRoles={['pharmacy']}>
                 <PharmacyAnalytics />
+              </ProtectedRoute>
+            } />
+            <Route path="/dashboard/pharmacy/sell" element={
+              <ProtectedRoute allowedRoles={['pharmacy']}>
+                <PharmacySell />
+              </ProtectedRoute>
+            } />
+            <Route path="/dashboard/pharmacy/stock" element={
+              <ProtectedRoute allowedRoles={['pharmacy']}>
+                <PharmacyStock />
               </ProtectedRoute>
             } />
 
