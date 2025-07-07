@@ -9,13 +9,21 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { formatPkrCurrency } from "@/utils/currency";
+import { PharmacyInvoiceDetailsDialog } from "@/components/dialogs/PharmacyInvoiceDetailsDialog";
 
 export default function DashboardPharmacy() {
   const { data: stats, isLoading: statsLoading } = usePharmacyStats();
   const { data: expiringMedicines, isLoading: expiringLoading } = useExpiringMedicines();
   const { data: invoices, isLoading: invoicesLoading } = usePharmacyInvoices();
+  const [selectedInvoice, setSelectedInvoice] = useState(null);
+  const [invoiceDialogOpen, setInvoiceDialogOpen] = useState(false);
 
   const urgentExpiring = expiringMedicines?.filter(med => med.daysLeft <= 7) || [];
+
+  const handleInvoiceClick = (invoice: any) => {
+    setSelectedInvoice(invoice);
+    setInvoiceDialogOpen(true);
+  };
 
   return (
     <AppLayout>
@@ -171,7 +179,11 @@ export default function DashboardPharmacy() {
                     </TableHeader>
                     <TableBody>
                       {invoices.slice(0, 10).map((invoice) => (
-                        <TableRow key={invoice.id}>
+                        <TableRow 
+                          key={invoice.id} 
+                          className="cursor-pointer hover:bg-gray-50"
+                          onClick={() => handleInvoiceClick(invoice)}
+                        >
                           <TableCell className="font-medium">{invoice.invoice_number}</TableCell>
                           <TableCell>{invoice.customer_name || "Walk-in Customer"}</TableCell>
                           <TableCell>{new Date(invoice.created_at).toLocaleDateString()}</TableCell>
@@ -196,6 +208,12 @@ export default function DashboardPharmacy() {
             </Card>
           </TabsContent>
         </Tabs>
+
+        <PharmacyInvoiceDetailsDialog
+          invoice={selectedInvoice}
+          open={invoiceDialogOpen}
+          onOpenChange={setInvoiceDialogOpen}
+        />
       </div>
     </AppLayout>
   );

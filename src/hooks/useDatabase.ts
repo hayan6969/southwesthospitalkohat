@@ -293,6 +293,31 @@ export const usePharmacyInvoices = () => {
   });
 };
 
+export const useInvoiceItems = (invoiceId: string | undefined) => {
+  return useQuery({
+    queryKey: ['invoice-items', invoiceId],
+    queryFn: async () => {
+      if (!invoiceId) return [];
+      
+      const { data, error } = await supabase
+        .from('pharmacy_invoice_items')
+        .select(`
+          *,
+          medicines(name)
+        `)
+        .eq('invoice_id', invoiceId);
+      
+      if (error) throw error;
+      
+      return data?.map(item => ({
+        ...item,
+        medicine_name: item.medicines?.name || 'Unknown Medicine'
+      })) || [];
+    },
+    enabled: !!invoiceId,
+  });
+};
+
 // Mutation hooks
 export const useCreateAppointment = () => {
   const queryClient = useQueryClient();
