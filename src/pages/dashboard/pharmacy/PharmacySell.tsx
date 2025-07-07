@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Separator } from "@/components/ui/separator";
 import { useMedicines, useCreatePharmacyInvoice } from "@/hooks/useDatabase";
 import { formatPkrCurrency } from "@/utils/currency";
+import { generatePharmacyInvoicePDF } from "@/utils/pharmacyPdfGenerator";
 import { toast } from "sonner";
 import { ShoppingCart, Plus, Trash2 } from "lucide-react";
 
@@ -133,7 +134,26 @@ export default function PharmacySell() {
         }))
       };
 
-      await createInvoice.mutateAsync(invoiceData);
+      const result = await createInvoice.mutateAsync(invoiceData);
+      
+      // Generate and open PDF invoice
+      const pdfData = {
+        invoice_number: invoiceNumber,
+        customer_name: customerName || "Walk-in Customer",
+        customer_phone: customerPhone || undefined,
+        total_amount: subtotal,
+        discount_amount: discountAmount,
+        final_amount: total,
+        created_at: new Date().toISOString(),
+        items: cart.map(item => ({
+          medicine_name: item.name,
+          quantity: item.quantity,
+          unit_price: item.unitPrice,
+          total_price: item.totalPrice
+        }))
+      };
+      
+      generatePharmacyInvoicePDF(pdfData);
       
       // Clear the form
       setCart([]);
@@ -141,7 +161,7 @@ export default function PharmacySell() {
       setCustomerPhone("");
       setDiscount(0);
       
-      toast.success("Sale completed successfully!");
+      toast.success("Sale completed successfully! Invoice opened in new tab.");
     } catch (error) {
       toast.error("Failed to complete sale");
       console.error("Sale error:", error);

@@ -1,15 +1,19 @@
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import AppLayout from "@/layouts/AppLayout";
 import { StatsCard } from "@/components/StatsCard";
-import { usePharmacyStats, useExpiringMedicines } from "@/hooks/useDatabase";
-import { Pill, ShoppingCart, DollarSign, AlertTriangle, TrendingUp } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { usePharmacyStats, useExpiringMedicines, usePharmacyInvoices } from "@/hooks/useDatabase";
+import { Pill, ShoppingCart, DollarSign, AlertTriangle, TrendingUp, FileText } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { formatPkrCurrency } from "@/utils/currency";
 
 export default function DashboardPharmacy() {
   const { data: stats, isLoading: statsLoading } = usePharmacyStats();
   const { data: expiringMedicines, isLoading: expiringLoading } = useExpiringMedicines();
+  const { data: invoices, isLoading: invoicesLoading } = usePharmacyInvoices();
 
   const urgentExpiring = expiringMedicines?.filter(med => med.daysLeft <= 7) || [];
 
@@ -58,82 +62,140 @@ export default function DashboardPharmacy() {
           />
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
-            <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center gap-2">
-              <AlertTriangle className="w-5 h-5 text-orange-500" />
-              Medicines Expiring Soon
-            </h2>
-            <div className="space-y-3">
-              {expiringLoading ? (
-                <div className="animate-pulse space-y-2">
-                  {Array.from({ length: 3 }).map((_, i) => (
-                    <div key={i} className="h-16 bg-gray-100 rounded"></div>
-                  ))}
-                </div>
-              ) : expiringMedicines && expiringMedicines.length > 0 ? (
-                expiringMedicines.slice(0, 5).map((medicine) => (
-                  <div key={medicine.id} className="flex items-center justify-between p-3 bg-orange-50 rounded-lg border border-orange-200">
-                    <div>
-                      <p className="font-medium text-gray-900">{medicine.name}</p>
-                      <p className="text-sm text-gray-600">Stock: {medicine.stock_quantity}</p>
-                    </div>
-                    <div className="text-right">
-                      <p className={`text-sm font-medium ${
-                        medicine.daysLeft <= 7 ? 'text-red-600' : 
-                        medicine.daysLeft <= 30 ? 'text-orange-600' : 'text-yellow-600'
-                      }`}>
-                        {medicine.daysLeft} days left
-                      </p>
-                      <p className="text-xs text-gray-500">
-                        Expires: {new Date(medicine.expiry_date).toLocaleDateString()}
-                      </p>
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <p className="text-gray-500 text-center py-4">No medicines expiring soon</p>
-              )}
-            </div>
-          </div>
+        <Tabs defaultValue="overview" className="space-y-4">
+          <TabsList>
+            <TabsTrigger value="overview">Overview</TabsTrigger>
+            <TabsTrigger value="invoices">Recent Invoices</TabsTrigger>
+          </TabsList>
 
-          <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
-            <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center gap-2">
-              <TrendingUp className="w-5 h-5 text-green-500" />
-              Quick Actions
-            </h2>
-            <div className="grid grid-cols-2 gap-4">
-              <a
-                href="/dashboard/pharmacy/medicines"
-                className="p-4 bg-blue-50 rounded-lg border border-blue-200 hover:bg-blue-100 transition-colors text-center"
-              >
-                <Pill className="w-8 h-8 text-blue-600 mx-auto mb-2" />
-                <p className="font-medium text-blue-900">Manage Medicines</p>
-              </a>
-              <a
-                href="/dashboard/pharmacy/invoices"
-                className="p-4 bg-green-50 rounded-lg border border-green-200 hover:bg-green-100 transition-colors text-center"
-              >
-                <ShoppingCart className="w-8 h-8 text-green-600 mx-auto mb-2" />
-                <p className="font-medium text-green-900">Create Invoice</p>
-              </a>
-              <a
-                href="/dashboard/pharmacy/expiry"
-                className="p-4 bg-orange-50 rounded-lg border border-orange-200 hover:bg-orange-100 transition-colors text-center"
-              >
-                <AlertTriangle className="w-8 h-8 text-orange-600 mx-auto mb-2" />
-                <p className="font-medium text-orange-900">Expiry Tracker</p>
-              </a>
-              <a
-                href="/dashboard/pharmacy/analytics"
-                className="p-4 bg-purple-50 rounded-lg border border-purple-200 hover:bg-purple-100 transition-colors text-center"
-              >
-                <TrendingUp className="w-8 h-8 text-purple-600 mx-auto mb-2" />
-                <p className="font-medium text-purple-900">Analytics</p>
-              </a>
+          <TabsContent value="overview" className="space-y-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+                <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                  <AlertTriangle className="w-5 h-5 text-orange-500" />
+                  Medicines Expiring Soon
+                </h2>
+                <div className="space-y-3">
+                  {expiringLoading ? (
+                    <div className="animate-pulse space-y-2">
+                      {Array.from({ length: 3 }).map((_, i) => (
+                        <div key={i} className="h-16 bg-gray-100 rounded"></div>
+                      ))}
+                    </div>
+                  ) : expiringMedicines && expiringMedicines.length > 0 ? (
+                    expiringMedicines.slice(0, 5).map((medicine) => (
+                      <div key={medicine.id} className="flex items-center justify-between p-3 bg-orange-50 rounded-lg border border-orange-200">
+                        <div>
+                          <p className="font-medium text-gray-900">{medicine.name}</p>
+                          <p className="text-sm text-gray-600">Stock: {medicine.stock_quantity}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className={`text-sm font-medium ${
+                            medicine.daysLeft <= 7 ? 'text-red-600' : 
+                            medicine.daysLeft <= 30 ? 'text-orange-600' : 'text-yellow-600'
+                          }`}>
+                            {medicine.daysLeft} days left
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            Expires: {new Date(medicine.expiry_date).toLocaleDateString()}
+                          </p>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-gray-500 text-center py-4">No medicines expiring soon</p>
+                  )}
+                </div>
+              </div>
+
+              <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+                <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                  <TrendingUp className="w-5 h-5 text-green-500" />
+                  Quick Actions
+                </h2>
+                <div className="grid grid-cols-2 gap-4">
+                  <a
+                    href="/dashboard/pharmacy/medicines"
+                    className="p-4 bg-blue-50 rounded-lg border border-blue-200 hover:bg-blue-100 transition-colors text-center"
+                  >
+                    <Pill className="w-8 h-8 text-blue-600 mx-auto mb-2" />
+                    <p className="font-medium text-blue-900">Manage Medicines</p>
+                  </a>
+                  <a
+                    href="/dashboard/pharmacy/sell"
+                    className="p-4 bg-green-50 rounded-lg border border-green-200 hover:bg-green-100 transition-colors text-center"
+                  >
+                    <ShoppingCart className="w-8 h-8 text-green-600 mx-auto mb-2" />
+                    <p className="font-medium text-green-900">Sell Medicine</p>
+                  </a>
+                  <a
+                    href="/dashboard/pharmacy/expiry"
+                    className="p-4 bg-orange-50 rounded-lg border border-orange-200 hover:bg-orange-100 transition-colors text-center"
+                  >
+                    <AlertTriangle className="w-8 h-8 text-orange-600 mx-auto mb-2" />
+                    <p className="font-medium text-orange-900">Expiry Tracker</p>
+                  </a>
+                  <a
+                    href="/dashboard/pharmacy/analytics"
+                    className="p-4 bg-purple-50 rounded-lg border border-purple-200 hover:bg-purple-100 transition-colors text-center"
+                  >
+                    <TrendingUp className="w-8 h-8 text-purple-600 mx-auto mb-2" />
+                    <p className="font-medium text-purple-900">Analytics</p>
+                  </a>
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
+          </TabsContent>
+
+          <TabsContent value="invoices" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <FileText className="w-5 h-5" />
+                  Recent Pharmacy Invoices
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {invoicesLoading ? (
+                  <div className="text-center py-8">Loading invoices...</div>
+                ) : invoices && invoices.length > 0 ? (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Invoice #</TableHead>
+                        <TableHead>Customer</TableHead>
+                        <TableHead>Date</TableHead>
+                        <TableHead>Amount</TableHead>
+                        <TableHead>Status</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {invoices.slice(0, 10).map((invoice) => (
+                        <TableRow key={invoice.id}>
+                          <TableCell className="font-medium">{invoice.invoice_number}</TableCell>
+                          <TableCell>{invoice.customer_name || "Walk-in Customer"}</TableCell>
+                          <TableCell>{new Date(invoice.created_at).toLocaleDateString()}</TableCell>
+                          <TableCell>{formatPkrCurrency(invoice.final_amount)}</TableCell>
+                          <TableCell>
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                              {invoice.status || "Completed"}
+                            </span>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                ) : (
+                  <div className="text-center py-8 text-gray-500">
+                    <FileText className="w-12 h-12 mx-auto mb-4 text-gray-300" />
+                    <p>No invoices found</p>
+                    <p className="text-sm">Start selling medicines to see invoices here</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
       </div>
     </AppLayout>
   );
