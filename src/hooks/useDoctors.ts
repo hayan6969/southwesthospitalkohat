@@ -10,7 +10,7 @@ export const useDoctors = () => {
         .from('doctors')
         .select(`
           *,
-          user:users(*)
+          user:profiles(*)
         `)
         .order('id');
 

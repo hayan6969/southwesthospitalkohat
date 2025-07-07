@@ -16,5 +16,17 @@ export const useAuditLogger = () => {
     }
   };
 
-  return { logAction };
+  const logLogin = async (userId: string, email: string) => {
+    await logAction('Login', `User ${email} logged in`);
+  };
+
+  const logLogout = async (userId: string, email: string) => {
+    await logAction('Logout', `User ${email} logged out`);
+  };
+
+  const logCreate = async (type: string, details: string, userId?: string) => {
+    await logAction(`Create ${type}`, details);
+  };
+
+  return { logAction, logLogin, logLogout, logCreate };
 };
