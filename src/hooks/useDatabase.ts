@@ -1,4 +1,3 @@
-
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { createClient } from '@supabase/supabase-js';
@@ -116,7 +115,7 @@ export const usePatients = () => {
         .from('patients')
         .select(`
           *,
-          profiles(*)
+          profiles!inner(*)
         `);
 
       if (error) {
@@ -140,7 +139,7 @@ export const useDoctors = () => {
         .from('doctors')
         .select(`
           *,
-          profiles(*)
+          profiles!inner(*)
         `);
 
       if (error) {
@@ -164,13 +163,13 @@ export const useAppointments = () => {
         .from('appointments')
         .select(`
           *,
-          patient:patients(
+          patient:patients!inner(
             *,
-            profiles(*)
+            profiles!inner(*)
           ),
-          doctor:doctors(
+          doctor:doctors!inner(
             *,
-            profiles(*)
+            profiles!inner(*)
           )
         `)
         .order('appointment_date', { ascending: true });
@@ -203,9 +202,9 @@ export const useInvoices = () => {
         .from('invoices')
         .select(`
           *,
-          patient:patients(
+          patient:patients!inner(
             *,
-            profiles(*)
+            profiles!inner(*)
           )
         `)
         .order('created_at', { ascending: false });
@@ -234,13 +233,13 @@ export const useLabReports = () => {
         .from('lab_reports')
         .select(`
           *,
-          patient:patients(
+          patient:patients!inner(
             *,
-            profiles(*)
+            profiles!inner(*)
           ),
-          doctor:doctors(
+          doctor:doctors!inner(
             *,
-            profiles(*)
+            profiles!inner(*)
           )
         `)
         .order('test_date', { ascending: false });
@@ -273,13 +272,13 @@ export const useMedicalRecords = () => {
         .from('medical_records')
         .select(`
           *,
-          patient:patients(
+          patient:patients!inner(
             *,
-            profiles(*)
+            profiles!inner(*)
           ),
-          doctor:doctors(
+          doctor:doctors!inner(
             *,
-            profiles(*)
+            profiles!inner(*)
           )
         `)
         .order('visit_date', { ascending: false });
