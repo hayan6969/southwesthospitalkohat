@@ -1,6 +1,6 @@
 
 import { NavLink } from "react-router-dom";
-import { User, Users, Calendar, FileText, Inbox, Info, Activity, Building2, Shield, Pill } from "lucide-react";
+import { User, Users, Calendar, FileText, Inbox, Info, Activity, Building2, Shield, Pill, Clock, TestTube, CreditCard, Calculator, Receipt, Settings, ChartBar, UserPlus, Stethoscope, Upload, CheckCircle } from "lucide-react";
 
 type SidebarNavProps = {
   role: string;
@@ -9,37 +9,51 @@ type SidebarNavProps = {
 const navsByRole: Record<string, { label: string; to: string; icon: React.ElementType }[]> = {
   patient: [
     { label: "Dashboard", to: "/dashboard/patient", icon: Info },
+    { label: "Book Appointments", to: "/dashboard/patient/book", icon: Calendar },
     { label: "My Appointments", to: "/dashboard/patient/appointments", icon: Calendar },
     { label: "Medical Records", to: "/dashboard/patient/records", icon: FileText },
-    { label: "Invoices", to: "/dashboard/patient/invoices", icon: Inbox },
     { label: "Lab Reports", to: "/dashboard/patient/labs", icon: Activity },
+    { label: "Upload Documents", to: "/dashboard/patient/documents", icon: Upload },
+    { label: "Analytics", to: "/dashboard/patient/analytics", icon: ChartBar },
   ],
   doctor: [
     { label: "Dashboard", to: "/dashboard/doctor", icon: Info },
-    { label: "My Schedule", to: "/dashboard/doctor/schedule", icon: Calendar },
-    { label: "Patients", to: "/dashboard/doctor/patients", icon: Users },
-    { label: "Medical Notes", to: "/dashboard/doctor/notes", icon: FileText },
+    { label: "Appointments", to: "/dashboard/doctor/appointments", icon: Calendar },
+    { label: "Patient History", to: "/dashboard/doctor/patients", icon: Users },
+    { label: "Diagnoses & Prescriptions", to: "/dashboard/doctor/diagnoses", icon: Stethoscope },
+    { label: "Patient Notes", to: "/dashboard/doctor/notes", icon: FileText },
+    { label: "Lab Reports", to: "/dashboard/doctor/labs", icon: TestTube },
+    { label: "Schedule Management", to: "/dashboard/doctor/schedule", icon: Clock },
+    { label: "Analytics", to: "/dashboard/doctor/analytics", icon: ChartBar },
   ],
   staff: [
     { label: "Dashboard", to: "/dashboard/staff", icon: Info },
-    { label: "Patients", to: "/dashboard/staff/patients", icon: Users },
-    { label: "Appointments", to: "/dashboard/staff/appointments", icon: Calendar },
-    { label: "Invoices", to: "/dashboard/staff/invoices", icon: Inbox },
-    { label: "Lab Reports", to: "/dashboard/staff/labs", icon: FileText },
+    { label: "Counter", to: "/dashboard/staff/counter", icon: Receipt },
+    { label: "Lab", to: "/dashboard/staff/lab", icon: TestTube },
+    { label: "OT", to: "/dashboard/staff/ot", icon: Building2 },
   ],
   admin: [
     { label: "Dashboard", to: "/dashboard/admin", icon: Info },
-    { label: "Departments", to: "/dashboard/admin/departments", icon: Building2 },
-    { label: "Staff Management", to: "/dashboard/admin/staff", icon: User },
-    { label: "Doctors", to: "/dashboard/admin/doctors", icon: Users },
-    { label: "Audit Logs", to: "/dashboard/admin/audit-logs", icon: Shield },
+    { label: "Account Management", to: "/dashboard/admin/accounts", icon: User },
+    { label: "Staff & Doctors", to: "/dashboard/admin/staff", icon: Users },
+    { label: "Analytics", to: "/dashboard/admin/analytics", icon: ChartBar },
+    { label: "Pharmacy Overview", to: "/dashboard/admin/pharmacy", icon: Pill },
+    { label: "System Settings", to: "/dashboard/admin/settings", icon: Settings },
   ],
   pharmacy: [
     { label: "Dashboard", to: "/dashboard/pharmacy", icon: Info },
     { label: "Medicines", to: "/dashboard/pharmacy/medicines", icon: Pill },
-    { label: "Invoices", to: "/dashboard/pharmacy/invoices", icon: Inbox },
+    { label: "Sell Medicine", to: "/dashboard/pharmacy/sell", icon: CreditCard },
+    { label: "Stock Tracking", to: "/dashboard/pharmacy/stock", icon: CheckCircle },
     { label: "Expiry Tracker", to: "/dashboard/pharmacy/expiry", icon: Calendar },
     { label: "Analytics", to: "/dashboard/pharmacy/analytics", icon: Activity },
+  ],
+  finance: [
+    { label: "Dashboard", to: "/dashboard/finance", icon: Info },
+    { label: "Income & Transactions", to: "/dashboard/finance/income", icon: Calculator },
+    { label: "Analytics", to: "/dashboard/finance/analytics", icon: ChartBar },
+    { label: "Expenses", to: "/dashboard/finance/expenses", icon: Receipt },
+    { label: "Payroll", to: "/dashboard/finance/payroll", icon: Users },
   ],
 };
 
@@ -69,19 +83,11 @@ export function SidebarNav({ role }: SidebarNavProps) {
         ))}
       </nav>
       <div className="mt-auto px-6 pt-4 text-xs text-slate-400 border-t border-slate-700">
-        <div className="mb-2">Clinic</div>
+        <div className="mb-2">Hospital System</div>
         <div className="space-y-2">
           <div className="flex items-center gap-2 text-slate-500">
             <Users size={14} />
-            <span>Doctors</span>
-          </div>
-          <div className="flex items-center gap-2 text-slate-500">
-            <User size={14} />
-            <span>Patients</span>
-          </div>
-          <div className="flex items-center gap-2 text-slate-500">
-            <Calendar size={14} />
-            <span>Appointments</span>
+            <span>Role: {role}</span>
           </div>
         </div>
       </div>
