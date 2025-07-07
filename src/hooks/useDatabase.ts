@@ -58,7 +58,10 @@ export const useAuditLogs = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('audit_logs')
-        .select('*')
+        .select(`
+          *,
+          user:profiles!audit_logs_user_id_fkey(*)
+        `)
         .order('created_at', { ascending: false })
         .limit(100);
 
@@ -76,7 +79,7 @@ export const usePatients = () => {
         .from('patients')
         .select(`
           *,
-          users:profiles!patients_id_fkey(*)
+          user:profiles!patients_id_fkey(*)
         `)
         .order('id');
 
@@ -94,7 +97,7 @@ export const useDoctors = () => {
         .from('doctors')
         .select(`
           *,
-          users:profiles!doctors_id_fkey(*)
+          user:profiles!doctors_id_fkey(*)
         `)
         .order('id');
 
@@ -114,11 +117,11 @@ export const useAppointments = () => {
           *,
           patient:patients!appointments_patient_id_fkey(
             *,
-            users:profiles!patients_id_fkey(*)
+            user:profiles!patients_id_fkey(*)
           ),
           doctor:doctors!appointments_doctor_id_fkey(
             *,
-            users:profiles!doctors_id_fkey(*)
+            user:profiles!doctors_id_fkey(*)
           )
         `)
         .order('appointment_date', { ascending: false });
@@ -139,11 +142,11 @@ export const useLabReports = () => {
           *,
           patient:patients!lab_reports_patient_id_fkey(
             *,
-            users:profiles!patients_id_fkey(*)
+            user:profiles!patients_id_fkey(*)
           ),
           doctor:doctors!lab_reports_doctor_id_fkey(
             *,
-            users:profiles!doctors_id_fkey(*)
+            user:profiles!doctors_id_fkey(*)
           )
         `)
         .order('created_at', { ascending: false });
@@ -164,11 +167,11 @@ export const useMedicalRecords = () => {
           *,
           patient:patients!medical_records_patient_id_fkey(
             *,
-            users:profiles!patients_id_fkey(*)
+            user:profiles!patients_id_fkey(*)
           ),
           doctor:doctors!medical_records_doctor_id_fkey(
             *,
-            users:profiles!doctors_id_fkey(*)
+            user:profiles!doctors_id_fkey(*)
           )
         `)
         .order('created_at', { ascending: false });
@@ -179,7 +182,27 @@ export const useMedicalRecords = () => {
   });
 };
 
-// Additional hooks that were missing
+export const useInvoices = () => {
+  return useQuery({
+    queryKey: ['invoices'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('invoices')
+        .select(`
+          *,
+          patient:patients!invoices_patient_id_fkey(
+            *,
+            user:profiles!patients_id_fkey(*)
+          )
+        `)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      return data;
+    }
+  });
+};
+
 export const usePharmacyStats = () => {
   return useQuery({
     queryKey: ['pharmacy-stats'],
@@ -200,6 +223,36 @@ export const usePharmacyStats = () => {
         totalRevenue: invoices.reduce((sum, invoice) => sum + invoice.final_amount, 0),
         lowStockCount: medicines.filter(m => m.stock_quantity <= (m.minimum_stock_level || 10)).length
       };
+    }
+  });
+};
+
+export const useExpiringMedicines = () => {
+  return useQuery({
+    queryKey: ['expiring-medicines'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('medicines')
+        .select('*')
+        .order('expiry_date', { ascending: true });
+
+      if (error) throw error;
+
+      // Calculate days left for each medicine
+      const medicinesWithDaysLeft = data?.map(medicine => {
+        const today = new Date();
+        const expiryDate = new Date(medicine.expiry_date);
+        const diffTime = expiryDate.getTime() - today.getTime();
+        const daysLeft = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+        return {
+          ...medicine,
+          daysLeft
+        };
+      }) || [];
+
+      // Filter to show only medicines expiring within 90 days
+      return medicinesWithDaysLeft.filter(med => med.daysLeft <= 90);
     }
   });
 };
