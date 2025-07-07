@@ -50,7 +50,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         return null;
       }
 
-      return data;
+      if (data) {
+        // Cast the role to the proper type
+        const profile: UserProfile = {
+          ...data,
+          role: data.role as 'admin' | 'doctor' | 'staff' | 'pharmacy' | 'patient' | 'finance'
+        };
+        return profile;
+      }
+
+      return null;
     } catch (error) {
       console.error('Error fetching user profile:', error);
       return null;
