@@ -175,27 +175,27 @@ const App = () => (
 
             {/* Pharmacy dashboard routes */}
             <Route path="/dashboard/pharmacy" element={
-              <ProtectedRoute allowedRoles={['admin', 'staff']}>
+              <ProtectedRoute allowedRoles={['pharmacy']}>
                 <DashboardPharmacy />
               </ProtectedRoute>
             } />
             <Route path="/dashboard/pharmacy/medicines" element={
-              <ProtectedRoute allowedRoles={['admin', 'staff']}>
+              <ProtectedRoute allowedRoles={['pharmacy']}>
                 <PharmacyMedicines />
               </ProtectedRoute>
             } />
             <Route path="/dashboard/pharmacy/invoices" element={
-              <ProtectedRoute allowedRoles={['admin', 'staff']}>
+              <ProtectedRoute allowedRoles={['pharmacy']}>
                 <PharmacyInvoices />
               </ProtectedRoute>
             } />
             <Route path="/dashboard/pharmacy/expiry" element={
-              <ProtectedRoute allowedRoles={['admin', 'staff']}>
+              <ProtectedRoute allowedRoles={['pharmacy']}>
                 <PharmacyExpiry />
               </ProtectedRoute>
             } />
             <Route path="/dashboard/pharmacy/analytics" element={
-              <ProtectedRoute allowedRoles={['admin', 'staff']}>
+              <ProtectedRoute allowedRoles={['pharmacy']}>
                 <PharmacyAnalytics />
               </ProtectedRoute>
             } />
