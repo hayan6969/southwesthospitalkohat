@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { StatsCard } from "@/components/StatsCard";
 import { AppointmentChart } from "@/components/AppointmentChart";
@@ -86,34 +85,45 @@ export default function DashboardAdmin() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header with Profile */}
-      <header className="bg-white shadow-sm border-b border-gray-200 px-6 py-4">
+      {/* Header with Profile - Made more prominent */}
+      <header className="bg-white shadow-lg border-b-2 border-blue-200 px-6 py-6">
         <div className="flex justify-between items-center">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-              <span className="inline-block w-2 h-8 bg-blue-500 rounded-full" />
+            <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
+              <span className="inline-block w-3 h-10 bg-blue-500 rounded-full" />
               HIMS - Admin Dashboard
             </h1>
+            <p className="text-gray-600 mt-1">Hospital Information Management System</p>
           </div>
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-3">
-              <Avatar className="w-8 h-8">
-                <AvatarFallback className="bg-purple-100 text-purple-700 text-sm font-medium">
+          
+          {/* Profile Section - Made more prominent */}
+          <div className="flex items-center gap-6 bg-gray-50 rounded-lg p-4 border border-gray-200">
+            <div className="flex items-center gap-4">
+              <Avatar className="w-12 h-12 border-2 border-purple-200">
+                <AvatarFallback className="bg-purple-100 text-purple-700 text-lg font-bold">
                   {profile?.first_name?.[0]}{profile?.last_name?.[0]}
                 </AvatarFallback>
               </Avatar>
               <div className="flex flex-col">
-                <span className="text-sm font-medium text-gray-900">
+                <span className="text-lg font-semibold text-gray-900">
                   {profile?.first_name} {profile?.last_name}
                 </span>
-                <span className="text-xs text-gray-500">{profile?.email}</span>
+                <span className="text-sm text-gray-600">{profile?.email}</span>
               </div>
-              <span className="px-2 py-1 bg-purple-100 text-purple-800 rounded-full text-xs font-medium">
-                Admin
-              </span>
+              <div className="flex flex-col items-center gap-2">
+                <span className="px-4 py-2 bg-purple-500 text-white rounded-full text-sm font-bold uppercase tracking-wide shadow-md">
+                  Administrator
+                </span>
+                <span className="text-xs text-gray-500">System Admin</span>
+              </div>
             </div>
-            <Button variant="outline" size="sm" onClick={signOut} className="flex items-center gap-2">
-              <LogOut className="w-4 h-4" />
+            <Button 
+              variant="outline" 
+              size="lg" 
+              onClick={signOut} 
+              className="flex items-center gap-2 border-red-200 hover:border-red-300 hover:bg-red-50 text-red-600"
+            >
+              <LogOut className="w-5 h-5" />
               Sign Out
             </Button>
           </div>
