@@ -3,73 +3,144 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { AuthProvider } from "./hooks/useAuth";
-import ProtectedRoute from "./components/ProtectedRoute";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { useAuth } from "@/hooks/useAuth";
+import { ProtectedRoute } from "@/components/ProtectedRoute";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
-
-// Dashboard main pages
-import DashboardPatient from "./pages/dashboard/DashboardPatient";
-import DashboardDoctor from "./pages/dashboard/DashboardDoctor";
-import DashboardStaff from "./pages/dashboard/DashboardStaff";
 import DashboardAdmin from "./pages/dashboard/DashboardAdmin";
+import DashboardDoctor from "./pages/dashboard/DashboardDoctor";
+import DashboardPatient from "./pages/dashboard/DashboardPatient";
+import DashboardStaff from "./pages/dashboard/DashboardStaff";
 import DashboardPharmacy from "./pages/dashboard/DashboardPharmacy";
+import DashboardFinance from "./pages/dashboard/DashboardFinance";
+
+// Admin pages
+import AdminAnalytics from "./pages/dashboard/admin/AdminAnalytics";
+import AdminAccounts from "./pages/dashboard/admin/AdminAccounts";
+import AdminPharmacy from "./pages/dashboard/admin/AdminPharmacy";
+import AdminSystemLogs from "./pages/dashboard/admin/AdminSystemLogs";
+import AdminSettings from "./pages/dashboard/admin/AdminSettings";
+import AdminDoctors from "./pages/dashboard/admin/AdminDoctors";
+import AdminStaff from "./pages/dashboard/admin/AdminStaff";
 
 // Doctor pages
-import DoctorSchedule from "./pages/dashboard/doctor/DoctorSchedule";
-import DoctorPatients from "./pages/dashboard/doctor/DoctorPatients";
 import DoctorNotes from "./pages/dashboard/doctor/DoctorNotes";
+import DoctorPatients from "./pages/dashboard/doctor/DoctorPatients";
+import DoctorSchedule from "./pages/dashboard/doctor/DoctorSchedule";
 
 // Patient pages
 import PatientAppointments from "./pages/dashboard/patient/PatientAppointments";
-import PatientRecords from "./pages/dashboard/patient/PatientRecords";
 import PatientInvoices from "./pages/dashboard/patient/PatientInvoices";
 import PatientLabs from "./pages/dashboard/patient/PatientLabs";
+import PatientRecords from "./pages/dashboard/patient/PatientRecords";
 
 // Staff pages
-import StaffPatients from "./pages/dashboard/staff/StaffPatients";
 import StaffAppointments from "./pages/dashboard/staff/StaffAppointments";
 import StaffInvoices from "./pages/dashboard/staff/StaffInvoices";
 import StaffLabs from "./pages/dashboard/staff/StaffLabs";
-
-// Admin pages
-import AdminDepartments from "./pages/dashboard/admin/AdminDepartments";
-import AdminStaff from "./pages/dashboard/admin/AdminStaff";
-import AdminDoctors from "./pages/dashboard/admin/AdminDoctors";
-import AdminAuditLogs from "./pages/dashboard/admin/AdminAuditLogs";
+import StaffPatients from "./pages/dashboard/staff/StaffPatients";
 
 // Pharmacy pages
-import PharmacyMedicines from "./pages/dashboard/pharmacy/PharmacyMedicines";
-import PharmacyInvoices from "./pages/dashboard/pharmacy/PharmacyInvoices";
+import PharmacyAnalytics from "./pages/dashboard/pharmacy/PharmacyAnalytics";
 import PharmacyExpiry from "./pages/dashboard/pharmacy/PharmacyExpiry";
+import PharmacyInvoices from "./pages/dashboard/pharmacy/PharmacyInvoices";
+import PharmacyMedicines from "./pages/dashboard/pharmacy/PharmacyMedicines";
 
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      staleTime: 1000 * 60 * 5, // 5 minutes
-      retry: 1,
-    },
-  },
-});
+const queryClient = new QueryClient();
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <AuthProvider>
+const App = () => {
+  const { isLoading } = useAuth();
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-gray-900"></div>
+      </div>
+    );
+  }
+
+  return (
+    <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <Toaster />
         <Sonner />
         <BrowserRouter>
           <Routes>
+            <Route path="/" element={<Index />} />
             <Route path="/auth" element={<Auth />} />
-            <Route path="/" element={
-              <ProtectedRoute>
-                <Index />
+            
+            {/* Admin Routes */}
+            <Route path="/dashboard/admin" element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <DashboardAdmin />
+              </ProtectedRoute>
+            } />
+            <Route path="/dashboard/admin/analytics" element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <AdminAnalytics />
+              </ProtectedRoute>
+            } />
+            <Route path="/dashboard/admin/accounts" element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <AdminAccounts />
+              </ProtectedRoute>
+            } />
+            <Route path="/dashboard/admin/pharmacy" element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <AdminPharmacy />
+              </ProtectedRoute>
+            } />
+            <Route path="/dashboard/admin/logs" element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <AdminSystemLogs />
+              </ProtectedRoute>
+            } />
+            <Route path="/dashboard/admin/settings" element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <AdminSettings />
+              </ProtectedRoute>
+            } />
+            <Route path="/dashboard/admin/doctors" element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <AdminDoctors />
+              </ProtectedRoute>
+            } />
+            <Route path="/dashboard/admin/staff" element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <AdminStaff />
               </ProtectedRoute>
             } />
 
-            {/* Patient dashboard routes */}
+            {/* Doctor Routes */}
+            <Route path="/dashboard/doctor" element={
+              <ProtectedRoute allowedRoles={['doctor']}>
+                <DashboardDoctor />
+              </ProtectedRoute>
+            } />
+            <Route path="/dashboard/doctor/appointments" element={
+              <ProtectedRoute allowedRoles={['doctor']}>
+                <DashboardDoctor />
+              </ProtectedRoute>
+            } />
+            <Route path="/dashboard/doctor/patients" element={
+              <ProtectedRoute allowedRoles={['doctor']}>
+                <DoctorPatients />
+              </ProtectedRoute>
+            } />
+            <Route path="/dashboard/doctor/notes" element={
+              <ProtectedRoute allowedRoles={['doctor']}>
+                <DoctorNotes />
+              </ProtectedRoute>
+            } />
+            <Route path="/dashboard/doctor/schedule" element={
+              <ProtectedRoute allowedRoles={['doctor']}>
+                <DoctorSchedule />
+              </ProtectedRoute>
+            } />
+
+            {/* Patient Routes */}
             <Route path="/dashboard/patient" element={
               <ProtectedRoute allowedRoles={['patient']}>
                 <DashboardPatient />
@@ -85,48 +156,21 @@ const App = () => (
                 <PatientRecords />
               </ProtectedRoute>
             } />
-            <Route path="/dashboard/patient/invoices" element={
-              <ProtectedRoute allowedRoles={['patient']}>
-                <PatientInvoices />
-              </ProtectedRoute>
-            } />
             <Route path="/dashboard/patient/labs" element={
               <ProtectedRoute allowedRoles={['patient']}>
                 <PatientLabs />
               </ProtectedRoute>
             } />
-
-            {/* Doctor dashboard routes */}
-            <Route path="/dashboard/doctor" element={
-              <ProtectedRoute allowedRoles={['doctor']}>
-                <DashboardDoctor />
-              </ProtectedRoute>
-            } />
-            <Route path="/dashboard/doctor/schedule" element={
-              <ProtectedRoute allowedRoles={['doctor']}>
-                <DoctorSchedule />
-              </ProtectedRoute>
-            } />
-            <Route path="/dashboard/doctor/patients" element={
-              <ProtectedRoute allowedRoles={['doctor']}>
-                <DoctorPatients />
-              </ProtectedRoute>
-            } />
-            <Route path="/dashboard/doctor/notes" element={
-              <ProtectedRoute allowedRoles={['doctor']}>
-                <DoctorNotes />
+            <Route path="/dashboard/patient/invoices" element={
+              <ProtectedRoute allowedRoles={['patient']}>
+                <PatientInvoices />
               </ProtectedRoute>
             } />
 
-            {/* Staff dashboard routes */}
+            {/* Staff Routes */}
             <Route path="/dashboard/staff" element={
               <ProtectedRoute allowedRoles={['staff']}>
                 <DashboardStaff />
-              </ProtectedRoute>
-            } />
-            <Route path="/dashboard/staff/patients" element={
-              <ProtectedRoute allowedRoles={['staff']}>
-                <StaffPatients />
               </ProtectedRoute>
             } />
             <Route path="/dashboard/staff/appointments" element={
@@ -134,9 +178,9 @@ const App = () => (
                 <StaffAppointments />
               </ProtectedRoute>
             } />
-            <Route path="/dashboard/staff/invoices" element={
+            <Route path="/dashboard/staff/patients" element={
               <ProtectedRoute allowedRoles={['staff']}>
-                <StaffInvoices />
+                <StaffPatients />
               </ProtectedRoute>
             } />
             <Route path="/dashboard/staff/labs" element={
@@ -144,35 +188,13 @@ const App = () => (
                 <StaffLabs />
               </ProtectedRoute>
             } />
-
-            {/* Admin dashboard routes */}
-            <Route path="/dashboard/admin" element={
-              <ProtectedRoute allowedRoles={['admin']}>
-                <DashboardAdmin />
-              </ProtectedRoute>
-            } />
-            <Route path="/dashboard/admin/departments" element={
-              <ProtectedRoute allowedRoles={['admin']}>
-                <AdminDepartments />
-              </ProtectedRoute>
-            } />
-            <Route path="/dashboard/admin/staff" element={
-              <ProtectedRoute allowedRoles={['admin']}>
-                <AdminStaff />
-              </ProtectedRoute>
-            } />
-            <Route path="/dashboard/admin/doctors" element={
-              <ProtectedRoute allowedRoles={['admin']}>
-                <AdminDoctors />
-              </ProtectedRoute>
-            } />
-            <Route path="/dashboard/admin/audit-logs" element={
-              <ProtectedRoute allowedRoles={['admin']}>
-                <AdminAuditLogs />
+            <Route path="/dashboard/staff/invoices" element={
+              <ProtectedRoute allowedRoles={['staff']}>
+                <StaffInvoices />
               </ProtectedRoute>
             } />
 
-            {/* Pharmacy dashboard routes */}
+            {/* Pharmacy Routes */}
             <Route path="/dashboard/pharmacy" element={
               <ProtectedRoute allowedRoles={['pharmacy']}>
                 <DashboardPharmacy />
@@ -183,9 +205,9 @@ const App = () => (
                 <PharmacyMedicines />
               </ProtectedRoute>
             } />
-            <Route path="/dashboard/pharmacy/invoices" element={
+            <Route path="/dashboard/pharmacy/analytics" element={
               <ProtectedRoute allowedRoles={['pharmacy']}>
-                <PharmacyInvoices />
+                <PharmacyAnalytics />
               </ProtectedRoute>
             } />
             <Route path="/dashboard/pharmacy/expiry" element={
@@ -193,24 +215,25 @@ const App = () => (
                 <PharmacyExpiry />
               </ProtectedRoute>
             } />
-
-            {/* Finance dashboard routes */}
-            <Route path="/dashboard/finance" element={
-              <ProtectedRoute allowedRoles={['finance']}>
-                <DashboardAdmin />
+            <Route path="/dashboard/pharmacy/invoices" element={
+              <ProtectedRoute allowedRoles={['pharmacy']}>
+                <PharmacyInvoices />
               </ProtectedRoute>
             } />
-            
-            {/* Redirect for unknown dashboard routes */}
-            <Route path="/dashboard" element={<Navigate to="/" replace />} />
 
-            {/* Catch-all route */}
+            {/* Finance Routes */}
+            <Route path="/dashboard/finance" element={
+              <ProtectedRoute allowedRoles={['finance']}>
+                <DashboardFinance />
+              </ProtectedRoute>
+            } />
+
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
       </TooltipProvider>
-    </AuthProvider>
-  </QueryClientProvider>
-);
+    </QueryClientProvider>
+  );
+};
 
 export default App;
