@@ -1,17 +1,42 @@
+
+import { useState } from "react";
 import AppLayout from "@/layouts/AppLayout";
 import { useUsers, useDepartments } from "@/hooks/useDatabase";
-import { StaffDialog } from "@/components/dialogs/StaffDialog";
-import { Users, Edit, UserCheck } from "lucide-react";
+import { AccountManagementDialog } from "@/components/dialogs/AccountManagementDialog";
+import { EditUserDialog } from "@/components/dialogs/EditUserDialog";
+import { Users, Edit, UserCheck, Trash2, Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { format } from "date-fns";
 
 export default function AdminStaff() {
-  const { data: users, isLoading } = useUsers();
+  const { data: users, isLoading, refetch } = useUsers();
   const { data: departments } = useDepartments();
+  const [editingUser, setEditingUser] = useState<any>(null);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
 
-  // Filter for staff and admin users
-  const staffUsers = users?.filter(user => user.role === 'staff' || user.role === 'admin') || [];
+  // Filter for all users except patients
+  const nonPatientUsers = users?.filter(user => user.role !== 'patient') || [];
+
+  const handleEditUser = (user: any) => {
+    setEditingUser(user);
+    setEditDialogOpen(true);
+  };
+
+  const handleUserUpdated = () => {
+    refetch();
+  };
+
+  const getRoleBadgeColor = (role: string) => {
+    switch (role) {
+      case 'admin': return 'bg-purple-100 text-purple-700';
+      case 'doctor': return 'bg-green-100 text-green-700';
+      case 'staff': return 'bg-blue-100 text-blue-700';
+      case 'pharmacy': return 'bg-orange-100 text-orange-700';
+      case 'finance': return 'bg-teal-100 text-teal-700';
+      default: return 'bg-gray-100 text-gray-700';
+    }
+  };
 
   return (
     <AppLayout>
@@ -19,16 +44,16 @@ export default function AdminStaff() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold text-gray-900">Staff Management</h1>
-            <p className="text-gray-600 mt-1">Manage hospital staff and administrators</p>
+            <p className="text-gray-600 mt-1">Manage hospital staff, doctors, pharmacy, and finance users</p>
           </div>
-          <StaffDialog />
+          <AccountManagementDialog />
         </div>
 
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
           <div className="p-6 border-b border-gray-200">
             <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
               <Users className="w-5 h-5" />
-              All Staff Members
+              All Staff Members ({nonPatientUsers.length})
             </h2>
           </div>
           
@@ -56,8 +81,8 @@ export default function AdminStaff() {
                       ))}
                     </TableRow>
                   ))
-                ) : staffUsers && staffUsers.length > 0 ? (
-                  staffUsers.map((user) => (
+                ) : nonPatientUsers && nonPatientUsers.length > 0 ? (
+                  nonPatientUsers.map((user) => (
                     <TableRow key={user.id}>
                       <TableCell>
                         <div className="flex items-center gap-2">
@@ -68,10 +93,7 @@ export default function AdminStaff() {
                       <TableCell>{user.email}</TableCell>
                       <TableCell>{user.phone || 'N/A'}</TableCell>
                       <TableCell>
-                        <span className={`px-2 py-1 rounded-full text-sm font-medium ${
-                          user.role === 'admin' ? 'bg-purple-100 text-purple-700' :
-                          'bg-blue-100 text-blue-700'
-                        }`}>
+                        <span className={`px-2 py-1 rounded-full text-sm font-medium ${getRoleBadgeColor(user.role)}`}>
                           {user.role}
                         </span>
                       </TableCell>
@@ -83,12 +105,13 @@ export default function AdminStaff() {
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
-                          <Button size="sm" variant="outline">
+                          <Button 
+                            size="sm" 
+                            variant="outline"
+                            onClick={() => handleEditUser(user)}
+                          >
                             <Edit className="w-3 h-3 mr-1" />
                             Edit
-                          </Button>
-                          <Button size="sm" variant="outline">
-                            View Details
                           </Button>
                         </div>
                       </TableCell>
@@ -105,6 +128,13 @@ export default function AdminStaff() {
             </Table>
           </div>
         </div>
+
+        <EditUserDialog 
+          user={editingUser}
+          open={editDialogOpen}
+          onOpenChange={setEditDialogOpen}
+          onUserUpdated={handleUserUpdated}
+        />
       </div>
     </AppLayout>
   );
