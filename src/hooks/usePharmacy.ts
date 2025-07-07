@@ -129,3 +129,6 @@ export const usePharmacy = () => {
     isLoading: medicines.isLoading || invoices.isLoading,
   };
 };
+
+// Export usePharmacyStats
+export { usePharmacyStats } from './usePharmacyStats';

@@ -1,6 +1,6 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { usePharmacyStats } from "@/hooks/usePharmacy";
+import { usePharmacyStats } from "@/hooks/usePharmacyStats";
 import { Activity, Package, AlertTriangle, DollarSign } from "lucide-react";
 
 export function PharmacyOverview() {

@@ -1,7 +1,7 @@
 
 import AppLayout from "@/layouts/AppLayout";
 import { StatsCard } from "@/components/StatsCard";
-import { usePharmacyStats } from "@/hooks/usePharmacy";
+import { usePharmacyStats } from "@/hooks/usePharmacyStats";
 import { Package, AlertTriangle, DollarSign, TrendingUp } from "lucide-react";
 
 export default function DashboardPharmacy() {

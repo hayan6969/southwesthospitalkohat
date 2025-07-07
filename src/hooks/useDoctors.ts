@@ -10,7 +10,7 @@ export const useDoctors = () => {
         .from('doctors')
         .select(`
           *,
-          user:profiles(*)
+          user:profiles!doctors_id_fkey(*)
         `)
         .order('id');
 
