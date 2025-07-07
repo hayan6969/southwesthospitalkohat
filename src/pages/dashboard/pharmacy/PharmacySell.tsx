@@ -114,12 +114,17 @@ export default function PharmacySell() {
     }
 
     try {
+      const invoiceNumber = `INV-${Date.now()}`;
+      
       const invoiceData = {
-        customer_name: customerName || "Walk-in Customer",
-        customer_phone: customerPhone || undefined,
-        total_amount: subtotal,
-        discount_amount: discountAmount,
-        final_amount: total,
+        invoice: {
+          invoice_number: invoiceNumber,
+          customer_name: customerName || "Walk-in Customer",
+          customer_phone: customerPhone || null,
+          total_amount: subtotal,
+          discount_amount: discountAmount,
+          final_amount: total,
+        },
         items: cart.map(item => ({
           medicine_id: item.medicineId,
           quantity: item.quantity,

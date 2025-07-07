@@ -524,10 +524,21 @@ export const useCreatePharmacyInvoice = () => {
 
       // Update medicine stock quantities
       for (const item of items) {
+        // Get current stock first
+        const { data: currentMedicine, error: fetchError } = await supabase
+          .from('medicines')
+          .select('stock_quantity')
+          .eq('id', item.medicine_id)
+          .single();
+
+        if (fetchError) throw fetchError;
+
+        const newStockQuantity = currentMedicine.stock_quantity - item.quantity;
+        
         const { error: updateError } = await supabase
           .from('medicines')
           .update({ 
-            stock_quantity: supabase.sql`stock_quantity - ${item.quantity}` 
+            stock_quantity: newStockQuantity
           })
           .eq('id', item.medicine_id);
 
