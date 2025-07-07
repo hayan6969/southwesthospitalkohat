@@ -58,14 +58,7 @@ export const useAuditLogs = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('audit_logs')
-        .select(`
-          id,
-          action,
-          details,
-          ip_address,
-          created_at,
-          user_id
-        `)
+        .select('*')
         .order('created_at', { ascending: false })
         .limit(100);
 
@@ -82,7 +75,8 @@ export const usePatients = () => {
       const { data, error } = await supabase
         .from('patients')
         .select(`
-          *
+          *,
+          users:profiles!patients_id_fkey(*)
         `)
         .order('id');
 
@@ -99,43 +93,10 @@ export const useDoctors = () => {
       const { data, error } = await supabase
         .from('doctors')
         .select(`
-          *
+          *,
+          users:profiles!doctors_id_fkey(*)
         `)
         .order('id');
-
-      if (error) throw error;
-      return data;
-    }
-  });
-};
-
-// Additional hooks that were missing
-export const usePharmacyStats = () => {
-  return useQuery({
-    queryKey: ['pharmacy-stats'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('medicines')
-        .select('*');
-
-      if (error) throw error;
-      return {
-        totalMedicines: data?.length || 0,
-        lowStock: data?.filter(m => m.stock_quantity <= (m.minimum_stock_level || 10)).length || 0,
-        expired: data?.filter(m => new Date(m.expiry_date) < new Date()).length || 0
-      };
-    }
-  });
-};
-
-export const usePharmacyInvoices = () => {
-  return useQuery({
-    queryKey: ['pharmacy-invoices'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('pharmacy_invoices')
-        .select('*')
-        .order('created_at', { ascending: false });
 
       if (error) throw error;
       return data;
@@ -149,7 +110,17 @@ export const useAppointments = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('appointments')
-        .select('*')
+        .select(`
+          *,
+          patient:patients!appointments_patient_id_fkey(
+            *,
+            users:profiles!patients_id_fkey(*)
+          ),
+          doctor:doctors!appointments_doctor_id_fkey(
+            *,
+            users:profiles!doctors_id_fkey(*)
+          )
+        `)
         .order('appointment_date', { ascending: false });
 
       if (error) throw error;
@@ -164,6 +135,81 @@ export const useLabReports = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('lab_reports')
+        .select(`
+          *,
+          patient:patients!lab_reports_patient_id_fkey(
+            *,
+            users:profiles!patients_id_fkey(*)
+          ),
+          doctor:doctors!lab_reports_doctor_id_fkey(
+            *,
+            users:profiles!doctors_id_fkey(*)
+          )
+        `)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      return data;
+    }
+  });
+};
+
+export const useMedicalRecords = () => {
+  return useQuery({
+    queryKey: ['medical-records'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('medical_records')
+        .select(`
+          *,
+          patient:patients!medical_records_patient_id_fkey(
+            *,
+            users:profiles!patients_id_fkey(*)
+          ),
+          doctor:doctors!medical_records_doctor_id_fkey(
+            *,
+            users:profiles!doctors_id_fkey(*)
+          )
+        `)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      return data;
+    }
+  });
+};
+
+// Additional hooks that were missing
+export const usePharmacyStats = () => {
+  return useQuery({
+    queryKey: ['pharmacy-stats'],
+    queryFn: async () => {
+      const [medicinesResult, invoicesResult] = await Promise.all([
+        supabase.from('medicines').select('*'),
+        supabase.from('pharmacy_invoices').select('*')
+      ]);
+
+      const medicines = medicinesResult.data || [];
+      const invoices = invoicesResult.data || [];
+
+      return {
+        totalMedicines: medicines.length,
+        lowStock: medicines.filter(m => m.stock_quantity <= (m.minimum_stock_level || 10)).length,
+        expired: medicines.filter(m => new Date(m.expiry_date) < new Date()).length,
+        totalInvoices: invoices.length,
+        totalRevenue: invoices.reduce((sum, invoice) => sum + invoice.final_amount, 0),
+        lowStockCount: medicines.filter(m => m.stock_quantity <= (m.minimum_stock_level || 10)).length
+      };
+    }
+  });
+};
+
+export const usePharmacyInvoices = () => {
+  return useQuery({
+    queryKey: ['pharmacy-invoices'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('pharmacy_invoices')
         .select('*')
         .order('created_at', { ascending: false });
 
@@ -330,6 +376,104 @@ export const useCreateAuditLog = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['audit-logs'] });
+    },
+  });
+};
+
+export const useCreateMedicalRecord = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async (record: any) => {
+      const { data, error } = await supabase
+        .from('medical_records')
+        .insert([record])
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['medical-records'] });
+    },
+  });
+};
+
+export const useUpdateAppointment = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async ({ id, ...updates }: any) => {
+      const { data, error } = await supabase
+        .from('appointments')
+        .update(updates)
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['appointments'] });
+    },
+  });
+};
+
+export const useUpdateLabReport = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async ({ id, ...updates }: any) => {
+      const { data, error } = await supabase
+        .from('lab_reports')
+        .update(updates)
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['lab-reports'] });
+    },
+  });
+};
+
+export const useDeleteAppointment = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from('appointments')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['appointments'] });
+    },
+  });
+};
+
+export const useDeleteLabReport = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from('lab_reports')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['lab-reports'] });
     },
   });
 };
