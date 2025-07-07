@@ -1,4 +1,3 @@
-
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
@@ -39,6 +38,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const fetchUserProfile = async (userId: string) => {
     try {
+      console.log('Fetching profile for user:', userId);
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
@@ -51,6 +51,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
 
       if (data) {
+        console.log('Profile fetched successfully:', data);
         // Cast the role to the proper type
         const profile: UserProfile = {
           ...data,
@@ -59,6 +60,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         return profile;
       }
 
+      console.log('No profile found for user');
       return null;
     } catch (error) {
       console.error('Error fetching user profile:', error);
@@ -79,25 +81,29 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           setTimeout(async () => {
             const profileData = await fetchUserProfile(session.user.id);
             setProfile(profileData);
+            setLoading(false);
           }, 0);
         } else {
           setProfile(null);
+          setLoading(false);
         }
-        
-        setLoading(false);
       }
     );
 
     // Check for existing session
     supabase.auth.getSession().then(({ data: { session } }) => {
+      console.log('Initial session check:', session?.user?.email);
       setSession(session);
       setUser(session?.user ?? null);
       
       if (session?.user) {
-        fetchUserProfile(session.user.id).then(setProfile);
+        fetchUserProfile(session.user.id).then((profileData) => {
+          setProfile(profileData);
+          setLoading(false);
+        });
+      } else {
+        setLoading(false);
       }
-      
-      setLoading(false);
     });
 
     return () => subscription.unsubscribe();
