@@ -36,7 +36,7 @@ export const useDoctorNames = () => {
 // Helper hook to search patients by CNIC with profile info
 export const useSearchPatientsWithNames = (searchTerm: string) => {
   return useQuery({
-    queryKey: ['search-patients-with-names', searchTerm],
+    queryKey: ['search-patients-cnic-only', searchTerm], // Changed query key to clear cache
     queryFn: async () => {
       if (!searchTerm.trim()) return [];
       
@@ -69,6 +69,8 @@ export const useSearchPatientsWithNames = (searchTerm: string) => {
       });
     },
     enabled: !!searchTerm && searchTerm.length >= 1, // Live search with minimum 1 character
+    staleTime: 0, // Always fetch fresh data
+    gcTime: 0, // Don't cache the data (replaced cacheTime)
   });
 };
 
