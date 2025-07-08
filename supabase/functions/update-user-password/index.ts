@@ -6,6 +6,8 @@ const corsHeaders = {
 }
 
 Deno.serve(async (req) => {
+  console.log('Password update function called with method:', req.method);
+
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -14,7 +16,10 @@ Deno.serve(async (req) => {
   try {
     // Get the authorization header
     const authHeader = req.headers.get('Authorization');
+    console.log('Auth header present:', !!authHeader);
+    
     if (!authHeader) {
+      console.error('No authorization header provided');
       return new Response(
         JSON.stringify({ error: 'No authorization header' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -22,28 +27,41 @@ Deno.serve(async (req) => {
     }
 
     // Create supabase client with service role key for admin operations
-    const supabaseAdmin = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
-      {
-        auth: {
-          autoRefreshToken: false,
-          persistSession: false
-        }
+    const supabaseUrl = Deno.env.get('SUPABASE_URL');
+    const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    const anonKey = Deno.env.get('SUPABASE_ANON_KEY');
+
+    console.log('Environment variables check:', {
+      hasUrl: !!supabaseUrl,
+      hasServiceKey: !!serviceRoleKey,
+      hasAnonKey: !!anonKey
+    });
+
+    if (!supabaseUrl || !serviceRoleKey || !anonKey) {
+      console.error('Missing environment variables');
+      return new Response(
+        JSON.stringify({ error: 'Server configuration error' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false
       }
-    );
+    });
 
     // Verify the user making the request
-    const supabaseClient = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? ''
-    );
+    const supabaseClient = createClient(supabaseUrl, anonKey);
 
-    const { data: { user }, error: userError } = await supabaseClient.auth.getUser(
-      authHeader.replace('Bearer ', '')
-    );
+    const token = authHeader.replace('Bearer ', '');
+    const { data: { user }, error: userError } = await supabaseClient.auth.getUser(token);
+
+    console.log('User verification:', { hasUser: !!user, error: userError?.message });
 
     if (userError || !user) {
+      console.error('Invalid authorization:', userError?.message);
       return new Response(
         JSON.stringify({ error: 'Invalid authorization' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -57,16 +75,23 @@ Deno.serve(async (req) => {
       .eq('id', user.id)
       .single();
 
+    console.log('Profile check:', { role: profile?.role, error: profileError?.message });
+
     if (profileError || profile?.role !== 'admin') {
+      console.error('Insufficient permissions - user role:', profile?.role);
       return new Response(
         JSON.stringify({ error: 'Insufficient permissions' }),
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    const { userId, password } = await req.json();
+    const requestBody = await req.json();
+    const { userId, password } = requestBody;
+
+    console.log('Request data:', { hasUserId: !!userId, hasPassword: !!password });
 
     if (!userId || !password) {
+      console.error('Missing required fields');
       return new Response(
         JSON.stringify({ error: 'Missing required fields' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -74,6 +99,7 @@ Deno.serve(async (req) => {
     }
 
     // Update user password using admin client
+    console.log('Attempting to update password for user:', userId);
     const { error } = await supabaseAdmin.auth.admin.updateUserById(userId, {
       password: password
     });
@@ -86,6 +112,7 @@ Deno.serve(async (req) => {
       );
     }
 
+    console.log('Password updated successfully');
     return new Response(
       JSON.stringify({ success: true }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -94,7 +121,7 @@ Deno.serve(async (req) => {
   } catch (error) {
     console.error('Function error:', error);
     return new Response(
-      JSON.stringify({ error: 'Internal server error' }),
+      JSON.stringify({ error: 'Internal server error', details: error.message }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
