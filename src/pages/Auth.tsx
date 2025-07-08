@@ -125,8 +125,30 @@ export default function Auth() {
       } else {
         toast({
           title: 'Account Created',
-          description: 'You can now login with your phone number and CNIC',
+          description: 'Signing you in...',
         });
+        
+        // Automatically sign in the user after successful signup
+        try {
+          const { error: signInError } = await signIn(email, signupData.cnic);
+          if (signInError) {
+            toast({
+              title: 'Account Created',
+              description: 'Please login with your phone number and CNIC',
+            });
+          } else {
+            toast({
+              title: 'Welcome!',
+              description: 'Redirecting to your dashboard...',
+            });
+          }
+        } catch (signInError) {
+          toast({
+            title: 'Account Created',
+            description: 'Please login with your phone number and CNIC',
+          });
+        }
+        
         // Clear form
         setSignupData({
           first_name: '',
