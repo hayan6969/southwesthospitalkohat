@@ -68,8 +68,8 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Check if user is admin
-    const { data: profile, error: profileError } = await supabaseClient
+    // Check if user is admin using the admin client to bypass RLS
+    const { data: profile, error: profileError } = await supabaseAdmin
       .from('profiles')
       .select('role')
       .eq('id', user.id)
@@ -77,10 +77,18 @@ Deno.serve(async (req) => {
 
     console.log('Profile check:', { role: profile?.role, error: profileError?.message });
 
-    if (profileError || profile?.role !== 'admin') {
+    if (profileError) {
+      console.error('Error fetching profile:', profileError?.message);
+      return new Response(
+        JSON.stringify({ error: 'Error fetching user profile' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    if (profile?.role !== 'admin') {
       console.error('Insufficient permissions - user role:', profile?.role);
       return new Response(
-        JSON.stringify({ error: 'Insufficient permissions' }),
+        JSON.stringify({ error: 'Insufficient permissions - admin role required' }),
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
