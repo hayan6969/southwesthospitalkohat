@@ -12,9 +12,16 @@ export default function Auth() {
   const { signIn, signUp, loading } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isPatientLogin, setIsPatientLogin] = useState(false);
 
-  // Login form state
+  // Login form state for regular users
   const [loginData, setLoginData] = useState({
+    email: '',
+    password: '',
+  });
+
+  // Patient login form state
+  const [patientLoginData, setPatientLoginData] = useState({
     phone: '',
     cnic: '',
   });
@@ -35,16 +42,25 @@ export default function Auth() {
     setIsLoading(true);
 
     try {
-      // Use phone as email and CNIC as password for patient login
-      // Format phone number to create a valid email
-      const cleanPhone = loginData.phone.replace(/\D/g, ''); // Remove non-digits
-      const email = `patient${cleanPhone}@hims.local`;
-      const { error } = await signIn(email, loginData.cnic);
+      let email, password;
+      
+      if (isPatientLogin) {
+        // Use phone as email and CNIC as password for patient login
+        const cleanPhone = patientLoginData.phone.replace(/\D/g, ''); // Remove non-digits
+        email = `patient${cleanPhone}@hims.local`;
+        password = patientLoginData.cnic;
+      } else {
+        // Regular email/password login for staff, doctors, admins
+        email = loginData.email;
+        password = loginData.password;
+      }
+
+      const { error } = await signIn(email, password);
       
       if (error) {
         toast({
           title: 'Login Failed',
-          description: 'Invalid phone number or CNIC',
+          description: isPatientLogin ? 'Invalid phone number or CNIC' : 'Invalid email or password',
           variant: 'destructive',
         });
       } else {
@@ -156,7 +172,7 @@ export default function Auth() {
           <CardHeader className="space-y-1">
             <CardTitle className="text-2xl text-center">Welcome</CardTitle>
             <CardDescription className="text-center">
-              Patients: Login with phone number and CNIC
+              Sign in to your account or create a new patient account
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -168,44 +184,102 @@ export default function Auth() {
               
               <TabsContent value="login">
                 <form onSubmit={handleLogin} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="phone">Phone Number</Label>
-                    <div className="relative">
-                      <Phone className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                      <Input
-                        id="phone"
-                        type="tel"
-                        placeholder="03001234567"
-                        value={loginData.phone}
-                        onChange={(e) => setLoginData({ ...loginData, phone: e.target.value })}
-                        className="pl-10"
-                        required
-                      />
-                    </div>
+                  <div className="flex items-center space-x-2 mb-4">
+                    <input
+                      type="checkbox"
+                      id="patientLogin"
+                      checked={isPatientLogin}
+                      onChange={(e) => setIsPatientLogin(e.target.checked)}
+                      className="rounded border-gray-300"
+                    />
+                    <Label htmlFor="patientLogin" className="text-sm font-medium">
+                      Patient Login (Phone & CNIC)
+                    </Label>
                   </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="cnic">CNIC</Label>
-                    <div className="relative">
-                      <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                      <Input
-                        id="cnic"
-                        type={showPassword ? 'text' : 'password'}
-                        placeholder="12345-6789012-3"
-                        value={loginData.cnic}
-                        onChange={(e) => setLoginData({ ...loginData, cnic: e.target.value })}
-                        className="pl-10 pr-10"
-                        required
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowPassword(!showPassword)}
-                        className="absolute right-3 top-3 text-gray-400 hover:text-gray-600"
-                      >
-                        {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                      </button>
-                    </div>
-                  </div>
+
+                  {isPatientLogin ? (
+                    <>
+                      <div className="space-y-2">
+                        <Label htmlFor="patient_phone">Phone Number</Label>
+                        <div className="relative">
+                          <Phone className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                          <Input
+                            id="patient_phone"
+                            type="tel"
+                            placeholder="03001234567"
+                            value={patientLoginData.phone}
+                            onChange={(e) => setPatientLoginData({ ...patientLoginData, phone: e.target.value })}
+                            className="pl-10"
+                            required
+                          />
+                        </div>
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <Label htmlFor="patient_cnic">CNIC</Label>
+                        <div className="relative">
+                          <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                          <Input
+                            id="patient_cnic"
+                            type={showPassword ? 'text' : 'password'}
+                            placeholder="12345-6789012-3"
+                            value={patientLoginData.cnic}
+                            onChange={(e) => setPatientLoginData({ ...patientLoginData, cnic: e.target.value })}
+                            className="pl-10 pr-10"
+                            required
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowPassword(!showPassword)}
+                            className="absolute right-3 top-3 text-gray-400 hover:text-gray-600"
+                          >
+                            {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                          </button>
+                        </div>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="space-y-2">
+                        <Label htmlFor="email">Email</Label>
+                        <div className="relative">
+                          <Mail className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                          <Input
+                            id="email"
+                            type="email"
+                            placeholder="Enter your email"
+                            value={loginData.email}
+                            onChange={(e) => setLoginData({ ...loginData, email: e.target.value })}
+                            className="pl-10"
+                            required
+                          />
+                        </div>
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <Label htmlFor="password">Password</Label>
+                        <div className="relative">
+                          <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                          <Input
+                            id="password"
+                            type={showPassword ? 'text' : 'password'}
+                            placeholder="Enter your password"
+                            value={loginData.password}
+                            onChange={(e) => setLoginData({ ...loginData, password: e.target.value })}
+                            className="pl-10 pr-10"
+                            required
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowPassword(!showPassword)}
+                            className="absolute right-3 top-3 text-gray-400 hover:text-gray-600"
+                          >
+                            {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                          </button>
+                        </div>
+                      </div>
+                    </>
+                  )}
                   
                   <Button type="submit" className="w-full" disabled={isLoading}>
                     {isLoading ? 'Signing In...' : 'Sign In'}
