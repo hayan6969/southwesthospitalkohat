@@ -354,56 +354,44 @@ export const useCreatePatientWithProfile = () => {
   
   return useMutation({
     mutationFn: async (patientData: {
-      id?: string;
       first_name: string;
       last_name: string;
       phone: string;
       cnic: string;
-      email?: string;
-      date_of_birth?: string;
-      address?: string;
-      blood_type?: string;
-      allergies?: string;
     }) => {
-      const patientId = patientData.id || crypto.randomUUID();
+      // Create user account first with phone as email and CNIC as password
+      const email = `${patientData.phone}@patient.local`;
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email,
+        password: patientData.cnic,
+        options: {
+          data: {
+            first_name: patientData.first_name,
+            last_name: patientData.last_name,
+            role: 'patient'
+          }
+        }
+      });
+
+      if (authError) throw authError;
+      if (!authData.user) throw new Error('Failed to create user account');
+
+      const patientId = authData.user.id;
       
-      // Create patient record first
+      // Create patient record
       const { data: patient, error: patientError } = await supabase
         .from('patients')
         .insert({
           id: patientId,
           cnic: patientData.cnic,
-          date_of_birth: patientData.date_of_birth || null,
-          address: patientData.address || null,
-          blood_type: patientData.blood_type || null,
-          allergies: patientData.allergies || null,
         })
         .select()
         .single();
 
       if (patientError) throw patientError;
 
-      // Create profile record (for display purposes)
-      const { data: profile, error: profileError } = await supabase
-        .from('profiles')
-        .insert({
-          id: patientId,
-          email: patientData.email || `${patientData.phone}@patient.local`,
-          first_name: patientData.first_name,
-          last_name: patientData.last_name,
-          phone: patientData.phone,
-          role: 'patient',
-        })
-        .select()
-        .single();
-
-      if (profileError) {
-        console.warn('Profile creation failed, but patient was created:', profileError);
-        // Return patient anyway since the main goal is achieved
-        return { patient, profile: null };
-      }
-
-      return { patient, profile };
+      // Profile will be created automatically by the trigger
+      return { patient, user: authData.user };
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['patients'] });

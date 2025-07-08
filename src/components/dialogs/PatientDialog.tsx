@@ -17,12 +17,6 @@ export function PatientDialog() {
   const [lastName, setLastName] = useState("");
   const [phone, setPhone] = useState("");
   const [cnic, setCnic] = useState("");
-  const [dateOfBirth, setDateOfBirth] = useState("");
-  const [address, setAddress] = useState("");
-  const [bloodType, setBloodType] = useState("");
-  const [allergies, setAllergies] = useState("");
-  const [emergencyContactName, setEmergencyContactName] = useState("");
-  const [emergencyContactPhone, setEmergencyContactPhone] = useState("");
 
   const createPatientWithProfile = useCreatePatientWithProfile();
   const { logAction } = useAuditLogger();
@@ -41,10 +35,6 @@ export function PatientDialog() {
         last_name: lastName.trim(),
         phone: phone.trim(),
         cnic: cnic.trim(),
-        date_of_birth: dateOfBirth || undefined,
-        address: address.trim() || undefined,
-        blood_type: bloodType || undefined,
-        allergies: allergies.trim() || undefined
       };
       
       const result = await createPatientWithProfile.mutateAsync(patientData);
@@ -52,10 +42,10 @@ export function PatientDialog() {
       // Log the audit event
       await logAction(
         "Registered new patient",
-        `Patient: ${firstName} ${lastName} (CNIC: ${cnic})`
+        `Patient: ${firstName} ${lastName} (Phone: ${phone}, CNIC: ${cnic})`
       );
       
-      toast.success("Patient registered successfully");
+      toast.success("Patient account created successfully. They can now login with their phone number and CNIC.");
       setOpen(false);
       
       // Reset form
@@ -63,12 +53,6 @@ export function PatientDialog() {
       setLastName("");
       setPhone("");
       setCnic("");
-      setDateOfBirth("");
-      setAddress("");
-      setBloodType("");
-      setAllergies("");
-      setEmergencyContactName("");
-      setEmergencyContactPhone("");
     } catch (error) {
       toast.error("Failed to register patient");
       console.error("Error creating patient:", error);
@@ -113,7 +97,7 @@ export function PatientDialog() {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="phone">Phone Number *</Label>
+            <Label htmlFor="phone">Phone Number * (Used as Username)</Label>
             <Input
               id="phone"
               type="tel"
@@ -125,7 +109,7 @@ export function PatientDialog() {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="cnic">CNIC *</Label>
+            <Label htmlFor="cnic">CNIC * (Used as Password)</Label>
             <Input
               id="cnic"
               value={cnic}
@@ -134,76 +118,11 @@ export function PatientDialog() {
               required
             />
           </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="dateOfBirth">Date of Birth</Label>
-            <Input
-              id="dateOfBirth"
-              type="date"
-              value={dateOfBirth}
-              onChange={(e) => setDateOfBirth(e.target.value)}
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="address">Address</Label>
-            <Textarea
-              id="address"
-              value={address}
-              onChange={(e) => setAddress(e.target.value)}
-              placeholder="123 Main St, City, State, ZIP"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="bloodType">Blood Type</Label>
-            <Select value={bloodType} onValueChange={setBloodType}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select blood type" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="A+">A+</SelectItem>
-                <SelectItem value="A-">A-</SelectItem>
-                <SelectItem value="B+">B+</SelectItem>
-                <SelectItem value="B-">B-</SelectItem>
-                <SelectItem value="AB+">AB+</SelectItem>
-                <SelectItem value="AB-">AB-</SelectItem>
-                <SelectItem value="O+">O+</SelectItem>
-                <SelectItem value="O-">O-</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="allergies">Allergies</Label>
-            <Textarea
-              id="allergies"
-              value={allergies}
-              onChange={(e) => setAllergies(e.target.value)}
-              placeholder="List any known allergies..."
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="emergencyContactName">Emergency Contact Name</Label>
-              <Input
-                id="emergencyContactName"
-                value={emergencyContactName}
-                onChange={(e) => setEmergencyContactName(e.target.value)}
-                placeholder="Contact person name"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="emergencyContactPhone">Emergency Contact Phone</Label>
-              <Input
-                id="emergencyContactPhone"
-                type="tel"
-                value={emergencyContactPhone}
-                onChange={(e) => setEmergencyContactPhone(e.target.value)}
-                placeholder="03001234567"
-              />
-            </div>
+          
+          <div className="text-sm text-gray-600 bg-blue-50 p-3 rounded-lg">
+            <p>• Phone number will be used as username for login</p>
+            <p>• CNIC will be used as password for login</p>
+            <p>• Patient can complete their profile after logging in</p>
           </div>
 
           <div className="flex justify-end space-x-2">
