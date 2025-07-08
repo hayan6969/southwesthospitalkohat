@@ -5,6 +5,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "./hooks/useAuth";
+import { useRealTimeUpdates } from "./hooks/useRealTimeUpdates";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
@@ -51,19 +52,27 @@ import PharmacyStock from "./pages/dashboard/pharmacy/PharmacyStock";
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 1000 * 60 * 5, // 5 minutes
+      staleTime: 1000 * 30, // 30 seconds - shorter for real-time feel
+      refetchInterval: 1000 * 60, // Refetch every minute as backup
       retry: 1,
     },
   },
 });
 
+// Component to initialize real-time updates
+const RealTimeProvider = ({ children }: { children: React.ReactNode }) => {
+  useRealTimeUpdates();
+  return <>{children}</>;
+};
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
+      <RealTimeProvider>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
+          <BrowserRouter>
           <Routes>
             <Route path="/auth" element={<Auth />} />
             <Route path="/" element={
@@ -227,8 +236,9 @@ const App = () => (
           </Routes>
         </BrowserRouter>
       </TooltipProvider>
-    </AuthProvider>
-  </QueryClientProvider>
+    </RealTimeProvider>
+  </AuthProvider>
+</QueryClientProvider>
 );
 
 export default App;
