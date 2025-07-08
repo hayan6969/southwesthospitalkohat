@@ -11,6 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { Plus } from "lucide-react";
 import { convertUsdToPkr } from "@/utils/currency";
+import { generateInvoicePDF } from "@/utils/pdfGenerator";
 
 export function InvoiceDialog() {
   const [open, setOpen] = useState(false);
@@ -45,10 +46,11 @@ export function InvoiceDialog() {
     try {
       // Convert PKR to USD for storage
       const usdAmount = amountNumber / convertUsdToPkr(1);
+      const invoiceNumber = generateInvoiceNumber();
       
-      await createInvoice.mutateAsync({
+      const newInvoice = await createInvoice.mutateAsync({
         patient_id: patientId,
-        invoice_number: generateInvoiceNumber(),
+        invoice_number: invoiceNumber,
         amount: usdAmount,
         description: description.trim(),
         due_date: dueDate || undefined,
@@ -56,6 +58,29 @@ export function InvoiceDialog() {
       });
       
       toast.success("Invoice created successfully");
+      
+      // Generate and open PDF invoice
+      const selectedPatient = patients?.find(p => p.id === patientId);
+      const patientName = getPatientName(patientId, patientNames || []);
+      
+      const invoiceData = {
+        invoice_number: invoiceNumber,
+        created_at: new Date().toISOString(),
+        amount: amountNumber, // Use original PKR amount for display
+        description: description.trim(),
+        due_date: dueDate,
+        status: 'pending',
+        patient: {
+          users: {
+            first_name: patientName.split(' ')[0] || '',
+            last_name: patientName.split(' ').slice(1).join(' ') || '',
+            email: ''
+          }
+        }
+      };
+      
+      generateInvoicePDF(invoiceData);
+      
       setOpen(false);
       
       // Reset form

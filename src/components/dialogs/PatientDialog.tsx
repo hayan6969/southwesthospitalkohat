@@ -1,6 +1,6 @@
 
 import { useState } from "react";
-import { useCreatePatient } from "@/hooks/useDatabase";
+import { useCreatePatientWithProfile } from "@/hooks/useDatabase";
 import { useAuditLogger } from "@/hooks/useAuditLogger";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -15,43 +15,44 @@ export function PatientDialog() {
   const [open, setOpen] = useState(false);
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
-  const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
+  const [cnic, setCnic] = useState("");
   const [dateOfBirth, setDateOfBirth] = useState("");
   const [address, setAddress] = useState("");
   const [bloodType, setBloodType] = useState("");
   const [allergies, setAllergies] = useState("");
+  const [emergencyContactName, setEmergencyContactName] = useState("");
+  const [emergencyContactPhone, setEmergencyContactPhone] = useState("");
 
-  const createPatient = useCreatePatient();
+  const createPatientWithProfile = useCreatePatientWithProfile();
   const { logAction } = useAuditLogger();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!firstName.trim() || !lastName.trim() || !email.trim()) {
+    if (!firstName.trim() || !lastName.trim() || !phone.trim() || !cnic.trim()) {
       toast.error("Please fill in all required fields");
       return;
     }
 
     try {
-      const newPatient = await createPatient.mutateAsync({
-        user: {
-          first_name: firstName.trim(),
-          last_name: lastName.trim(),
-          email: email.trim(),
-          phone: phone.trim() || undefined,
-          role: 'patient'
-        },
+      const patientData = {
+        first_name: firstName.trim(),
+        last_name: lastName.trim(),
+        phone: phone.trim(),
+        cnic: cnic.trim(),
         date_of_birth: dateOfBirth || undefined,
         address: address.trim() || undefined,
         blood_type: bloodType || undefined,
         allergies: allergies.trim() || undefined
-      });
+      };
+      
+      const result = await createPatientWithProfile.mutateAsync(patientData);
       
       // Log the audit event
       await logAction(
         "Registered new patient",
-        `Patient: ${firstName} ${lastName} (${email})`
+        `Patient: ${firstName} ${lastName} (CNIC: ${cnic})`
       );
       
       toast.success("Patient registered successfully");
@@ -60,12 +61,14 @@ export function PatientDialog() {
       // Reset form
       setFirstName("");
       setLastName("");
-      setEmail("");
       setPhone("");
+      setCnic("");
       setDateOfBirth("");
       setAddress("");
       setBloodType("");
       setAllergies("");
+      setEmergencyContactName("");
+      setEmergencyContactPhone("");
     } catch (error) {
       toast.error("Failed to register patient");
       console.error("Error creating patient:", error);
@@ -110,25 +113,25 @@ export function PatientDialog() {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="email">Email *</Label>
-            <Input
-              id="email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="john.doe@example.com"
-              required
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="phone">Phone</Label>
+            <Label htmlFor="phone">Phone Number *</Label>
             <Input
               id="phone"
               type="tel"
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
-              placeholder="+1 (555) 123-4567"
+              placeholder="03001234567"
+              required
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="cnic">CNIC *</Label>
+            <Input
+              id="cnic"
+              value={cnic}
+              onChange={(e) => setCnic(e.target.value)}
+              placeholder="12345-6789012-3"
+              required
             />
           </div>
 
@@ -181,12 +184,34 @@ export function PatientDialog() {
             />
           </div>
 
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="emergencyContactName">Emergency Contact Name</Label>
+              <Input
+                id="emergencyContactName"
+                value={emergencyContactName}
+                onChange={(e) => setEmergencyContactName(e.target.value)}
+                placeholder="Contact person name"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="emergencyContactPhone">Emergency Contact Phone</Label>
+              <Input
+                id="emergencyContactPhone"
+                type="tel"
+                value={emergencyContactPhone}
+                onChange={(e) => setEmergencyContactPhone(e.target.value)}
+                placeholder="03001234567"
+              />
+            </div>
+          </div>
+
           <div className="flex justify-end space-x-2">
             <Button type="button" variant="outline" onClick={() => setOpen(false)}>
               Cancel
             </Button>
-            <Button type="submit" disabled={createPatient.isPending}>
-              {createPatient.isPending ? "Registering..." : "Register Patient"}
+            <Button type="submit" disabled={createPatientWithProfile.isPending}>
+              {createPatientWithProfile.isPending ? "Registering..." : "Register Patient"}
             </Button>
           </div>
         </form>

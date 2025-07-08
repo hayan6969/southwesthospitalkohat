@@ -15,18 +15,19 @@ export default function Auth() {
 
   // Login form state
   const [loginData, setLoginData] = useState({
-    email: '',
-    password: '',
+    phone: '',
+    cnic: '',
   });
 
   // Signup form state
   const [signupData, setSignupData] = useState({
-    email: '',
-    password: '',
-    confirmPassword: '',
     first_name: '',
     last_name: '',
     phone: '',
+    cnic: '',
+    confirmCnic: '',
+    date_of_birth: '',
+    address: '',
   });
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -34,12 +35,14 @@ export default function Auth() {
     setIsLoading(true);
 
     try {
-      const { error } = await signIn(loginData.email, loginData.password);
+      // Use phone as email and CNIC as password for patient login
+      const email = `${loginData.phone}@patient.local`;
+      const { error } = await signIn(email, loginData.cnic);
       
       if (error) {
         toast({
           title: 'Login Failed',
-          description: error.message || 'Invalid email or password',
+          description: 'Invalid phone number or CNIC',
           variant: 'destructive',
         });
       } else {
@@ -64,20 +67,20 @@ export default function Auth() {
     e.preventDefault();
     setIsLoading(true);
 
-    if (signupData.password !== signupData.confirmPassword) {
+    if (signupData.cnic !== signupData.confirmCnic) {
       toast({
-        title: 'Password Mismatch',
-        description: 'Passwords do not match',
+        title: 'CNIC Mismatch',
+        description: 'CNIC numbers do not match',
         variant: 'destructive',
       });
       setIsLoading(false);
       return;
     }
 
-    if (signupData.password.length < 6) {
+    if (signupData.cnic.length < 13) {
       toast({
-        title: 'Password Too Short',
-        description: 'Password must be at least 6 characters long',
+        title: 'Invalid CNIC',
+        description: 'CNIC must be at least 13 characters long',
         variant: 'destructive',
       });
       setIsLoading(false);
@@ -85,7 +88,9 @@ export default function Auth() {
     }
 
     try {
-      const { error } = await signUp(signupData.email, signupData.password, {
+      // Use phone as email and CNIC as password for patient signup
+      const email = `${signupData.phone}@patient.local`;
+      const { error } = await signUp(email, signupData.cnic, {
         first_name: signupData.first_name,
         last_name: signupData.last_name,
         role: 'patient'
@@ -100,16 +105,17 @@ export default function Auth() {
       } else {
         toast({
           title: 'Account Created',
-          description: 'Please check your email to verify your account',
+          description: 'You can now login with your phone number and CNIC',
         });
         // Clear form
         setSignupData({
-          email: '',
-          password: '',
-          confirmPassword: '',
           first_name: '',
           last_name: '',
           phone: '',
+          cnic: '',
+          confirmCnic: '',
+          date_of_birth: '',
+          address: '',
         });
       }
     } catch (error) {
@@ -146,7 +152,7 @@ export default function Auth() {
           <CardHeader className="space-y-1">
             <CardTitle className="text-2xl text-center">Welcome</CardTitle>
             <CardDescription className="text-center">
-              Sign in to your account or create a new patient account
+              Patients: Login with phone number and CNIC
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -159,15 +165,15 @@ export default function Auth() {
               <TabsContent value="login">
                 <form onSubmit={handleLogin} className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="email">Email</Label>
+                    <Label htmlFor="phone">Phone Number</Label>
                     <div className="relative">
-                      <Mail className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                      <Phone className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
                       <Input
-                        id="email"
-                        type="email"
-                        placeholder="Enter your email"
-                        value={loginData.email}
-                        onChange={(e) => setLoginData({ ...loginData, email: e.target.value })}
+                        id="phone"
+                        type="tel"
+                        placeholder="03001234567"
+                        value={loginData.phone}
+                        onChange={(e) => setLoginData({ ...loginData, phone: e.target.value })}
                         className="pl-10"
                         required
                       />
@@ -175,15 +181,15 @@ export default function Auth() {
                   </div>
                   
                   <div className="space-y-2">
-                    <Label htmlFor="password">Password</Label>
+                    <Label htmlFor="cnic">CNIC</Label>
                     <div className="relative">
                       <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
                       <Input
-                        id="password"
+                        id="cnic"
                         type={showPassword ? 'text' : 'password'}
-                        placeholder="Enter your password"
-                        value={loginData.password}
-                        onChange={(e) => setLoginData({ ...loginData, password: e.target.value })}
+                        placeholder="12345-6789012-3"
+                        value={loginData.cnic}
+                        onChange={(e) => setLoginData({ ...loginData, cnic: e.target.value })}
                         className="pl-10 pr-10"
                         required
                       />
@@ -240,15 +246,15 @@ export default function Auth() {
                   </div>
                   
                   <div className="space-y-2">
-                    <Label htmlFor="signup_email">Email</Label>
+                    <Label htmlFor="signup_phone">Phone Number</Label>
                     <div className="relative">
-                      <Mail className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                      <Phone className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
                       <Input
-                        id="signup_email"
-                        type="email"
-                        placeholder="Enter your email"
-                        value={signupData.email}
-                        onChange={(e) => setSignupData({ ...signupData, email: e.target.value })}
+                        id="signup_phone"
+                        type="tel"
+                        placeholder="03001234567"
+                        value={signupData.phone}
+                        onChange={(e) => setSignupData({ ...signupData, phone: e.target.value })}
                         className="pl-10"
                         required
                       />
@@ -256,30 +262,15 @@ export default function Auth() {
                   </div>
                   
                   <div className="space-y-2">
-                    <Label htmlFor="phone">Phone (Optional)</Label>
-                    <div className="relative">
-                      <Phone className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                      <Input
-                        id="phone"
-                        type="tel"
-                        placeholder="Enter your phone number"
-                        value={signupData.phone}
-                        onChange={(e) => setSignupData({ ...signupData, phone: e.target.value })}
-                        className="pl-10"
-                      />
-                    </div>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="signup_password">Password</Label>
+                    <Label htmlFor="signup_cnic">CNIC</Label>
                     <div className="relative">
                       <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
                       <Input
-                        id="signup_password"
+                        id="signup_cnic"
                         type={showPassword ? 'text' : 'password'}
-                        placeholder="Create a password"
-                        value={signupData.password}
-                        onChange={(e) => setSignupData({ ...signupData, password: e.target.value })}
+                        placeholder="12345-6789012-3"
+                        value={signupData.cnic}
+                        onChange={(e) => setSignupData({ ...signupData, cnic: e.target.value })}
                         className="pl-10 pr-10"
                         required
                       />
@@ -294,19 +285,40 @@ export default function Auth() {
                   </div>
                   
                   <div className="space-y-2">
-                    <Label htmlFor="confirm_password">Confirm Password</Label>
+                    <Label htmlFor="confirm_cnic">Confirm CNIC</Label>
                     <div className="relative">
                       <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
                       <Input
-                        id="confirm_password"
+                        id="confirm_cnic"
                         type={showPassword ? 'text' : 'password'}
-                        placeholder="Confirm your password"
-                        value={signupData.confirmPassword}
-                        onChange={(e) => setSignupData({ ...signupData, confirmPassword: e.target.value })}
+                        placeholder="Confirm your CNIC"
+                        value={signupData.confirmCnic}
+                        onChange={(e) => setSignupData({ ...signupData, confirmCnic: e.target.value })}
                         className="pl-10"
                         required
                       />
                     </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="date_of_birth">Date of Birth (Optional)</Label>
+                    <Input
+                      id="date_of_birth"
+                      type="date"
+                      value={signupData.date_of_birth}
+                      onChange={(e) => setSignupData({ ...signupData, date_of_birth: e.target.value })}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="address">Address (Optional)</Label>
+                    <Input
+                      id="address"
+                      type="text"
+                      placeholder="Your address"
+                      value={signupData.address}
+                      onChange={(e) => setSignupData({ ...signupData, address: e.target.value })}
+                    />
                   </div>
                   
                   <Button type="submit" className="w-full" disabled={isLoading}>
