@@ -88,7 +88,10 @@ export const useDoctors = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('doctors')
-        .select('*')
+        .select(`
+          *,
+          profiles(first_name, last_name, email, phone)
+        `)
         .order('id');
 
       if (error) throw error;
@@ -106,7 +109,7 @@ export const useAppointments = () => {
         .select(`
           *,
           patient:patients(*),
-          doctor:doctors(*)
+          doctor:doctors(*, profiles(first_name, last_name, email, phone))
         `)
         .order('appointment_date', { ascending: false });
 
@@ -122,7 +125,11 @@ export const useLabReports = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('lab_reports')
-        .select('*')
+        .select(`
+          *,
+          patient:patients(*),
+          doctor:doctors(*, profiles(first_name, last_name))
+        `)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -137,7 +144,11 @@ export const useMedicalRecords = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('medical_records')
-        .select('*')
+        .select(`
+          *,
+          patient:patients(*),
+          doctor:doctors(*, profiles(first_name, last_name))
+        `)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -152,7 +163,10 @@ export const useInvoices = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('invoices')
-        .select('*')
+        .select(`
+          *,
+          patient:patients(*,profiles(first_name, last_name, phone, email))
+        `)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
