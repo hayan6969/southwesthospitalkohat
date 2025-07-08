@@ -57,10 +57,7 @@ export const useAuditLogs = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('audit_logs')
-        .select(`
-          *,
-          profiles!audit_logs_user_id_fkey (*)
-        `)
+        .select('*')
         .order('created_at', { ascending: false })
         .limit(100);
 
@@ -76,10 +73,7 @@ export const usePatients = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('patients')
-        .select(`
-          *,
-          profiles!patients_id_fkey (*)
-        `)
+        .select('*')
         .order('id');
 
       if (error) throw error;
@@ -94,10 +88,7 @@ export const useDoctors = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('doctors')
-        .select(`
-          *,
-          profiles!doctors_id_fkey (*)
-        `)
+        .select('*')
         .order('id');
 
       if (error) throw error;
@@ -114,14 +105,8 @@ export const useAppointments = () => {
         .from('appointments')
         .select(`
           *,
-          patient:patients(
-            *,
-            profiles!patients_id_fkey (*)
-          ),
-          doctor:doctors(
-            *,
-            profiles!doctors_id_fkey (*)
-          )
+          patient:patients(*),
+          doctor:doctors(*)
         `)
         .order('appointment_date', { ascending: false });
 

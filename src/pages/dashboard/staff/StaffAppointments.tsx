@@ -1,7 +1,8 @@
 
 import AppLayout from "@/layouts/AppLayout";
 import { useAppointments, useUpdateAppointment } from "@/hooks/useDatabase";
-import { Calendar, Clock, User, Plus, CheckCircle, X } from "lucide-react";
+import { EnhancedAppointmentDialog } from "@/components/dialogs/EnhancedAppointmentDialog";
+import { Calendar, Clock, User, CheckCircle, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { format } from "date-fns";
@@ -32,10 +33,7 @@ export default function StaffAppointments() {
             <h1 className="text-3xl font-bold text-gray-900">Appointment Management</h1>
             <p className="text-gray-600 mt-1">Schedule and manage patient appointments</p>
           </div>
-          <Button className="bg-blue-600 hover:bg-blue-700">
-            <Plus className="w-4 h-4 mr-2" />
-            Schedule Appointment
-          </Button>
+          <EnhancedAppointmentDialog />
         </div>
 
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm">

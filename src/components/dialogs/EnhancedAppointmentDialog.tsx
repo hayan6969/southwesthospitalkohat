@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { useCreateAppointmentWithInvoice, useCreatePatientWithProfile, useDoctors, useSearchPatients } from "@/hooks/useDatabase";
+import { useCreateAppointmentWithInvoice, useCreatePatientWithProfile, useDoctors } from "@/hooks/useDatabase";
+import { useSearchPatientsWithNames, useDoctorNames } from "@/hooks/useDisplayHelpers";
 import { useAuditLogger } from "@/hooks/useAuditLogger";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -43,10 +44,12 @@ export function EnhancedAppointmentDialog() {
   const createAppointmentWithInvoice = useCreateAppointmentWithInvoice();
   const createPatientWithProfile = useCreatePatientWithProfile();
   const { data: doctors } = useDoctors();
-  const { data: searchResults } = useSearchPatients(searchTerm);
+  const { data: doctorNames } = useDoctorNames();
+  const { data: searchResults } = useSearchPatientsWithNames(searchTerm);
   const { logAction } = useAuditLogger();
 
   const selectedDoctor = doctors?.find(d => d.id === doctorId);
+  const selectedDoctorName = doctorNames?.find(d => d.id === doctorId);
   const consultationFee = selectedDoctor?.consultation_fee || 0;
 
   const resetForm = () => {
@@ -123,7 +126,7 @@ export function EnhancedAppointmentDialog() {
           status: 'scheduled'
         },
         consultationFee,
-        doctorName: `${selectedDoctor?.profiles?.first_name} ${selectedDoctor?.profiles?.last_name}`
+        doctorName: `${selectedDoctorName?.first_name} ${selectedDoctorName?.last_name}`
       };
 
       const result = await createAppointmentWithInvoice.mutateAsync(appointmentData);
@@ -204,10 +207,10 @@ export function EnhancedAppointmentDialog() {
                             onClick={() => setSelectedPatient(patient)}
                           >
                             <div className="font-medium">
-                              {patient.profiles?.first_name} {patient.profiles?.last_name}
+                              {patient.profile?.first_name} {patient.profile?.last_name}
                             </div>
                             <div className="text-sm text-gray-500">
-                              CNIC: {patient.cnic} | Phone: {patient.profiles?.phone}
+                              CNIC: {patient.cnic} | Phone: {patient.profile?.phone}
                             </div>
                           </div>
                         ))}
@@ -303,16 +306,19 @@ export function EnhancedAppointmentDialog() {
                 <SelectValue placeholder="Select a doctor" />
               </SelectTrigger>
               <SelectContent>
-                {doctors?.map((doctor) => (
-                  <SelectItem key={doctor.id} value={doctor.id}>
-                    <div className="flex justify-between items-center w-full">
-                      <span>Dr. {doctor.profiles?.first_name} {doctor.profiles?.last_name} - {doctor.specialization}</span>
-                      <span className="ml-2 text-green-600 font-medium">
-                        {formatCurrency(doctor.consultation_fee || 0)}
-                      </span>
-                    </div>
-                  </SelectItem>
-                ))}
+                {doctors?.map((doctor) => {
+                  const doctorName = doctorNames?.find(d => d.id === doctor.id);
+                  return (
+                    <SelectItem key={doctor.id} value={doctor.id}>
+                      <div className="flex justify-between items-center w-full">
+                        <span>Dr. {doctorName?.first_name} {doctorName?.last_name} - {doctor.specialization}</span>
+                        <span className="ml-2 text-green-600 font-medium">
+                          {formatCurrency(doctor.consultation_fee || 0)}
+                        </span>
+                      </div>
+                    </SelectItem>
+                  );
+                })}
               </SelectContent>
             </Select>
             {selectedDoctor && (
@@ -377,12 +383,12 @@ export function EnhancedAppointmentDialog() {
                 <div>
                   <strong>Patient:</strong> {
                     selectedPatient 
-                      ? `${selectedPatient.profiles?.first_name} ${selectedPatient.profiles?.last_name}`
+                      ? `${selectedPatient.profile?.first_name} ${selectedPatient.profile?.last_name}`
                       : `${newPatient.first_name} ${newPatient.last_name}`
                   }
                 </div>
                 <div>
-                  <strong>Doctor:</strong> Dr. {selectedDoctor.profiles?.first_name} {selectedDoctor.profiles?.last_name}
+                  <strong>Doctor:</strong> Dr. {selectedDoctorName?.first_name} {selectedDoctorName?.last_name}
                 </div>
                 <div>
                   <strong>Consultation Fee:</strong> <span className="text-green-600 font-medium">{formatCurrency(consultationFee)}</span>
