@@ -72,7 +72,7 @@ export default function PatientLabs() {
                           <User className="w-4 h-4 text-gray-400" />
                           <div>
                             <div className="font-medium">
-                              Dr. {lab.doctor?.users?.first_name} {lab.doctor?.users?.last_name}
+                              Dr. {lab.doctor?.profiles?.first_name} {lab.doctor?.profiles?.last_name}
                             </div>
                             <div className="text-sm text-gray-500">
                               {lab.doctor?.specialization}

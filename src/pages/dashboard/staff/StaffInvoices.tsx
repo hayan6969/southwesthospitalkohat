@@ -91,10 +91,10 @@ export default function StaffInvoices() {
                       <TableCell>
                         <div>
                           <div className="font-medium">
-                            {invoice.patient?.users?.first_name} {invoice.patient?.users?.last_name}
+                            {invoice.patient?.profiles?.first_name} {invoice.patient?.profiles?.last_name}
                           </div>
                           <div className="text-sm text-gray-500">
-                            {invoice.patient?.users?.email}
+                            {invoice.patient?.profiles?.email}
                           </div>
                         </div>
                       </TableCell>

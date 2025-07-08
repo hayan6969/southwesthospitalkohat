@@ -1,5 +1,6 @@
 import AppLayout from "@/layouts/AppLayout";
 import { usePatients } from "@/hooks/useDatabase";
+import { usePatientNames, getPatientName } from "@/hooks/useDisplayHelpers";
 import { PatientDialog } from "@/components/dialogs/PatientDialog";
 import { Users, Eye, Edit } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -8,6 +9,7 @@ import { format } from "date-fns";
 
 export default function StaffPatients() {
   const { data: patients, isLoading } = usePatients();
+  const { data: patientNames } = usePatientNames();
 
   return (
     <AppLayout>
@@ -56,23 +58,23 @@ export default function StaffPatients() {
                     <TableRow key={patient.id}>
                       <TableCell>
                         <div className="font-medium">
-                          {patient.users?.first_name} {patient.users?.last_name}
+                          {getPatientName(patient.id, patientNames || [])}
                         </div>
                         <div className="text-sm text-gray-500">
-                          {patient.users?.email}
+                          {patient.patient_number}
                         </div>
                       </TableCell>
                       <TableCell>
                         {patient.date_of_birth ? format(new Date(patient.date_of_birth), 'MMM d, yyyy') : 'N/A'}
                       </TableCell>
-                      <TableCell>{patient.users?.phone || 'N/A'}</TableCell>
+                      <TableCell>{patient.emergency_contact_phone || 'N/A'}</TableCell>
                       <TableCell>
                         <span className="px-2 py-1 bg-red-100 text-red-700 rounded-full text-sm font-medium">
                           {patient.blood_type || 'Unknown'}
                         </span>
                       </TableCell>
                       <TableCell>
-                        {format(new Date(patient.users?.created_at || ''), 'MMM d, yyyy')}
+                        {patient.cnic || 'N/A'}
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
