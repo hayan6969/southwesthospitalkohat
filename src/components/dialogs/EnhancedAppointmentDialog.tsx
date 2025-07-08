@@ -92,9 +92,14 @@ export function EnhancedAppointmentDialog() {
 
       try {
         const patientData = {
-          id: crypto.randomUUID(),
-          ...newPatient,
-          email: `${newPatient.phone}@temp.com`
+          first_name: newPatient.first_name,
+          last_name: newPatient.last_name,
+          phone: newPatient.phone,
+          cnic: newPatient.cnic,
+          date_of_birth: newPatient.date_of_birth,
+          address: newPatient.address,
+          blood_type: newPatient.blood_type,
+          allergies: newPatient.allergies
         };
         
         const result = await createPatientWithProfile.mutateAsync(patientData);

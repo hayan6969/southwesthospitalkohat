@@ -122,17 +122,7 @@ export const useLabReports = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('lab_reports')
-        .select(`
-          *,
-          patient:patients(
-            *,
-            profiles!patients_id_fkey (*)
-          ),
-          doctor:doctors(
-            *,
-            profiles!doctors_id_fkey (*)
-          )
-        `)
+        .select('*')
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -147,17 +137,7 @@ export const useMedicalRecords = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('medical_records')
-        .select(`
-          *,
-          patient:patients(
-            *,
-            profiles!patients_id_fkey (*)
-          ),
-          doctor:doctors(
-            *,
-            profiles!doctors_id_fkey (*)
-          )
-        `)
+        .select('*')
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -172,13 +152,7 @@ export const useInvoices = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('invoices')
-        .select(`
-          *,
-          patient:patients(
-            *,
-            profiles!patients_id_fkey (*)
-          )
-        `)
+        .select('*')
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -311,11 +285,8 @@ export const useSearchPatients = (searchTerm: string) => {
       
       const { data, error } = await supabase
         .from('patients')
-        .select(`
-          *,
-          profiles!patients_id_fkey (*)
-        `)
-        .or(`cnic.ilike.%${searchTerm}%,id.ilike.%${searchTerm}%`)
+        .select('*')
+        .or(`cnic.ilike.%${searchTerm}%,id.ilike.%${searchTerm}%,patient_number.ilike.%${searchTerm}%`)
         .limit(10);
 
       if (error) throw error;
@@ -368,44 +339,62 @@ export const useCreatePatientWithProfile = () => {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: async (patientData: any) => {
-      // Create profile first
-      const { data: profile, error: profileError } = await supabase
-        .from('profiles')
-        .insert([{
-          id: patientData.id,
-          email: patientData.email || `${patientData.phone}@temp.com`,
-          first_name: patientData.first_name,
-          last_name: patientData.last_name,
-          phone: patientData.phone,
-          role: 'patient'
-        }])
-        .select()
-        .single();
-
-      if (profileError) throw profileError;
-
-      // Create patient record
+    mutationFn: async (patientData: {
+      id?: string;
+      first_name: string;
+      last_name: string;
+      phone: string;
+      cnic: string;
+      email?: string;
+      date_of_birth?: string;
+      address?: string;
+      blood_type?: string;
+      allergies?: string;
+    }) => {
+      const patientId = patientData.id || crypto.randomUUID();
+      
+      // Create patient record first
       const { data: patient, error: patientError } = await supabase
         .from('patients')
-        .insert([{
-          id: profile.id,
+        .insert({
+          id: patientId,
           cnic: patientData.cnic,
-          date_of_birth: patientData.date_of_birth,
-          address: patientData.address,
-          blood_type: patientData.blood_type,
-          allergies: patientData.allergies
-        }])
+          date_of_birth: patientData.date_of_birth || null,
+          address: patientData.address || null,
+          blood_type: patientData.blood_type || null,
+          allergies: patientData.allergies || null,
+        })
         .select()
         .single();
 
       if (patientError) throw patientError;
 
-      return { profile, patient };
+      // Create profile record (for display purposes)
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .insert({
+          id: patientId,
+          email: patientData.email || `${patientData.phone}@patient.local`,
+          first_name: patientData.first_name,
+          last_name: patientData.last_name,
+          phone: patientData.phone,
+          role: 'patient',
+        })
+        .select()
+        .single();
+
+      if (profileError) {
+        console.warn('Profile creation failed, but patient was created:', profileError);
+        // Return patient anyway since the main goal is achieved
+        return { patient, profile: null };
+      }
+
+      return { patient, profile };
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['patients'] });
-      queryClient.invalidateQueries({ queryKey: ['users'] });
+      queryClient.invalidateQueries({ queryKey: ['patient-names'] });
+      queryClient.invalidateQueries({ queryKey: ['profiles'] });
     },
   });
 };

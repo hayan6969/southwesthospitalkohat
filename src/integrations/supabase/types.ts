@@ -90,15 +90,7 @@ export type Database = {
           ip_address?: string | null
           user_id?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "audit_logs_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       departments: {
         Row: {
@@ -143,15 +135,7 @@ export type Database = {
           license_number?: string | null
           specialization?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "doctors_id_fkey"
-            columns: ["id"]
-            isOneToOne: true
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       invoices: {
         Row: {
@@ -360,6 +344,7 @@ export type Database = {
           emergency_contact_name: string | null
           emergency_contact_phone: string | null
           id: string
+          patient_number: string | null
         }
         Insert: {
           address?: string | null
@@ -370,6 +355,7 @@ export type Database = {
           emergency_contact_name?: string | null
           emergency_contact_phone?: string | null
           id: string
+          patient_number?: string | null
         }
         Update: {
           address?: string | null
@@ -380,16 +366,9 @@ export type Database = {
           emergency_contact_name?: string | null
           emergency_contact_phone?: string | null
           id?: string
+          patient_number?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "patients_id_fkey"
-            columns: ["id"]
-            isOneToOne: true
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       pharmacy_invoice_items: {
         Row: {
@@ -568,7 +547,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      generate_patient_number: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
     }
     Enums: {
       appointment_status:
