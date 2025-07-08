@@ -34,6 +34,7 @@ export function EditUserDialog({ user, open, onOpenChange, onUserUpdated }: Edit
   const [phone, setPhone] = useState("");
   const [role, setRole] = useState("");
   const [departmentId, setDepartmentId] = useState("");
+  const [password, setPassword] = useState("");
   
   const [loading, setLoading] = useState(false);
 
@@ -47,7 +48,7 @@ export function EditUserDialog({ user, open, onOpenChange, onUserUpdated }: Edit
       setPhone(user.phone || "");
       setRole(user.role);
       setDepartmentId(user.department_id || "");
-      
+      setPassword("");
     }
   }, [user, open]);
 
@@ -78,7 +79,20 @@ export function EditUserDialog({ user, open, onOpenChange, onUserUpdated }: Edit
 
       if (profileError) throw profileError;
 
-      // Note: Password updates require service role access and should be handled via edge function
+      // Update password if provided
+      if (password.trim()) {
+        const { error: passwordError } = await supabase.functions.invoke(
+          'update-user-password',
+          {
+            body: {
+              userId: user.id,
+              password: password.trim()
+            }
+          }
+        );
+        
+        if (passwordError) throw passwordError;
+      }
 
       toast.success("Account updated successfully");
       onUserUpdated();
@@ -92,7 +106,14 @@ export function EditUserDialog({ user, open, onOpenChange, onUserUpdated }: Edit
     }
   };
 
-
+  const generatePassword = () => {
+    const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789@#$";
+    let newPassword = "";
+    for (let i = 0; i < 12; i++) {
+      newPassword += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    setPassword(newPassword);
+  };
 
   if (!user) return null;
 
@@ -151,6 +172,22 @@ export function EditUserDialog({ user, open, onOpenChange, onUserUpdated }: Edit
             </Select>
           </div>
 
+          <div className="space-y-2">
+            <Label htmlFor="password">New Password (leave empty to keep current)</Label>
+            <div className="flex gap-2">
+              <Input
+                id="password"
+                type="text"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Enter new password or leave empty"
+                className="flex-1"
+              />
+              <Button type="button" variant="outline" onClick={generatePassword}>
+                Generate
+              </Button>
+            </div>
+          </div>
 
           <div className="space-y-2">
             <Label htmlFor="phone">Phone</Label>
