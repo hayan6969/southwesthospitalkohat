@@ -108,7 +108,7 @@ export function AppointmentDialog() {
               <SelectContent>
                 {doctors?.map((doctor) => (
                   <SelectItem key={doctor.id} value={doctor.id}>
-                    {getDoctorName(doctor.id, doctorNames || [])} - {doctor.specialization}
+                    Dr. {doctor.profiles?.first_name} {doctor.profiles?.last_name} - {doctor.specialization}
                   </SelectItem>
                 ))}
               </SelectContent>

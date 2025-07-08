@@ -75,7 +75,7 @@ export default function PatientAppointments() {
                           <User className="w-4 h-4 text-gray-400" />
                           <div>
                             <div className="font-medium">
-                              Dr. {appointment.doctor?.users?.first_name} {appointment.doctor?.users?.last_name}
+                              Dr. {appointment.doctor?.profiles?.first_name} {appointment.doctor?.profiles?.last_name}
                             </div>
                             <div className="text-sm text-gray-500">
                               {appointment.doctor?.specialization}

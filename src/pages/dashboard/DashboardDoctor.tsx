@@ -17,6 +17,7 @@ import { EnhancedAppointmentDialog } from "@/components/dialogs/EnhancedAppointm
 import DoctorPatients from "@/pages/dashboard/doctor/DoctorPatients";
 import DoctorSchedule from "@/pages/dashboard/doctor/DoctorSchedule";
 import DoctorNotes from "@/pages/dashboard/doctor/DoctorNotes";
+import DoctorConsultationRates from "@/pages/dashboard/doctor/DoctorConsultationRates";
 
 const chartData = {
   appointments: [{ value: 8 }, { value: 12 }, { value: 15 }, { value: 10 }, { value: 18 }],
@@ -101,7 +102,7 @@ export default function DashboardDoctor() {
           </div>
 
           <Tabs defaultValue="overview" className="space-y-6">
-            <TabsList className="grid w-full grid-cols-8">
+            <TabsList className="grid w-full grid-cols-9">
               <TabsTrigger value="overview">Overview</TabsTrigger>
               <TabsTrigger value="appointments">Appointments</TabsTrigger>
               <TabsTrigger value="patients">Patient History</TabsTrigger>
@@ -109,6 +110,7 @@ export default function DashboardDoctor() {
               <TabsTrigger value="notes">Patient Notes</TabsTrigger>
               <TabsTrigger value="labs">Lab Reports</TabsTrigger>
               <TabsTrigger value="schedule">Schedule</TabsTrigger>
+              <TabsTrigger value="consultation-rates">Rates</TabsTrigger>
               <TabsTrigger value="analytics">Analytics</TabsTrigger>
             </TabsList>
 
@@ -301,6 +303,10 @@ export default function DashboardDoctor() {
 
             <TabsContent value="schedule">
               <DoctorSchedule />
+            </TabsContent>
+
+            <TabsContent value="consultation-rates">
+              <DoctorConsultationRates />
             </TabsContent>
 
             <TabsContent value="analytics">

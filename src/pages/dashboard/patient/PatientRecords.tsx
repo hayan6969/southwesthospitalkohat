@@ -67,12 +67,12 @@ export default function PatientRecords() {
                         <div className="flex items-center gap-2">
                           <User className="w-4 h-4 text-gray-400" />
                           <div>
-                            <div className="font-medium">
-                              Dr. {record.doctor?.users?.first_name} {record.doctor?.users?.last_name}
-                            </div>
-                            <div className="text-sm text-gray-500">
-                              {record.doctor?.specialization}
-                            </div>
+                        <div className="font-medium">
+                          Dr. {record.doctor?.profiles?.first_name} {record.doctor?.profiles?.last_name}
+                        </div>
+                        <div className="text-sm text-gray-500">
+                          {record.doctor?.specialization}
+                        </div>
                           </div>
                         </div>
                       </TableCell>
