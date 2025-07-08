@@ -359,8 +359,10 @@ export const useCreatePatientWithProfile = () => {
       phone: string;
       cnic: string;
     }) => {
-      // Store current session before creating new user
+      // Store current session and access token
       const { data: currentSession } = await supabase.auth.getSession();
+      const originalAccessToken = currentSession?.session?.access_token;
+      const originalRefreshToken = currentSession?.session?.refresh_token;
       
       // Create user account first with phone as email and CNIC as password
       const email = `${patientData.phone}@patient.local`;
@@ -393,11 +395,21 @@ export const useCreatePatientWithProfile = () => {
 
       if (patientError) throw patientError;
 
-      // Sign out the newly created patient and restore original session
+      // Immediately sign out the new patient account
       await supabase.auth.signOut();
       
-      if (currentSession?.session) {
-        await supabase.auth.setSession(currentSession.session);
+      // Restore the original session if it exists
+      if (currentSession?.session && originalAccessToken && originalRefreshToken) {
+        try {
+          await supabase.auth.setSession({
+            access_token: originalAccessToken,
+            refresh_token: originalRefreshToken
+          });
+        } catch (error) {
+          console.error('Failed to restore original session:', error);
+          // If session restoration fails, force a page reload to get clean state
+          window.location.reload();
+        }
       }
 
       // Profile will be created automatically by the trigger
