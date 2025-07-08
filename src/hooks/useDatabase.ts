@@ -1,4 +1,3 @@
-
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -60,7 +59,7 @@ export const useAuditLogs = () => {
         .from('audit_logs')
         .select(`
           *,
-          user:profiles(*)
+          profiles!audit_logs_user_id_fkey (*)
         `)
         .order('created_at', { ascending: false })
         .limit(100);
@@ -79,7 +78,7 @@ export const usePatients = () => {
         .from('patients')
         .select(`
           *,
-          user:profiles(*)
+          profiles!patients_id_fkey (*)
         `)
         .order('id');
 
@@ -97,7 +96,7 @@ export const useDoctors = () => {
         .from('doctors')
         .select(`
           *,
-          user:profiles(*)
+          profiles!doctors_id_fkey (*)
         `)
         .order('id');
 
@@ -117,11 +116,11 @@ export const useAppointments = () => {
           *,
           patient:patients(
             *,
-            user:profiles(*)
+            profiles!patients_id_fkey (*)
           ),
           doctor:doctors(
             *,
-            user:profiles(*)
+            profiles!doctors_id_fkey (*)
           )
         `)
         .order('appointment_date', { ascending: false });
@@ -142,11 +141,11 @@ export const useLabReports = () => {
           *,
           patient:patients(
             *,
-            user:profiles(*)
+            profiles!patients_id_fkey (*)
           ),
           doctor:doctors(
             *,
-            user:profiles(*)
+            profiles!doctors_id_fkey (*)
           )
         `)
         .order('created_at', { ascending: false });
@@ -167,11 +166,11 @@ export const useMedicalRecords = () => {
           *,
           patient:patients(
             *,
-            user:profiles(*)
+            profiles!patients_id_fkey (*)
           ),
           doctor:doctors(
             *,
-            user:profiles(*)
+            profiles!doctors_id_fkey (*)
           )
         `)
         .order('created_at', { ascending: false });
@@ -192,7 +191,7 @@ export const useInvoices = () => {
           *,
           patient:patients(
             *,
-            user:profiles(*)
+            profiles!patients_id_fkey (*)
           )
         `)
         .order('created_at', { ascending: false });
@@ -318,7 +317,115 @@ export const useInvoiceItems = (invoiceId: string | undefined) => {
   });
 };
 
+// Search patients by CNIC or ID
+export const useSearchPatients = (searchTerm: string) => {
+  return useQuery({
+    queryKey: ['search-patients', searchTerm],
+    queryFn: async () => {
+      if (!searchTerm.trim()) return [];
+      
+      const { data, error } = await supabase
+        .from('patients')
+        .select(`
+          *,
+          profiles!patients_id_fkey (*)
+        `)
+        .or(`cnic.ilike.%${searchTerm}%,id.ilike.%${searchTerm}%`)
+        .limit(10);
+
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!searchTerm && searchTerm.length > 2,
+  });
+};
+
 // Mutation hooks
+export const useCreateAppointmentWithInvoice = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async (appointmentData: any) => {
+      // Create appointment
+      const { data: appointment, error: appointmentError } = await supabase
+        .from('appointments')
+        .insert([appointmentData.appointment])
+        .select()
+        .single();
+
+      if (appointmentError) throw appointmentError;
+
+      // Create invoice
+      const { data: invoice, error: invoiceError } = await supabase
+        .from('invoices')
+        .insert([{
+          patient_id: appointmentData.appointment.patient_id,
+          amount: appointmentData.consultationFee,
+          description: `Consultation with Dr. ${appointmentData.doctorName}`,
+          invoice_number: `INV-${Date.now()}`,
+          status: 'pending'
+        }])
+        .select()
+        .single();
+
+      if (invoiceError) throw invoiceError;
+
+      return { appointment, invoice };
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['appointments'] });
+      queryClient.invalidateQueries({ queryKey: ['invoices'] });
+    },
+  });
+};
+
+export const useCreatePatientWithProfile = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async (patientData: any) => {
+      // Create profile first
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .insert([{
+          id: patientData.id,
+          email: patientData.email || `${patientData.phone}@temp.com`,
+          first_name: patientData.first_name,
+          last_name: patientData.last_name,
+          phone: patientData.phone,
+          role: 'patient'
+        }])
+        .select()
+        .single();
+
+      if (profileError) throw profileError;
+
+      // Create patient record
+      const { data: patient, error: patientError } = await supabase
+        .from('patients')
+        .insert([{
+          id: profile.id,
+          cnic: patientData.cnic,
+          date_of_birth: patientData.date_of_birth,
+          address: patientData.address,
+          blood_type: patientData.blood_type,
+          allergies: patientData.allergies
+        }])
+        .select()
+        .single();
+
+      if (patientError) throw patientError;
+
+      return { profile, patient };
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['patients'] });
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+    },
+  });
+};
+
+// Keep existing mutation hooks
 export const useCreateAppointment = () => {
   const queryClient = useQueryClient();
   
@@ -662,6 +769,27 @@ export const useUpdateMedicine = () => {
       queryClient.invalidateQueries({ queryKey: ['medicines'] });
       queryClient.invalidateQueries({ queryKey: ['pharmacy-stats'] });
       queryClient.invalidateQueries({ queryKey: ['expiring-medicines'] });
+    },
+  });
+};
+
+export const useUpdateDoctor = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async ({ id, ...updates }: any) => {
+      const { data, error } = await supabase
+        .from('doctors')
+        .update(updates)
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['doctors'] });
     },
   });
 };

@@ -123,18 +123,21 @@ export type Database = {
       }
       doctors: {
         Row: {
+          consultation_fee: number | null
           experience_years: number | null
           id: string
           license_number: string | null
           specialization: string | null
         }
         Insert: {
+          consultation_fee?: number | null
           experience_years?: number | null
           id: string
           license_number?: string | null
           specialization?: string | null
         }
         Update: {
+          consultation_fee?: number | null
           experience_years?: number | null
           id?: string
           license_number?: string | null
@@ -352,6 +355,7 @@ export type Database = {
           address: string | null
           allergies: string | null
           blood_type: string | null
+          cnic: string | null
           date_of_birth: string | null
           emergency_contact_name: string | null
           emergency_contact_phone: string | null
@@ -361,6 +365,7 @@ export type Database = {
           address?: string | null
           allergies?: string | null
           blood_type?: string | null
+          cnic?: string | null
           date_of_birth?: string | null
           emergency_contact_name?: string | null
           emergency_contact_phone?: string | null
@@ -370,6 +375,7 @@ export type Database = {
           address?: string | null
           allergies?: string | null
           blood_type?: string | null
+          cnic?: string | null
           date_of_birth?: string | null
           emergency_contact_name?: string | null
           emergency_contact_phone?: string | null
