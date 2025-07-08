@@ -36,7 +36,9 @@ export default function Auth() {
 
     try {
       // Use phone as email and CNIC as password for patient login
-      const email = `${loginData.phone}@patient.local`;
+      // Format phone number to create a valid email
+      const cleanPhone = loginData.phone.replace(/\D/g, ''); // Remove non-digits
+      const email = `patient${cleanPhone}@hims.local`;
       const { error } = await signIn(email, loginData.cnic);
       
       if (error) {
@@ -89,7 +91,9 @@ export default function Auth() {
 
     try {
       // Use phone as email and CNIC as password for patient signup
-      const email = `${signupData.phone}@patient.local`;
+      // Format phone number to create a valid email
+      const cleanPhone = signupData.phone.replace(/\D/g, ''); // Remove non-digits
+      const email = `patient${cleanPhone}@hims.local`;
       const { error } = await signUp(email, signupData.cnic, {
         first_name: signupData.first_name,
         last_name: signupData.last_name,
