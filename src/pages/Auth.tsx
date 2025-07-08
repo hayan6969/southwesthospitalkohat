@@ -123,6 +123,7 @@ export default function Auth() {
           variant: 'destructive',
         });
       } else {
+        console.log('Signup successful, attempting auto sign-in');
         toast({
           title: 'Account Created',
           description: 'Signing you in...',
@@ -130,19 +131,23 @@ export default function Auth() {
         
         // Automatically sign in the user after successful signup
         try {
+          console.log('Auto sign-in with email:', email);
           const { error: signInError } = await signIn(email, signupData.cnic);
           if (signInError) {
+            console.error('Auto sign-in failed:', signInError);
             toast({
               title: 'Account Created',
               description: 'Please login with your phone number and CNIC',
             });
           } else {
+            console.log('Auto sign-in successful');
             toast({
               title: 'Welcome!',
               description: 'Redirecting to your dashboard...',
             });
           }
         } catch (signInError) {
+          console.error('Auto sign-in exception:', signInError);
           toast({
             title: 'Account Created',
             description: 'Please login with your phone number and CNIC',
