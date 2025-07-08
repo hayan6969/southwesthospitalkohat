@@ -2,10 +2,11 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { AppointmentDialog } from "@/components/dialogs/AppointmentDialog";
+import { EnhancedAppointmentDialog } from "@/components/dialogs/EnhancedAppointmentDialog";
 import { PatientDialog } from "@/components/dialogs/PatientDialog";
 import { InvoiceDialog } from "@/components/dialogs/InvoiceDialog";
 import { useAppointments, usePatients, useDoctors } from "@/hooks/useDatabase";
+import { usePatientNames, useDoctorNames, getPatientName, getDoctorName } from "@/hooks/useDisplayHelpers";
 import { Calendar, UserPlus, Receipt, Users, Clock, Edit, CreditCard, Printer } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { format } from "date-fns";
@@ -14,6 +15,8 @@ export function StaffCounter() {
   const { data: appointments, isLoading: appointmentsLoading } = useAppointments();
   const { data: patients, isLoading: patientsLoading } = usePatients();
   const { data: doctors, isLoading: doctorsLoading } = useDoctors();
+  const { data: patientNames } = usePatientNames();
+  const { data: doctorNames } = useDoctorNames();
 
   const todayAppointments = appointments?.filter(apt => 
     apt.appointment_date.startsWith(new Date().toISOString().split('T')[0])
@@ -74,7 +77,7 @@ export function StaffCounter() {
       </div>
 
       <div className="flex flex-wrap gap-3">
-        <AppointmentDialog />
+        <EnhancedAppointmentDialog />
         <PatientDialog />
         <InvoiceDialog />
         <Button variant="outline">
@@ -109,10 +112,10 @@ export function StaffCounter() {
                       <TableRow key={appointment.id}>
                         <TableCell className="font-bold">#{index + 1}</TableCell>
                         <TableCell>
-                          {appointment.patient?.users?.first_name} {appointment.patient?.users?.last_name}
+                          {getPatientName(appointment.patient_id, patientNames || [])}
                         </TableCell>
                         <TableCell>
-                          Dr. {appointment.doctor?.users?.first_name} {appointment.doctor?.users?.last_name}
+                          {getDoctorName(appointment.doctor_id, doctorNames || [])}
                         </TableCell>
                         <TableCell>
                           {format(new Date(appointment.appointment_date), 'h:mm a')}
@@ -164,7 +167,7 @@ export function StaffCounter() {
                   <div key={doctor.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                     <div>
                       <p className="font-medium">
-                        Dr. {doctor.users?.first_name} {doctor.users?.last_name}
+                        {getDoctorName(doctor.id, doctorNames || [])}
                       </p>
                       <p className="text-sm text-gray-600">{doctor.specialization}</p>
                     </div>

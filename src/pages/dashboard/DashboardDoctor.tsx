@@ -3,6 +3,7 @@ import AppLayout from "@/layouts/AppLayout";
 import { StatsCard } from "@/components/StatsCard";
 import { MiniChart } from "@/components/MiniChart";
 import { useAppointments, useStats, useMedicalRecords } from "@/hooks/useDatabase";
+import { usePatientNames, getPatientName } from "@/hooks/useDisplayHelpers";
 import { Calendar, Users, Clock, CheckCircle, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
@@ -17,6 +18,7 @@ export default function DashboardDoctor() {
   const { data: appointments, isLoading: appointmentsLoading } = useAppointments();
   const { data: stats, isLoading: statsLoading } = useStats();
   const { data: medicalRecords, isLoading: recordsLoading } = useMedicalRecords();
+  const { data: patientNames } = usePatientNames();
 
   // Filter today's appointments
   const today = new Date().toISOString().split('T')[0];
@@ -111,7 +113,7 @@ export default function DashboardDoctor() {
                           {format(new Date(appointment.appointment_date), 'h:mm a')}
                         </TableCell>
                         <TableCell>
-                          {appointment.patient?.users?.first_name} {appointment.patient?.users?.last_name}
+                          {getPatientName(appointment.patient_id, patientNames || [])}
                         </TableCell>
                         <TableCell>{appointment.type}</TableCell>
                         <TableCell>
@@ -164,7 +166,7 @@ export default function DashboardDoctor() {
                     recentRecords.map((record) => (
                       <TableRow key={record.id}>
                         <TableCell className="font-medium">
-                          {record.patient?.users?.first_name} {record.patient?.users?.last_name}
+                          {getPatientName(record.patient_id, patientNames || [])}
                         </TableCell>
                         <TableCell>
                           {format(new Date(record.visit_date), 'MMM d, yyyy')}

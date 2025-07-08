@@ -246,9 +246,7 @@ export default function DashboardAdmin() {
                 </div>
                 <div>
                   <AuditLog events={filteredLogs.slice(0, 5).map(log => ({
-                    who: log.user?.first_name && log.user?.last_name 
-                      ? `${log.user.first_name} ${log.user.last_name}` 
-                      : log.user?.email || 'System',
+                    who: log.user_id || 'System',
                     when: format(new Date(log.created_at || ''), 'yyyy-MM-dd HH:mm'),
                     what: log.action,
                     details: log.details || ''
@@ -480,9 +478,7 @@ export default function DashboardAdmin() {
                               {format(new Date(log.created_at || ''), 'MMM dd, yyyy HH:mm:ss')}
                             </TableCell>
                             <TableCell>
-                              {log.user?.first_name && log.user?.last_name 
-                                ? `${log.user.first_name} ${log.user.last_name}` 
-                                : log.user?.email || 'System'}
+                              {log.user_id || 'System'}
                             </TableCell>
                             <TableCell>
                               <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded text-sm font-medium">

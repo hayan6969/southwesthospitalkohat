@@ -1,6 +1,7 @@
 
 import AppLayout from "@/layouts/AppLayout";
 import { useAppointments, useUpdateAppointment } from "@/hooks/useDatabase";
+import { usePatientNames, getPatientName } from "@/hooks/useDisplayHelpers";
 import { Calendar, Clock, User, Edit3, CheckCircle, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -10,6 +11,7 @@ import { toast } from "sonner";
 export default function DoctorSchedule() {
   const { data: appointments, isLoading } = useAppointments();
   const updateAppointment = useUpdateAppointment();
+  const { data: patientNames } = usePatientNames();
 
   const handleStatusUpdate = async (appointmentId: string, newStatus: string) => {
     try {
@@ -93,10 +95,10 @@ export default function DoctorSchedule() {
                           <User className="w-4 h-4 text-gray-400" />
                           <div>
                             <div className="font-medium">
-                              {appointment.patient?.users?.first_name} {appointment.patient?.users?.last_name}
+                              {getPatientName(appointment.patient_id, patientNames || [])}
                             </div>
                             <div className="text-sm text-gray-500">
-                              {appointment.patient?.users?.email}
+                              Patient ID: {appointment.patient_id}
                             </div>
                           </div>
                         </div>

@@ -3,6 +3,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useLabReports, useCreateLabReport } from "@/hooks/useDatabase";
+import { usePatientNames, useDoctorNames, getPatientName, getDoctorName } from "@/hooks/useDisplayHelpers";
 import { TestTube, Upload, Clock, CheckCircle, FileText, Plus, CreditCard } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { format } from "date-fns";
@@ -11,6 +12,8 @@ import { toast } from "sonner";
 export function StaffLab() {
   const { data: labReports, isLoading } = useLabReports();
   const createLabReport = useCreateLabReport();
+  const { data: patientNames } = usePatientNames();
+  const { data: doctorNames } = useDoctorNames();
 
   const pendingReports = labReports?.filter(report => report.status === 'pending') || [];
   const completedReports = labReports?.filter(report => report.status === 'completed') || [];
@@ -123,11 +126,11 @@ export function StaffLab() {
                     pendingReports.map((report) => (
                       <TableRow key={report.id}>
                         <TableCell>
-                          {report.patient?.users?.first_name} {report.patient?.users?.last_name}
+                          {getPatientName(report.patient_id, patientNames || [])}
                         </TableCell>
                         <TableCell>{report.test_name}</TableCell>
                         <TableCell>
-                          Dr. {report.doctor?.users?.first_name} {report.doctor?.users?.last_name}
+                          {getDoctorName(report.doctor_id, doctorNames || [])}
                         </TableCell>
                         <TableCell>
                           {format(new Date(report.test_date), 'MMM d, yyyy')}
@@ -180,7 +183,7 @@ export function StaffLab() {
                 <div key={report.id} className="flex items-center justify-between p-3 bg-green-50 rounded-lg border border-green-200">
                   <div>
                     <p className="font-medium">
-                      {report.patient?.users?.first_name} {report.patient?.users?.last_name}
+                      {getPatientName(report.patient_id, patientNames || [])}
                     </p>
                     <p className="text-sm text-gray-600">{report.test_name}</p>
                   </div>

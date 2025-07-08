@@ -1,6 +1,7 @@
 
 import AppLayout from "@/layouts/AppLayout";
 import { useAppointments, useUpdateAppointment } from "@/hooks/useDatabase";
+import { usePatientNames, useDoctorNames, getPatientName, getDoctorName } from "@/hooks/useDisplayHelpers";
 import { EnhancedAppointmentDialog } from "@/components/dialogs/EnhancedAppointmentDialog";
 import { Calendar, Clock, User, CheckCircle, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -11,6 +12,8 @@ import { toast } from "sonner";
 export default function StaffAppointments() {
   const { data: appointments, isLoading } = useAppointments();
   const updateAppointment = useUpdateAppointment();
+  const { data: patientNames } = usePatientNames();
+  const { data: doctorNames } = useDoctorNames();
 
   const handleStatusUpdate = async (appointmentId: string, newStatus: string) => {
     try {
@@ -88,10 +91,10 @@ export default function StaffAppointments() {
                           <User className="w-4 h-4 text-gray-400" />
                           <div>
                             <div className="font-medium">
-                              {appointment.patient?.users?.first_name} {appointment.patient?.users?.last_name}
+                              {getPatientName(appointment.patient_id, patientNames || [])}
                             </div>
                             <div className="text-sm text-gray-500">
-                              {appointment.patient?.users?.email}
+                              Patient ID: {appointment.patient_id}
                             </div>
                           </div>
                         </div>
@@ -99,10 +102,10 @@ export default function StaffAppointments() {
                       <TableCell>
                         <div>
                           <div className="font-medium">
-                            Dr. {appointment.doctor?.users?.first_name} {appointment.doctor?.users?.last_name}
+                            {getDoctorName(appointment.doctor_id, doctorNames || [])}
                           </div>
                           <div className="text-sm text-gray-500">
-                            {appointment.doctor?.specialization}
+                            Doctor ID: {appointment.doctor_id}
                           </div>
                         </div>
                       </TableCell>

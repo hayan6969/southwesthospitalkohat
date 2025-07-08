@@ -1,6 +1,7 @@
 
 import { useState } from "react";
 import { useCreateInvoice, usePatients } from "@/hooks/useDatabase";
+import { usePatientNames, getPatientName } from "@/hooks/useDisplayHelpers";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,6 +21,7 @@ export function InvoiceDialog() {
 
   const createInvoice = useCreateInvoice();
   const { data: patients } = usePatients();
+  const { data: patientNames } = usePatientNames();
 
   const generateInvoiceNumber = () => {
     const timestamp = Date.now().toString().slice(-6);
@@ -89,7 +91,7 @@ export function InvoiceDialog() {
               <SelectContent>
                 {patients?.map((patient) => (
                   <SelectItem key={patient.id} value={patient.id}>
-                    {patient.users?.first_name} {patient.users?.last_name}
+                    {getPatientName(patient.id, patientNames || [])}
                   </SelectItem>
                 ))}
               </SelectContent>
