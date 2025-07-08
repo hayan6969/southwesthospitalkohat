@@ -81,7 +81,8 @@ export function EditUserDialog({ user, open, onOpenChange, onUserUpdated }: Edit
 
       // Update password if provided
       if (password.trim()) {
-        const { error: passwordError } = await supabase.functions.invoke(
+        console.log('Invoking password update function for user:', user.id);
+        const { data, error: passwordError } = await supabase.functions.invoke(
           'update-user-password',
           {
             body: {
@@ -91,7 +92,12 @@ export function EditUserDialog({ user, open, onOpenChange, onUserUpdated }: Edit
           }
         );
         
-        if (passwordError) throw passwordError;
+        console.log('Password update response:', { data, error: passwordError });
+        
+        if (passwordError) {
+          console.error('Password update error:', passwordError);
+          throw new Error(`Password update failed: ${passwordError.message}`);
+        }
       }
 
       toast.success("Account updated successfully");
