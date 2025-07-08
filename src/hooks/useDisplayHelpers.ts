@@ -40,11 +40,11 @@ export const useSearchPatientsWithNames = (searchTerm: string) => {
     queryFn: async () => {
       if (!searchTerm.trim()) return [];
       
-      // First get patients matching CNIC or ID
+      // Search patients by CNIC only
       const { data: patients, error: patientsError } = await supabase
         .from('patients')
         .select('*')
-        .or(`cnic.ilike.%${searchTerm}%,id.ilike.%${searchTerm}%`)
+        .ilike('cnic', `%${searchTerm}%`)
         .limit(10);
 
       if (patientsError) throw patientsError;
@@ -68,7 +68,7 @@ export const useSearchPatientsWithNames = (searchTerm: string) => {
         };
       });
     },
-    enabled: !!searchTerm && searchTerm.length > 2,
+    enabled: !!searchTerm && searchTerm.length >= 1, // Live search with minimum 1 character
   });
 };
 
