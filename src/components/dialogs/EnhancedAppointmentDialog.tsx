@@ -223,32 +223,43 @@ export function EnhancedAppointmentDialog() {
                     <div className="space-y-2">
                       <Label>Select Patient</Label>
                       <div className="space-y-2 max-h-40 overflow-y-auto">
-                        {searchResults.map((patient) => (
-                          <div
-                            key={patient.id}
-                            className={`p-3 border-2 rounded-lg cursor-pointer transition-all duration-200 ${
-                              selectedPatient?.id === patient.id 
-                                ? 'border-blue-500 bg-blue-50 shadow-md ring-1 ring-blue-200' 
-                                : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
-                            }`}
-                            onClick={() => setSelectedPatient(patient)}
-                          >
-                            <div className="flex items-center justify-between">
-                              <div className="font-medium text-gray-900">
-                                {patient.profile?.first_name && patient.profile?.last_name
-                                  ? `${patient.profile.first_name} ${patient.profile.last_name}`
-                                  : 'Name not available'
-                                }
+                        {searchResults.map((patient) => {
+                          const fullName = patient.profile?.first_name && patient.profile?.last_name
+                            ? `${patient.profile.first_name} ${patient.profile.last_name}`.trim()
+                            : 'Name not available';
+                          
+                          return (
+                            <div
+                              key={patient.id}
+                              className={`p-4 border-2 rounded-lg cursor-pointer transition-all duration-200 ${
+                                selectedPatient?.id === patient.id 
+                                  ? 'border-blue-500 bg-blue-50 shadow-md ring-1 ring-blue-200' 
+                                  : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                              }`}
+                              onClick={() => setSelectedPatient(patient)}
+                            >
+                              <div className="flex items-center justify-between mb-2">
+                                <div className="font-semibold text-lg text-gray-900">
+                                  {fullName}
+                                </div>
+                                {selectedPatient?.id === patient.id && (
+                                  <div className="text-blue-600 text-sm font-medium flex items-center gap-1">
+                                    <span className="text-blue-500">✓</span> Selected
+                                  </div>
+                                )}
                               </div>
-                              {selectedPatient?.id === patient.id && (
-                                <div className="text-blue-600 text-sm font-medium">✓ Selected</div>
-                              )}
+                              <div className="space-y-1 text-sm text-gray-600">
+                                <div><strong>CNIC:</strong> {patient.cnic || 'Not provided'}</div>
+                                {patient.profile?.phone && (
+                                  <div><strong>Phone:</strong> {patient.profile.phone}</div>
+                                )}
+                                {patient.profile?.email && (
+                                  <div><strong>Email:</strong> {patient.profile.email}</div>
+                                )}
+                              </div>
                             </div>
-                            <div className="text-sm text-gray-600 mt-1">
-                              CNIC: {patient.cnic} {patient.profile?.phone && `| Phone: ${patient.profile.phone}`}
-                            </div>
-                          </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     </div>
                   )}
