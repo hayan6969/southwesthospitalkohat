@@ -10,14 +10,18 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { toast } from "sonner";
-import { Plus, Search, UserPlus } from "lucide-react";
+import { Plus, Search, UserPlus, Check, ChevronsUpDown } from "lucide-react";
 import { formatCurrency } from "@/utils/currency";
 import { generateInvoicePDF } from "@/utils/pdfGenerator";
+import { cn } from "@/lib/utils";
 
 export function EnhancedAppointmentDialog() {
   const [open, setOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("search");
+  const [doctorOpen, setDoctorOpen] = useState(false);
   
   // Search existing patient
   const [searchTerm, setSearchTerm] = useState("");
@@ -347,26 +351,61 @@ export function EnhancedAppointmentDialog() {
           {/* Doctor Selection */}
           <div className="space-y-2">
             <Label htmlFor="doctor">Doctor *</Label>
-            <Select value={doctorId} onValueChange={setDoctorId} required>
-              <SelectTrigger>
-                <SelectValue placeholder="Select a doctor" />
-              </SelectTrigger>
-              <SelectContent>
-                {doctors?.map((doctor) => {
-                  const doctorName = doctorNames?.find(d => d.id === doctor.id);
-                  return (
-                    <SelectItem key={doctor.id} value={doctor.id}>
-                      <div className="flex justify-between items-center w-full">
-                        <span>Dr. {doctorName?.first_name} {doctorName?.last_name} - {doctor.specialization}</span>
-                        <span className="ml-2 text-green-600 font-medium">
-                          {formatCurrency(doctor.consultation_fee || 0)}
-                        </span>
-                      </div>
-                    </SelectItem>
-                  );
-                })}
-              </SelectContent>
-            </Select>
+            <Popover open={doctorOpen} onOpenChange={setDoctorOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  role="combobox"
+                  aria-expanded={doctorOpen}
+                  className="w-full justify-between"
+                >
+                  {doctorId
+                    ? (() => {
+                        const doctor = doctors?.find((d) => d.id === doctorId);
+                        const doctorName = doctorNames?.find(d => d.id === doctorId);
+                        return `Dr. ${doctorName?.first_name} ${doctorName?.last_name} - ${formatCurrency(doctor?.consultation_fee || 0)}`;
+                      })()
+                    : "Select doctor..."}
+                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-full p-0">
+                <Command>
+                  <CommandInput placeholder="Search doctors..." />
+                  <CommandList>
+                    <CommandEmpty>No doctor found.</CommandEmpty>
+                    <CommandGroup>
+                      {doctors?.map((doctor) => {
+                        const doctorName = doctorNames?.find(d => d.id === doctor.id);
+                        return (
+                          <CommandItem
+                            key={doctor.id}
+                            value={`${doctorName?.first_name} ${doctorName?.last_name} ${doctor.specialization}`}
+                            onSelect={() => {
+                              setDoctorId(doctor.id);
+                              setDoctorOpen(false);
+                            }}
+                          >
+                            <Check
+                              className={cn(
+                                "mr-2 h-4 w-4",
+                                doctorId === doctor.id ? "opacity-100" : "opacity-0"
+                              )}
+                            />
+                            <div className="flex justify-between items-center w-full">
+                              <span>Dr. {doctorName?.first_name} {doctorName?.last_name} - {doctor.specialization}</span>
+                              <span className="ml-2 text-green-600 font-medium">
+                                {formatCurrency(doctor.consultation_fee || 0)}
+                              </span>
+                            </div>
+                          </CommandItem>
+                        );
+                      })}
+                    </CommandGroup>
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
             {selectedDoctor && (
               <div className="text-sm text-gray-600">
                 Consultation Fee: <span className="font-medium text-green-600">{formatCurrency(consultationFee)}</span>

@@ -9,13 +9,17 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { toast } from "sonner";
-import { Plus } from "lucide-react";
+import { Plus, Check, ChevronsUpDown } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 export function AppointmentDialog() {
   const [open, setOpen] = useState(false);
   const [patientId, setPatientId] = useState("");
   const [doctorId, setDoctorId] = useState("");
+  const [doctorOpen, setDoctorOpen] = useState(false);
   const [appointmentDate, setAppointmentDate] = useState("");
   const [appointmentTime, setAppointmentTime] = useState("");
   const [type, setType] = useState("");
@@ -60,6 +64,7 @@ export function AppointmentDialog() {
       // Reset form
       setPatientId("");
       setDoctorId("");
+      setDoctorOpen(false);
       setAppointmentDate("");
       setAppointmentTime("");
       setType("");
@@ -101,18 +106,49 @@ export function AppointmentDialog() {
 
           <div className="space-y-2">
             <Label htmlFor="doctor">Doctor</Label>
-            <Select value={doctorId} onValueChange={setDoctorId} required>
-              <SelectTrigger>
-                <SelectValue placeholder="Select a doctor" />
-              </SelectTrigger>
-              <SelectContent>
-                {doctors?.map((doctor) => (
-                  <SelectItem key={doctor.id} value={doctor.id}>
-                    Dr. {doctor.profiles?.first_name} {doctor.profiles?.last_name} - {doctor.specialization}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Popover open={doctorOpen} onOpenChange={setDoctorOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  role="combobox"
+                  aria-expanded={doctorOpen}
+                  className="w-full justify-between"
+                >
+                  {doctorId
+                    ? `Dr. ${doctors?.find((doctor) => doctor.id === doctorId)?.profiles?.first_name} ${doctors?.find((doctor) => doctor.id === doctorId)?.profiles?.last_name}`
+                    : "Select doctor..."}
+                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-full p-0">
+                <Command>
+                  <CommandInput placeholder="Search doctors..." />
+                  <CommandList>
+                    <CommandEmpty>No doctor found.</CommandEmpty>
+                    <CommandGroup>
+                      {doctors?.map((doctor) => (
+                        <CommandItem
+                          key={doctor.id}
+                          value={`${doctor.profiles?.first_name} ${doctor.profiles?.last_name} ${doctor.specialization}`}
+                          onSelect={() => {
+                            setDoctorId(doctor.id);
+                            setDoctorOpen(false);
+                          }}
+                        >
+                          <Check
+                            className={cn(
+                              "mr-2 h-4 w-4",
+                              doctorId === doctor.id ? "opacity-100" : "opacity-0"
+                            )}
+                          />
+                          Dr. {doctor.profiles?.first_name} {doctor.profiles?.last_name} - {doctor.specialization}
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
