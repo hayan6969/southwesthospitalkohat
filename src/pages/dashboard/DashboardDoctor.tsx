@@ -101,11 +101,15 @@ export default function DashboardDoctor() {
           </div>
 
           <Tabs defaultValue="overview" className="space-y-6">
-            <TabsList className="grid w-full grid-cols-4">
+            <TabsList className="grid w-full grid-cols-8">
               <TabsTrigger value="overview">Overview</TabsTrigger>
-              <TabsTrigger value="patients">My Patients</TabsTrigger>
+              <TabsTrigger value="appointments">Appointments</TabsTrigger>
+              <TabsTrigger value="patients">Patient History</TabsTrigger>
+              <TabsTrigger value="diagnoses">Diagnoses & Rx</TabsTrigger>
+              <TabsTrigger value="notes">Patient Notes</TabsTrigger>
+              <TabsTrigger value="labs">Lab Reports</TabsTrigger>
               <TabsTrigger value="schedule">Schedule</TabsTrigger>
-              <TabsTrigger value="notes">Medical Notes</TabsTrigger>
+              <TabsTrigger value="analytics">Analytics</TabsTrigger>
             </TabsList>
 
             <TabsContent value="overview" className="space-y-8">
@@ -248,16 +252,85 @@ export default function DashboardDoctor() {
               </div>
             </TabsContent>
 
+            <TabsContent value="appointments">
+              <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+                <h3 className="text-lg font-semibold mb-4">Appointment Management</h3>
+                <p className="text-gray-600 mb-4">View and manage all appointments</p>
+                <div className="flex gap-3">
+                  <EnhancedAppointmentDialog />
+                  <Button variant="outline">Reschedule Appointment</Button>
+                </div>
+              </div>
+            </TabsContent>
+
             <TabsContent value="patients">
               <DoctorPatients />
+            </TabsContent>
+
+            <TabsContent value="diagnoses">
+              <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+                <h3 className="text-lg font-semibold mb-4">Diagnoses & Prescriptions</h3>
+                <p className="text-gray-600 mb-4">Manage patient diagnoses and prescription workflows</p>
+                <div className="flex gap-3">
+                  <Button className="bg-green-600 hover:bg-green-700">
+                    <Plus className="w-4 h-4 mr-2" />
+                    New Diagnosis
+                  </Button>
+                  <Button variant="outline">View Prescriptions</Button>
+                </div>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="notes">
+              <DoctorNotes />
+            </TabsContent>
+
+            <TabsContent value="labs">
+              <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+                <h3 className="text-lg font-semibold mb-4">Lab Reports</h3>
+                <p className="text-gray-600 mb-4">Review and manage patient lab results</p>
+                <div className="flex gap-3">
+                  <Button className="bg-purple-600 hover:bg-purple-700">
+                    <Plus className="w-4 h-4 mr-2" />
+                    Request Lab Test
+                  </Button>
+                  <Button variant="outline">View All Reports</Button>
+                </div>
+              </div>
             </TabsContent>
 
             <TabsContent value="schedule">
               <DoctorSchedule />
             </TabsContent>
 
-            <TabsContent value="notes">
-              <DoctorNotes />
+            <TabsContent value="analytics">
+              <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+                <h3 className="text-lg font-semibold mb-4">Doctor Analytics</h3>
+                <p className="text-gray-600 mb-4">View performance metrics and patient statistics</p>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6">
+                  <StatsCard
+                    title="This Month"
+                    value="78"
+                    change="+12%"
+                    changeType="positive"
+                    icon={<Calendar className="w-5 h-5 text-blue-600" />}
+                  />
+                  <StatsCard
+                    title="Avg Rating"
+                    value="4.8"
+                    change="+0.2"
+                    changeType="positive"
+                    icon={<CheckCircle className="w-5 h-5 text-green-600" />}
+                  />
+                  <StatsCard
+                    title="Response Time"
+                    value="12min"
+                    change="-3min"
+                    changeType="positive"
+                    icon={<Clock className="w-5 h-5 text-orange-600" />}
+                  />
+                </div>
+              </div>
             </TabsContent>
           </Tabs>
         </div>
