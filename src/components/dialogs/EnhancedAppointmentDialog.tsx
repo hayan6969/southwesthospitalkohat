@@ -13,6 +13,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { Plus, Search, UserPlus } from "lucide-react";
 import { formatCurrency } from "@/utils/currency";
+import { generateInvoicePDF } from "@/utils/pdfGenerator";
 
 export function EnhancedAppointmentDialog() {
   const [open, setOpen] = useState(false);
@@ -144,9 +145,28 @@ export function EnhancedAppointmentDialog() {
       
       toast.success("Appointment created successfully with invoice");
       
-      // Generate PDF invoice
-      const pdfUrl = `/invoice/${result.invoice.id}`;
-      window.open(pdfUrl, '_blank');
+      // Generate and open PDF invoice
+      const patientName = selectedPatient 
+        ? `${selectedPatient.profile?.first_name} ${selectedPatient.profile?.last_name}`
+        : `${newPatient.first_name} ${newPatient.last_name}`;
+      
+      const invoiceData = {
+        invoice_number: result.invoice.invoice_number,
+        created_at: result.invoice.created_at,
+        amount: result.invoice.amount,
+        description: result.invoice.description || `Consultation with Dr. ${selectedDoctorName?.first_name} ${selectedDoctorName?.last_name}`,
+        due_date: result.invoice.due_date,
+        status: result.invoice.status,
+        patient: {
+          users: {
+            first_name: patientName.split(' ')[0],
+            last_name: patientName.split(' ').slice(1).join(' '),
+            email: selectedPatient?.profile?.email || ''
+          }
+        }
+      };
+      
+      generateInvoicePDF(invoiceData);
       
       setOpen(false);
       resetForm();
