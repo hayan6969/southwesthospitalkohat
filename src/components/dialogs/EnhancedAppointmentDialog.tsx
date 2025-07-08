@@ -226,16 +226,26 @@ export function EnhancedAppointmentDialog() {
                         {searchResults.map((patient) => (
                           <div
                             key={patient.id}
-                            className={`p-3 border rounded cursor-pointer hover:bg-gray-50 ${
-                              selectedPatient?.id === patient.id ? 'border-blue-500 bg-blue-50' : ''
+                            className={`p-3 border-2 rounded-lg cursor-pointer transition-all duration-200 ${
+                              selectedPatient?.id === patient.id 
+                                ? 'border-blue-500 bg-blue-50 shadow-md ring-1 ring-blue-200' 
+                                : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
                             }`}
                             onClick={() => setSelectedPatient(patient)}
                           >
-                            <div className="font-medium">
-                              {patient.profile?.first_name} {patient.profile?.last_name}
+                            <div className="flex items-center justify-between">
+                              <div className="font-medium text-gray-900">
+                                {patient.profile?.first_name && patient.profile?.last_name
+                                  ? `${patient.profile.first_name} ${patient.profile.last_name}`
+                                  : 'Name not available'
+                                }
+                              </div>
+                              {selectedPatient?.id === patient.id && (
+                                <div className="text-blue-600 text-sm font-medium">✓ Selected</div>
+                              )}
                             </div>
-                            <div className="text-sm text-gray-500">
-                              CNIC: {patient.cnic} | Phone: {patient.profile?.phone}
+                            <div className="text-sm text-gray-600 mt-1">
+                              CNIC: {patient.cnic} {patient.profile?.phone && `| Phone: ${patient.profile.phone}`}
                             </div>
                           </div>
                         ))}
