@@ -34,7 +34,7 @@ export function EditUserDialog({ user, open, onOpenChange, onUserUpdated }: Edit
   const [phone, setPhone] = useState("");
   const [role, setRole] = useState("");
   const [departmentId, setDepartmentId] = useState("");
-  const [password, setPassword] = useState("");
+  
   const [loading, setLoading] = useState(false);
 
   const { data: departments } = useDepartments();
@@ -47,7 +47,7 @@ export function EditUserDialog({ user, open, onOpenChange, onUserUpdated }: Edit
       setPhone(user.phone || "");
       setRole(user.role);
       setDepartmentId(user.department_id || "");
-      setPassword("");
+      
     }
   }, [user, open]);
 
@@ -78,14 +78,7 @@ export function EditUserDialog({ user, open, onOpenChange, onUserUpdated }: Edit
 
       if (profileError) throw profileError;
 
-      // Update password if provided
-      if (password.trim()) {
-        const { error: passwordError } = await supabase.auth.admin.updateUserById(
-          user.id,
-          { password: password.trim() }
-        );
-        if (passwordError) throw passwordError;
-      }
+      // Note: Password updates require service role access and should be handled via edge function
 
       toast.success("Account updated successfully");
       onUserUpdated();
@@ -99,37 +92,7 @@ export function EditUserDialog({ user, open, onOpenChange, onUserUpdated }: Edit
     }
   };
 
-  const handleDelete = async () => {
-    if (!user || !confirm("Are you sure you want to delete this account? This action cannot be undone.")) {
-      return;
-    }
 
-    setLoading(true);
-
-    try {
-      const { error } = await supabase.auth.admin.deleteUser(user.id);
-      if (error) throw error;
-
-      toast.success("Account deleted successfully");
-      onUserUpdated();
-      onOpenChange(false);
-      
-    } catch (error: any) {
-      toast.error("Failed to delete account: " + error.message);
-      console.error("Error deleting account:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const generatePassword = () => {
-    const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789@#$";
-    let newPassword = "";
-    for (let i = 0; i < 12; i++) {
-      newPassword += chars.charAt(Math.floor(Math.random() * chars.length));
-    }
-    setPassword(newPassword);
-  };
 
   if (!user) return null;
 
@@ -188,22 +151,6 @@ export function EditUserDialog({ user, open, onOpenChange, onUserUpdated }: Edit
             </Select>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="password">New Password (leave empty to keep current)</Label>
-            <div className="flex gap-2">
-              <Input
-                id="password"
-                type="text"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Enter new password or leave empty"
-                className="flex-1"
-              />
-              <Button type="button" variant="outline" onClick={generatePassword}>
-                Generate
-              </Button>
-            </div>
-          </div>
 
           <div className="space-y-2">
             <Label htmlFor="phone">Phone</Label>
@@ -230,23 +177,13 @@ export function EditUserDialog({ user, open, onOpenChange, onUserUpdated }: Edit
             </Select>
           </div>
 
-          <div className="flex justify-between pt-4">
-            <Button 
-              type="button" 
-              variant="destructive" 
-              onClick={handleDelete}
-              disabled={loading}
-            >
-              Delete Account
+          <div className="flex justify-end space-x-2 pt-4">
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+              Cancel
             </Button>
-            <div className="flex space-x-2">
-              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-                Cancel
-              </Button>
-              <Button type="submit" disabled={loading}>
-                {loading ? "Updating..." : "Update Account"}
-              </Button>
-            </div>
+            <Button type="submit" disabled={loading}>
+              {loading ? "Updating..." : "Update Account"}
+            </Button>
           </div>
         </form>
       </DialogContent>
