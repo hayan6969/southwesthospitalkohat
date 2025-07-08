@@ -48,7 +48,7 @@ export default function PharmacyAnalytics() {
     
     invoices?.forEach(invoice => {
       invoice.pharmacy_invoice_items?.forEach(item => {
-        const medicineName = item.medicines?.name || 'Unknown';
+        const medicineName = item.medicine?.name || 'Unknown';
         const current = medicinesSold.get(medicineName) || { quantity: 0, revenue: 0 };
         medicinesSold.set(medicineName, {
           quantity: current.quantity + item.quantity,

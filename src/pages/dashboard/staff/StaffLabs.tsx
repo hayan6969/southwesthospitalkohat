@@ -1,5 +1,6 @@
 import AppLayout from "@/layouts/AppLayout";
 import { useLabReports, useUpdateLabReport } from "@/hooks/useDatabase";
+import { usePatientNames, getPatientName } from "@/hooks/useDisplayHelpers";
 import { LabDialog } from "@/components/dialogs/LabDialog";
 import { Activity, User, Calendar, CheckCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -9,6 +10,7 @@ import { toast } from "sonner";
 
 export default function StaffLabs() {
   const { data: labReports, isLoading } = useLabReports();
+  const { data: patientNames } = usePatientNames();
   const updateLabReport = useUpdateLabReport();
 
   const handleMarkComplete = async (labId: string) => {
@@ -83,10 +85,10 @@ export default function StaffLabs() {
                           <User className="w-4 h-4 text-gray-400" />
                           <div>
                             <div className="font-medium">
-                              {lab.patient?.profiles?.first_name} {lab.patient?.profiles?.last_name}
+                              {getPatientName(lab.patient_id, patientNames || [])}
                             </div>
                             <div className="text-sm text-gray-500">
-                              {lab.patient?.profiles?.email}
+                              Patient ID: {lab.patient_id}
                             </div>
                           </div>
                         </div>
