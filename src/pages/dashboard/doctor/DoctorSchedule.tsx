@@ -34,11 +34,12 @@ export default function DoctorSchedule() {
   };
 
   const upcomingAppointments = appointments?.filter(apt => 
-    new Date(apt.appointment_date) >= new Date() || apt.status === 'scheduled'
+    apt.status === 'scheduled' && new Date(apt.appointment_date) >= new Date()
   ).sort((a, b) => new Date(a.appointment_date).getTime() - new Date(b.appointment_date).getTime()) || [];
 
   const pastAppointments = appointments?.filter(apt => 
-    new Date(apt.appointment_date) < new Date() && apt.status !== 'scheduled'
+    apt.status === 'completed' || apt.status === 'cancelled' || 
+    (new Date(apt.appointment_date) < new Date() && apt.status !== 'scheduled')
   ).sort((a, b) => new Date(b.appointment_date).getTime() - new Date(a.appointment_date).getTime()) || [];
 
   if (selectedPatient) {
