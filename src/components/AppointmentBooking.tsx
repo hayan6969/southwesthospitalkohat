@@ -133,11 +133,15 @@ export const AppointmentBooking = () => {
 
     try {
       // First, ensure a patient record exists for this user
-      const { data: existingPatient } = await supabase
+      const { data: existingPatient, error: checkError } = await supabase
         .from('patients')
         .select('id')
         .eq('id', profile?.id)
-        .single();
+        .maybeSingle();
+
+      if (checkError && checkError.code !== 'PGRST116') {
+        throw checkError;
+      }
 
       if (!existingPatient) {
         // Create patient record if it doesn't exist
@@ -149,7 +153,7 @@ export const AppointmentBooking = () => {
         
         if (patientError) {
           console.error('Error creating patient record:', patientError);
-          throw new Error('Failed to create patient record');
+          throw new Error(`Failed to create patient record: ${patientError.message}`);
         }
       }
 
