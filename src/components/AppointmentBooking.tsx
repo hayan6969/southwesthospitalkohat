@@ -5,12 +5,13 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { format } from "date-fns";
-import { Calendar as CalendarIcon, Clock, DollarSign, User } from "lucide-react";
+import { Calendar as CalendarIcon, Clock, DollarSign, User, Check, ChevronsUpDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
 
@@ -35,7 +36,7 @@ export const AppointmentBooking = () => {
   const { profile } = useAuth();
   const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [filteredDoctors, setFilteredDoctors] = useState<Doctor[]>([]);
-  const [doctorSearch, setDoctorSearch] = useState("");
+  const [doctorComboOpen, setDoctorComboOpen] = useState(false);
   const [hospitalSettings, setHospitalSettings] = useState<HospitalSettings | null>(null);
   const [selectedDoctor, setSelectedDoctor] = useState<string>("");
   const [selectedDate, setSelectedDate] = useState<Date>();
@@ -47,15 +48,6 @@ export const AppointmentBooking = () => {
     fetchDoctors();
     fetchHospitalSettings();
   }, []);
-
-  useEffect(() => {
-    // Filter doctors based on search
-    const filtered = doctors.filter(doctor => 
-      `${doctor.first_name} ${doctor.last_name}`.toLowerCase().includes(doctorSearch.toLowerCase()) ||
-      doctor.specialization.toLowerCase().includes(doctorSearch.toLowerCase())
-    );
-    setFilteredDoctors(filtered);
-  }, [doctors, doctorSearch]);
 
   const fetchDoctors = async () => {
     try {
@@ -89,7 +81,6 @@ export const AppointmentBooking = () => {
       });
 
       setDoctors(formattedDoctors);
-      setFilteredDoctors(formattedDoctors);
     } catch (error) {
       console.error('Error fetching doctors:', error);
       toast({
@@ -194,39 +185,65 @@ export const AppointmentBooking = () => {
           <CardContent className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="doctor">Select Doctor</Label>
-              <div className="space-y-2">
-                <Input
-                  placeholder="Search doctors by name or specialization..."
-                  value={doctorSearch}
-                  onChange={(e) => setDoctorSearch(e.target.value)}
-                  className="mb-2"
-                />
-                <Select value={selectedDoctor} onValueChange={setSelectedDoctor}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Choose a doctor" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {filteredDoctors.map(doctor => (
-                      <SelectItem key={doctor.id} value={doctor.id}>
-                        <div className="flex flex-col gap-1 py-1">
-                          <div className="flex items-center gap-2">
-                            <User className="w-4 h-4" />
-                            <span className="font-medium">
-                              Dr. {doctor.first_name} {doctor.last_name}
-                            </span>
-                          </div>
-                          <div className="text-sm text-gray-500">
-                            {doctor.specialization} • {doctor.experience_years} years exp.
-                          </div>
-                          <div className="text-sm font-medium text-green-600">
-                            PKR {doctor.consultation_fee} consultation fee
-                          </div>
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+              <Popover open={doctorComboOpen} onOpenChange={setDoctorComboOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={doctorComboOpen}
+                    className="w-full justify-between"
+                  >
+                    {selectedDoctor
+                      ? (() => {
+                          const doctor = doctors.find(d => d.id === selectedDoctor);
+                          return doctor ? `Dr. ${doctor.first_name} ${doctor.last_name}` : "Select doctor...";
+                        })()
+                      : "Select doctor..."}
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-full p-0">
+                  <Command>
+                    <CommandInput placeholder="Search doctors by name or specialization..." />
+                    <CommandList>
+                      <CommandEmpty>No doctor found.</CommandEmpty>
+                      <CommandGroup>
+                        {doctors.map((doctor) => (
+                          <CommandItem
+                            key={doctor.id}
+                            value={`${doctor.first_name} ${doctor.last_name} ${doctor.specialization}`}
+                            onSelect={() => {
+                              setSelectedDoctor(doctor.id);
+                              setDoctorComboOpen(false);
+                            }}
+                          >
+                            <Check
+                              className={cn(
+                                "mr-2 h-4 w-4",
+                                selectedDoctor === doctor.id ? "opacity-100" : "opacity-0"
+                              )}
+                            />
+                            <div className="flex flex-col gap-1 py-1">
+                              <div className="flex items-center gap-2">
+                                <User className="w-4 h-4" />
+                                <span className="font-medium">
+                                  Dr. {doctor.first_name} {doctor.last_name}
+                                </span>
+                              </div>
+                              <div className="text-sm text-gray-500">
+                                {doctor.specialization} • {doctor.experience_years} years exp.
+                              </div>
+                              <div className="text-sm font-medium text-green-600">
+                                PKR {doctor.consultation_fee} consultation fee
+                              </div>
+                            </div>
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
             </div>
 
             <div className="space-y-2">
