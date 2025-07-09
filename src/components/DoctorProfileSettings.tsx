@@ -246,7 +246,14 @@ export const DoctorProfileSettings = () => {
         <CardContent className="flex items-center gap-6">
           <div className="relative">
             <Avatar className="w-24 h-24 border-4 border-green-200">
-              <AvatarImage src={doctorProfile.avatar_url} alt="Doctor Avatar" />
+              <AvatarImage 
+                src={doctorProfile.avatar_url || ''} 
+                alt="Doctor Avatar"
+                onError={(e) => {
+                  console.log('Profile settings avatar failed to load:', doctorProfile.avatar_url);
+                  e.currentTarget.style.display = 'none';
+                }}
+              />
               <AvatarFallback className="bg-green-100 text-green-700 text-2xl font-bold">
                 {doctorProfile.first_name?.[0]}{doctorProfile.last_name?.[0]}
               </AvatarFallback>

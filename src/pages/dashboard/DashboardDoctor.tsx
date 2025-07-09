@@ -79,7 +79,14 @@ export default function DashboardDoctor() {
           <div className="flex items-center gap-6 bg-gray-50 rounded-lg p-4 border border-gray-200">
             <div className="flex items-center gap-4">
               <Avatar className="w-12 h-12 border-2 border-green-200">
-                <AvatarImage src={doctorProfile?.avatar_url} alt="Doctor Avatar" />
+                <AvatarImage 
+                  src={doctorProfile?.avatar_url || ''} 
+                  alt="Doctor Avatar"
+                  onError={(e) => {
+                    console.log('Doctor dashboard avatar failed to load:', doctorProfile?.avatar_url);
+                    e.currentTarget.style.display = 'none';
+                  }}
+                />
                 <AvatarFallback className="bg-green-100 text-green-700 text-lg font-bold">
                   {profile?.first_name?.[0]}{profile?.last_name?.[0]}
                 </AvatarFallback>

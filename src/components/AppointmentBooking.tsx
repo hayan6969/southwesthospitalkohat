@@ -228,7 +228,14 @@ export const AppointmentBooking = () => {
                             />
                             <div className="flex items-center gap-3 py-2">
                               <Avatar className="w-10 h-10 border-2 border-green-200">
-                                <AvatarImage src={doctor.avatar_url} alt="Doctor Avatar" />
+                                <AvatarImage 
+                                  src={doctor.avatar_url || ''} 
+                                  alt="Doctor Avatar"
+                                  onError={(e) => {
+                                    console.log('Avatar image failed to load:', doctor.avatar_url);
+                                    e.currentTarget.style.display = 'none';
+                                  }}
+                                />
                                 <AvatarFallback className="bg-green-100 text-green-700 text-sm font-bold">
                                   {doctor.first_name?.[0]}{doctor.last_name?.[0]}
                                 </AvatarFallback>
