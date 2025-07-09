@@ -34,6 +34,8 @@ interface HospitalSettings {
 export const AppointmentBooking = () => {
   const { profile } = useAuth();
   const [doctors, setDoctors] = useState<Doctor[]>([]);
+  const [filteredDoctors, setFilteredDoctors] = useState<Doctor[]>([]);
+  const [doctorSearch, setDoctorSearch] = useState("");
   const [hospitalSettings, setHospitalSettings] = useState<HospitalSettings | null>(null);
   const [selectedDoctor, setSelectedDoctor] = useState<string>("");
   const [selectedDate, setSelectedDate] = useState<Date>();
@@ -45,6 +47,15 @@ export const AppointmentBooking = () => {
     fetchDoctors();
     fetchHospitalSettings();
   }, []);
+
+  useEffect(() => {
+    // Filter doctors based on search
+    const filtered = doctors.filter(doctor => 
+      `${doctor.first_name} ${doctor.last_name}`.toLowerCase().includes(doctorSearch.toLowerCase()) ||
+      doctor.specialization.toLowerCase().includes(doctorSearch.toLowerCase())
+    );
+    setFilteredDoctors(filtered);
+  }, [doctors, doctorSearch]);
 
   const fetchDoctors = async () => {
     try {
@@ -78,6 +89,7 @@ export const AppointmentBooking = () => {
       });
 
       setDoctors(formattedDoctors);
+      setFilteredDoctors(formattedDoctors);
     } catch (error) {
       console.error('Error fetching doctors:', error);
       toast({
@@ -182,28 +194,39 @@ export const AppointmentBooking = () => {
           <CardContent className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="doctor">Select Doctor</Label>
-              <Select value={selectedDoctor} onValueChange={setSelectedDoctor}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Choose a doctor" />
-                </SelectTrigger>
-                <SelectContent>
-                  {doctors.map(doctor => (
-                    <SelectItem key={doctor.id} value={doctor.id}>
-                      <div className="flex items-center gap-2">
-                        <User className="w-4 h-4" />
-                        <div>
-                          <div className="font-medium">
-                            Dr. {doctor.first_name} {doctor.last_name}
+              <div className="space-y-2">
+                <Input
+                  placeholder="Search doctors by name or specialization..."
+                  value={doctorSearch}
+                  onChange={(e) => setDoctorSearch(e.target.value)}
+                  className="mb-2"
+                />
+                <Select value={selectedDoctor} onValueChange={setSelectedDoctor}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Choose a doctor" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {filteredDoctors.map(doctor => (
+                      <SelectItem key={doctor.id} value={doctor.id}>
+                        <div className="flex flex-col gap-1 py-1">
+                          <div className="flex items-center gap-2">
+                            <User className="w-4 h-4" />
+                            <span className="font-medium">
+                              Dr. {doctor.first_name} {doctor.last_name}
+                            </span>
                           </div>
                           <div className="text-sm text-gray-500">
                             {doctor.specialization} • {doctor.experience_years} years exp.
                           </div>
+                          <div className="text-sm font-medium text-green-600">
+                            PKR {doctor.consultation_fee} consultation fee
+                          </div>
                         </div>
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
 
             <div className="space-y-2">
