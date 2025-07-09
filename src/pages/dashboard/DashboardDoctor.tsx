@@ -128,14 +128,13 @@ export default function DashboardDoctor() {
           </div>
 
           <Tabs defaultValue="overview" className="space-y-6">
-            <TabsList className="grid w-full grid-cols-9">
+            <TabsList className="grid w-full grid-cols-8">
               <TabsTrigger value="overview">Overview</TabsTrigger>
               <TabsTrigger value="appointments">Appointments</TabsTrigger>
               <TabsTrigger value="patients">Patient History</TabsTrigger>
               <TabsTrigger value="diagnoses">Diagnoses & Rx</TabsTrigger>
               <TabsTrigger value="notes">Patient Notes</TabsTrigger>
               <TabsTrigger value="labs">Lab Reports</TabsTrigger>
-              <TabsTrigger value="schedule">Schedule</TabsTrigger>
               <TabsTrigger value="settings">Settings</TabsTrigger>
               <TabsTrigger value="analytics">Analytics</TabsTrigger>
             </TabsList>
@@ -281,14 +280,7 @@ export default function DashboardDoctor() {
             </TabsContent>
 
             <TabsContent value="appointments">
-              <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
-                <h3 className="text-lg font-semibold mb-4">Appointment Management</h3>
-                <p className="text-gray-600 mb-4">View and manage all appointments</p>
-                <div className="flex gap-3">
-                  <EnhancedAppointmentDialog />
-                  <Button variant="outline">Reschedule Appointment</Button>
-                </div>
-              </div>
+              <DoctorSchedule />
             </TabsContent>
 
             <TabsContent value="patients">
@@ -327,9 +319,6 @@ export default function DashboardDoctor() {
               </div>
             </TabsContent>
 
-            <TabsContent value="schedule">
-              <DoctorSchedule />
-            </TabsContent>
 
             <TabsContent value="settings">
               <DoctorProfileSettings />

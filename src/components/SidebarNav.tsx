@@ -23,7 +23,6 @@ const navsByRole: Record<string, { label: string; to: string; icon: React.Elemen
     { label: "Diagnoses & Prescriptions", to: "/dashboard/doctor/diagnoses", icon: Stethoscope },
     { label: "Patient Notes", to: "/dashboard/doctor/notes", icon: FileText },
     { label: "Lab Reports", to: "/dashboard/doctor/labs", icon: TestTube },
-    { label: "Schedule Management", to: "/dashboard/doctor/schedule", icon: Clock },
     { label: "Analytics", to: "/dashboard/doctor/analytics", icon: ChartBar },
   ],
   staff: [
