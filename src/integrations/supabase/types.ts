@@ -17,33 +17,45 @@ export type Database = {
       appointments: {
         Row: {
           appointment_date: string
+          booking_type: string | null
           created_at: string | null
           doctor_id: string
           id: string
+          invoice_generated_at: string | null
           notes: string | null
           patient_id: string
+          payment_due_time: string | null
+          payment_status: string | null
           status: Database["public"]["Enums"]["appointment_status"] | null
           type: string
           updated_at: string | null
         }
         Insert: {
           appointment_date: string
+          booking_type?: string | null
           created_at?: string | null
           doctor_id: string
           id?: string
+          invoice_generated_at?: string | null
           notes?: string | null
           patient_id: string
+          payment_due_time?: string | null
+          payment_status?: string | null
           status?: Database["public"]["Enums"]["appointment_status"] | null
           type: string
           updated_at?: string | null
         }
         Update: {
           appointment_date?: string
+          booking_type?: string | null
           created_at?: string | null
           doctor_id?: string
           id?: string
+          invoice_generated_at?: string | null
           notes?: string | null
           patient_id?: string
+          payment_due_time?: string | null
+          payment_status?: string | null
           status?: Database["public"]["Enums"]["appointment_status"] | null
           type?: string
           updated_at?: string | null
@@ -659,6 +671,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      auto_cancel_overdue_appointments: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
       generate_patient_number: {
         Args: Record<PropertyKey, never>
         Returns: string

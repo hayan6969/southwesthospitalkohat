@@ -1,20 +1,77 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAppointments, useUpdateAppointment } from "@/hooks/useDatabase";
 import { usePatientNames, getPatientName } from "@/hooks/useDisplayHelpers";
-import { Calendar, Clock, User, Edit3, CheckCircle, X } from "lucide-react";
+import { Calendar, Clock, User, Edit3, CheckCircle, X, Hash, CreditCard, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { PatientDetailsView } from "@/components/PatientDetailsView";
+import { supabase } from "@/integrations/supabase/client";
 
 export default function DoctorSchedule() {
   const { data: appointments, isLoading } = useAppointments();
   const updateAppointment = useUpdateAppointment();
   const { data: patientNames } = usePatientNames();
   const [selectedPatient, setSelectedPatient] = useState<{ id: string; name: string } | null>(null);
+  const [appointmentsWithQueue, setAppointmentsWithQueue] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  // Fetch appointments with queue positions and patient details
+  useEffect(() => {
+    const fetchAppointmentsWithDetails = async () => {
+      if (!appointments) return;
+      
+      setLoading(true);
+      try {
+        const { data: queueData } = await supabase
+          .from('queue_positions')
+          .select('appointment_id, queue_position, status')
+          .order('queue_position');
+
+        const { data: patientsData } = await supabase
+          .from('patients')
+          .select('id, cnic, patient_number');
+
+        const enrichedAppointments = appointments.map(apt => {
+          const queueInfo = queueData?.find(q => q.appointment_id === apt.id);
+          const patientInfo = patientsData?.find(p => p.id === apt.patient_id);
+          
+          return {
+            ...apt,
+            queue_position: queueInfo?.queue_position || null,
+            queue_status: queueInfo?.status || 'waiting',
+            patient_cnic: patientInfo?.cnic || 'N/A',
+            patient_number: patientInfo?.patient_number || 'N/A'
+          };
+        });
+
+        setAppointmentsWithQueue(enrichedAppointments);
+      } catch (error) {
+        console.error('Error fetching appointment details:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchAppointmentsWithDetails();
+  }, [appointments]);
+
+  // Auto-cancel overdue appointments every minute
+  useEffect(() => {
+    const interval = setInterval(async () => {
+      try {
+        await supabase.rpc('auto_cancel_overdue_appointments');
+      } catch (error) {
+        console.error('Error auto-canceling appointments:', error);
+      }
+    }, 60000); // Run every minute
+
+    return () => clearInterval(interval);
+  }, []);
 
   const handleStatusUpdate = async (appointmentId: string, newStatus: string) => {
     try {
@@ -33,11 +90,34 @@ export default function DoctorSchedule() {
     setSelectedPatient({ id: patientId, name: patientName });
   };
 
-  const upcomingAppointments = appointments?.filter(apt => 
-    apt.status === 'scheduled' && new Date(apt.appointment_date) >= new Date()
-  ).sort((a, b) => new Date(a.appointment_date).getTime() - new Date(b.appointment_date).getTime()) || [];
+  const handleGenerateInvoice = async (appointmentId: string) => {
+    try {
+      await supabase
+        .from('appointments')
+        .update({
+          payment_status: 'paid',
+          invoice_generated_at: new Date().toISOString(),
+          payment_due_time: null
+        })
+        .eq('id', appointmentId);
+      
+      toast.success('Invoice generated and payment confirmed');
+    } catch (error) {
+      toast.error('Failed to generate invoice');
+    }
+  };
 
-  const pastAppointments = appointments?.filter(apt => 
+  const upcomingAppointments = appointmentsWithQueue?.filter(apt => 
+    apt.status === 'scheduled' && new Date(apt.appointment_date) >= new Date()
+  ).sort((a, b) => {
+    // Sort by queue position first, then by appointment time
+    if (a.queue_position && b.queue_position) {
+      return a.queue_position - b.queue_position;
+    }
+    return new Date(a.appointment_date).getTime() - new Date(b.appointment_date).getTime();
+  }) || [];
+
+  const pastAppointments = appointmentsWithQueue?.filter(apt => 
     apt.status === 'completed' || apt.status === 'cancelled' || 
     (new Date(apt.appointment_date) < new Date() && apt.status !== 'scheduled')
   ).sort((a, b) => new Date(b.appointment_date).getTime() - new Date(a.appointment_date).getTime()) || [];
@@ -62,19 +142,21 @@ export default function DoctorSchedule() {
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead>Queue #</TableHead>
               <TableHead>Date & Time</TableHead>
               <TableHead>Patient</TableHead>
+              <TableHead>CNIC</TableHead>
               <TableHead>Type</TableHead>
+              <TableHead>Payment</TableHead>
               <TableHead>Status</TableHead>
-              <TableHead>Notes</TableHead>
               <TableHead>Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {isLoading ? (
+            {(isLoading || loading) ? (
               Array.from({ length: 5 }).map((_, i) => (
                 <TableRow key={i}>
-                  {Array.from({ length: 6 }).map((_, j) => (
+                  {Array.from({ length: 8 }).map((_, j) => (
                     <TableCell key={j}>
                       <div className="h-4 bg-gray-200 rounded animate-pulse"></div>
                     </TableCell>
@@ -84,6 +166,17 @@ export default function DoctorSchedule() {
             ) : appointmentsList.length > 0 ? (
               appointmentsList.map((appointment) => (
                 <TableRow key={appointment.id} className="hover:bg-gray-50">
+                  {/* Queue Position */}
+                  <TableCell>
+                    <div className="flex items-center gap-2">
+                      <Hash className="w-4 h-4 text-gray-400" />
+                      <span className="font-medium text-lg">
+                        {appointment.queue_position || '-'}
+                      </span>
+                    </div>
+                  </TableCell>
+                  
+                  {/* Date & Time */}
                   <TableCell>
                     <div className="flex items-center gap-2">
                       <Clock className="w-4 h-4 text-gray-400" />
@@ -97,6 +190,8 @@ export default function DoctorSchedule() {
                       </div>
                     </div>
                   </TableCell>
+                  
+                  {/* Patient */}
                   <TableCell>
                     <div className="flex items-center gap-2">
                       <User className="w-4 h-4 text-gray-400" />
@@ -111,31 +206,71 @@ export default function DoctorSchedule() {
                           {getPatientName(appointment.patient_id, patientNames || [])}
                         </div>
                         <div className="text-sm text-gray-500">
-                          Click to view details
+                          {appointment.patient_number}
                         </div>
                       </div>
                     </div>
                   </TableCell>
+                  
+                  {/* CNIC */}
                   <TableCell>
-                    <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-medium">
-                      {appointment.type}
+                    <span className="text-sm font-mono">
+                      {appointment.patient_cnic}
                     </span>
                   </TableCell>
+                  
+                  {/* Type */}
                   <TableCell>
-                    <span className={`px-2 py-1 rounded-full text-sm font-medium ${
+                    <Badge variant="secondary">
+                      {appointment.type}
+                    </Badge>
+                  </TableCell>
+                  
+                  {/* Payment Status */}
+                  <TableCell>
+                    <div className="flex items-center gap-2">
+                      {appointment.booking_type === 'counter' ? (
+                        <Badge variant="default" className="bg-green-100 text-green-700">
+                          <CreditCard className="w-3 h-3 mr-1" />
+                          Paid (Counter)
+                        </Badge>
+                      ) : appointment.payment_status === 'paid' ? (
+                        <Badge variant="default" className="bg-green-100 text-green-700">
+                          <CreditCard className="w-3 h-3 mr-1" />
+                          Paid (Online)
+                        </Badge>
+                      ) : (
+                        <div className="flex flex-col gap-1">
+                          <Badge variant="destructive" className="bg-red-100 text-red-700">
+                            <AlertTriangle className="w-3 h-3 mr-1" />
+                            Pending
+                          </Badge>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-6 text-xs"
+                            onClick={() => handleGenerateInvoice(appointment.id)}
+                          >
+                            Generate Invoice
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  </TableCell>
+                  
+                  {/* Status */}
+                  <TableCell>
+                    <Badge className={
                       appointment.status === 'completed' ? 'bg-green-100 text-green-700' :
                       appointment.status === 'scheduled' ? 'bg-blue-100 text-blue-700' :
                       appointment.status === 'cancelled' ? 'bg-red-100 text-red-700' :
                       'bg-gray-100 text-gray-700'
-                    }`}>
+                    }>
                       {appointment.status}
-                    </span>
+                    </Badge>
                   </TableCell>
-                  <TableCell>
-                    <span className="text-sm text-gray-600">
-                      {appointment.notes || 'No notes'}
-                    </span>
-                  </TableCell>
+                  
+                  {/* Actions */}
                   <TableCell>
                     <div className="flex items-center gap-2">
                       {appointment.status === 'scheduled' && (
@@ -151,7 +286,7 @@ export default function DoctorSchedule() {
                           </Button>
                           <Button
                             size="sm"
-                            variant="outline"
+                            variant="destructive"
                             onClick={() => handleStatusUpdate(appointment.id, 'cancelled')}
                             disabled={updateAppointment.isPending}
                           >
@@ -160,16 +295,13 @@ export default function DoctorSchedule() {
                           </Button>
                         </>
                       )}
-                      <Button size="sm" variant="ghost">
-                        <Edit3 className="w-3 h-3" />
-                      </Button>
                     </div>
                   </TableCell>
                 </TableRow>
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={6} className="text-center text-gray-500 py-12">
+                <TableCell colSpan={8} className="text-center text-gray-500 py-12">
                   No {title.toLowerCase()} found
                 </TableCell>
               </TableRow>
