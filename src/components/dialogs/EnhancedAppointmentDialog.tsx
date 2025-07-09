@@ -214,12 +214,12 @@ export function EnhancedAppointmentDialog() {
                 
                 <TabsContent value="search" className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="search">Search by CNIC</Label>
+                    <Label htmlFor="search">Search by Patient ID</Label>
                     <Input
                       id="search"
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
-                      placeholder="Enter CNIC..."
+                      placeholder="Enter Patient ID (e.g. P-0001)..."
                     />
                   </div>
                   
@@ -253,7 +253,7 @@ export function EnhancedAppointmentDialog() {
                                 )}
                               </div>
                               <div className="space-y-1 text-sm text-gray-600">
-                                <div><strong>CNIC:</strong> {patient.cnic || 'Not provided'}</div>
+                                <div><strong>Patient ID:</strong> {patient.patient_number || 'Not assigned'}</div>
                                 {patient.profile?.phone && (
                                   <div><strong>Phone:</strong> {patient.profile.phone}</div>
                                 )}

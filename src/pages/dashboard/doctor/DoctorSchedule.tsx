@@ -2,11 +2,14 @@
 import { useState, useEffect } from "react";
 import { useAppointments, useUpdateAppointment } from "@/hooks/useDatabase";
 import { usePatientNames, getPatientName } from "@/hooks/useDisplayHelpers";
-import { Calendar, Clock, User, Edit3, CheckCircle, X, Hash, CreditCard, AlertTriangle } from "lucide-react";
+import { Calendar, Clock, User, Edit3, CheckCircle, X, Hash, CreditCard, AlertTriangle, Filter, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { PatientDetailsView } from "@/components/PatientDetailsView";
@@ -19,6 +22,11 @@ export default function DoctorSchedule() {
   const [selectedPatient, setSelectedPatient] = useState<{ id: string; name: string } | null>(null);
   const [appointmentsWithQueue, setAppointmentsWithQueue] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+  
+  // Filter states for past appointments
+  const [dateFilter, setDateFilter] = useState("");
+  const [patientFilter, setPatientFilter] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
 
   // Fetch appointments with queue positions and patient details
   useEffect(() => {
@@ -117,10 +125,33 @@ export default function DoctorSchedule() {
     return new Date(a.appointment_date).getTime() - new Date(b.appointment_date).getTime();
   }) || [];
 
-  const pastAppointments = appointmentsWithQueue?.filter(apt => 
-    apt.status === 'completed' || apt.status === 'cancelled' || 
-    (new Date(apt.appointment_date) < new Date() && apt.status !== 'scheduled')
-  ).sort((a, b) => new Date(b.appointment_date).getTime() - new Date(a.appointment_date).getTime()) || [];
+  // Filter past appointments based on user inputs
+  const filteredPastAppointments = appointmentsWithQueue?.filter(apt => {
+    const isPastAppointment = apt.status === 'completed' || apt.status === 'cancelled' || 
+      (new Date(apt.appointment_date) < new Date() && apt.status !== 'scheduled');
+    
+    if (!isPastAppointment) return false;
+    
+    // Apply filters
+    if (dateFilter && !format(new Date(apt.appointment_date), 'yyyy-MM-dd').includes(dateFilter)) {
+      return false;
+    }
+    
+    if (patientFilter) {
+      const patientName = getPatientName(apt.patient_id, patientNames || []).toLowerCase();
+      const patientNumber = apt.patient_number?.toLowerCase() || '';
+      if (!patientName.includes(patientFilter.toLowerCase()) && 
+          !patientNumber.includes(patientFilter.toLowerCase())) {
+        return false;
+      }
+    }
+    
+    if (statusFilter && apt.status !== statusFilter) {
+      return false;
+    }
+    
+    return true;
+  }).sort((a, b) => new Date(b.appointment_date).getTime() - new Date(a.appointment_date).getTime()) || [];
 
   if (selectedPatient) {
     return (
@@ -145,7 +176,7 @@ export default function DoctorSchedule() {
               <TableHead>Queue #</TableHead>
               <TableHead>Date & Time</TableHead>
               <TableHead>Patient</TableHead>
-              <TableHead>CNIC</TableHead>
+              <TableHead>Patient ID</TableHead>
               <TableHead>Type</TableHead>
               <TableHead>Payment</TableHead>
               <TableHead>Status</TableHead>
@@ -212,10 +243,10 @@ export default function DoctorSchedule() {
                     </div>
                   </TableCell>
                   
-                  {/* CNIC */}
+                  {/* Patient ID */}
                   <TableCell>
                     <span className="text-sm font-mono">
-                      {appointment.patient_cnic}
+                      {appointment.patient_number}
                     </span>
                   </TableCell>
                   
@@ -338,7 +369,62 @@ export default function DoctorSchedule() {
         </TabsContent>
 
         <TabsContent value="past">
-          {renderAppointmentTable(pastAppointments, "Past Appointments")}
+          <div className="space-y-4">
+            {/* Filters for Past Appointments */}
+            <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
+              <div className="flex items-center gap-2 mb-3">
+                <Filter className="w-4 h-4 text-gray-500" />
+                <span className="text-sm font-medium text-gray-700">Filters</span>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div>
+                  <Label htmlFor="date-filter" className="text-sm">Date</Label>
+                  <Input
+                    id="date-filter"
+                    type="date"
+                    placeholder="Filter by date"
+                    value={dateFilter}
+                    onChange={(e) => setDateFilter(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="patient-filter" className="text-sm">Patient</Label>
+                  <Input
+                    id="patient-filter"
+                    placeholder="Search by name or ID"
+                    value={patientFilter}
+                    onChange={(e) => setPatientFilter(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="status-filter" className="text-sm">Status</Label>
+                  <Select value={statusFilter} onValueChange={setStatusFilter}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="All statuses" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">All statuses</SelectItem>
+                      <SelectItem value="completed">Completed</SelectItem>
+                      <SelectItem value="cancelled">Cancelled</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex items-end">
+                  <Button 
+                    variant="outline" 
+                    onClick={() => {
+                      setDateFilter("");
+                      setPatientFilter("");
+                      setStatusFilter("");
+                    }}
+                  >
+                    Clear Filters
+                  </Button>
+                </div>
+              </div>
+            </div>
+            {renderAppointmentTable(filteredPastAppointments, "Past Appointments")}
+          </div>
         </TabsContent>
       </Tabs>
     </div>

@@ -33,18 +33,18 @@ export const useDoctorNames = () => {
   });
 };
 
-// Helper hook to search patients by CNIC with profile info
+// Helper hook to search patients by Patient ID with profile info
 export const useSearchPatientsWithNames = (searchTerm: string) => {
   return useQuery({
-    queryKey: ['search-patients-cnic-only', searchTerm], // Changed query key to clear cache
+    queryKey: ['search-patients-patient-id', searchTerm],
     queryFn: async () => {
       if (!searchTerm.trim()) return [];
       
-      // Search patients by CNIC only
+      // Search patients by patient_number (Patient ID)
       const { data: patients, error: patientsError } = await supabase
         .from('patients')
         .select('*')
-        .ilike('cnic', `%${searchTerm}%`)
+        .ilike('patient_number', `%${searchTerm}%`)
         .limit(10);
 
       if (patientsError) throw patientsError;
