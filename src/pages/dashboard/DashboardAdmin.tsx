@@ -161,13 +161,13 @@ export default function DashboardAdmin() {
           </div>
 
           <Tabs defaultValue="overview" className="space-y-6">
-            <TabsList className="grid w-full grid-cols-6">
-              <TabsTrigger value="overview">Overview</TabsTrigger>
-              <TabsTrigger value="analytics">Analytics</TabsTrigger>
-              <TabsTrigger value="accounts">Account Management</TabsTrigger>
-              <TabsTrigger value="pharmacy">Pharmacy</TabsTrigger>
-              <TabsTrigger value="logs">System Logs</TabsTrigger>
-              <TabsTrigger value="settings">Settings</TabsTrigger>
+            <TabsList className="grid w-full grid-cols-6 h-auto gap-1">
+              <TabsTrigger value="overview" className="whitespace-nowrap">Overview</TabsTrigger>
+              <TabsTrigger value="analytics" className="whitespace-nowrap">Analytics</TabsTrigger>
+              <TabsTrigger value="accounts" className="whitespace-nowrap">Account Management</TabsTrigger>
+              <TabsTrigger value="pharmacy" className="whitespace-nowrap">Pharmacy</TabsTrigger>
+              <TabsTrigger value="logs" className="whitespace-nowrap">System Logs</TabsTrigger>
+              <TabsTrigger value="settings" className="whitespace-nowrap">Settings</TabsTrigger>
             </TabsList>
 
             <TabsContent value="overview" className="space-y-8">
