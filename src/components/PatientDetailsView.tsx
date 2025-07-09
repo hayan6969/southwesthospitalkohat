@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { supabase } from "@/integrations/supabase/client";
-import { FileText, TestTube, User, Upload, ArrowLeft, Calendar, Pill } from "lucide-react";
+import { FileText, TestTube, User, ArrowLeft } from "lucide-react";
 import { format } from "date-fns";
 
 interface PatientDetailsViewProps {
@@ -17,7 +17,6 @@ export function PatientDetailsView({ patientId, patientName, onBack }: PatientDe
   const [patientData, setPatientData] = useState<any>(null);
   const [labReports, setLabReports] = useState<any[]>([]);
   const [medicalRecords, setMedicalRecords] = useState<any[]>([]);
-  const [appointments, setAppointments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -51,17 +50,9 @@ export function PatientDetailsView({ patientId, patientName, onBack }: PatientDe
           .eq('patient_id', patientId)
           .order('created_at', { ascending: false });
 
-        // Fetch appointments
-        const { data: appointmentsData } = await supabase
-          .from('appointments')
-          .select('*')
-          .eq('patient_id', patientId)
-          .order('appointment_date', { ascending: false });
-
         setPatientData({ ...profileData, ...patientDetails });
         setLabReports(labData || []);
         setMedicalRecords(recordsData || []);
-        setAppointments(appointmentsData || []);
       } catch (error) {
         console.error('Error fetching patient details:', error);
       } finally {
@@ -107,12 +98,10 @@ export function PatientDetailsView({ patientId, patientName, onBack }: PatientDe
       </div>
 
       <Tabs defaultValue="general" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="general">General Info</TabsTrigger>
-          <TabsTrigger value="appointments">Appointments</TabsTrigger>
           <TabsTrigger value="labs">Lab Reports</TabsTrigger>
           <TabsTrigger value="records">Medical Records</TabsTrigger>
-          <TabsTrigger value="documents">Documents</TabsTrigger>
         </TabsList>
 
         <TabsContent value="general">
@@ -166,72 +155,6 @@ export function PatientDetailsView({ patientId, patientName, onBack }: PatientDe
                   )}
                 </div>
               </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="appointments">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Calendar className="w-5 h-5" />
-                Appointment History
-              </CardTitle>
-              <CardDescription>
-                Patient appointment history and visit timeline
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Date & Time</TableHead>
-                    <TableHead>Type</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Notes</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {appointments.length > 0 ? (
-                    appointments.map((appointment) => (
-                      <TableRow key={appointment.id}>
-                        <TableCell>
-                          <div>
-                            <div className="font-medium">
-                              {format(new Date(appointment.appointment_date), 'MMM d, yyyy')}
-                            </div>
-                            <div className="text-sm text-gray-500">
-                              {format(new Date(appointment.appointment_date), 'h:mm a')}
-                            </div>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-medium">
-                            {appointment.type}
-                          </span>
-                        </TableCell>
-                        <TableCell>
-                          <span className={`px-2 py-1 rounded-full text-sm font-medium ${
-                            appointment.status === 'completed' ? 'bg-green-100 text-green-700' :
-                            appointment.status === 'scheduled' ? 'bg-blue-100 text-blue-700' :
-                            appointment.status === 'cancelled' ? 'bg-red-100 text-red-700' :
-                            'bg-gray-100 text-gray-700'
-                          }`}>
-                            {appointment.status}
-                          </span>
-                        </TableCell>
-                        <TableCell>{appointment.notes || 'No notes'}</TableCell>
-                      </TableRow>
-                    ))
-                  ) : (
-                    <TableRow>
-                      <TableCell colSpan={4} className="text-center text-gray-500 py-8">
-                        No appointments found
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
             </CardContent>
           </Card>
         </TabsContent>
@@ -300,7 +223,7 @@ export function PatientDetailsView({ patientId, patientName, onBack }: PatientDe
                 Medical Records
               </CardTitle>
               <CardDescription>
-                Patient visit history and medical notes
+                Patient visit history and medical notes (can be uploaded by patients)
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -336,31 +259,6 @@ export function PatientDetailsView({ patientId, patientName, onBack }: PatientDe
                   )}
                 </TableBody>
               </Table>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="documents">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Upload className="w-5 h-5" />
-                Documents & Uploads
-              </CardTitle>
-              <CardDescription>
-                Patient uploaded documents and files
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="text-center text-gray-500 py-12">
-                <Upload className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                <p className="text-lg font-medium mb-2">Document Management</p>
-                <p>Document upload and management feature coming soon.</p>
-                <Button className="mt-4" variant="outline">
-                  <Upload className="w-4 h-4 mr-2" />
-                  Upload Document
-                </Button>
-              </div>
             </CardContent>
           </Card>
         </TabsContent>
