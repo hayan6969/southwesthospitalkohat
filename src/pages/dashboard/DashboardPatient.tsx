@@ -7,8 +7,8 @@ import { AuditLog } from "@/components/AuditLog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Calendar, FileText, DollarSign, Activity, Clock, Users, TestTube, Upload } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
-import PatientBookAppointment from "./patient/PatientBookAppointment";
-import PatientMyAppointments from "./patient/PatientMyAppointments";
+import { AppointmentBooking } from "@/components/AppointmentBooking";
+import { MyAppointments } from "@/components/MyAppointments";
 
 export default function DashboardPatient() {
   const { profile } = useAuth();
@@ -77,9 +77,19 @@ export default function DashboardPatient() {
     </div>
   );
 
-  const renderAppointmentsTab = () => <PatientBookAppointment />;
+  const renderAppointmentsTab = () => (
+    <div>
+      <h2 className="text-2xl font-bold mb-8">Book Appointment</h2>
+      <AppointmentBooking />
+    </div>
+  );
 
-  const renderMyAppointmentsTab = () => <PatientMyAppointments />;
+  const renderMyAppointmentsTab = () => (
+    <div>
+      <h2 className="text-2xl font-bold mb-8">My Appointments</h2>
+      <MyAppointments />
+    </div>
+  );
 
   const renderRecordsTab = () => (
     <div>

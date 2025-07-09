@@ -145,6 +145,51 @@ export type Database = {
           },
         ]
       }
+      hospital_settings: {
+        Row: {
+          booking_lead_time_hours: number
+          closing_time: string
+          contact_number: string | null
+          created_at: string | null
+          emergency_slots_percentage: number
+          hospital_address: string | null
+          hospital_name: string
+          id: string
+          max_appointments_per_doctor: number
+          opening_time: string
+          updated_at: string | null
+          working_days: string[]
+        }
+        Insert: {
+          booking_lead_time_hours?: number
+          closing_time?: string
+          contact_number?: string | null
+          created_at?: string | null
+          emergency_slots_percentage?: number
+          hospital_address?: string | null
+          hospital_name?: string
+          id?: string
+          max_appointments_per_doctor?: number
+          opening_time?: string
+          updated_at?: string | null
+          working_days?: string[]
+        }
+        Update: {
+          booking_lead_time_hours?: number
+          closing_time?: string
+          contact_number?: string | null
+          created_at?: string | null
+          emergency_slots_percentage?: number
+          hospital_address?: string | null
+          hospital_name?: string
+          id?: string
+          max_appointments_per_doctor?: number
+          opening_time?: string
+          updated_at?: string | null
+          working_days?: string[]
+        }
+        Relationships: []
+      }
       invoices: {
         Row: {
           amount: number
@@ -514,6 +559,54 @@ export type Database = {
           },
         ]
       }
+      queue_positions: {
+        Row: {
+          appointment_date: string
+          appointment_id: string
+          created_at: string | null
+          doctor_id: string
+          id: string
+          queue_position: number
+          status: string
+          updated_at: string | null
+        }
+        Insert: {
+          appointment_date: string
+          appointment_id: string
+          created_at?: string | null
+          doctor_id: string
+          id?: string
+          queue_position: number
+          status?: string
+          updated_at?: string | null
+        }
+        Update: {
+          appointment_date?: string
+          appointment_id?: string
+          created_at?: string | null
+          doctor_id?: string
+          id?: string
+          queue_position?: number
+          status?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "queue_positions_appointment_id_fkey"
+            columns: ["appointment_id"]
+            isOneToOne: false
+            referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "queue_positions_doctor_id_fkey"
+            columns: ["doctor_id"]
+            isOneToOne: false
+            referencedRelation: "doctors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       users: {
         Row: {
           created_at: string | null
@@ -566,6 +659,10 @@ export type Database = {
       generate_patient_number: {
         Args: Record<PropertyKey, never>
         Returns: string
+      }
+      get_next_queue_position: {
+        Args: { doctor_uuid: string; appointment_date_param: string }
+        Returns: number
       }
     }
     Enums: {

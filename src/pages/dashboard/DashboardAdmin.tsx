@@ -19,7 +19,8 @@ import { EditUserDialog } from "@/components/dialogs/EditUserDialog";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { format } from "date-fns";
 import { formatPkrCurrency } from "@/utils/currency";
-import AdminSettings from "./admin/AdminSettings";
+import { useHospitalSettings } from "@/hooks/useHospitalSettings";
+
 
 const chartData = {
   doctors: [{ value: 180 }, { value: 200 }, { value: 247 }, { value: 230 }, { value: 247 }],
@@ -34,8 +35,26 @@ export default function DashboardAdmin() {
   const { data: users, refetch: refetchUsers } = useUsers();
   const { data: departments } = useDepartments();
   const { data: auditLogs } = useAuditLogs();
+  const { settings: hospitalSettings, updateSettings } = useHospitalSettings();
   const [editingUser, setEditingUser] = useState<any>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
+  
+  // Settings form state
+  const [timingsForm, setTimingsForm] = useState({
+    opening_time: '',
+    closing_time: '',
+    working_days: [] as string[]
+  });
+  const [appointmentForm, setAppointmentForm] = useState({
+    max_appointments_per_doctor: 50,
+    booking_lead_time_hours: 2,
+    emergency_slots_percentage: 20
+  });
+  const [hospitalForm, setHospitalForm] = useState({
+    hospital_name: '',
+    contact_number: '',
+    hospital_address: ''
+  });
   
   // Account management filters
   const [roleFilter, setRoleFilter] = useState("all");
