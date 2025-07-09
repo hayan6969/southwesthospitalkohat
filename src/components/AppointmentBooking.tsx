@@ -132,6 +132,27 @@ export const AppointmentBooking = () => {
     setLoading(true);
 
     try {
+      // First, ensure a patient record exists for this user
+      const { data: existingPatient } = await supabase
+        .from('patients')
+        .select('id')
+        .eq('id', profile?.id)
+        .single();
+
+      if (!existingPatient) {
+        // Create patient record if it doesn't exist
+        const { error: patientError } = await supabase
+          .from('patients')
+          .insert({
+            id: profile?.id,
+          });
+        
+        if (patientError) {
+          console.error('Error creating patient record:', patientError);
+          throw new Error('Failed to create patient record');
+        }
+      }
+
       // Set appointment time to hospital opening time (queue-based system)
       const appointmentDateTime = new Date(selectedDate);
       const [hours, minutes] = hospitalSettings?.opening_time.split(':') || ['08', '00'];
