@@ -7,6 +7,8 @@ import { AuditLog } from "@/components/AuditLog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Calendar, FileText, DollarSign, Activity, Clock, Users, TestTube, Upload } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import PatientBookAppointment from "./patient/PatientBookAppointment";
+import PatientMyAppointments from "./patient/PatientMyAppointments";
 
 export default function DashboardPatient() {
   const { profile } = useAuth();
@@ -75,23 +77,9 @@ export default function DashboardPatient() {
     </div>
   );
 
-  const renderAppointmentsTab = () => (
-    <div>
-      <h2 className="text-2xl font-bold mb-8">Book Appointment</h2>
-      <div className="bg-white rounded-lg border shadow-sm p-6">
-        <p className="text-gray-600">Appointment booking functionality will be implemented here.</p>
-      </div>
-    </div>
-  );
+  const renderAppointmentsTab = () => <PatientBookAppointment />;
 
-  const renderMyAppointmentsTab = () => (
-    <div>
-      <h2 className="text-2xl font-bold mb-8">My Appointments</h2>
-      <div className="bg-white rounded-lg border shadow-sm p-6">
-        <p className="text-gray-600">My appointments and queue status will be shown here.</p>
-      </div>
-    </div>
-  );
+  const renderMyAppointmentsTab = () => <PatientMyAppointments />;
 
   const renderRecordsTab = () => (
     <div>

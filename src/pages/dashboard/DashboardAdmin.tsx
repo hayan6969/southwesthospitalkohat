@@ -19,6 +19,7 @@ import { EditUserDialog } from "@/components/dialogs/EditUserDialog";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { format } from "date-fns";
 import { formatPkrCurrency } from "@/utils/currency";
+import AdminSettings from "./admin/AdminSettings";
 
 const chartData = {
   doctors: [{ value: 180 }, { value: 200 }, { value: 247 }, { value: 230 }, { value: 247 }],
