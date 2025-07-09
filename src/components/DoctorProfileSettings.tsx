@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Camera, Upload } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 
 interface DoctorProfile {
@@ -13,6 +15,7 @@ interface DoctorProfile {
   consultation_fee: number;
   experience_years: number;
   license_number: string;
+  avatar_url: string;
   first_name: string;
   last_name: string;
   phone: string;
@@ -25,12 +28,14 @@ export const DoctorProfileSettings = () => {
     consultation_fee: 0,
     experience_years: 0,
     license_number: '',
+    avatar_url: '',
     first_name: '',
     last_name: '',
     phone: ''
   });
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
 
   useEffect(() => {
     if (profile?.id) {
@@ -65,6 +70,7 @@ export const DoctorProfileSettings = () => {
         consultation_fee: doctorData.consultation_fee || 0,
         experience_years: doctorData.experience_years || 0,
         license_number: doctorData.license_number || '',
+        avatar_url: doctorData.avatar_url || '',
         first_name: profileData.first_name || '',
         last_name: profileData.last_name || '',
         phone: profileData.phone || ''
@@ -81,6 +87,85 @@ export const DoctorProfileSettings = () => {
     }
   };
 
+  const handlePhotoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file || !profile?.id) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      toast({
+        title: "Error",
+        description: "Please select an image file",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast({
+        title: "Error",
+        description: "Image size must be less than 5MB",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      setUploading(true);
+
+      // Delete old avatar if exists
+      if (doctorProfile.avatar_url) {
+        const oldPath = doctorProfile.avatar_url.split('/').pop();
+        if (oldPath) {
+          await supabase.storage
+            .from('doctor-avatars')
+            .remove([`${profile.id}/${oldPath}`]);
+        }
+      }
+
+      // Upload new avatar
+      const fileExt = file.name.split('.').pop();
+      const fileName = `avatar-${Date.now()}.${fileExt}`;
+      const filePath = `${profile.id}/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('doctor-avatars')
+        .upload(filePath, file);
+
+      if (uploadError) throw uploadError;
+
+      // Get public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('doctor-avatars')
+        .getPublicUrl(filePath);
+
+      // Update doctor profile with new avatar URL
+      const { error: updateError } = await supabase
+        .from('doctors')
+        .update({ avatar_url: publicUrl })
+        .eq('id', profile.id);
+
+      if (updateError) throw updateError;
+
+      setDoctorProfile(prev => ({ ...prev, avatar_url: publicUrl }));
+
+      toast({
+        title: "Success",
+        description: "Profile photo updated successfully",
+      });
+    } catch (error) {
+      console.error('Error uploading photo:', error);
+      toast({
+        title: "Error",
+        description: "Failed to upload photo",
+        variant: "destructive",
+      });
+    } finally {
+      setUploading(false);
+    }
+  };
+
   const handleSave = async () => {
     try {
       setSaving(true);
@@ -89,10 +174,11 @@ export const DoctorProfileSettings = () => {
       const { error: doctorError } = await supabase
         .from('doctors')
         .update({
-          specialization: doctorProfile.specialization,
-          consultation_fee: doctorProfile.consultation_fee,
-          experience_years: doctorProfile.experience_years,
-          license_number: doctorProfile.license_number
+        specialization: doctorProfile.specialization,
+        consultation_fee: doctorProfile.consultation_fee,
+        experience_years: doctorProfile.experience_years,
+        license_number: doctorProfile.license_number,
+        avatar_url: doctorProfile.avatar_url
         })
         .eq('id', profile?.id);
 
@@ -149,6 +235,58 @@ export const DoctorProfileSettings = () => {
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
+      {/* Profile Photo Section */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Profile Photo</CardTitle>
+          <CardDescription>
+            Upload your professional profile photo
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="flex items-center gap-6">
+          <div className="relative">
+            <Avatar className="w-24 h-24 border-4 border-green-200">
+              <AvatarImage src={doctorProfile.avatar_url} alt="Doctor Avatar" />
+              <AvatarFallback className="bg-green-100 text-green-700 text-2xl font-bold">
+                {doctorProfile.first_name?.[0]}{doctorProfile.last_name?.[0]}
+              </AvatarFallback>
+            </Avatar>
+            <label
+              htmlFor="avatar-upload"
+              className="absolute bottom-0 right-0 bg-green-600 hover:bg-green-700 text-white rounded-full p-2 cursor-pointer shadow-lg transition-colors"
+            >
+              <Camera className="w-4 h-4" />
+              <input
+                id="avatar-upload"
+                type="file"
+                accept="image/*"
+                onChange={handlePhotoUpload}
+                className="hidden"
+              />
+            </label>
+          </div>
+          <div className="flex-1">
+            <h3 className="font-semibold text-lg">
+              Dr. {doctorProfile.first_name} {doctorProfile.last_name}
+            </h3>
+            <p className="text-gray-600">{doctorProfile.specialization}</p>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => document.getElementById('avatar-upload')?.click()}
+              disabled={uploading}
+              className="mt-2"
+            >
+              <Upload className="w-4 h-4 mr-2" />
+              {uploading ? "Uploading..." : "Change Photo"}
+            </Button>
+            <p className="text-xs text-gray-500 mt-1">
+              JPG, PNG or JPEG. Max 5MB.
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card>
           <CardHeader>

@@ -1,14 +1,15 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { StatsCard } from "@/components/StatsCard";
 import { MiniChart } from "@/components/MiniChart";
 import { useAppointments, useStats, useMedicalRecords } from "@/hooks/useDatabase";
 import { usePatientNames, useDoctorNames, getPatientName, getDoctorName } from "@/hooks/useDisplayHelpers";
 import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
 import { Calendar, Users, Clock, CheckCircle, Plus, User, LogOut, Stethoscope, FileText, CalendarDays, ClipboardList } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { format } from "date-fns";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { EnhancedAppointmentDialog } from "@/components/dialogs/EnhancedAppointmentDialog";
@@ -32,6 +33,22 @@ export default function DashboardDoctor() {
   const { data: medicalRecords, isLoading: recordsLoading } = useMedicalRecords();
   const { data: patientNames } = usePatientNames();
   const { data: doctorNames } = useDoctorNames();
+  const [doctorProfile, setDoctorProfile] = useState<any>(null);
+
+  // Fetch doctor profile including avatar
+  useEffect(() => {
+    const fetchDoctorProfile = async () => {
+      if (profile?.id) {
+        const { data } = await supabase
+          .from('doctors')
+          .select('avatar_url')
+          .eq('id', profile.id)
+          .single();
+        setDoctorProfile(data);
+      }
+    };
+    fetchDoctorProfile();
+  }, [profile?.id]);
 
   // Filter today's appointments
   const today = new Date().toISOString().split('T')[0];
@@ -62,6 +79,7 @@ export default function DashboardDoctor() {
           <div className="flex items-center gap-6 bg-gray-50 rounded-lg p-4 border border-gray-200">
             <div className="flex items-center gap-4">
               <Avatar className="w-12 h-12 border-2 border-green-200">
+                <AvatarImage src={doctorProfile?.avatar_url} alt="Doctor Avatar" />
                 <AvatarFallback className="bg-green-100 text-green-700 text-lg font-bold">
                   {profile?.first_name?.[0]}{profile?.last_name?.[0]}
                 </AvatarFallback>
@@ -103,7 +121,7 @@ export default function DashboardDoctor() {
           </div>
 
           <Tabs defaultValue="overview" className="space-y-6">
-            <TabsList className="grid w-full grid-cols-10">
+            <TabsList className="grid w-full grid-cols-9">
               <TabsTrigger value="overview">Overview</TabsTrigger>
               <TabsTrigger value="appointments">Appointments</TabsTrigger>
               <TabsTrigger value="patients">Patient History</TabsTrigger>
@@ -111,8 +129,7 @@ export default function DashboardDoctor() {
               <TabsTrigger value="notes">Patient Notes</TabsTrigger>
               <TabsTrigger value="labs">Lab Reports</TabsTrigger>
               <TabsTrigger value="schedule">Schedule</TabsTrigger>
-              <TabsTrigger value="consultation-rates">Rates</TabsTrigger>
-              <TabsTrigger value="profile">Profile Settings</TabsTrigger>
+              <TabsTrigger value="settings">Settings</TabsTrigger>
               <TabsTrigger value="analytics">Analytics</TabsTrigger>
             </TabsList>
 
@@ -307,11 +324,7 @@ export default function DashboardDoctor() {
               <DoctorSchedule />
             </TabsContent>
 
-            <TabsContent value="consultation-rates">
-              <DoctorConsultationRates />
-            </TabsContent>
-
-            <TabsContent value="profile">
+            <TabsContent value="settings">
               <DoctorProfileSettings />
             </TabsContent>
 

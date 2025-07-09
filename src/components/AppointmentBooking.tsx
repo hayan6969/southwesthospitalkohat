@@ -10,6 +10,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { format } from "date-fns";
 import { Calendar as CalendarIcon, Clock, DollarSign, User, Check, ChevronsUpDown } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -20,6 +21,7 @@ interface Doctor {
   specialization: string;
   consultation_fee: number;
   experience_years: number;
+  avatar_url: string;
   first_name: string;
   last_name: string;
 }
@@ -57,7 +59,8 @@ export const AppointmentBooking = () => {
           id,
           specialization,
           consultation_fee,
-          experience_years
+          experience_years,
+          avatar_url
         `);
 
       if (error) throw error;
@@ -223,18 +226,25 @@ export const AppointmentBooking = () => {
                                 selectedDoctor === doctor.id ? "opacity-100" : "opacity-0"
                               )}
                             />
-                            <div className="flex flex-col gap-1 py-1">
-                              <div className="flex items-center gap-2">
-                                <User className="w-4 h-4" />
-                                <span className="font-medium">
-                                  Dr. {doctor.first_name} {doctor.last_name}
-                                </span>
-                              </div>
-                              <div className="text-sm text-gray-500">
-                                {doctor.specialization} • {doctor.experience_years} years exp.
-                              </div>
-                              <div className="text-sm font-medium text-green-600">
-                                PKR {doctor.consultation_fee} consultation fee
+                            <div className="flex items-center gap-3 py-2">
+                              <Avatar className="w-10 h-10 border-2 border-green-200">
+                                <AvatarImage src={doctor.avatar_url} alt="Doctor Avatar" />
+                                <AvatarFallback className="bg-green-100 text-green-700 text-sm font-bold">
+                                  {doctor.first_name?.[0]}{doctor.last_name?.[0]}
+                                </AvatarFallback>
+                              </Avatar>
+                              <div className="flex flex-col gap-1 flex-1">
+                                <div className="flex items-center gap-2">
+                                  <span className="font-medium">
+                                    Dr. {doctor.first_name} {doctor.last_name}
+                                  </span>
+                                </div>
+                                <div className="text-sm text-gray-500">
+                                  {doctor.specialization} • {doctor.experience_years} years exp.
+                                </div>
+                                <div className="text-sm font-medium text-green-600">
+                                  PKR {doctor.consultation_fee} consultation fee
+                                </div>
                               </div>
                             </div>
                           </CommandItem>
@@ -319,12 +329,20 @@ export const AppointmentBooking = () => {
                   Selected Doctor
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-3">
-                <div>
-                  <h3 className="font-semibold text-lg">
-                    Dr. {selectedDoctorDetails.first_name} {selectedDoctorDetails.last_name}
-                  </h3>
-                  <p className="text-gray-600">{selectedDoctorDetails.specialization}</p>
+              <CardContent className="space-y-4">
+                <div className="flex items-center gap-4">
+                  <Avatar className="w-16 h-16 border-4 border-green-200">
+                    <AvatarImage src={selectedDoctorDetails.avatar_url} alt="Doctor Avatar" />
+                    <AvatarFallback className="bg-green-100 text-green-700 text-xl font-bold">
+                      {selectedDoctorDetails.first_name?.[0]}{selectedDoctorDetails.last_name?.[0]}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1">
+                    <h3 className="font-semibold text-lg">
+                      Dr. {selectedDoctorDetails.first_name} {selectedDoctorDetails.last_name}
+                    </h3>
+                    <p className="text-gray-600">{selectedDoctorDetails.specialization}</p>
+                  </div>
                 </div>
                 <div className="flex items-center gap-4 text-sm">
                   <div className="flex items-center gap-1">

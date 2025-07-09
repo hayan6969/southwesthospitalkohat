@@ -115,6 +115,7 @@ export type Database = {
       }
       doctors: {
         Row: {
+          avatar_url: string | null
           consultation_fee: number | null
           experience_years: number | null
           id: string
@@ -122,6 +123,7 @@ export type Database = {
           specialization: string | null
         }
         Insert: {
+          avatar_url?: string | null
           consultation_fee?: number | null
           experience_years?: number | null
           id: string
@@ -129,6 +131,7 @@ export type Database = {
           specialization?: string | null
         }
         Update: {
+          avatar_url?: string | null
           consultation_fee?: number | null
           experience_years?: number | null
           id?: string
