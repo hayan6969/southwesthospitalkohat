@@ -62,7 +62,7 @@ export const MyAppointments = () => {
     try {
       setLoading(true);
 
-      // Fetch appointments with doctor details
+      // Fetch appointments with doctor details separately
       const { data: appointmentsData, error: appointmentsError } = await supabase
         .from('appointments')
         .select(`
@@ -71,25 +71,31 @@ export const MyAppointments = () => {
           type,
           notes,
           status,
-          doctor_id,
-          doctors:doctor_id (
-            specialization,
-            consultation_fee,
-            profiles:id (
-              first_name,
-              last_name
-            )
-          )
+          doctor_id
         `)
         .eq('patient_id', profile.id)
         .order('appointment_date', { ascending: true });
 
       if (appointmentsError) throw appointmentsError;
 
+      // Get doctors data separately
+      const doctorIds = appointmentsData.map(a => a.doctor_id);
+      const [doctorsData, profilesData] = await Promise.all([
+        supabase.from('doctors').select('id, specialization, consultation_fee').in('id', doctorIds),
+        supabase.from('profiles').select('id, first_name, last_name').in('id', doctorIds)
+      ]);
+
+      if (doctorsData.error) throw doctorsData.error;
+      if (profilesData.error) throw profilesData.error;
+
       // For each appointment, get queue position and calculate ahead count
       const appointmentsWithQueue = await Promise.all(
         appointmentsData.map(async (appointment) => {
           const appointmentDate = new Date(appointment.appointment_date).toISOString().split('T')[0];
+          
+          // Get doctor and profile info
+          const doctor = doctorsData.data?.find(d => d.id === appointment.doctor_id);
+          const profile = profilesData.data?.find(p => p.id === appointment.doctor_id);
           
           // Get this appointment's queue position
           const { data: queueData, error: queueError } = await supabase
@@ -103,10 +109,10 @@ export const MyAppointments = () => {
             return {
               ...appointment,
               doctor: {
-                first_name: appointment.doctors?.profiles?.first_name || '',
-                last_name: appointment.doctors?.profiles?.last_name || '',
-                specialization: appointment.doctors?.specialization || '',
-                consultation_fee: appointment.doctors?.consultation_fee || 0
+                first_name: profile?.first_name || '',
+                last_name: profile?.last_name || '',
+                specialization: doctor?.specialization || '',
+                consultation_fee: doctor?.consultation_fee || 0
               },
               queue_position: {
                 queue_position: 0,
@@ -139,10 +145,10 @@ export const MyAppointments = () => {
           return {
             ...appointment,
             doctor: {
-              first_name: appointment.doctors?.profiles?.first_name || '',
-              last_name: appointment.doctors?.profiles?.last_name || '',
-              specialization: appointment.doctors?.specialization || '',
-              consultation_fee: appointment.doctors?.consultation_fee || 0
+              first_name: profile?.first_name || '',
+              last_name: profile?.last_name || '',
+              specialization: doctor?.specialization || '',
+              consultation_fee: doctor?.consultation_fee || 0
             },
             queue_position: {
               queue_position: queueData.queue_position,

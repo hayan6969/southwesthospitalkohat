@@ -54,20 +54,28 @@ export const AppointmentBooking = () => {
           id,
           specialization,
           consultation_fee,
-          experience_years,
-          profiles:id (
-            first_name,
-            last_name
-          )
+          experience_years
         `);
 
       if (error) throw error;
 
-      const formattedDoctors = data.map(doctor => ({
-        ...doctor,
-        first_name: doctor.profiles?.first_name || '',
-        last_name: doctor.profiles?.last_name || ''
-      }));
+      // Get profile data separately to avoid relationship conflicts
+      const doctorIds = data.map(d => d.id);
+      const { data: profiles, error: profilesError } = await supabase
+        .from('profiles')
+        .select('id, first_name, last_name')
+        .in('id', doctorIds);
+
+      if (profilesError) throw profilesError;
+
+      const formattedDoctors = data.map(doctor => {
+        const profile = profiles.find(p => p.id === doctor.id);
+        return {
+          ...doctor,
+          first_name: profile?.first_name || '',
+          last_name: profile?.last_name || ''
+        };
+      });
 
       setDoctors(formattedDoctors);
     } catch (error) {
