@@ -81,7 +81,13 @@ export default function DoctorSchedule() {
     return () => clearInterval(interval);
   }, []);
 
-  const handleStatusUpdate = async (appointmentId: string, newStatus: string) => {
+  const handleStatusUpdate = async (appointmentId: string, newStatus: string, appointment: any) => {
+    // Prevent completing appointments with pending payments
+    if (newStatus === 'completed' && appointment.booking_type === 'online' && appointment.payment_status === 'pending') {
+      toast.error('Cannot complete appointment with pending payment. Only staff can generate invoices.');
+      return;
+    }
+
     try {
       await updateAppointment.mutateAsync({
         id: appointmentId,
@@ -271,20 +277,10 @@ export default function DoctorSchedule() {
                           Paid (Online)
                         </Badge>
                       ) : (
-                        <div className="flex flex-col gap-1">
-                          <Badge variant="destructive" className="bg-red-100 text-red-700">
-                            <AlertTriangle className="w-3 h-3 mr-1" />
-                            Pending
-                          </Badge>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="h-6 text-xs"
-                            onClick={() => handleGenerateInvoice(appointment.id)}
-                          >
-                            Generate Invoice
-                          </Button>
-                        </div>
+                        <Badge variant="destructive" className="bg-red-100 text-red-700">
+                          <AlertTriangle className="w-3 h-3 mr-1" />
+                          Pending Payment
+                        </Badge>
                       )}
                     </div>
                   </TableCell>
@@ -309,8 +305,9 @@ export default function DoctorSchedule() {
                           <Button
                             size="sm"
                             variant="outline"
-                            onClick={() => handleStatusUpdate(appointment.id, 'completed')}
-                            disabled={updateAppointment.isPending}
+                            onClick={() => handleStatusUpdate(appointment.id, 'completed', appointment)}
+                            disabled={updateAppointment.isPending || (appointment.booking_type === 'online' && appointment.payment_status === 'pending')}
+                            title={appointment.booking_type === 'online' && appointment.payment_status === 'pending' ? 'Cannot complete appointment with pending payment' : ''}
                           >
                             <CheckCircle className="w-3 h-3 mr-1" />
                             Complete
@@ -318,7 +315,7 @@ export default function DoctorSchedule() {
                           <Button
                             size="sm"
                             variant="destructive"
-                            onClick={() => handleStatusUpdate(appointment.id, 'cancelled')}
+                            onClick={() => handleStatusUpdate(appointment.id, 'cancelled', appointment)}
                             disabled={updateAppointment.isPending}
                           >
                             <X className="w-3 h-3 mr-1" />
