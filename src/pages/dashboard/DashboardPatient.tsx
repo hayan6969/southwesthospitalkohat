@@ -1,14 +1,20 @@
 
-import AppLayout from "@/layouts/AppLayout";
+import { useState } from "react";
+import PatientLayout from "@/layouts/PatientLayout";
 import { StatsCard } from "@/components/StatsCard";
 import { DemoTable } from "@/components/DemoTable";
 import { AuditLog } from "@/components/AuditLog";
-import { Calendar, FileText, DollarSign, Activity } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Calendar, FileText, DollarSign, Activity, Clock, Users, TestTube, Upload } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
 
 export default function DashboardPatient() {
-  return (
-    <AppLayout>
-      <h2 className="text-2xl font-bold mb-8">Welcome back, John!</h2>
+  const { profile } = useAuth();
+  const [activeTab, setActiveTab] = useState("overview");
+
+  const renderOverviewTab = () => (
+    <div>
+      <h2 className="text-2xl font-bold mb-8">Welcome back, {profile?.first_name}!</h2>
       
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         <StatsCard
@@ -66,6 +72,108 @@ export default function DashboardPatient() {
           ]} 
         />
       </div>
-    </AppLayout>
+    </div>
+  );
+
+  const renderAppointmentsTab = () => (
+    <div>
+      <h2 className="text-2xl font-bold mb-8">Book Appointment</h2>
+      <div className="bg-white rounded-lg border shadow-sm p-6">
+        <p className="text-gray-600">Appointment booking functionality will be implemented here.</p>
+      </div>
+    </div>
+  );
+
+  const renderMyAppointmentsTab = () => (
+    <div>
+      <h2 className="text-2xl font-bold mb-8">My Appointments</h2>
+      <div className="bg-white rounded-lg border shadow-sm p-6">
+        <p className="text-gray-600">My appointments and queue status will be shown here.</p>
+      </div>
+    </div>
+  );
+
+  const renderRecordsTab = () => (
+    <div>
+      <h2 className="text-2xl font-bold mb-8">Medical Records</h2>
+      <div className="bg-white rounded-lg border shadow-sm p-6">
+        <p className="text-gray-600">Medical records functionality will be implemented here.</p>
+      </div>
+    </div>
+  );
+
+  const renderLabsTab = () => (
+    <div>
+      <h2 className="text-2xl font-bold mb-8">Lab Reports</h2>
+      <div className="bg-white rounded-lg border shadow-sm p-6">
+        <p className="text-gray-600">Lab reports functionality will be implemented here.</p>
+      </div>
+    </div>
+  );
+
+  const renderInvoicesTab = () => (
+    <div>
+      <h2 className="text-2xl font-bold mb-8">Invoices</h2>
+      <div className="bg-white rounded-lg border shadow-sm p-6">
+        <p className="text-gray-600">Invoices functionality will be implemented here.</p>
+      </div>
+    </div>
+  );
+
+  return (
+    <PatientLayout>
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <TabsList className="grid w-full grid-cols-6 mb-8">
+          <TabsTrigger value="overview" className="flex items-center gap-2">
+            <Activity className="w-4 h-4" />
+            Overview
+          </TabsTrigger>
+          <TabsTrigger value="book-appointment" className="flex items-center gap-2">
+            <Calendar className="w-4 h-4" />
+            Book Appointment
+          </TabsTrigger>
+          <TabsTrigger value="my-appointments" className="flex items-center gap-2">
+            <Clock className="w-4 h-4" />
+            My Appointments
+          </TabsTrigger>
+          <TabsTrigger value="records" className="flex items-center gap-2">
+            <FileText className="w-4 h-4" />
+            Records
+          </TabsTrigger>
+          <TabsTrigger value="labs" className="flex items-center gap-2">
+            <TestTube className="w-4 h-4" />
+            Lab Reports
+          </TabsTrigger>
+          <TabsTrigger value="invoices" className="flex items-center gap-2">
+            <DollarSign className="w-4 h-4" />
+            Invoices
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="overview" className="space-y-4">
+          {renderOverviewTab()}
+        </TabsContent>
+
+        <TabsContent value="book-appointment" className="space-y-4">
+          {renderAppointmentsTab()}
+        </TabsContent>
+
+        <TabsContent value="my-appointments" className="space-y-4">
+          {renderMyAppointmentsTab()}
+        </TabsContent>
+
+        <TabsContent value="records" className="space-y-4">
+          {renderRecordsTab()}
+        </TabsContent>
+
+        <TabsContent value="labs" className="space-y-4">
+          {renderLabsTab()}
+        </TabsContent>
+
+        <TabsContent value="invoices" className="space-y-4">
+          {renderInvoicesTab()}
+        </TabsContent>
+      </Tabs>
+    </PatientLayout>
   );
 }

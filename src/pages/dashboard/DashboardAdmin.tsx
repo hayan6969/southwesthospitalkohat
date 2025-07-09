@@ -141,12 +141,13 @@ export default function DashboardAdmin() {
           </div>
 
           <Tabs defaultValue="overview" className="space-y-6">
-            <TabsList className="grid w-full grid-cols-5">
+            <TabsList className="grid w-full grid-cols-6">
               <TabsTrigger value="overview">Overview</TabsTrigger>
               <TabsTrigger value="analytics">Analytics</TabsTrigger>
               <TabsTrigger value="accounts">Account Management</TabsTrigger>
               <TabsTrigger value="pharmacy">Pharmacy</TabsTrigger>
               <TabsTrigger value="logs">System Logs</TabsTrigger>
+              <TabsTrigger value="settings">Settings</TabsTrigger>
             </TabsList>
 
             <TabsContent value="overview" className="space-y-8">
@@ -495,6 +496,109 @@ export default function DashboardAdmin() {
                         ))}
                       </TableBody>
                     </Table>
+                  </div>
+                </div>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="settings">
+              <div className="space-y-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-xl font-semibold">Hospital Settings</h3>
+                    <p className="text-gray-600">Configure hospital timings and operational settings</p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+                    <h4 className="text-lg font-semibold mb-4">Hospital Timings</h4>
+                    <div className="space-y-4">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Opening Time
+                          </label>
+                          <Input type="time" defaultValue="08:00" />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Closing Time
+                          </label>
+                          <Input type="time" defaultValue="20:00" />
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Working Days
+                        </label>
+                        <div className="flex flex-wrap gap-2">
+                          {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].map(day => (
+                            <label key={day} className="flex items-center">
+                              <input 
+                                type="checkbox" 
+                                className="mr-2" 
+                                defaultChecked={day !== 'Sunday'}
+                              />
+                              <span className="text-sm">{day}</span>
+                            </label>
+                          ))}
+                        </div>
+                      </div>
+                      <Button className="w-full">Save Hospital Timings</Button>
+                    </div>
+                  </div>
+
+                  <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+                    <h4 className="text-lg font-semibold mb-4">Appointment Settings</h4>
+                    <div className="space-y-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Maximum Appointments per Doctor per Day
+                        </label>
+                        <Input type="number" defaultValue="50" min="1" max="100" />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Appointment Booking Lead Time (hours)
+                        </label>
+                        <Input type="number" defaultValue="2" min="0" max="72" />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Emergency Slots Reserved (%)
+                        </label>
+                        <Input type="number" defaultValue="20" min="0" max="50" />
+                      </div>
+                      <Button className="w-full">Save Appointment Settings</Button>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+                  <h4 className="text-lg font-semibold mb-4">Additional Settings</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Hospital Name
+                      </label>
+                      <Input defaultValue="City General Hospital" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Contact Number
+                      </label>
+                      <Input defaultValue="+92-XXX-XXXXXXX" />
+                    </div>
+                    <div className="md:col-span-2">
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Hospital Address
+                      </label>
+                      <Input defaultValue="123 Main Street, City Center" />
+                    </div>
+                  </div>
+                  <div className="mt-6">
+                    <Button>Save Hospital Information</Button>
                   </div>
                 </div>
               </div>
