@@ -146,7 +146,7 @@ export default function DoctorSchedule() {
       }
     }
     
-    if (statusFilter && apt.status !== statusFilter) {
+    if (statusFilter && statusFilter !== "all" && apt.status !== statusFilter) {
       return false;
     }
     
@@ -403,7 +403,7 @@ export default function DoctorSchedule() {
                       <SelectValue placeholder="All statuses" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">All statuses</SelectItem>
+                      <SelectItem value="all">All statuses</SelectItem>
                       <SelectItem value="completed">Completed</SelectItem>
                       <SelectItem value="cancelled">Cancelled</SelectItem>
                     </SelectContent>
@@ -415,7 +415,7 @@ export default function DoctorSchedule() {
                     onClick={() => {
                       setDateFilter("");
                       setPatientFilter("");
-                      setStatusFilter("");
+                      setStatusFilter("all");
                     }}
                   >
                     Clear Filters
