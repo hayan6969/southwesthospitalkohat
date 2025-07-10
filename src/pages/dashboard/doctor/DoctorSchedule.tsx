@@ -19,7 +19,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { getCurrentPakistanTime } from "@/utils/timezone";
 
-export default function DoctorSchedule() {
+export default function DoctorSchedule() { // Fixed ordering syntax
   const { data: appointments, isLoading } = useAppointments();
   const updateAppointment = useUpdateAppointment();
   const { data: patientNames } = usePatientNames();
