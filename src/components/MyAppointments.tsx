@@ -34,26 +34,6 @@ export const MyAppointments = () => {
 
   useEffect(() => {
     fetchMyAppointments();
-    
-    // Set up real-time subscription for queue updates
-    const channel = supabase
-      .channel('queue_updates')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'queue_positions'
-        },
-        () => {
-          fetchMyAppointments();
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
   }, [profile?.id]);
 
   const fetchMyAppointments = async () => {
