@@ -3,11 +3,14 @@ import AppLayout from "@/layouts/AppLayout";
 import { useAppointments, useUpdateAppointment } from "@/hooks/useDatabase";
 import { usePatientNames, useDoctorNames, getPatientName, getDoctorName } from "@/hooks/useDisplayHelpers";
 import { EnhancedAppointmentDialog } from "@/components/dialogs/EnhancedAppointmentDialog";
-import { Calendar, Clock, User, CheckCircle, X } from "lucide-react";
+import { Calendar, Clock, User, CheckCircle, X, CreditCard, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import { toast } from "sonner";
+import { generateInvoicePDF } from "@/utils/pdfGenerator";
+import { supabase } from "@/integrations/supabase/client";
 
 export default function StaffAppointments() {
   const { data: appointments, isLoading } = useAppointments();
@@ -25,6 +28,58 @@ export default function StaffAppointments() {
       toast.success(`Appointment ${newStatus} successfully`);
     } catch (error) {
       toast.error('Failed to update appointment');
+    }
+  };
+
+  const handleGenerateInvoice = async (appointment: any) => {
+    try {
+      // Create an invoice record
+      const invoiceNumber = `INV-${Date.now().toString().slice(-6)}`;
+      
+      // Get patient and doctor details for invoice
+      const { data: patientData } = await supabase
+        .from('patients')
+        .select('*, profiles(*)')
+        .eq('id', appointment.patient_id)
+        .single();
+
+      const { data: doctorData } = await supabase
+        .from('doctors')
+        .select('*, profiles(*)')
+        .eq('id', appointment.doctor_id)
+        .single();
+
+      // Update appointment payment status
+      await supabase
+        .from('appointments')
+        .update({
+          payment_status: 'paid',
+          invoice_generated_at: new Date().toISOString(),
+          payment_due_time: null
+        })
+        .eq('id', appointment.id);
+
+      // Generate PDF invoice
+      const invoiceData = {
+        invoice_number: invoiceNumber,
+        created_at: new Date().toISOString(),
+        patient: {
+          users: {
+            first_name: patientData?.profiles?.first_name || '',
+            last_name: patientData?.profiles?.last_name || '',
+            email: patientData?.profiles?.email || ''
+          }
+        },
+        description: `${appointment.type} consultation with Dr. ${doctorData?.profiles?.first_name || ''} ${doctorData?.profiles?.last_name || ''}`,
+        amount: doctorData?.consultation_fee || 2000, // Default fee if not set
+        status: 'paid'
+      };
+
+      generateInvoicePDF(invoiceData);
+      toast.success('Invoice generated and payment confirmed');
+    } catch (error) {
+      console.error('Error generating invoice:', error);
+      toast.error('Failed to generate invoice');
     }
   };
 
@@ -55,6 +110,7 @@ export default function StaffAppointments() {
                   <TableHead>Patient</TableHead>
                   <TableHead>Doctor</TableHead>
                   <TableHead>Type</TableHead>
+                  <TableHead>Payment</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
@@ -63,7 +119,7 @@ export default function StaffAppointments() {
                 {isLoading ? (
                   Array.from({ length: 5 }).map((_, i) => (
                     <TableRow key={i}>
-                      {Array.from({ length: 6 }).map((_, j) => (
+                      {Array.from({ length: 7 }).map((_, j) => (
                         <TableCell key={j}>
                           <div className="h-4 bg-gray-200 rounded animate-pulse"></div>
                         </TableCell>
@@ -110,19 +166,39 @@ export default function StaffAppointments() {
                         </div>
                       </TableCell>
                       <TableCell>
-                        <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-medium">
+                        <Badge variant="secondary">
                           {appointment.type}
-                        </span>
+                        </Badge>
                       </TableCell>
                       <TableCell>
-                        <span className={`px-2 py-1 rounded-full text-sm font-medium ${
+                        <div className="flex items-center gap-2">
+                          {appointment.booking_type === 'counter' ? (
+                            <Badge variant="default" className="bg-green-100 text-green-700">
+                              <CreditCard className="w-3 h-3 mr-1" />
+                              Paid (Counter)
+                            </Badge>
+                          ) : appointment.payment_status === 'paid' ? (
+                            <Badge variant="default" className="bg-green-100 text-green-700">
+                              <CreditCard className="w-3 h-3 mr-1" />
+                              Paid (Online)
+                            </Badge>
+                          ) : (
+                            <Badge variant="destructive" className="bg-red-100 text-red-700">
+                              <AlertTriangle className="w-3 h-3 mr-1" />
+                              Pending Payment
+                            </Badge>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge className={
                           appointment.status === 'completed' ? 'bg-green-100 text-green-700' :
                           appointment.status === 'scheduled' ? 'bg-blue-100 text-blue-700' :
                           appointment.status === 'cancelled' ? 'bg-red-100 text-red-700' :
                           'bg-gray-100 text-gray-700'
-                        }`}>
+                        }>
                           {appointment.status}
-                        </span>
+                        </Badge>
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
@@ -146,6 +222,17 @@ export default function StaffAppointments() {
                                 <X className="w-3 h-3 mr-1" />
                                 Cancel
                               </Button>
+                              {appointment.booking_type === 'online' && appointment.payment_status === 'pending' && (
+                                <Button
+                                  size="sm"
+                                  variant="default"
+                                  onClick={() => handleGenerateInvoice(appointment)}
+                                  className="bg-green-600 hover:bg-green-700"
+                                >
+                                  <CreditCard className="w-3 h-3 mr-1" />
+                                  Generate Invoice
+                                </Button>
+                              )}
                             </>
                           )}
                         </div>
@@ -154,7 +241,7 @@ export default function StaffAppointments() {
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center text-gray-500 py-12">
+                    <TableCell colSpan={7} className="text-center text-gray-500 py-12">
                       No appointments found
                     </TableCell>
                   </TableRow>

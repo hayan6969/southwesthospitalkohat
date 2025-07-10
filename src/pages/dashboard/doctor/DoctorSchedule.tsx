@@ -104,26 +104,12 @@ export default function DoctorSchedule() {
     setSelectedPatient({ id: patientId, name: patientName });
   };
 
-  const handleGenerateInvoice = async (appointmentId: string) => {
-    try {
-      await supabase
-        .from('appointments')
-        .update({
-          payment_status: 'paid',
-          invoice_generated_at: new Date().toISOString(),
-          payment_due_time: null
-        })
-        .eq('id', appointmentId);
-      
-      toast.success('Invoice generated and payment confirmed');
-    } catch (error) {
-      toast.error('Failed to generate invoice');
-    }
-  };
+  // Removed handleGenerateInvoice - only staff can generate invoices
 
-  const upcomingAppointments = appointmentsWithQueue?.filter(apt => 
-    apt.status === 'scheduled' && new Date(apt.appointment_date) >= new Date()
-  ).sort((a, b) => {
+  const upcomingAppointments = appointmentsWithQueue?.filter(apt => {
+    console.log('Filtering appointment:', apt.id, apt.status, apt.appointment_date, 'Current date:', new Date());
+    return apt.status === 'scheduled' && new Date(apt.appointment_date) >= new Date(new Date().toDateString()); // Compare dates only, not times
+  }).sort((a, b) => {
     // Sort by queue position first, then by appointment time
     if (a.queue_position && b.queue_position) {
       return a.queue_position - b.queue_position;
