@@ -98,6 +98,7 @@ export default function DoctorSchedule() { // Fixed ordering syntax
         // For each doctor, check who is first in queue and needs a payment timer
         for (const doctorId of uniqueDoctorIds) {
           // First get queue positions for this doctor today
+          console.log(`Checking queue for doctor ${doctorId} on date ${today}`);
           const { data: queuePositions, error: queueError } = await supabase
             .from('queue_positions')
             .select('appointment_id, queue_position')
@@ -105,6 +106,8 @@ export default function DoctorSchedule() { // Fixed ordering syntax
             .eq('appointment_date', today)
             .order('queue_position', { ascending: true })
             .limit(1);
+          
+          console.log(`Queue positions found for doctor ${doctorId}:`, queuePositions);
 
           if (queueError) {
             console.error('Error finding queue positions:', queueError);
