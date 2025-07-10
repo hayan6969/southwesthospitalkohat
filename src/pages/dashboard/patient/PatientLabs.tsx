@@ -1,11 +1,12 @@
 
-import AppLayout from "@/layouts/AppLayout";
 import { useLabReports } from "@/hooks/useDatabase";
 import { useAuth } from "@/hooks/useAuth";
 import { Activity, User, Calendar, Download, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { format } from "date-fns";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 export default function PatientLabs() {
   const { profile } = useAuth();
@@ -13,13 +14,28 @@ export default function PatientLabs() {
 
   const patientLabs = labReports?.filter(lab => lab.patient_id === profile?.id) || [];
 
-  const handleDownloadResult = (resultFileUrl: string) => {
-    const link = document.createElement('a');
-    link.href = resultFileUrl;
-    link.download = '';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+  const handleDownloadResult = async (resultFileUrl: string) => {
+    try {
+      // Download file from private storage bucket
+      const { data, error } = await supabase.storage
+        .from('lab-results')
+        .download(resultFileUrl);
+
+      if (error) throw error;
+
+      // Create download link
+      const url = URL.createObjectURL(data);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = resultFileUrl.split('/').pop() || 'lab-result';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Download error:', error);
+      toast.error("Failed to download lab result");
+    }
   };
 
   return (

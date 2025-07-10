@@ -72,24 +72,22 @@ export function StaffLab() {
 
       if (uploadError) throw uploadError;
 
-      // Get public URL
-      const { data: { publicUrl } } = supabase.storage
-        .from('lab-results')
-        .getPublicUrl(fileName);
+      // Store the file path instead of public URL since bucket is private
+      const filePath = fileName;
 
       // Update lab report
       const { error: updateError } = await supabase
         .from('lab_reports')
         .update({
           status: 'completed',
-          result_file_url: publicUrl,
+          result_file_url: filePath,
           results: 'Results uploaded - see attached file'
         })
         .eq('id', selectedReportId);
 
       if (updateError) throw updateError;
 
-      return { publicUrl };
+      return { filePath };
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['lab-reports'] });
