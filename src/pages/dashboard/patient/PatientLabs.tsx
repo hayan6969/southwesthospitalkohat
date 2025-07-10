@@ -18,22 +18,27 @@ export default function PatientLabs() {
     try {
       console.log('Attempting to download:', resultFileUrl);
       
-      // Check if it's already a full URL (old format) or just a file path (new format)
+      let filePath = resultFileUrl;
+      
+      // If it's a full URL (old format), extract the file path
       if (resultFileUrl.startsWith('https://')) {
-        // Old format - direct download
-        const link = document.createElement('a');
-        link.href = resultFileUrl;
-        link.download = resultFileUrl.split('/').pop() || 'lab-result';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        return;
+        // Extract file path from URL like: https://domain/storage/v1/object/public/lab-results/lab-results/filename.pdf
+        const urlParts = resultFileUrl.split('/');
+        const bucketIndex = urlParts.findIndex(part => part === 'lab-results');
+        if (bucketIndex !== -1 && urlParts.length > bucketIndex + 1) {
+          // Get everything after the bucket name
+          filePath = urlParts.slice(bucketIndex + 1).join('/');
+        } else {
+          // Fallback: try to extract filename
+          filePath = urlParts[urlParts.length - 1];
+        }
+        console.log('Extracted file path:', filePath);
       }
 
-      // New format - download from private storage bucket
+      // Download from private storage bucket
       const { data, error } = await supabase.storage
         .from('lab-results')
-        .download(resultFileUrl);
+        .download(filePath);
 
       if (error) {
         console.error('Storage download error:', error);
@@ -44,7 +49,7 @@ export default function PatientLabs() {
       const url = URL.createObjectURL(data);
       const link = document.createElement('a');
       link.href = url;
-      link.download = resultFileUrl.split('/').pop() || 'lab-result';
+      link.download = filePath.split('/').pop() || 'lab-result';
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
