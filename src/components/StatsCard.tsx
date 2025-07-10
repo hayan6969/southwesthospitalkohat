@@ -43,17 +43,17 @@ export function StatsCard({ title, value, change, changeType, icon, chart, loadi
           </div>
         </div>
         {change && (
-          <div className={`flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold ${
+          <div className={`flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap ${
             changeType === "positive" 
               ? "bg-green-50 text-green-700 border border-green-200" 
               : "bg-red-50 text-red-700 border border-red-200"
           }`}>
             {changeType === "positive" ? (
-              <TrendingUp className="w-3 h-3" />
+              <TrendingUp className="w-3 h-3 flex-shrink-0" />
             ) : (
-              <TrendingDown className="w-3 h-3" />
+              <TrendingDown className="w-3 h-3 flex-shrink-0" />
             )}
-            {change}
+            <span className="truncate">{change}</span>
           </div>
         )}
       </div>
