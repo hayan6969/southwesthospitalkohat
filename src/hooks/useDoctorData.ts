@@ -135,15 +135,23 @@ export const useCreateUpdateMedicalRecord = () => {
     }) => {
       if (!profile?.id) throw new Error('User not authenticated');
       
-      // For admin users or doctors, allow creating medical records
-      // Admin users can act on behalf of doctors for record management
       let doctorId = profile.id;
       
-      // If user is admin, try to find a doctor ID or use the profile ID
+      // If user is admin, find a valid doctor to assign the record to
       if (profile.role === 'admin') {
-        // For now, allow admins to create records using their profile ID
-        // In a real system, you might want to select a specific doctor
-        doctorId = profile.id;
+        // Get the first available doctor from the system
+        const { data: doctors, error } = await supabase
+          .from('doctors')
+          .select('id')
+          .limit(1);
+        
+        if (error) throw new Error('Failed to fetch doctors');
+        
+        if (doctors && doctors.length > 0) {
+          doctorId = doctors[0].id;
+        } else {
+          throw new Error('No doctors available in the system. Cannot create medical records.');
+        }
       }
       
       const recordData = {
@@ -225,9 +233,21 @@ export const useCreatePatientNote = () => {
       
       let doctorId = profile.id;
       
-      // If user is admin, allow creating notes using their profile ID
+      // If user is admin, find a valid doctor to assign the note to
       if (profile.role === 'admin') {
-        doctorId = profile.id;
+        // Get the first available doctor from the system
+        const { data: doctors, error } = await supabase
+          .from('doctors')
+          .select('id')
+          .limit(1);
+        
+        if (error) throw new Error('Failed to fetch doctors');
+        
+        if (doctors && doctors.length > 0) {
+          doctorId = doctors[0].id;
+        } else {
+          throw new Error('No doctors available in the system. Cannot create patient notes.');
+        }
       }
       
       const { data, error } = await supabase
