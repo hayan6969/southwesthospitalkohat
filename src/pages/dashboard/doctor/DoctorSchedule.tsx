@@ -75,125 +75,85 @@ export default function DoctorSchedule() { // Fixed ordering syntax
 
   // Auto-cancel overdue appointments and manage payment timers
   useEffect(() => {
-    // Check and set payment timers for patients who are now first in queue
+    // Efficient payment timer management using JOINs
     const managePaymentTimers = async () => {
       try {
-        // Get all doctors with scheduled appointments today
         const today = new Date().toISOString().split('T')[0];
         
-        const { data: doctors, error: doctorsError } = await supabase
-          .from('appointments')
-          .select('doctor_id')
-          .eq('status', 'scheduled')
-          .gte('appointment_date', today)
-          .lt('appointment_date', new Date(new Date(today).getTime() + 24 * 60 * 60 * 1000).toISOString());
+        // Single efficient query to get first scheduled appointment for each doctor today
+        const { data: firstInQueueData, error } = await supabase
+          .from('queue_positions')
+          .select(`
+            doctor_id,
+            appointment_id,
+            queue_position,
+            appointments!inner (
+              id,
+              payment_status,
+              booking_type,
+              payment_due_time,
+              status
+            )
+          `)
+          .eq('appointment_date', today)
+          .eq('appointments.status', 'scheduled')
+          .order('queue_position', { ascending: true });
 
-        if (doctorsError) {
-          console.error('Error fetching doctors:', doctorsError);
+        if (error) {
+          console.error('Error fetching queue data:', error);
           return;
         }
 
-        const uniqueDoctorIds = [...new Set(doctors?.map(d => d.doctor_id) || [])];
-
-        // For each doctor, check who is first in queue and needs a payment timer
-        for (const doctorId of uniqueDoctorIds) {
-          // First check what scheduled appointments exist for this doctor today
-          console.log(`Checking scheduled appointments for doctor ${doctorId} on date ${today}`);
-          const { data: scheduledAppts, error: scheduledError } = await supabase
-            .from('appointments')
-            .select('id, patient_id, appointment_date, status, payment_status, booking_type')
-            .eq('doctor_id', doctorId)
-            .eq('status', 'scheduled')
-            .gte('appointment_date', today)
-            .lt('appointment_date', new Date(new Date(today).getTime() + 24 * 60 * 60 * 1000).toISOString());
+        // Group by doctor and get first appointment for each
+        const doctorFirstAppointments = new Map();
+        
+        firstInQueueData?.forEach(queueItem => {
+          const doctorId = queueItem.doctor_id;
+          const appointment = queueItem.appointments;
           
-          console.log(`Scheduled appointments found:`, scheduledAppts);
-
-          // Then get queue positions for this doctor today
-          console.log(`Checking queue for doctor ${doctorId} on date ${today}`);
-          const { data: queuePositions, error: queueError } = await supabase
-            .from('queue_positions')
-            .select('appointment_id, queue_position')
-            .eq('doctor_id', doctorId)
-            .eq('appointment_date', today)
-            .order('queue_position', { ascending: true });
-          
-          console.log(`Queue positions found for doctor ${doctorId}:`, queuePositions);
-
-          if (queueError) {
-            console.error('Error finding queue positions:', queueError);
-            continue;
-          }
-
-          // Find the first scheduled appointment in the queue
-          let firstScheduledAppointment = null;
-          
-          if (queuePositions && queuePositions.length > 0) {
-            for (const queuePos of queuePositions) {
-              console.log(`Checking queue position appointment ID: ${queuePos.appointment_id}`);
-              
-              const { data: queueAppt } = await supabase
-                .from('appointments')
-                .select('id, payment_status, booking_type, payment_due_time, status')
-                .eq('id', queuePos.appointment_id)
-                .eq('status', 'scheduled')
-                .maybeSingle();
-              
-              if (queueAppt) {
-                firstScheduledAppointment = queueAppt;
-                console.log(`Found first scheduled appointment in queue:`, firstScheduledAppointment);
-                break;
-              } else {
-                // Check what status this appointment has
-                const { data: anyStatusAppt } = await supabase
-                  .from('appointments')
-                  .select('id, status')
-                  .eq('id', queuePos.appointment_id)
-                  .maybeSingle();
-                
-                console.log(`Queue position ${queuePos.appointment_id} has status: ${anyStatusAppt?.status || 'not found'}`);
-              }
+          if (!doctorFirstAppointments.has(doctorId)) {
+            doctorFirstAppointments.set(doctorId, {
+              ...appointment,
+              queue_position: queueItem.queue_position
+            });
+          } else {
+            // Keep the one with lower queue position
+            const existing = doctorFirstAppointments.get(doctorId);
+            if (queueItem.queue_position < existing.queue_position) {
+              doctorFirstAppointments.set(doctorId, {
+                ...appointment,
+                queue_position: queueItem.queue_position
+              });
             }
           }
-          
-          // If no scheduled appointments found in queue but there are scheduled appointments,
-          // we need to create/update queue positions
-          if (!firstScheduledAppointment && scheduledAppts && scheduledAppts.length > 0) {
-            console.log(`No scheduled appointments in queue, but ${scheduledAppts.length} scheduled appointments exist. Queue needs to be rebuilt.`);
-            
-            // For now, let's just use the first scheduled appointment and log this issue
-            firstScheduledAppointment = scheduledAppts[0];
-            console.log(`Using first scheduled appointment as fallback:`, firstScheduledAppointment);
-          }
-          
-          if (!firstScheduledAppointment) {
-            console.log(`No scheduled appointments found for doctor ${doctorId}`);
-            continue;
-          }
+        });
 
-          console.log(`Doctor ${doctorId} - First scheduled appointment:`, firstScheduledAppointment);
+        console.log(`Found ${doctorFirstAppointments.size} doctors with scheduled appointments`);
+
+        // Process first appointments for payment timers
+        for (const [doctorId, appointment] of doctorFirstAppointments) {
+          console.log(`Doctor ${doctorId} - First scheduled appointment:`, appointment);
           
-          if (firstScheduledAppointment && 
-              firstScheduledAppointment.payment_status === 'pending' && 
-              firstScheduledAppointment.booking_type === 'online' && 
-              !firstScheduledAppointment.payment_due_time) {
+          if (appointment.payment_status === 'pending' && 
+              appointment.booking_type === 'online' && 
+              !appointment.payment_due_time) {
             
             // Set payment due time to 3 minutes from now
             const paymentDueTime = new Date(Date.now() + 3 * 60 * 1000).toISOString();
-            console.log(`Setting payment due time for appointment ${firstScheduledAppointment.id} to ${paymentDueTime}`);
+            console.log(`Setting payment due time for appointment ${appointment.id} to ${paymentDueTime}`);
             
             const { error: updateError } = await supabase
               .from('appointments')
               .update({ payment_due_time: paymentDueTime })
-              .eq('id', firstScheduledAppointment.id);
+              .eq('id', appointment.id);
 
             if (updateError) {
               console.error('Error setting payment due time:', updateError);
             } else {
-              console.log(`Successfully set 3-minute payment timer for first-in-queue appointment ${firstScheduledAppointment.id}`);
+              console.log(`Successfully set 3-minute payment timer for appointment ${appointment.id}`);
             }
-          } else if (firstScheduledAppointment) {
-            console.log(`First appointment ${firstScheduledAppointment.id} does not need timer - payment_status: ${firstScheduledAppointment.payment_status}, booking_type: ${firstScheduledAppointment.booking_type}, existing timer: ${firstScheduledAppointment.payment_due_time}`);
+          } else if (appointment.payment_due_time) {
+            console.log(`Appointment ${appointment.id} already has timer: ${appointment.payment_due_time}`);
           }
         }
       } catch (error) {
@@ -201,18 +161,47 @@ export default function DoctorSchedule() { // Fixed ordering syntax
       }
     };
 
-    // Run initial timer management
+    // Cleanup function to remove completed/cancelled appointments from queue
+    const cleanupQueue = async () => {
+      try {
+        console.log('Cleaning up queue positions for completed/cancelled appointments...');
+        
+        // Remove queue positions for non-scheduled appointments
+        const { error } = await supabase
+          .from('queue_positions')
+          .delete()
+          .not('appointment_id', 'in', `(
+            SELECT id FROM appointments 
+            WHERE status = 'scheduled'
+          )`);
+
+        if (error) {
+          console.error('Error cleaning up queue:', error);
+        } else {
+          console.log('Queue cleanup completed');
+        }
+      } catch (error) {
+        console.error('Error in queue cleanup:', error);
+      }
+    };
+
+    // Run initial setup
     managePaymentTimers();
 
     const interval = setInterval(async () => {
       try {
         console.log('Running auto-cancellation check...');
         // Auto-cancel overdue appointments
-        const { data: cancelResult, error: cancelError } = await supabase.rpc('auto_cancel_overdue_appointments');
+        const { error: cancelError } = await supabase.rpc('auto_cancel_overdue_appointments');
         if (cancelError) {
           console.error('Error cancelling overdue appointments:', cancelError);
         } else {
           console.log('Auto-cancellation check completed');
+        }
+        
+        // Clean up queue positions (run less frequently)
+        if (Date.now() % 300000 < 60000) { // Every 5 minutes
+          await cleanupQueue();
         }
         
         // Manage payment timers for new first-in-queue patients
