@@ -27,28 +27,7 @@ export default function AdminAuditLogs() {
     ipAddress: ""
   });
 
-  // Set up real-time updates for audit logs
-  useEffect(() => {
-    const channel = supabase
-      .channel('audit-logs-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'audit_logs'
-        },
-        () => {
-          // Invalidate and refetch audit logs when new ones are added
-          queryClient.invalidateQueries({ queryKey: ['audit_logs'] });
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [queryClient]);
+  // Real-time updates are handled by the global useRealTimeUpdates hook
 
   // Filter logs based on current filters
   const filteredLogs = auditLogs?.filter(log => {
