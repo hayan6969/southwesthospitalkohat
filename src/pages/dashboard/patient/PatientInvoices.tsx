@@ -1,17 +1,18 @@
 
 import AppLayout from "@/layouts/AppLayout";
 import { useInvoices } from "@/hooks/useDatabase";
+import { useAuth } from "@/hooks/useAuth";
 import { DollarSign, FileText, Calendar, CreditCard } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { format } from "date-fns";
-import { formatPkrCurrency } from "@/utils/currency";
+import { formatPkrAmount } from "@/utils/currency";
 
 export default function PatientInvoices() {
+  const { profile } = useAuth();
   const { data: invoices, isLoading } = useInvoices();
 
-  const currentPatientId = "550e8400-e29b-41d4-a716-446655440008"; // Current patient
-  const patientInvoices = invoices?.filter(invoice => invoice.patient_id === currentPatientId) || [];
+  const patientInvoices = invoices?.filter(invoice => invoice.patient_id === profile?.id) || [];
 
   return (
     <AppLayout>
@@ -74,7 +75,7 @@ export default function PatientInvoices() {
                         <span className="text-sm">{invoice.description}</span>
                       </TableCell>
                       <TableCell>
-                        <span className="font-medium text-lg">{formatPkrCurrency(invoice.amount)}</span>
+                        <span className="font-medium text-lg">{formatPkrAmount(invoice.amount)}</span>
                       </TableCell>
                       <TableCell>
                         {invoice.due_date ? format(new Date(invoice.due_date), 'MMM d, yyyy') : 'N/A'}

@@ -1,16 +1,21 @@
 
 import AppLayout from "@/layouts/AppLayout";
 import { useLabReports } from "@/hooks/useDatabase";
-import { Activity, User, Calendar, Download } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
+import { Activity, User, Calendar, Download, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { format } from "date-fns";
 
 export default function PatientLabs() {
+  const { profile } = useAuth();
   const { data: labReports, isLoading } = useLabReports();
 
-  const currentPatientId = "550e8400-e29b-41d4-a716-446655440008"; // Current patient
-  const patientLabs = labReports?.filter(lab => lab.patient_id === currentPatientId) || [];
+  const patientLabs = labReports?.filter(lab => lab.patient_id === profile?.id) || [];
+
+  const handleDownloadResult = (resultFileUrl: string) => {
+    window.open(resultFileUrl, '_blank');
+  };
 
   return (
     <AppLayout>
@@ -94,19 +99,29 @@ export default function PatientLabs() {
                           {lab.results || 'Results pending'}
                         </span>
                       </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          {lab.status === 'completed' && (
-                            <Button size="sm" variant="outline">
-                              <Download className="w-3 h-3 mr-1" />
-                              Download
-                            </Button>
-                          )}
-                          <Button size="sm" variant="outline">
-                            View Details
-                          </Button>
-                        </div>
-                      </TableCell>
+                       <TableCell>
+                         <div className="flex items-center gap-2">
+                           {lab.status === 'completed' && lab.result_file_url && (
+                             <Button 
+                               size="sm" 
+                               variant="outline"
+                               onClick={() => handleDownloadResult(lab.result_file_url)}
+                             >
+                               <Download className="w-3 h-3 mr-1" />
+                               Download Results
+                             </Button>
+                           )}
+                           {lab.status === 'completed' && lab.results && !lab.result_file_url && (
+                             <Button size="sm" variant="outline">
+                               <ExternalLink className="w-3 h-3 mr-1" />
+                               View Results
+                             </Button>
+                           )}
+                           {lab.status === 'pending' && (
+                             <span className="text-sm text-gray-500">Results pending</span>
+                           )}
+                         </div>
+                       </TableCell>
                     </TableRow>
                   ))
                 ) : (

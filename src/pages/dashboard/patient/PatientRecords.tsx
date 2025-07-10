@@ -1,15 +1,16 @@
 
 import AppLayout from "@/layouts/AppLayout";
 import { useMedicalRecords } from "@/hooks/useDatabase";
+import { useAuth } from "@/hooks/useAuth";
 import { FileText, User, Calendar } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { format } from "date-fns";
 
 export default function PatientRecords() {
+  const { profile } = useAuth();
   const { data: medicalRecords, isLoading } = useMedicalRecords();
 
-  const currentPatientId = "550e8400-e29b-41d4-a716-446655440008"; // Current patient
-  const patientRecords = medicalRecords?.filter(record => record.patient_id === currentPatientId) || [];
+  const patientRecords = medicalRecords?.filter(record => record.patient_id === profile?.id) || [];
 
   return (
     <AppLayout>
