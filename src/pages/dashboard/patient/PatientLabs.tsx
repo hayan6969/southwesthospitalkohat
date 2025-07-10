@@ -16,12 +16,29 @@ export default function PatientLabs() {
 
   const handleDownloadResult = async (resultFileUrl: string) => {
     try {
-      // Download file from private storage bucket
+      console.log('Attempting to download:', resultFileUrl);
+      
+      // Check if it's already a full URL (old format) or just a file path (new format)
+      if (resultFileUrl.startsWith('https://')) {
+        // Old format - direct download
+        const link = document.createElement('a');
+        link.href = resultFileUrl;
+        link.download = resultFileUrl.split('/').pop() || 'lab-result';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        return;
+      }
+
+      // New format - download from private storage bucket
       const { data, error } = await supabase.storage
         .from('lab-results')
         .download(resultFileUrl);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Storage download error:', error);
+        throw error;
+      }
 
       // Create download link
       const url = URL.createObjectURL(data);
