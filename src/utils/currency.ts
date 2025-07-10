@@ -17,3 +17,8 @@ export const formatPkrCurrency = (usdAmount: number): string => {
   const pkrAmount = convertUsdToPkr(usdAmount);
   return formatCurrency(pkrAmount, 'PKR');
 };
+
+// Format amount that's already in PKR (no conversion needed)
+export const formatPkrAmount = (pkrAmount: number): string => {
+  return formatCurrency(pkrAmount, 'PKR');
+};

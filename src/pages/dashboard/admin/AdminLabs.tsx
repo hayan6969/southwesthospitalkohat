@@ -10,7 +10,7 @@ import { TestTube, Plus, Edit, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { formatPkrCurrency } from "@/utils/currency";
+import { formatPkrAmount } from "@/utils/currency";
 
 interface LabTest {
   id: string;
@@ -324,7 +324,7 @@ export default function AdminLabs() {
                       <TableCell className="font-medium">{test.name}</TableCell>
                       <TableCell>{test.category || "-"}</TableCell>
                       <TableCell className="font-medium text-green-600">
-                        {formatPkrCurrency(test.price)}
+                        {formatPkrAmount(test.price)}
                       </TableCell>
                       <TableCell className="text-sm">{test.normal_range || "-"}</TableCell>
                       <TableCell className="text-sm max-w-xs truncate">

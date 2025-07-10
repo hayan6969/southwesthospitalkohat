@@ -12,7 +12,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { usePatientNames, useDoctorNames, getPatientName, getDoctorName } from "@/hooks/useDisplayHelpers";
 import { useAuditLogger } from "@/hooks/useAuditLogger";
-import { formatPkrCurrency } from "@/utils/currency";
+import { formatPkrAmount } from "@/utils/currency";
 import { generateLabInvoicePDF } from "@/utils/pdfGenerator";
 
 interface Patient {
@@ -512,7 +512,7 @@ export function EnhancedLabDialog() {
                       </div>
                       <div className="text-right">
                         <div className="font-semibold text-green-600">
-                          {formatPkrCurrency(test.price)}
+                          {formatPkrAmount(test.price)}
                         </div>
                         <input
                           type="checkbox"
@@ -537,7 +537,7 @@ export function EnhancedLabDialog() {
                       Selected Tests: {selectedTests.length}
                     </span>
                     <span className="font-bold text-blue-600">
-                      Total: {formatPkrCurrency(getTotalAmount())}
+                      Total: {formatPkrAmount(getTotalAmount())}
                     </span>
                   </div>
                 </div>
