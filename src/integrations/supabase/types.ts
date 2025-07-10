@@ -224,6 +224,7 @@ export type Database = {
           hospital_address: string | null
           hospital_name: string
           id: string
+          logo_url: string | null
           max_appointments_per_doctor: number
           opening_time: string
           updated_at: string | null
@@ -238,6 +239,7 @@ export type Database = {
           hospital_address?: string | null
           hospital_name?: string
           id?: string
+          logo_url?: string | null
           max_appointments_per_doctor?: number
           opening_time?: string
           updated_at?: string | null
@@ -252,6 +254,7 @@ export type Database = {
           hospital_address?: string | null
           hospital_name?: string
           id?: string
+          logo_url?: string | null
           max_appointments_per_doctor?: number
           opening_time?: string
           updated_at?: string | null
