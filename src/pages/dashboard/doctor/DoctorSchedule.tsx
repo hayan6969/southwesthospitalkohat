@@ -97,28 +97,37 @@ export default function DoctorSchedule() {
 
         // For each doctor, check who is first in queue and needs a payment timer
         for (const doctorId of uniqueDoctorIds) {
+          // First get queue positions for this doctor today
+          const { data: queuePositions, error: queueError } = await supabase
+            .from('queue_positions')
+            .select('appointment_id, queue_position')
+            .eq('doctor_id', doctorId)
+            .eq('appointment_date', today)
+            .order('queue_position', { ascending: true })
+            .limit(1);
+
+          if (queueError) {
+            console.error('Error finding queue positions:', queueError);
+            continue;
+          }
+
+          const firstQueuePosition = queuePositions?.[0];
+          if (!firstQueuePosition) continue;
+
+          // Now get the appointment details for the first in queue
           const { data: firstInQueue, error } = await supabase
             .from('appointments')
-            .select(`
-              id,
-              payment_status,
-              booking_type,
-              payment_due_time,
-              queue_positions!inner(queue_position)
-            `)
-            .eq('doctor_id', doctorId)
+            .select('id, payment_status, booking_type, payment_due_time')
+            .eq('id', firstQueuePosition.appointment_id)
             .eq('status', 'scheduled')
-            .gte('appointment_date', today)
-            .lt('appointment_date', new Date(new Date(today).getTime() + 24 * 60 * 60 * 1000).toISOString())
-            .order('queue_positions.queue_position', { ascending: true })
-            .limit(1);
+            .single();
 
           if (error) {
             console.error('Error finding first in queue:', error);
             continue;
           }
 
-          const firstAppointment = firstInQueue?.[0];
+          const firstAppointment = firstInQueue;
           console.log(`Doctor ${doctorId} - First in queue:`, firstAppointment);
           
           if (firstAppointment && 
@@ -203,27 +212,37 @@ export default function DoctorSchedule() {
       // Find the next patient in queue with pending payment
       const appointmentDateOnly = new Date(appointmentDate).toISOString().split('T')[0];
       
+      // First get queue positions for this doctor today
+      const { data: queuePositions, error: queueError } = await supabase
+        .from('queue_positions')
+        .select('appointment_id, queue_position')
+        .eq('doctor_id', doctorId)
+        .eq('appointment_date', appointmentDateOnly)
+        .order('queue_position', { ascending: true })
+        .limit(1);
+
+      if (queueError) {
+        console.error('Error finding queue positions:', queueError);
+        return;
+      }
+
+      const firstQueuePosition = queuePositions?.[0];
+      if (!firstQueuePosition) return;
+
+      // Now get the appointment details for the first in queue
       const { data: nextAppointments, error } = await supabase
         .from('appointments')
-        .select(`
-          id,
-          payment_status,
-          booking_type,
-          queue_positions!inner(queue_position)
-        `)
-        .eq('doctor_id', doctorId)
+        .select('id, payment_status, booking_type')
+        .eq('id', firstQueuePosition.appointment_id)
         .eq('status', 'scheduled')
-        .gte('appointment_date', appointmentDateOnly)
-        .lt('appointment_date', new Date(new Date(appointmentDateOnly).getTime() + 24 * 60 * 60 * 1000).toISOString())
-        .order('queue_positions.queue_position', { ascending: true })
-        .limit(1);
+        .single();
 
       if (error) {
         console.error('Error finding next appointment:', error);
         return;
       }
 
-      const nextAppointment = nextAppointments?.[0];
+      const nextAppointment = nextAppointments;
       if (nextAppointment && 
           nextAppointment.payment_status === 'pending' && 
           nextAppointment.booking_type === 'online') {
