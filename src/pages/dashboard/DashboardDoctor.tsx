@@ -14,6 +14,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { format } from "date-fns";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { EnhancedAppointmentDialog } from "@/components/dialogs/EnhancedAppointmentDialog";
+import { AppointmentDetailDialog } from "@/components/dialogs/AppointmentDetailDialog";
 
 // Import doctor pages
 import DoctorPatients from "@/pages/dashboard/doctor/DoctorPatients";
@@ -38,6 +39,13 @@ export default function DashboardDoctor() {
   const { data: doctorNames } = useDoctorNames();
   const { data: todayAppointmentsData, isLoading: todayLoading } = useDoctorTodayAppointments();
   const [doctorProfile, setDoctorProfile] = useState<any>(null);
+  const [selectedAppointment, setSelectedAppointment] = useState<any>(null);
+  const [isAppointmentDialogOpen, setIsAppointmentDialogOpen] = useState(false);
+
+  const handleAppointmentClick = (appointment: any) => {
+    setSelectedAppointment(appointment);
+    setIsAppointmentDialogOpen(true);
+  };
 
   // Fetch doctor profile including avatar
   useEffect(() => {
@@ -207,26 +215,30 @@ export default function DashboardDoctor() {
                             </TableRow>
                           ))
                         ) : todayAppointments.length > 0 ? (
-                          todayAppointments.map((appointment) => (
-                            <TableRow key={appointment.id}>
-                              <TableCell className="font-medium">
-                                {format(new Date(appointment.appointment_date), 'h:mm a')}
-                              </TableCell>
-                              <TableCell>
-                                {getPatientName(appointment.patient_id, patientNames || [])}
-                              </TableCell>
-                              <TableCell>{appointment.type}</TableCell>
-                              <TableCell>
-                                <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                                  appointment.status === 'completed' ? 'bg-green-100 text-green-700' :
-                                  appointment.status === 'scheduled' ? 'bg-blue-100 text-blue-700' :
-                                  'bg-gray-100 text-gray-700'
-                                }`}>
-                                  {appointment.status}
-                                </span>
-                              </TableCell>
-                            </TableRow>
-                          ))
+                           todayAppointments.map((appointment) => (
+                             <TableRow 
+                               key={appointment.id} 
+                               className="cursor-pointer hover:bg-gray-50"
+                               onClick={() => handleAppointmentClick(appointment)}
+                             >
+                               <TableCell className="font-medium">
+                                 {format(new Date(appointment.appointment_date), 'h:mm a')}
+                               </TableCell>
+                               <TableCell>
+                                 {getPatientName(appointment.patient_id, patientNames || [])}
+                               </TableCell>
+                               <TableCell>{appointment.type}</TableCell>
+                               <TableCell>
+                                 <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                   appointment.status === 'completed' ? 'bg-green-100 text-green-700' :
+                                   appointment.status === 'scheduled' ? 'bg-blue-100 text-blue-700' :
+                                   'bg-gray-100 text-gray-700'
+                                 }`}>
+                                   {appointment.status}
+                                 </span>
+                               </TableCell>
+                             </TableRow>
+                           ))
                         ) : (
                           <TableRow>
                             <TableCell colSpan={4} className="text-center text-gray-500 py-8">
@@ -391,6 +403,14 @@ export default function DashboardDoctor() {
           </Tabs>
         </div>
       </div>
+
+      {/* Appointment Detail Dialog */}
+      <AppointmentDetailDialog
+        isOpen={isAppointmentDialogOpen}
+        onClose={() => setIsAppointmentDialogOpen(false)}
+        appointment={selectedAppointment}
+        patientName={selectedAppointment ? getPatientName(selectedAppointment.patient_id, patientNames || []) : ''}
+      />
     </div>
   );
 }

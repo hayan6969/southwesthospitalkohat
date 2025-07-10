@@ -137,8 +137,25 @@ export const useCreateUpdateMedicalRecord = () => {
       
       let doctorId = profile.id;
       
-      // If user is admin, find a valid doctor to assign the record to
-      if (profile.role === 'admin') {
+      // Check if user is actually a doctor in the doctors table
+      if (profile.role === 'doctor') {
+        const { data: doctorExists, error: doctorCheckError } = await supabase
+          .from('doctors')
+          .select('id')
+          .eq('id', profile.id)
+          .maybeSingle();
+        
+        if (doctorCheckError) {
+          console.error('Error checking doctor existence:', doctorCheckError);
+          throw new Error('Failed to verify doctor credentials');
+        }
+        
+        if (!doctorExists) {
+          throw new Error('Doctor profile not found. Please contact admin to set up your doctor profile.');
+        }
+        
+        doctorId = profile.id;
+      } else if (profile.role === 'admin') {
         // Get the first available doctor from the system
         const { data: doctors, error } = await supabase
           .from('doctors')
@@ -152,6 +169,8 @@ export const useCreateUpdateMedicalRecord = () => {
         } else {
           throw new Error('No doctors available in the system. Cannot create medical records.');
         }
+      } else {
+        throw new Error('Only doctors and admins can create medical records');
       }
       
       const recordData = {
@@ -233,8 +252,25 @@ export const useCreatePatientNote = () => {
       
       let doctorId = profile.id;
       
-      // If user is admin, find a valid doctor to assign the note to
-      if (profile.role === 'admin') {
+      // Check if user is actually a doctor in the doctors table
+      if (profile.role === 'doctor') {
+        const { data: doctorExists, error: doctorCheckError } = await supabase
+          .from('doctors')
+          .select('id')
+          .eq('id', profile.id)
+          .maybeSingle();
+        
+        if (doctorCheckError) {
+          console.error('Error checking doctor existence:', doctorCheckError);
+          throw new Error('Failed to verify doctor credentials');
+        }
+        
+        if (!doctorExists) {
+          throw new Error('Doctor profile not found. Please contact admin to set up your doctor profile.');
+        }
+        
+        doctorId = profile.id;
+      } else if (profile.role === 'admin') {
         // Get the first available doctor from the system
         const { data: doctors, error } = await supabase
           .from('doctors')
@@ -248,6 +284,8 @@ export const useCreatePatientNote = () => {
         } else {
           throw new Error('No doctors available in the system. Cannot create patient notes.');
         }
+      } else {
+        throw new Error('Only doctors and admins can create patient notes');
       }
       
       const { data, error } = await supabase

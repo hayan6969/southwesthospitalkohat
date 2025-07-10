@@ -1,12 +1,16 @@
 
+import { useState } from "react";
 import { useMedicalRecords } from "@/hooks/useDatabase";
 import { usePatientNames, getPatientName } from "@/hooks/useDisplayHelpers";
+import { usePatientNotes } from "@/hooks/useDoctorData";
 import { FileText, Plus, User, Calendar } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { PatientNoteDialog } from "@/components/dialogs/PatientNoteDialog";
 import { format } from "date-fns";
 
 export default function DoctorNotes() {
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
   const { data: medicalRecords, isLoading } = useMedicalRecords();
   const { data: patientNames } = usePatientNames();
 
@@ -17,7 +21,10 @@ export default function DoctorNotes() {
           <h1 className="text-3xl font-bold text-gray-900">Medical Notes</h1>
           <p className="text-gray-600 mt-1">View and manage patient medical records</p>
         </div>
-        <Button className="bg-blue-600 hover:bg-blue-700">
+        <Button 
+          className="bg-blue-600 hover:bg-blue-700"
+          onClick={() => setIsDialogOpen(true)}
+        >
           <Plus className="w-4 h-4 mr-2" />
           New Record
         </Button>
@@ -102,6 +109,11 @@ export default function DoctorNotes() {
           </Table>
         </div>
       </div>
+
+      <PatientNoteDialog 
+        isOpen={isDialogOpen} 
+        onClose={() => setIsDialogOpen(false)} 
+      />
     </div>
   );
 }
