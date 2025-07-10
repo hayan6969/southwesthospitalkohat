@@ -133,11 +133,22 @@ export const useCreateUpdateMedicalRecord = () => {
       prescription?: string;
       notes?: string;
     }) => {
-      if (!profile?.id) throw new Error('Doctor not authenticated');
+      if (!profile?.id) throw new Error('User not authenticated');
+      
+      // For admin users or doctors, allow creating medical records
+      // Admin users can act on behalf of doctors for record management
+      let doctorId = profile.id;
+      
+      // If user is admin, try to find a doctor ID or use the profile ID
+      if (profile.role === 'admin') {
+        // For now, allow admins to create records using their profile ID
+        // In a real system, you might want to select a specific doctor
+        doctorId = profile.id;
+      }
       
       const recordData = {
         ...record,
-        doctor_id: profile.id,
+        doctor_id: doctorId,
         visit_date: record.id ? undefined : new Date().toISOString()
       };
 
@@ -147,7 +158,6 @@ export const useCreateUpdateMedicalRecord = () => {
           .from('medical_records')
           .update(recordData)
           .eq('id', record.id)
-          .eq('doctor_id', profile.id)
           .select()
           .single();
         
@@ -181,18 +191,62 @@ export const usePatientNotes = (patientId: string) => {
     queryFn: async () => {
       if (!patientId || !profile?.id) return [];
       
-      const { data, error } = await supabase
+      // Allow both doctors and admins to view notes
+      let query = supabase
         .from('medical_records')
         .select('id, notes, visit_date, created_at')
         .eq('patient_id', patientId)
-        .eq('doctor_id', profile.id)
         .not('notes', 'is', null)
-        .neq('notes', '')
-        .order('created_at', { ascending: false });
+        .neq('notes', '');
+      
+      // If user is doctor, filter by doctor_id, if admin show all notes for the patient
+      if (profile.role === 'doctor') {
+        query = query.eq('doctor_id', profile.id);
+      }
+      
+      const { data, error } = await query.order('created_at', { ascending: false });
 
       if (error) throw error;
       return data || [];
     },
     enabled: !!patientId && !!profile?.id
+  });
+};
+
+// Hook to create a standalone patient note
+export const useCreatePatientNote = () => {
+  const queryClient = useQueryClient();
+  const { profile } = useAuth();
+  
+  return useMutation({
+    mutationFn: async ({ patient_id, notes }: { patient_id: string; notes: string }) => {
+      if (!profile?.id) throw new Error('User not authenticated');
+      if (!notes.trim()) throw new Error('Note content is required');
+      
+      let doctorId = profile.id;
+      
+      // If user is admin, allow creating notes using their profile ID
+      if (profile.role === 'admin') {
+        doctorId = profile.id;
+      }
+      
+      const { data, error } = await supabase
+        .from('medical_records')
+        .insert([{
+          patient_id,
+          doctor_id: doctorId,
+          notes,
+          visit_date: new Date().toISOString()
+        }])
+        .select()
+        .single();
+      
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['patient-notes', data.patient_id] });
+      queryClient.invalidateQueries({ queryKey: ['patient-medical-records', data.patient_id] });
+    },
   });
 };

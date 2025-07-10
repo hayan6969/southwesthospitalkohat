@@ -7,7 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { usePatientAppointmentHistory, usePatientMedicalRecords, useCreateUpdateMedicalRecord, usePatientNotes } from "@/hooks/useDoctorData";
+import { usePatientAppointmentHistory, usePatientMedicalRecords, useCreateUpdateMedicalRecord, usePatientNotes, useCreatePatientNote } from "@/hooks/useDoctorData";
 import { User, Calendar, FileText, Clock, Plus, Save } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
@@ -21,6 +21,8 @@ interface PatientDetailDialogProps {
 export function PatientDetailDialog({ isOpen, onClose, patient }: PatientDetailDialogProps) {
   const [activeRecord, setActiveRecord] = useState<any>(null);
   const [isCreatingRecord, setIsCreatingRecord] = useState(false);
+  const [isCreatingNote, setIsCreatingNote] = useState(false);
+  const [newNote, setNewNote] = useState('');
   const [recordForm, setRecordForm] = useState({
     diagnosis: '',
     treatment: '',
@@ -32,6 +34,7 @@ export function PatientDetailDialog({ isOpen, onClose, patient }: PatientDetailD
   const { data: medicalRecords, isLoading: recordsLoading } = usePatientMedicalRecords(patient?.id);
   const { data: patientNotes, isLoading: notesLoading } = usePatientNotes(patient?.id);
   const createUpdateRecord = useCreateUpdateMedicalRecord();
+  const createPatientNote = useCreatePatientNote();
 
   const patientProfile = patient?.profiles;
 
@@ -48,7 +51,29 @@ export function PatientDetailDialog({ isOpen, onClose, patient }: PatientDetailD
       setIsCreatingRecord(false);
       setRecordForm({ diagnosis: '', treatment: '', prescription: '', notes: '' });
     } catch (error) {
-      toast.error('Failed to save record');
+      console.error('Error saving record:', error);
+      toast.error('Failed to save diagnostic record');
+    }
+  };
+
+  const handleSaveNote = async () => {
+    if (!newNote.trim()) {
+      toast.error('Please enter a note');
+      return;
+    }
+
+    try {
+      await createPatientNote.mutateAsync({
+        patient_id: patient.id,
+        notes: newNote
+      });
+      
+      toast.success('Note added successfully');
+      setNewNote('');
+      setIsCreatingNote(false);
+    } catch (error) {
+      console.error('Error saving note:', error);
+      toast.error('Failed to save note');
     }
   };
 
@@ -319,12 +344,46 @@ export function PatientDetailDialog({ isOpen, onClose, patient }: PatientDetailD
           <TabsContent value="notes">
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <FileText className="w-5 h-5" />
-                  Patient Notes
+                <CardTitle className="flex items-center justify-between">
+                  <span className="flex items-center gap-2">
+                    <FileText className="w-5 h-5" />
+                    Patient Notes
+                  </span>
+                  <Button onClick={() => setIsCreatingNote(true)} size="sm">
+                    <Plus className="w-4 h-4 mr-2" />
+                    Add Note
+                  </Button>
                 </CardTitle>
               </CardHeader>
               <CardContent>
+                {isCreatingNote && (
+                  <div className="space-y-4 p-4 border rounded-lg bg-muted/50 mb-4">
+                    <h4 className="font-medium">Add New Note</h4>
+                    <div>
+                      <Label htmlFor="new-note">Note</Label>
+                      <Textarea
+                        id="new-note"
+                        value={newNote}
+                        onChange={(e) => setNewNote(e.target.value)}
+                        placeholder="Enter your note for this patient..."
+                        rows={4}
+                      />
+                    </div>
+                    <div className="flex gap-2">
+                      <Button onClick={handleSaveNote} disabled={createPatientNote.isPending}>
+                        <Save className="w-4 h-4 mr-2" />
+                        {createPatientNote.isPending ? 'Saving...' : 'Save Note'}
+                      </Button>
+                      <Button variant="outline" onClick={() => {
+                        setIsCreatingNote(false);
+                        setNewNote('');
+                      }}>
+                        Cancel
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
                 <div className="space-y-4">
                   {notesLoading ? (
                     Array.from({ length: 3 }).map((_, i) => (
