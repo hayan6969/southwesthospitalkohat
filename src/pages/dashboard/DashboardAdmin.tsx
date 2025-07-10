@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { StatsCard } from "@/components/StatsCard";
 import { AppointmentChart } from "@/components/AppointmentChart";
 import { MiniChart } from "@/components/MiniChart";
@@ -41,6 +41,11 @@ export default function DashboardAdmin() {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   
   // Settings form state
+  const [brandingForm, setBrandingForm] = useState({
+    hospital_name: '',
+    logo_url: ''
+  });
+  const [logoFile, setLogoFile] = useState<File | null>(null);
   const [timingsForm, setTimingsForm] = useState({
     opening_time: '',
     closing_time: '',
@@ -90,6 +95,43 @@ export default function DashboardAdmin() {
 
   const handleUserUpdated = () => {
     refetchUsers();
+  };
+
+  // Initialize branding form when hospital settings load
+  useEffect(() => {
+    if (hospitalSettings) {
+      setBrandingForm({
+        hospital_name: hospitalSettings.hospital_name || '',
+        logo_url: hospitalSettings.logo_url || ''
+      });
+    }
+  }, [hospitalSettings]);
+
+  const handleSaveBranding = async () => {
+    const updates: any = { hospital_name: brandingForm.hospital_name };
+    
+    // Upload logo if a new file was selected
+    if (logoFile) {
+      const fileExt = logoFile.name.split('.').pop();
+      const fileName = `logo-${Date.now()}.${fileExt}`;
+      
+      const { data, error } = await supabase.storage
+        .from('hospital-logos')
+        .upload(fileName, logoFile);
+      
+      if (!error && data) {
+        const { data: { publicUrl } } = supabase.storage
+          .from('hospital-logos')
+          .getPublicUrl(fileName);
+        
+        updates.logo_url = publicUrl;
+      }
+    }
+    
+    const success = await updateSettings(updates);
+    if (success) {
+      setLogoFile(null);
+    }
   };
 
   const getRoleBadgeColor = (role: string) => {
@@ -550,12 +592,8 @@ export default function DashboardAdmin() {
                         </label>
                         <Input 
                           placeholder="Enter hospital name"
-                          value={hospitalSettings?.hospital_name || ""} 
-                          onChange={async (e) => {
-                            if (hospitalSettings) {
-                              await updateSettings({ hospital_name: e.target.value });
-                            }
-                          }}
+                          value={brandingForm.hospital_name} 
+                          onChange={(e) => setBrandingForm(prev => ({ ...prev, hospital_name: e.target.value }))}
                         />
                       </div>
                       <div>
@@ -563,9 +601,9 @@ export default function DashboardAdmin() {
                           Hospital Logo
                         </label>
                         <div className="flex items-center gap-4">
-                          {hospitalSettings?.logo_url && (
+                          {(hospitalSettings?.logo_url || brandingForm.logo_url) && (
                             <img 
-                              src={hospitalSettings.logo_url} 
+                              src={hospitalSettings?.logo_url || brandingForm.logo_url} 
                               alt="Hospital Logo" 
                               className="w-12 h-12 object-contain rounded border"
                             />
@@ -573,28 +611,29 @@ export default function DashboardAdmin() {
                           <Input 
                             type="file" 
                             accept="image/*"
-                            onChange={async (e) => {
+                            onChange={(e) => {
                               const file = e.target.files?.[0];
                               if (file) {
-                                const fileExt = file.name.split('.').pop();
-                                const fileName = `logo-${Date.now()}.${fileExt}`;
-                                
-                                const { data, error } = await supabase.storage
-                                  .from('hospital-logos')
-                                  .upload(fileName, file);
-                                
-                                if (!error && data) {
-                                  const { data: { publicUrl } } = supabase.storage
-                                    .from('hospital-logos')
-                                    .getPublicUrl(fileName);
-                                  
-                                  await updateSettings({ logo_url: publicUrl });
-                                }
+                                setLogoFile(file);
                               }
                             }}
                           />
                         </div>
+                        {logoFile && (
+                          <p className="text-sm text-gray-600 mt-2">
+                            Selected: {logoFile.name}
+                          </p>
+                        )}
                       </div>
+                    </div>
+                    <div className="mt-6">
+                      <Button 
+                        onClick={handleSaveBranding}
+                        className="w-full"
+                        disabled={!brandingForm.hospital_name.trim() && !logoFile}
+                      >
+                        Save Hospital Branding
+                      </Button>
                     </div>
                   </div>
                 </div>
