@@ -88,19 +88,21 @@ export function DoctorAvailabilityManager() {
 
   const getDayAvailability = (date: Date) => {
     const dateString = format(date, 'yyyy-MM-dd');
+    // If no explicit record exists, default to available (true)
+    // Only return false if explicitly set to unavailable
+    return availability[dateString] !== false;
+  };
+
+  const getExplicitAvailability = (date: Date) => {
+    const dateString = format(date, 'yyyy-MM-dd');
     return availability[dateString];
   };
 
   const modifiers = {
-    available: (date: Date) => getDayAvailability(date) === true,
-    unavailable: (date: Date) => getDayAvailability(date) === false,
+    unavailable: (date: Date) => getExplicitAvailability(date) === false,
   };
 
   const modifiersStyles = {
-    available: {
-      backgroundColor: '#10b981',
-      color: 'white',
-    },
     unavailable: {
       backgroundColor: '#ef4444',
       color: 'white',
@@ -122,9 +124,9 @@ export function DoctorAvailabilityManager() {
         
         <div className="space-y-4">
           <div className="flex gap-2 text-sm">
-            <Badge className="bg-green-100 text-green-700 border-green-200">
-              <div className="w-3 h-3 bg-green-500 rounded-full mr-1"></div>
-              Available
+            <Badge className="bg-gray-100 text-gray-700 border-gray-200">
+              <div className="w-3 h-3 bg-gray-400 rounded-full mr-1"></div>
+              Available (Default)
             </Badge>
             <Badge className="bg-red-100 text-red-700 border-red-200">
               <div className="w-3 h-3 bg-red-500 rounded-full mr-1"></div>
@@ -150,7 +152,7 @@ export function DoctorAvailabilityManager() {
               <div className="flex gap-2">
                 <Button
                   size="sm"
-                  variant={getDayAvailability(selectedDate) === true ? "default" : "outline"}
+                  variant={getDayAvailability(selectedDate) === true && getExplicitAvailability(selectedDate) === true ? "default" : "outline"}
                   onClick={() => toggleAvailability(selectedDate, true)}
                   disabled={isLoading}
                   className="flex items-center gap-1"
@@ -160,7 +162,7 @@ export function DoctorAvailabilityManager() {
                 </Button>
                 <Button
                   size="sm"
-                  variant={getDayAvailability(selectedDate) === false ? "destructive" : "outline"}
+                  variant={getExplicitAvailability(selectedDate) === false ? "destructive" : "outline"}
                   onClick={() => toggleAvailability(selectedDate, false)}
                   disabled={isLoading}
                   className="flex items-center gap-1"
