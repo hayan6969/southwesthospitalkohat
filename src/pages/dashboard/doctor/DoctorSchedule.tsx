@@ -121,7 +121,7 @@ export default function DoctorSchedule() { // Fixed ordering syntax
             .select('id, payment_status, booking_type, payment_due_time')
             .eq('id', firstQueuePosition.appointment_id)
             .eq('status', 'scheduled')
-            .single();
+            .maybeSingle();
 
           if (error) {
             console.error('Error finding first in queue:', error);
@@ -237,7 +237,7 @@ export default function DoctorSchedule() { // Fixed ordering syntax
         .select('id, payment_status, booking_type')
         .eq('id', firstQueuePosition.appointment_id)
         .eq('status', 'scheduled')
-        .single();
+        .maybeSingle();
 
       if (error) {
         console.error('Error finding next appointment:', error);
