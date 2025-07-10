@@ -119,18 +119,21 @@ export default function DoctorSchedule() { // Fixed ordering syntax
           if (!firstQueuePosition) continue;
 
           // Now get the appointment details for the first in queue
-          console.log(`Looking up appointment ${firstQueuePosition.appointment_id}`);
           const { data: firstInQueue, error } = await supabase
             .from('appointments')
             .select('id, payment_status, booking_type, payment_due_time, status')
             .eq('id', firstQueuePosition.appointment_id)
+            .eq('status', 'scheduled') // Only process scheduled appointments
             .maybeSingle();
-          
-          console.log(`Appointment lookup result:`, firstInQueue);
 
           if (error) {
             console.error('Error finding first in queue:', error);
-            console.error('Appointment lookup details:', { appointmentId: firstQueuePosition.appointment_id });
+            continue;
+          }
+
+          // Skip if no scheduled appointment found (could be completed/cancelled)
+          if (!firstInQueue) {
+            console.log(`No scheduled appointment found for queue position, skipping doctor ${doctorId}`);
             continue;
           }
 
