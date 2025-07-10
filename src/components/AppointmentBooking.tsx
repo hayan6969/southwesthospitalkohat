@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
+import { useDoctorAvailability, useCheckDoctorAvailability } from "@/hooks/useDoctorAvailability";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -45,6 +46,11 @@ export const AppointmentBooking = () => {
   const [appointmentType, setAppointmentType] = useState<string>("");
   const [notes, setNotes] = useState("");
   const [loading, setLoading] = useState(false);
+  const { checkAvailability } = useCheckDoctorAvailability();
+  const { data: availability } = useDoctorAvailability(
+    selectedDoctor, 
+    selectedDate ? format(selectedDate, 'yyyy-MM-dd') : undefined
+  );
 
   useEffect(() => {
     fetchDoctors();
@@ -124,6 +130,39 @@ export const AppointmentBooking = () => {
       toast({
         title: "Error",
         description: "Please fill in all required fields",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Check doctor availability
+    try {
+      const dateString = format(selectedDate, 'yyyy-MM-dd');
+      const availabilityCheck = await checkAvailability(selectedDoctor, dateString);
+      
+      if (!availabilityCheck.canBook) {
+        if (!availabilityCheck.isAvailable) {
+          toast({
+            title: "Doctor Unavailable",
+            description: "This doctor is not available on the selected date. Please choose another date.",
+            variant: "destructive",
+          });
+          return;
+        }
+        if (!availabilityCheck.isAcceptingAppointments) {
+          toast({
+            title: "Appointments Stopped",
+            description: "This doctor is not accepting appointments for the selected date.",
+            variant: "destructive",
+          });
+          return;
+        }
+      }
+    } catch (error) {
+      console.error("Error checking availability:", error);
+      toast({
+        title: "Error",
+        description: "Failed to check doctor availability",
         variant: "destructive",
       });
       return;
@@ -303,17 +342,23 @@ export const AppointmentBooking = () => {
                     {selectedDate ? format(selectedDate, "PPP") : "Pick a date"}
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={selectedDate}
-                    onSelect={setSelectedDate}
-                    disabled={(date) => !isDateAvailable(date)}
-                    initialFocus
-                    className="pointer-events-auto"
-                  />
-                </PopoverContent>
-              </Popover>
+                 <PopoverContent className="w-auto p-0" align="start">
+                   <Calendar
+                     mode="single"
+                     selected={selectedDate}
+                     onSelect={setSelectedDate}
+                     disabled={(date) => !isDateAvailable(date)}
+                     initialFocus
+                     className="pointer-events-auto"
+                   />
+                 </PopoverContent>
+               </Popover>
+               {selectedDate && selectedDoctor && availability && !availability.canBook && (
+                 <div className="text-sm text-red-600 mt-1 p-2 bg-red-50 rounded border border-red-200">
+                   {!availability.isAvailable && "⚠️ Doctor is not available on this date"}
+                   {availability.isAvailable && !availability.isAcceptingAppointments && "⚠️ Doctor is not accepting appointments on this date"}
+                 </div>
+               )}
             </div>
 
             <div className="space-y-2">
@@ -345,7 +390,13 @@ export const AppointmentBooking = () => {
             <Button 
               onClick={handleBookAppointment} 
               className="w-full"
-              disabled={loading || !selectedDoctor || !selectedDate || !appointmentType}
+              disabled={
+                loading || 
+                !selectedDoctor || 
+                !selectedDate || 
+                !appointmentType ||
+                (availability && !availability.canBook)
+              }
             >
               {loading ? "Booking..." : "Book Appointment"}
             </Button>
