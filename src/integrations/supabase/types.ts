@@ -125,6 +125,60 @@ export type Database = {
         }
         Relationships: []
       }
+      doctor_availability: {
+        Row: {
+          availability_date: string
+          created_at: string
+          doctor_id: string
+          id: string
+          is_available: boolean
+          updated_at: string
+        }
+        Insert: {
+          availability_date: string
+          created_at?: string
+          doctor_id: string
+          id?: string
+          is_available?: boolean
+          updated_at?: string
+        }
+        Update: {
+          availability_date?: string
+          created_at?: string
+          doctor_id?: string
+          id?: string
+          is_available?: boolean
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      doctor_daily_status: {
+        Row: {
+          accepting_appointments: boolean
+          created_at: string
+          doctor_id: string
+          id: string
+          status_date: string
+          updated_at: string
+        }
+        Insert: {
+          accepting_appointments?: boolean
+          created_at?: string
+          doctor_id: string
+          id?: string
+          status_date: string
+          updated_at?: string
+        }
+        Update: {
+          accepting_appointments?: boolean
+          created_at?: string
+          doctor_id?: string
+          id?: string
+          status_date?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       doctors: {
         Row: {
           avatar_url: string | null

@@ -20,6 +20,8 @@ import DoctorSchedule from "@/pages/dashboard/doctor/DoctorSchedule";
 import DoctorNotes from "@/pages/dashboard/doctor/DoctorNotes";
 import DoctorConsultationRates from "@/pages/dashboard/doctor/DoctorConsultationRates";
 import { DoctorProfileSettings } from "@/components/DoctorProfileSettings";
+import { DoctorAvailabilityManager } from "@/components/DoctorAvailabilityManager";
+import { StopAppointmentsButton } from "@/components/StopAppointmentsButton";
 
 const chartData = {
   appointments: [{ value: 8 }, { value: 12 }, { value: 15 }, { value: 10 }, { value: 18 }],
@@ -122,8 +124,8 @@ export default function DashboardDoctor() {
           <div className="flex items-center justify-between mb-8">
             <h2 className="text-2xl font-bold">Medical Dashboard</h2>
             <div className="flex gap-3">
-              <EnhancedAppointmentDialog />
-              <Button variant="outline">View Full Schedule</Button>
+              <StopAppointmentsButton />
+              <DoctorAvailabilityManager />
             </div>
           </div>
 
