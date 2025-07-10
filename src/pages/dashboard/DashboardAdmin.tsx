@@ -162,7 +162,7 @@ export default function DashboardAdmin() {
               ) : (
                 <span className="inline-block w-3 h-10 bg-blue-500 rounded-full" />
               )}
-              {hospitalSettings?.hospital_name || "HIMS"} - Admin Dashboard
+              {hospitalSettings?.hospital_name || "HIMS"}
             </h1>
             <p className="text-gray-600 mt-1">Hospital Information Management System</p>
           </div>
