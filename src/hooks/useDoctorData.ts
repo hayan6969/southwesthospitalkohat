@@ -173,14 +173,13 @@ export const useCreateUpdateMedicalRecord = () => {
         throw new Error('Only doctors and admins can create medical records');
       }
       
-      const recordData = {
-        ...record,
-        doctor_id: doctorId,
-        visit_date: record.id ? undefined : new Date().toISOString()
-      };
-
       if (record.id) {
         // Update existing record
+        const recordData = {
+          ...record,
+          doctor_id: doctorId,
+        };
+        
         const { data, error } = await supabase
           .from('medical_records')
           .update(recordData)
@@ -191,7 +190,14 @@ export const useCreateUpdateMedicalRecord = () => {
         if (error) throw error;
         return data;
       } else {
-        // Create new record
+        // Create new record - exclude id to let database generate it
+        const { id, ...recordWithoutId } = record;
+        const recordData = {
+          ...recordWithoutId,
+          doctor_id: doctorId,
+          visit_date: new Date().toISOString()
+        };
+        
         const { data, error } = await supabase
           .from('medical_records')
           .insert([recordData])
