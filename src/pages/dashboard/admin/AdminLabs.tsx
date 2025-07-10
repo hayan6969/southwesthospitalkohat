@@ -221,7 +221,7 @@ export default function AdminLabs() {
                     step="0.01"
                     value={formData.price}
                     onChange={(e) => setFormData(prev => ({ ...prev, price: e.target.value }))}
-                    placeholder="e.g., 1500"
+                    placeholder="e.g., 1500.00"
                     required
                   />
                 </div>
