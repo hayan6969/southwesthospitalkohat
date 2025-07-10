@@ -196,7 +196,8 @@ export function EnhancedLabDialog() {
         .insert([{
           patient_id: selectedPatient.id,
           amount: totalAmount,
-          status: 'pending',
+          status: 'paid',
+          paid_at: new Date().toISOString(),
           invoice_number: invoiceNumber,
           description: `Lab Tests: ${selectedLabTests.map(t => t.name).join(', ')}`
         }])

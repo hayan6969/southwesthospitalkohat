@@ -100,16 +100,16 @@ export default function PatientLabs() {
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
-                        {lab.status === 'completed' && lab.result_file_url && (
-                          <Button 
-                            size="sm" 
-                            variant="outline"
-                            onClick={() => handleDownloadResult(lab.result_file_url)}
-                          >
-                            <Download className="w-3 h-3 mr-1" />
-                            Download Results
-                          </Button>
-                        )}
+                         {lab.status === 'completed' && lab.result_file_url && (
+                           <Button 
+                             size="sm" 
+                             variant="outline"
+                             onClick={() => handleDownloadResult(lab.result_file_url!)}
+                           >
+                             <Download className="w-3 h-3 mr-1" />
+                             Download Results
+                           </Button>
+                         )}
                         {lab.status === 'completed' && lab.results && !lab.result_file_url && (
                           <Button size="sm" variant="outline">
                             <ExternalLink className="w-3 h-3 mr-1" />
