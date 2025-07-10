@@ -9,6 +9,9 @@ import { Calendar, FileText, DollarSign, Activity, Clock, Users, TestTube, Uploa
 import { useAuth } from "@/hooks/useAuth";
 import { AppointmentBooking } from "@/components/AppointmentBooking";
 import { MyAppointments } from "@/components/MyAppointments";
+import PatientRecords from "./patient/PatientRecords";
+import PatientLabs from "./patient/PatientLabs";
+import PatientInvoices from "./patient/PatientInvoices";
 
 export default function DashboardPatient() {
   const { profile } = useAuth();
@@ -92,29 +95,20 @@ export default function DashboardPatient() {
   );
 
   const renderRecordsTab = () => (
-    <div>
-      <h2 className="text-2xl font-bold mb-8">Medical Records</h2>
-      <div className="bg-white rounded-lg border shadow-sm p-6">
-        <p className="text-gray-600">Medical records functionality will be implemented here.</p>
-      </div>
+    <div className="space-y-6">
+      <PatientRecords />
     </div>
   );
 
   const renderLabsTab = () => (
-    <div>
-      <h2 className="text-2xl font-bold mb-8">Lab Reports</h2>
-      <div className="bg-white rounded-lg border shadow-sm p-6">
-        <p className="text-gray-600">Lab reports functionality will be implemented here.</p>
-      </div>
+    <div className="space-y-6">
+      <PatientLabs />
     </div>
   );
 
   const renderInvoicesTab = () => (
-    <div>
-      <h2 className="text-2xl font-bold mb-8">Invoices</h2>
-      <div className="bg-white rounded-lg border shadow-sm p-6">
-        <p className="text-gray-600">Invoices functionality will be implemented here.</p>
-      </div>
+    <div className="space-y-6">
+      <PatientInvoices />
     </div>
   );
 
