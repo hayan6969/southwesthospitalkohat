@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { useCreateAppointment, useDoctors, usePatients } from "@/hooks/useDatabase";
 import { usePatientNames, useDoctorNames, getPatientName, getDoctorName } from "@/hooks/useDisplayHelpers";
+import { useDoctorAvailability, useCheckDoctorAvailability } from "@/hooks/useDoctorAvailability";
 import { useAuditLogger } from "@/hooks/useAuditLogger";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -31,12 +32,34 @@ export function AppointmentDialog() {
   const { data: patientNames } = usePatientNames();
   const { data: doctorNames } = useDoctorNames();
   const { logAction } = useAuditLogger();
+  const { checkAvailability } = useCheckDoctorAvailability();
+  const { data: availability } = useDoctorAvailability(doctorId, appointmentDate);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!patientId || !doctorId || !appointmentDate || !appointmentTime || !type.trim()) {
       toast.error("Please fill in all required fields");
+      return;
+    }
+
+    // Check doctor availability
+    try {
+      const availabilityCheck = await checkAvailability(doctorId, appointmentDate);
+      
+      if (!availabilityCheck.canBook) {
+        if (!availabilityCheck.isAvailable) {
+          toast.error("This doctor is not available on the selected date");
+          return;
+        }
+        if (!availabilityCheck.isAcceptingAppointments) {
+          toast.error("This doctor is not accepting appointments for the selected date");
+          return;
+        }
+      }
+    } catch (error) {
+      console.error("Error checking availability:", error);
+      toast.error("Failed to check doctor availability");
       return;
     }
 
@@ -161,6 +184,12 @@ export function AppointmentDialog() {
                 onChange={(e) => setAppointmentDate(e.target.value)}
                 required
               />
+              {appointmentDate && availability && !availability.canBook && (
+                <div className="text-sm text-red-600 mt-1">
+                  {!availability.isAvailable && "Doctor is not available on this date"}
+                  {availability.isAvailable && !availability.isAcceptingAppointments && "Doctor is not accepting appointments on this date"}
+                </div>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -200,7 +229,13 @@ export function AppointmentDialog() {
             <Button type="button" variant="outline" onClick={() => setOpen(false)}>
               Cancel
             </Button>
-            <Button type="submit" disabled={createAppointment.isPending}>
+            <Button 
+              type="submit" 
+              disabled={
+                createAppointment.isPending || 
+                (availability && !availability.canBook)
+              }
+            >
               {createAppointment.isPending ? "Scheduling..." : "Schedule Appointment"}
             </Button>
           </div>

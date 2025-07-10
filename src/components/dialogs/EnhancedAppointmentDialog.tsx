@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useCreateAppointmentWithInvoice, useCreatePatientWithProfile, useDoctors } from "@/hooks/useDatabase";
 import { useSearchPatientsWithNames, useDoctorNames } from "@/hooks/useDisplayHelpers";
+import { useDoctorAvailability, useCheckDoctorAvailability } from "@/hooks/useDoctorAvailability";
 import { useAuditLogger } from "@/hooks/useAuditLogger";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -52,6 +53,8 @@ export function EnhancedAppointmentDialog() {
   const { data: doctorNames } = useDoctorNames();
   const { data: searchResults } = useSearchPatientsWithNames(searchTerm);
   const { logAction } = useAuditLogger();
+  const { checkAvailability } = useCheckDoctorAvailability();
+  const { data: availability } = useDoctorAvailability(doctorId, appointmentDate);
 
   const selectedDoctor = doctors?.find(d => d.id === doctorId);
   const selectedDoctorName = doctorNames?.find(d => d.id === doctorId);
@@ -83,6 +86,26 @@ export function EnhancedAppointmentDialog() {
     
     if (!doctorId || !appointmentDate || !appointmentTime || !type.trim()) {
       toast.error("Please fill in all required fields");
+      return;
+    }
+
+    // Check doctor availability
+    try {
+      const availabilityCheck = await checkAvailability(doctorId, appointmentDate);
+      
+      if (!availabilityCheck.canBook) {
+        if (!availabilityCheck.isAvailable) {
+          toast.error("This doctor is not available on the selected date");
+          return;
+        }
+        if (!availabilityCheck.isAcceptingAppointments) {
+          toast.error("This doctor is not accepting appointments for the selected date");
+          return;
+        }
+      }
+    } catch (error) {
+      console.error("Error checking availability:", error);
+      toast.error("Failed to check doctor availability");
       return;
     }
 
@@ -424,6 +447,12 @@ export function EnhancedAppointmentDialog() {
                 onChange={(e) => setAppointmentDate(e.target.value)}
                 required
               />
+              {appointmentDate && availability && !availability.canBook && (
+                <div className="text-sm text-red-600 mt-1">
+                  {!availability.isAvailable && "Doctor is not available on this date"}
+                  {availability.isAvailable && !availability.isAcceptingAppointments && "Doctor is not accepting appointments on this date"}
+                </div>
+              )}
             </div>
             <div className="space-y-2">
               <Label htmlFor="time">Time *</Label>
@@ -491,7 +520,11 @@ export function EnhancedAppointmentDialog() {
             </Button>
             <Button 
               type="submit" 
-              disabled={createAppointmentWithInvoice.isPending || createPatientWithProfile.isPending}
+              disabled={
+                createAppointmentWithInvoice.isPending || 
+                createPatientWithProfile.isPending ||
+                (availability && !availability.canBook)
+              }
             >
               {createAppointmentWithInvoice.isPending || createPatientWithProfile.isPending 
                 ? "Creating..." 
