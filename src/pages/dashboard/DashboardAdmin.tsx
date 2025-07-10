@@ -541,8 +541,8 @@ export default function DashboardAdmin() {
                           </label>
                           <Input 
                             type="time" 
-                            value={settings?.opening_time || "08:00"} 
-                            onChange={(e) => setFormData(prev => ({ ...prev, opening_time: e.target.value }))}
+                            value={hospitalSettings?.opening_time || "08:00"} 
+                            onChange={(e) => setTimingsForm(prev => ({ ...prev, opening_time: e.target.value }))}
                           />
                         </div>
                         <div>
@@ -551,8 +551,8 @@ export default function DashboardAdmin() {
                           </label>
                           <Input 
                             type="time" 
-                            value={settings?.closing_time || "20:00"} 
-                            onChange={(e) => setFormData(prev => ({ ...prev, closing_time: e.target.value }))}
+                            value={hospitalSettings?.closing_time || "20:00"} 
+                            onChange={(e) => setTimingsForm(prev => ({ ...prev, closing_time: e.target.value }))}
                           />
                         </div>
                       </div>
