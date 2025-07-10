@@ -3,18 +3,21 @@ import { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Calendar as CalendarComponent } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { EnhancedAppointmentDialog } from "@/components/dialogs/EnhancedAppointmentDialog";
 import { PatientDialog } from "@/components/dialogs/PatientDialog";
 import { InvoiceDialog } from "@/components/dialogs/InvoiceDialog";
 import { useAppointments, usePatients, useDoctors } from "@/hooks/useDatabase";
 import { usePatientNames, useDoctorNames, getPatientName, getDoctorName } from "@/hooks/useDisplayHelpers";
 import { supabase } from "@/integrations/supabase/client";
-import { Calendar, UserPlus, Receipt, Users, Clock, Edit, CreditCard, Printer, Search, FileText, Download } from "lucide-react";
+import { Calendar, UserPlus, Receipt, Users, Clock, Edit, CreditCard, Printer, Search, FileText, Download, CalendarIcon } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { format } from "date-fns";
+import { format, isSameDay } from "date-fns";
 import { toast } from "@/hooks/use-toast";
 import { generateInvoicePDF } from "@/utils/pdfGenerator";
+import { cn } from "@/lib/utils";
 
 export function StaffCounter() {
   const { data: appointments, isLoading: appointmentsLoading, refetch: refetchAppointments } = useAppointments();
@@ -24,20 +27,20 @@ export function StaffCounter() {
   const { data: doctorNames } = useDoctorNames();
   const [searchTerm, setSearchTerm] = useState("");
   const [processingInvoice, setProcessingInvoice] = useState<string | null>(null);
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
 
-  // Get all appointments for today (including all statuses)
-  const todayAppointments = useMemo(() => {
+  // Get appointments for selected date (including all statuses)
+  const filteredAppointments = useMemo(() => {
     if (!appointments) return [];
-    const today = new Date().toISOString().split('T')[0];
     return appointments.filter(apt => {
-      const appointmentDate = new Date(apt.appointment_date).toISOString().split('T')[0];
-      return appointmentDate === today;
+      const appointmentDate = new Date(apt.appointment_date);
+      return isSameDay(appointmentDate, selectedDate);
     });
-  }, [appointments]);
+  }, [appointments, selectedDate]);
 
   // Get queue appointments (scheduled only)
   const queueAppointments = useMemo(() => {
-    let filtered = todayAppointments.filter(apt => apt.status === 'scheduled');
+    let filtered = filteredAppointments.filter(apt => apt.status === 'scheduled');
     
     // Filter by search term
     if (searchTerm) {
@@ -54,7 +57,7 @@ export function StaffCounter() {
     }
     
     return filtered.sort((a, b) => new Date(a.appointment_date).getTime() - new Date(b.appointment_date).getTime());
-  }, [todayAppointments, searchTerm, patientNames, doctorNames]);
+  }, [filteredAppointments, searchTerm, patientNames, doctorNames]);
 
   const handleGenerateInvoice = async (appointment: any) => {
     setProcessingInvoice(appointment.id);
@@ -193,9 +196,9 @@ export function StaffCounter() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {todayAppointments.filter(apt => apt.status === 'completed').length}
+              {filteredAppointments.filter(apt => apt.status === 'completed').length}
             </div>
-            <p className="text-xs text-muted-foreground">Today's appointments</p>
+            <p className="text-xs text-muted-foreground">Selected date</p>
           </CardContent>
         </Card>
       </div>
@@ -210,24 +213,50 @@ export function StaffCounter() {
         </Button>
       </div>
 
-      {/* Search Bar */}
+      {/* Search and Filter Bar */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Search className="w-5 h-5" />
-            Search Appointments
+            Search & Filter Appointments
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="flex gap-4">
+          <div className="flex flex-col md:flex-row gap-4">
             <Input
               placeholder="Search by patient name, patient ID, or doctor..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="flex-1"
             />
-            <Button variant="outline" onClick={() => setSearchTerm("")}>
-              Clear
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className={cn(
+                    "w-full md:w-[280px] justify-start text-left font-normal",
+                    !selectedDate && "text-muted-foreground"
+                  )}
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {selectedDate ? format(selectedDate, "PPP") : <span>Pick a date</span>}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0">
+                <CalendarComponent
+                  mode="single"
+                  selected={selectedDate}
+                  onSelect={(date) => date && setSelectedDate(date)}
+                  initialFocus
+                  className="pointer-events-auto"
+                />
+              </PopoverContent>
+            </Popover>
+            <Button variant="outline" onClick={() => {
+              setSearchTerm("");
+              setSelectedDate(new Date());
+            }}>
+              Clear All
             </Button>
           </div>
         </CardContent>
@@ -238,7 +267,7 @@ export function StaffCounter() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Clock className="w-5 h-5" />
-            Patient Queue ({queueAppointments.length} appointments)
+            Patient Queue - {format(selectedDate, "PPP")} ({queueAppointments.length} appointments)
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -368,7 +397,7 @@ export function StaffCounter() {
                     <div className="text-right">
                       <p className="text-sm font-medium text-green-600">Available</p>
                       <p className="text-xs text-gray-500">
-                        {todayAppointments.filter(apt => apt.doctor_id === doctor.id).length} appointments
+                        {filteredAppointments.filter(apt => apt.doctor_id === doctor.id).length} appointments
                       </p>
                     </div>
                   </div>
