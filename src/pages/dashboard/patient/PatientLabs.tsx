@@ -14,7 +14,12 @@ export default function PatientLabs() {
   const patientLabs = labReports?.filter(lab => lab.patient_id === profile?.id) || [];
 
   const handleDownloadResult = (resultFileUrl: string) => {
-    window.open(resultFileUrl, '_blank');
+    const link = document.createElement('a');
+    link.href = resultFileUrl;
+    link.download = '';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   return (
