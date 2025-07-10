@@ -108,6 +108,7 @@ export default function DoctorSchedule() { // Fixed ordering syntax
 
           if (queueError) {
             console.error('Error finding queue positions:', queueError);
+            console.error('Query details:', { doctorId, today });
             continue;
           }
 
@@ -124,6 +125,7 @@ export default function DoctorSchedule() { // Fixed ordering syntax
 
           if (error) {
             console.error('Error finding first in queue:', error);
+            console.error('Appointment lookup details:', { appointmentId: firstQueuePosition.appointment_id });
             continue;
           }
 
