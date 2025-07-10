@@ -18,7 +18,6 @@ import { PatientDetailsView } from "@/components/PatientDetailsView";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { getCurrentPakistanTime } from "@/utils/timezone";
-import { useRealTimeUpdates } from "@/hooks/useRealTimeUpdates";
 
 export default function DoctorSchedule() {
   const { data: appointments, isLoading } = useAppointments();
@@ -27,9 +26,6 @@ export default function DoctorSchedule() {
   const [selectedPatient, setSelectedPatient] = useState<{ id: string; name: string } | null>(null);
   const [appointmentsWithQueue, setAppointmentsWithQueue] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
-  
-  // Enable real-time updates
-  useRealTimeUpdates();
   
   // Filter states
   const [selectedDate, setSelectedDate] = useState<Date>(getCurrentPakistanTime()); // Default to today
