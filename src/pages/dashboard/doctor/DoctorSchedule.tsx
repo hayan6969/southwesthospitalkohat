@@ -18,6 +18,7 @@ import { PatientDetailsView } from "@/components/PatientDetailsView";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { getCurrentPakistanTime } from "@/utils/timezone";
+import { useRealTimeUpdates } from "@/hooks/useRealTimeUpdates";
 
 export default function DoctorSchedule() {
   const { data: appointments, isLoading } = useAppointments();
@@ -26,6 +27,9 @@ export default function DoctorSchedule() {
   const [selectedPatient, setSelectedPatient] = useState<{ id: string; name: string } | null>(null);
   const [appointmentsWithQueue, setAppointmentsWithQueue] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+  
+  // Enable real-time updates
+  useRealTimeUpdates();
   
   // Filter states
   const [selectedDate, setSelectedDate] = useState<Date>(getCurrentPakistanTime()); // Default to today
@@ -73,8 +77,54 @@ export default function DoctorSchedule() {
     fetchAppointmentsWithDetails();
   }, [appointments]);
 
-  // Auto-cancel overdue appointments every minute
+  // Auto-cancel overdue appointments every minute and set timer for first in queue
   useEffect(() => {
+    // Set payment due time for current first-in-queue patients on page load
+    const setInitialPaymentTimers = async () => {
+      try {
+        // Get all scheduled appointments that are first in queue with pending payments
+        const { data: firstInQueue, error } = await supabase
+          .from('appointments')
+          .select(`
+            id,
+            doctor_id,
+            appointment_date,
+            payment_status,
+            booking_type,
+            payment_due_time,
+            queue_positions!inner(queue_position)
+          `)
+          .eq('status', 'scheduled')
+          .eq('queue_positions.queue_position', 1)
+          .eq('payment_status', 'pending')
+          .eq('booking_type', 'online')
+          .is('payment_due_time', null);
+
+        if (error) {
+          console.error('Error fetching first in queue appointments:', error);
+          return;
+        }
+
+        // Set 3-minute timer for each
+        for (const appointment of firstInQueue || []) {
+          const paymentDueTime = new Date(Date.now() + 3 * 60 * 1000).toISOString();
+          
+          const { error: updateError } = await supabase
+            .from('appointments')
+            .update({ payment_due_time: paymentDueTime })
+            .eq('id', appointment.id);
+
+          if (!updateError) {
+            console.log(`Set initial 3-minute payment timer for appointment ${appointment.id}`);
+          }
+        }
+      } catch (error) {
+        console.error('Error setting initial payment timers:', error);
+      }
+    };
+
+    setInitialPaymentTimers();
+
     const interval = setInterval(async () => {
       try {
         await supabase.rpc('auto_cancel_overdue_appointments');
@@ -99,9 +149,65 @@ export default function DoctorSchedule() {
         status: newStatus as any,
         updated_at: new Date().toISOString()
       });
+
+      // When an appointment is completed, set payment_due_time for the next patient in queue
+      if (newStatus === 'completed') {
+        await setPaymentDueTimeForNextPatient(appointment.doctor_id, appointment.appointment_date);
+      }
+
       toast.success(`Appointment ${newStatus} successfully`);
     } catch (error) {
       toast.error('Failed to update appointment');
+    }
+  };
+
+  const setPaymentDueTimeForNextPatient = async (doctorId: string, appointmentDate: string) => {
+    try {
+      // Find the next patient in queue with pending payment
+      const appointmentDateOnly = new Date(appointmentDate).toISOString().split('T')[0];
+      
+      const { data: nextAppointments, error } = await supabase
+        .from('appointments')
+        .select(`
+          id,
+          payment_status,
+          booking_type,
+          queue_positions!inner(queue_position)
+        `)
+        .eq('doctor_id', doctorId)
+        .eq('status', 'scheduled')
+        .gte('appointment_date', appointmentDateOnly)
+        .lt('appointment_date', new Date(new Date(appointmentDateOnly).getTime() + 24 * 60 * 60 * 1000).toISOString())
+        .order('queue_positions.queue_position', { ascending: true })
+        .limit(1);
+
+      if (error) {
+        console.error('Error finding next appointment:', error);
+        return;
+      }
+
+      const nextAppointment = nextAppointments?.[0];
+      if (nextAppointment && 
+          nextAppointment.payment_status === 'pending' && 
+          nextAppointment.booking_type === 'online') {
+        
+        // Set payment due time to 3 minutes from now
+        const paymentDueTime = new Date(Date.now() + 3 * 60 * 1000).toISOString();
+        
+        const { error: updateError } = await supabase
+          .from('appointments')
+          .update({ payment_due_time: paymentDueTime })
+          .eq('id', nextAppointment.id);
+
+        if (updateError) {
+          console.error('Error setting payment due time:', updateError);
+        } else {
+          console.log(`Set 3-minute payment timer for appointment ${nextAppointment.id}`);
+          toast.success('Next patient has 3 minutes to complete payment');
+        }
+      }
+    } catch (error) {
+      console.error('Error in setPaymentDueTimeForNextPatient:', error);
     }
   };
 
