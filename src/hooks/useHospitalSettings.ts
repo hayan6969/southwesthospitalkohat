@@ -13,6 +13,7 @@ interface HospitalSettings {
   hospital_name: string;
   contact_number: string;
   hospital_address: string;
+  logo_url?: string;
 }
 
 export const useHospitalSettings = () => {

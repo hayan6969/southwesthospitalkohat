@@ -20,6 +20,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { format } from "date-fns";
 import { formatPkrCurrency } from "@/utils/currency";
 import { useHospitalSettings } from "@/hooks/useHospitalSettings";
+import { supabase } from "@/integrations/supabase/client";
 
 
 const chartData = {
@@ -110,8 +111,16 @@ export default function DashboardAdmin() {
         <div className="flex justify-between items-center">
           <div>
             <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
-              <span className="inline-block w-3 h-10 bg-blue-500 rounded-full" />
-              HIMS - Admin Dashboard
+              {hospitalSettings?.logo_url ? (
+                <img 
+                  src={hospitalSettings.logo_url} 
+                  alt="Hospital Logo" 
+                  className="w-10 h-10 object-contain"
+                />
+              ) : (
+                <span className="inline-block w-3 h-10 bg-blue-500 rounded-full" />
+              )}
+              {hospitalSettings?.hospital_name || "HIMS"} - Admin Dashboard
             </h1>
             <p className="text-gray-600 mt-1">Hospital Information Management System</p>
           </div>
@@ -526,7 +535,67 @@ export default function DashboardAdmin() {
                 <div className="flex items-center justify-between">
                   <div>
                     <h3 className="text-xl font-semibold">Hospital Settings</h3>
-                    <p className="text-gray-600">Configure hospital timings and operational settings</p>
+                    <p className="text-gray-600">Configure hospital branding, timings and operational settings</p>
+                  </div>
+                </div>
+
+                {/* Hospital Branding Section */}
+                <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+                  <h4 className="text-lg font-semibold mb-4">Hospital Branding</h4>
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Hospital Name
+                        </label>
+                        <Input 
+                          placeholder="Enter hospital name"
+                          value={hospitalSettings?.hospital_name || ""} 
+                          onChange={async (e) => {
+                            if (hospitalSettings) {
+                              await updateSettings({ hospital_name: e.target.value });
+                            }
+                          }}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Hospital Logo
+                        </label>
+                        <div className="flex items-center gap-4">
+                          {hospitalSettings?.logo_url && (
+                            <img 
+                              src={hospitalSettings.logo_url} 
+                              alt="Hospital Logo" 
+                              className="w-12 h-12 object-contain rounded border"
+                            />
+                          )}
+                          <Input 
+                            type="file" 
+                            accept="image/*"
+                            onChange={async (e) => {
+                              const file = e.target.files?.[0];
+                              if (file) {
+                                const fileExt = file.name.split('.').pop();
+                                const fileName = `logo-${Date.now()}.${fileExt}`;
+                                
+                                const { data, error } = await supabase.storage
+                                  .from('hospital-logos')
+                                  .upload(fileName, file);
+                                
+                                if (!error && data) {
+                                  const { data: { publicUrl } } = supabase.storage
+                                    .from('hospital-logos')
+                                    .getPublicUrl(fileName);
+                                  
+                                  await updateSettings({ logo_url: publicUrl });
+                                }
+                              }
+                            }}
+                          />
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
 
