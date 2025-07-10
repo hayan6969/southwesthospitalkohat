@@ -24,6 +24,7 @@ import DoctorConsultationRates from "@/pages/dashboard/doctor/DoctorConsultation
 import { DoctorProfileSettings } from "@/components/DoctorProfileSettings";
 import { DoctorAvailabilityManager } from "@/components/DoctorAvailabilityManager";
 import { StopAppointmentsButton } from "@/components/StopAppointmentsButton";
+import { useHospitalSettings } from "@/hooks/useHospitalSettings";
 
 const chartData = {
   appointments: [{ value: 8 }, { value: 12 }, { value: 15 }, { value: 10 }, { value: 18 }],
@@ -32,6 +33,7 @@ const chartData = {
 
 export default function DashboardDoctor() {
   const { profile, signOut } = useAuth();
+  const { settings: hospitalSettings } = useHospitalSettings();
   const { data: appointments, isLoading: appointmentsLoading } = useAppointments();
   const { data: stats, isLoading: statsLoading } = useStats();
   const { data: medicalRecords, isLoading: recordsLoading } = useMedicalRecords();
@@ -87,8 +89,16 @@ export default function DashboardDoctor() {
         <div className="flex justify-between items-center">
           <div>
             <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
-              <span className="inline-block w-3 h-10 bg-green-500 rounded-full" />
-              HIMS - Doctor Dashboard
+              {hospitalSettings?.logo_url ? (
+                <img 
+                  src={hospitalSettings.logo_url} 
+                  alt="Hospital Logo" 
+                  className="w-10 h-10 object-contain"
+                />
+              ) : (
+                <span className="inline-block w-3 h-10 bg-green-500 rounded-full" />
+              )}
+              {hospitalSettings?.hospital_name || "HIMS"}
             </h1>
             <p className="text-gray-600 mt-1">Hospital Information Management System</p>
           </div>

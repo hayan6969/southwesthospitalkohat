@@ -6,10 +6,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useInvoices, useStats } from "@/hooks/useDatabase";
 import { formatPkrCurrency } from "@/utils/currency";
+import { useHospitalSettings } from "@/hooks/useHospitalSettings";
 
 export default function DashboardFinance() {
   const { data: invoices, isLoading: invoicesLoading } = useInvoices();
   const { data: stats, isLoading: statsLoading } = useStats();
+  const { settings: hospitalSettings } = useHospitalSettings();
 
   const totalRevenue = invoices?.reduce((sum, invoice) => sum + (invoice.amount || 0), 0) || 0;
   const paidInvoices = invoices?.filter(inv => inv.status === 'paid') || [];
@@ -19,7 +21,18 @@ export default function DashboardFinance() {
     <AppLayout>
       <div className="space-y-8">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Finance Dashboard</h1>
+          <div className="flex items-center gap-3">
+            {hospitalSettings?.logo_url ? (
+              <img 
+                src={hospitalSettings.logo_url} 
+                alt="Hospital Logo" 
+                className="w-8 h-8 object-contain"
+              />
+            ) : (
+              <span className="inline-block w-2 h-8 bg-blue-500 rounded-full" />
+            )}
+            <h1 className="text-3xl font-bold text-gray-900">{hospitalSettings?.hospital_name || "HIMS"} - Finance</h1>
+          </div>
           <p className="text-gray-600 mt-1">Hospital financial overview and management</p>
         </div>
 

@@ -10,6 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { formatPkrCurrency } from "@/utils/currency";
 import { PharmacyInvoiceDetailsDialog } from "@/components/dialogs/PharmacyInvoiceDetailsDialog";
+import { useHospitalSettings } from "@/hooks/useHospitalSettings";
 
 export default function DashboardPharmacy() {
   const { data: stats, isLoading: statsLoading } = usePharmacyStats();
@@ -17,6 +18,7 @@ export default function DashboardPharmacy() {
   const { data: invoices, isLoading: invoicesLoading } = usePharmacyInvoices();
   const [selectedInvoice, setSelectedInvoice] = useState(null);
   const [invoiceDialogOpen, setInvoiceDialogOpen] = useState(false);
+  const { settings: hospitalSettings } = useHospitalSettings();
 
   const urgentExpiring = expiringMedicines?.filter(med => med.daysLeft <= 7) || [];
 
@@ -29,7 +31,18 @@ export default function DashboardPharmacy() {
     <AppLayout>
       <div className="space-y-8">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Pharmacy Dashboard</h1>
+          <div className="flex items-center gap-3">
+            {hospitalSettings?.logo_url ? (
+              <img 
+                src={hospitalSettings.logo_url} 
+                alt="Hospital Logo" 
+                className="w-8 h-8 object-contain"
+              />
+            ) : (
+              <span className="inline-block w-2 h-8 bg-blue-500 rounded-full" />
+            )}
+            <h1 className="text-3xl font-bold text-gray-900">{hospitalSettings?.hospital_name || "HIMS"} - Pharmacy</h1>
+          </div>
           <p className="text-gray-600 mt-1">Manage medicines, inventory, and sales</p>
         </div>
 

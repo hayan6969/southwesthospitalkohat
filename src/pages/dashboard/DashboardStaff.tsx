@@ -8,10 +8,12 @@ import { StaffCounter } from "@/components/staff/StaffCounter";
 import { StaffLab } from "@/components/staff/StaffLab";
 import { StaffOT } from "@/components/staff/StaffOT";
 import { Receipt, TestTube, Building2 } from "lucide-react";
+import { useHospitalSettings } from "@/hooks/useHospitalSettings";
 
 export default function DashboardStaff() {
   const [activeTab, setActiveTab] = useState("counter");
   const { profile, signOut } = useAuth();
+  const { settings: hospitalSettings } = useHospitalSettings();
 
   if (!profile) {
     return (
@@ -28,8 +30,16 @@ export default function DashboardStaff() {
         <div className="flex justify-between items-center">
           <div>
             <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-              <span className="inline-block w-2 h-8 bg-blue-500 rounded-full" />
-              HIMS - Staff Dashboard
+              {hospitalSettings?.logo_url ? (
+                <img 
+                  src={hospitalSettings.logo_url} 
+                  alt="Hospital Logo" 
+                  className="w-8 h-8 object-contain"
+                />
+              ) : (
+                <span className="inline-block w-2 h-8 bg-blue-500 rounded-full" />
+              )}
+              {hospitalSettings?.hospital_name || "HIMS"}
             </h1>
           </div>
           <div className="flex items-center gap-4">
