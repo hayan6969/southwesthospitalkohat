@@ -73,58 +73,86 @@ export default function DoctorSchedule() {
     fetchAppointmentsWithDetails();
   }, [appointments]);
 
-  // Auto-cancel overdue appointments every minute and set timer for first in queue
+  // Auto-cancel overdue appointments and manage payment timers
   useEffect(() => {
-    // Set payment due time for current first-in-queue patients on page load
-    const setInitialPaymentTimers = async () => {
+    // Check and set payment timers for patients who are now first in queue
+    const managePaymentTimers = async () => {
       try {
-        // Get all scheduled appointments that are first in queue with pending payments
-        const { data: firstInQueue, error } = await supabase
+        // Get all doctors with scheduled appointments today
+        const today = new Date().toISOString().split('T')[0];
+        
+        const { data: doctors, error: doctorsError } = await supabase
           .from('appointments')
-          .select(`
-            id,
-            doctor_id,
-            appointment_date,
-            payment_status,
-            booking_type,
-            payment_due_time,
-            queue_positions!inner(queue_position)
-          `)
+          .select('doctor_id')
           .eq('status', 'scheduled')
-          .eq('queue_positions.queue_position', 1)
-          .eq('payment_status', 'pending')
-          .eq('booking_type', 'online');
+          .gte('appointment_date', today)
+          .lt('appointment_date', new Date(new Date(today).getTime() + 24 * 60 * 60 * 1000).toISOString());
 
-        if (error) {
-          console.error('Error fetching first in queue appointments:', error);
+        if (doctorsError) {
+          console.error('Error fetching doctors:', doctorsError);
           return;
         }
 
-        // Set 3-minute timer for each
-        for (const appointment of firstInQueue || []) {
-          const paymentDueTime = new Date(Date.now() + 3 * 60 * 1000).toISOString();
-          
-          const { error: updateError } = await supabase
-            .from('appointments')
-            .update({ payment_due_time: paymentDueTime })
-            .eq('id', appointment.id);
+        const uniqueDoctorIds = [...new Set(doctors?.map(d => d.doctor_id) || [])];
 
-          if (!updateError) {
-            console.log(`Set initial 3-minute payment timer for appointment ${appointment.id}`);
+        // For each doctor, check who is first in queue and needs a payment timer
+        for (const doctorId of uniqueDoctorIds) {
+          const { data: firstInQueue, error } = await supabase
+            .from('appointments')
+            .select(`
+              id,
+              payment_status,
+              booking_type,
+              payment_due_time,
+              queue_positions!inner(queue_position)
+            `)
+            .eq('doctor_id', doctorId)
+            .eq('status', 'scheduled')
+            .gte('appointment_date', today)
+            .lt('appointment_date', new Date(new Date(today).getTime() + 24 * 60 * 60 * 1000).toISOString())
+            .order('queue_positions.queue_position', { ascending: true })
+            .limit(1);
+
+          if (error) {
+            console.error('Error finding first in queue:', error);
+            continue;
+          }
+
+          const firstAppointment = firstInQueue?.[0];
+          if (firstAppointment && 
+              firstAppointment.payment_status === 'pending' && 
+              firstAppointment.booking_type === 'online' && 
+              !firstAppointment.payment_due_time) {
+            
+            // Set payment due time to 3 minutes from now
+            const paymentDueTime = new Date(Date.now() + 3 * 60 * 1000).toISOString();
+            
+            const { error: updateError } = await supabase
+              .from('appointments')
+              .update({ payment_due_time: paymentDueTime })
+              .eq('id', firstAppointment.id);
+
+            if (!updateError) {
+              console.log(`Set 3-minute payment timer for first-in-queue appointment ${firstAppointment.id}`);
+            }
           }
         }
       } catch (error) {
-        console.error('Error setting initial payment timers:', error);
+        console.error('Error managing payment timers:', error);
       }
     };
 
-    setInitialPaymentTimers();
+    // Run initial timer management
+    managePaymentTimers();
 
     const interval = setInterval(async () => {
       try {
+        // Auto-cancel overdue appointments
         await supabase.rpc('auto_cancel_overdue_appointments');
+        // Manage payment timers for new first-in-queue patients
+        await managePaymentTimers();
       } catch (error) {
-        console.error('Error auto-canceling appointments:', error);
+        console.error('Error in scheduled tasks:', error);
       }
     }, 60000); // Run every minute
 

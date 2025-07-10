@@ -123,24 +123,29 @@ export const MyAppointments = () => {
             };
           }
 
-          // Count how many people are ahead in the queue
-          const { count: aheadCount, error: countError } = await supabase
+          // Count how many scheduled appointments are ahead in the queue
+          const { data: aheadAppointments, error: countError } = await supabase
             .from('queue_positions')
-            .select('*', { count: 'exact', head: true })
+            .select(`
+              appointment_id,
+              appointments!inner(status)
+            `)
             .eq('doctor_id', appointment.doctor_id)
             .eq('appointment_date', appointmentDate)
             .lt('queue_position', queueData.queue_position)
-            .in('status', ['waiting', 'in_progress']);
+            .eq('appointments.status', 'scheduled');
 
           if (countError) {
             console.error('Error counting ahead positions:', countError);
           }
 
+          const aheadCount = aheadAppointments?.length || 0;
+          
           // Estimate wait time (assuming 15 minutes per patient)
-          const estimatedMinutes = (aheadCount || 0) * 15;
+          const estimatedMinutes = aheadCount * 15;
           const estimatedWait = estimatedMinutes > 0 
             ? `${Math.floor(estimatedMinutes / 60)}h ${estimatedMinutes % 60}m`
-            : 'Your turn soon!';
+            : 'Your turn now!';
 
           return {
             ...appointment,
@@ -153,7 +158,7 @@ export const MyAppointments = () => {
             queue_position: {
               queue_position: queueData.queue_position,
               queue_status: queueData.status,
-              ahead_count: aheadCount || 0,
+              ahead_count: aheadCount,
               estimated_wait: estimatedWait
             }
           };
