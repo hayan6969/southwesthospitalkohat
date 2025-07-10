@@ -16,6 +16,7 @@ import { format } from "date-fns";
 import { Calendar as CalendarIcon, Clock, DollarSign, User, Check, ChevronsUpDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
+import { getCurrentPakistanTime } from "@/utils/timezone";
 
 interface Doctor {
   id: string;
@@ -120,9 +121,21 @@ export const AppointmentBooking = () => {
     
     const dayName = format(date, 'EEEE');
     const isWorkingDay = hospitalSettings.working_days.includes(dayName);
-    const isNotPast = date >= new Date();
     
-    return isWorkingDay && isNotPast;
+    // Get current time in Pakistani timezone
+    const currentPakistanTime = getCurrentPakistanTime();
+    
+    // Add booking lead time hours to current time
+    const minimumBookingTime = new Date(currentPakistanTime.getTime() + (hospitalSettings.booking_lead_time_hours * 60 * 60 * 1000));
+    
+    // Check if the selected date is after the minimum booking time
+    // For same-day bookings, we need to ensure there's enough lead time
+    const selectedDateTime = new Date(date);
+    selectedDateTime.setHours(currentPakistanTime.getHours(), currentPakistanTime.getMinutes(), 0, 0);
+    
+    const isAfterLeadTime = selectedDateTime >= minimumBookingTime;
+    
+    return isWorkingDay && isAfterLeadTime;
   };
 
   const handleBookAppointment = async () => {
