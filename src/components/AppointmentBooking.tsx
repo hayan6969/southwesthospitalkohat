@@ -122,20 +122,34 @@ export const AppointmentBooking = () => {
     const dayName = format(date, 'EEEE');
     const isWorkingDay = hospitalSettings.working_days.includes(dayName);
     
-    // Get current time in Pakistani timezone
+    // Basic check: must be today or future date and a working day
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const selectedDate = new Date(date);
+    selectedDate.setHours(0, 0, 0, 0);
+    const isNotPast = selectedDate >= today;
+    
+    if (!isWorkingDay || !isNotPast) {
+      return false;
+    }
+    
+    // For today's date, check if we're still within booking hours
     const currentPakistanTime = getCurrentPakistanTime();
+    const isToday = selectedDate.getTime() === today.getTime();
     
-    // Add booking lead time hours to current time
-    const minimumBookingTime = new Date(currentPakistanTime.getTime() + (hospitalSettings.booking_lead_time_hours * 60 * 60 * 1000));
+    if (isToday) {
+      // Parse closing time (format: "20:00")
+      const [closingHour, closingMinute] = hospitalSettings.closing_time.split(':').map(Number);
+      
+      // Create closing time for today
+      const closingTime = new Date(currentPakistanTime);
+      closingTime.setHours(closingHour, closingMinute - 10, 0, 0); // 10 minutes before closing
+      
+      // Check if current time is before closing time minus 10 minutes
+      return currentPakistanTime < closingTime;
+    }
     
-    // Check if the selected date is after the minimum booking time
-    // For same-day bookings, we need to ensure there's enough lead time
-    const selectedDateTime = new Date(date);
-    selectedDateTime.setHours(currentPakistanTime.getHours(), currentPakistanTime.getMinutes(), 0, 0);
-    
-    const isAfterLeadTime = selectedDateTime >= minimumBookingTime;
-    
-    return isWorkingDay && isAfterLeadTime;
+    return true; // Future dates are available (queue-based, no time restrictions)
   };
 
   const handleBookAppointment = async () => {
