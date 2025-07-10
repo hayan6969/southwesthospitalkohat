@@ -93,8 +93,7 @@ export default function DoctorSchedule() {
           .eq('status', 'scheduled')
           .eq('queue_positions.queue_position', 1)
           .eq('payment_status', 'pending')
-          .eq('booking_type', 'online')
-          .is('payment_due_time', null);
+          .eq('booking_type', 'online');
 
         if (error) {
           console.error('Error fetching first in queue appointments:', error);
