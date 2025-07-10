@@ -4,6 +4,7 @@ import { StatsCard } from "@/components/StatsCard";
 import { MiniChart } from "@/components/MiniChart";
 import { useAppointments, useStats, useMedicalRecords } from "@/hooks/useDatabase";
 import { usePatientNames, useDoctorNames, getPatientName, getDoctorName } from "@/hooks/useDisplayHelpers";
+import { useDoctorTodayAppointments } from "@/hooks/useDoctorData";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Calendar, Users, Clock, CheckCircle, Plus, User, LogOut, Stethoscope, FileText, CalendarDays, ClipboardList } from "lucide-react";
@@ -35,6 +36,7 @@ export default function DashboardDoctor() {
   const { data: medicalRecords, isLoading: recordsLoading } = useMedicalRecords();
   const { data: patientNames } = usePatientNames();
   const { data: doctorNames } = useDoctorNames();
+  const { data: todayAppointmentsData, isLoading: todayLoading } = useDoctorTodayAppointments();
   const [doctorProfile, setDoctorProfile] = useState<any>(null);
 
   // Fetch doctor profile including avatar
@@ -52,17 +54,23 @@ export default function DashboardDoctor() {
     fetchDoctorProfile();
   }, [profile?.id]);
 
-  // Filter today's appointments
+  // Filter today's appointments and calculate remaining
   const today = new Date().toISOString().split('T')[0];
   const todayAppointments = appointments?.filter(apt => 
-    apt.appointment_date.startsWith(today)
+    apt.appointment_date.startsWith(today) && apt.doctor_id === profile?.id
   ) || [];
 
+  const appointmentsLeft = todayAppointmentsData?.length || 0;
+
   const upcomingAppointments = appointments?.filter(apt => 
-    new Date(apt.appointment_date) > new Date() && apt.status === 'scheduled'
+    new Date(apt.appointment_date) > new Date() && apt.status === 'scheduled' && apt.doctor_id === profile?.id
   ).slice(0, 5) || [];
 
-  const recentRecords = medicalRecords?.slice(0, 5) || [];
+  // Filter medical records to only show records created by this doctor
+  const doctorRecords = medicalRecords?.filter(record => 
+    record.doctor_id === profile?.id
+  ) || [];
+  const recentRecords = doctorRecords.slice(0, 5);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -130,13 +138,12 @@ export default function DashboardDoctor() {
           </div>
 
           <Tabs defaultValue="overview" className="space-y-6">
-            <TabsList className="grid w-full grid-cols-8">
+            <TabsList className="grid w-full grid-cols-7">
               <TabsTrigger value="overview">Overview</TabsTrigger>
               <TabsTrigger value="appointments">Appointments</TabsTrigger>
               <TabsTrigger value="patients">Patient History</TabsTrigger>
               <TabsTrigger value="diagnoses">Diagnoses & Rx</TabsTrigger>
               <TabsTrigger value="notes">Patient Notes</TabsTrigger>
-              <TabsTrigger value="labs">Lab Reports</TabsTrigger>
               <TabsTrigger value="settings">Settings</TabsTrigger>
               <TabsTrigger value="analytics">Analytics</TabsTrigger>
             </TabsList>
@@ -166,10 +173,10 @@ export default function DashboardDoctor() {
                   loading={appointmentsLoading}
                 />
                 <StatsCard
-                  title="Next Appointment"
-                  value={upcomingAppointments[0] ? format(new Date(upcomingAppointments[0].appointment_date), 'h:mm a') : 'None'}
+                  title="Appointments Left Today"
+                  value={appointmentsLeft}
                   icon={<Clock className="w-5 h-5 text-orange-600" />}
-                  loading={appointmentsLoading}
+                  loading={todayLoading}
                 />
               </div>
 
@@ -291,14 +298,55 @@ export default function DashboardDoctor() {
 
             <TabsContent value="diagnoses">
               <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
-                <h3 className="text-lg font-semibold mb-4">Diagnoses & Prescriptions</h3>
-                <p className="text-gray-600 mb-4">Manage patient diagnoses and prescription workflows</p>
-                <div className="flex gap-3">
-                  <Button className="bg-green-600 hover:bg-green-700">
-                    <Plus className="w-4 h-4 mr-2" />
-                    New Diagnosis
-                  </Button>
-                  <Button variant="outline">View Prescriptions</Button>
+                <h3 className="text-lg font-semibold mb-4">Medical Records & Prescriptions</h3>
+                <p className="text-gray-600 mb-4">View and manage patient medical records and prescriptions</p>
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Patient</TableHead>
+                        <TableHead>Date</TableHead>
+                        <TableHead>Diagnosis</TableHead>
+                        <TableHead>Treatment</TableHead>
+                        <TableHead>Prescription</TableHead>
+                        <TableHead>Notes</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {recordsLoading ? (
+                        Array.from({ length: 5 }).map((_, i) => (
+                          <TableRow key={i}>
+                            {Array.from({ length: 6 }).map((_, j) => (
+                              <TableCell key={j}>
+                                <div className="h-4 bg-gray-200 rounded animate-pulse"></div>
+                              </TableCell>
+                            ))}
+                          </TableRow>
+                        ))
+                      ) : doctorRecords.length > 0 ? (
+                        doctorRecords.map((record) => (
+                          <TableRow key={record.id}>
+                            <TableCell className="font-medium">
+                              {getPatientName(record.patient_id, patientNames || [])}
+                            </TableCell>
+                            <TableCell>
+                              {record.visit_date ? format(new Date(record.visit_date), 'MMM d, yyyy') : 'N/A'}
+                            </TableCell>
+                            <TableCell>{record.diagnosis || 'No diagnosis'}</TableCell>
+                            <TableCell>{record.treatment || 'No treatment'}</TableCell>
+                            <TableCell className="max-w-xs truncate">{record.prescription || 'No prescription'}</TableCell>
+                            <TableCell className="max-w-xs truncate">{record.notes || 'No notes'}</TableCell>
+                          </TableRow>
+                        ))
+                      ) : (
+                        <TableRow>
+                          <TableCell colSpan={6} className="text-center text-gray-500 py-12">
+                            No medical records found
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
                 </div>
               </div>
             </TabsContent>
@@ -306,21 +354,6 @@ export default function DashboardDoctor() {
             <TabsContent value="notes">
               <DoctorNotes />
             </TabsContent>
-
-            <TabsContent value="labs">
-              <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
-                <h3 className="text-lg font-semibold mb-4">Lab Reports</h3>
-                <p className="text-gray-600 mb-4">Review and manage patient lab results</p>
-                <div className="flex gap-3">
-                  <Button className="bg-purple-600 hover:bg-purple-700">
-                    <Plus className="w-4 h-4 mr-2" />
-                    Request Lab Test
-                  </Button>
-                  <Button variant="outline">View All Reports</Button>
-                </div>
-              </div>
-            </TabsContent>
-
 
             <TabsContent value="settings">
               <DoctorProfileSettings />
