@@ -106,7 +106,7 @@ export default function DashboardAdmin() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header with Profile - Made more prominent */}
-      <header className="bg-white shadow-lg border-b-2 border-blue-200 px-6 py-6">
+      <header className="bg-white shadow-lg border-b-2 border-blue-200 px-6 py-3">
         <div className="flex justify-between items-center">
           <div>
             <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
