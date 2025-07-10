@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import { useAppointments, useUpdateAppointment } from "@/hooks/useDatabase";
 import { usePatientNames, getPatientName } from "@/hooks/useDisplayHelpers";
-import { Calendar, Clock, User, Edit3, CheckCircle, X, Hash, CreditCard, AlertTriangle, Filter, Search } from "lucide-react";
+import { Calendar, Clock, User, Edit3, CheckCircle, X, Hash, CreditCard, AlertTriangle, Filter, Search, CalendarIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -10,10 +10,14 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { PatientDetailsView } from "@/components/PatientDetailsView";
 import { supabase } from "@/integrations/supabase/client";
+import { cn } from "@/lib/utils";
+import { getCurrentPakistanTime } from "@/utils/timezone";
 
 export default function DoctorSchedule() {
   const { data: appointments, isLoading } = useAppointments();
@@ -23,7 +27,8 @@ export default function DoctorSchedule() {
   const [appointmentsWithQueue, setAppointmentsWithQueue] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   
-  // Filter states for past appointments
+  // Filter states
+  const [selectedDate, setSelectedDate] = useState<Date>(getCurrentPakistanTime()); // Default to today
   const [dateFilter, setDateFilter] = useState("");
   const [patientFilter, setPatientFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
@@ -107,8 +112,9 @@ export default function DoctorSchedule() {
   // Removed handleGenerateInvoice - only staff can generate invoices
 
   const upcomingAppointments = appointmentsWithQueue?.filter(apt => {
-    console.log('Filtering appointment:', apt.id, apt.status, apt.appointment_date, 'Current date:', new Date());
-    return apt.status === 'scheduled' && new Date(apt.appointment_date) >= new Date(new Date().toDateString()); // Compare dates only, not times
+    const selectedDateStr = format(selectedDate, 'yyyy-MM-dd');
+    const aptDateStr = format(new Date(apt.appointment_date), 'yyyy-MM-dd');
+    return apt.status === 'scheduled' && aptDateStr === selectedDateStr;
   }).sort((a, b) => {
     // Sort by queue position first, then by appointment time
     if (a.queue_position && b.queue_position) {
@@ -348,7 +354,38 @@ export default function DoctorSchedule() {
         </TabsList>
 
         <TabsContent value="upcoming">
-          {renderAppointmentTable(upcomingAppointments, "Upcoming Appointments")}
+          <div className="space-y-4">
+            {/* Date Filter for Upcoming Appointments */}
+            <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
+              <div className="flex items-center gap-4">
+                <Label className="text-sm font-medium">Select Date:</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "w-[240px] justify-start text-left font-normal",
+                        !selectedDate && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {selectedDate ? format(selectedDate, "PPP") : <span>Pick a date</span>}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <CalendarComponent
+                      mode="single"
+                      selected={selectedDate}
+                      onSelect={(date) => date && setSelectedDate(date)}
+                      initialFocus
+                      className="pointer-events-auto"
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+            </div>
+            {renderAppointmentTable(upcomingAppointments, `Appointments for ${format(selectedDate, "PPP")}`)}
+          </div>
         </TabsContent>
 
         <TabsContent value="past">
