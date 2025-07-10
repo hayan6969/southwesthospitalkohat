@@ -119,6 +119,8 @@ export default function DoctorSchedule() {
           }
 
           const firstAppointment = firstInQueue?.[0];
+          console.log(`Doctor ${doctorId} - First in queue:`, firstAppointment);
+          
           if (firstAppointment && 
               firstAppointment.payment_status === 'pending' && 
               firstAppointment.booking_type === 'online' && 
@@ -126,15 +128,20 @@ export default function DoctorSchedule() {
             
             // Set payment due time to 3 minutes from now
             const paymentDueTime = new Date(Date.now() + 3 * 60 * 1000).toISOString();
+            console.log(`Setting payment due time for appointment ${firstAppointment.id} to ${paymentDueTime}`);
             
             const { error: updateError } = await supabase
               .from('appointments')
               .update({ payment_due_time: paymentDueTime })
               .eq('id', firstAppointment.id);
 
-            if (!updateError) {
-              console.log(`Set 3-minute payment timer for first-in-queue appointment ${firstAppointment.id}`);
+            if (updateError) {
+              console.error('Error setting payment due time:', updateError);
+            } else {
+              console.log(`Successfully set 3-minute payment timer for first-in-queue appointment ${firstAppointment.id}`);
             }
+          } else if (firstAppointment) {
+            console.log(`First appointment ${firstAppointment.id} does not need timer - payment_status: ${firstAppointment.payment_status}, booking_type: ${firstAppointment.booking_type}, existing timer: ${firstAppointment.payment_due_time}`);
           }
         }
       } catch (error) {
@@ -147,8 +154,15 @@ export default function DoctorSchedule() {
 
     const interval = setInterval(async () => {
       try {
+        console.log('Running auto-cancellation check...');
         // Auto-cancel overdue appointments
-        await supabase.rpc('auto_cancel_overdue_appointments');
+        const { data: cancelResult, error: cancelError } = await supabase.rpc('auto_cancel_overdue_appointments');
+        if (cancelError) {
+          console.error('Error cancelling overdue appointments:', cancelError);
+        } else {
+          console.log('Auto-cancellation check completed');
+        }
+        
         // Manage payment timers for new first-in-queue patients
         await managePaymentTimers();
       } catch (error) {
