@@ -97,7 +97,19 @@ export default function DoctorSchedule() { // Fixed ordering syntax
 
         // For each doctor, check who is first in queue and needs a payment timer
         for (const doctorId of uniqueDoctorIds) {
-          // First get queue positions for this doctor today
+          // First check what scheduled appointments exist for this doctor today
+          console.log(`Checking scheduled appointments for doctor ${doctorId} on date ${today}`);
+          const { data: scheduledAppts, error: scheduledError } = await supabase
+            .from('appointments')
+            .select('id, patient_id, appointment_date, status, payment_status, booking_type')
+            .eq('doctor_id', doctorId)
+            .eq('status', 'scheduled')
+            .gte('appointment_date', today)
+            .lt('appointment_date', new Date(new Date(today).getTime() + 24 * 60 * 60 * 1000).toISOString());
+          
+          console.log(`Scheduled appointments found:`, scheduledAppts);
+
+          // Then get queue positions for this doctor today
           console.log(`Checking queue for doctor ${doctorId} on date ${today}`);
           const { data: queuePositions, error: queueError } = await supabase
             .from('queue_positions')
@@ -116,7 +128,17 @@ export default function DoctorSchedule() { // Fixed ordering syntax
           }
 
           const firstQueuePosition = queuePositions?.[0];
-          if (!firstQueuePosition) continue;
+          if (!firstQueuePosition) {
+            console.log(`No queue positions found for doctor ${doctorId}, but checking if we need to create them`);
+            
+            // If no queue positions but there are scheduled appointments, something is wrong
+            if (scheduledAppts && scheduledAppts.length > 0) {
+              console.log(`Doctor ${doctorId} has ${scheduledAppts.length} scheduled appointments but no queue positions - this is a data consistency issue`);
+            }
+            continue;
+          }
+
+          console.log(`First queue position appointment ID: ${firstQueuePosition.appointment_id}`);
 
           // Now get the appointment details for the first in queue
           const { data: firstInQueue, error } = await supabase
@@ -133,7 +155,16 @@ export default function DoctorSchedule() { // Fixed ordering syntax
 
           // Skip if no scheduled appointment found (could be completed/cancelled)
           if (!firstInQueue) {
-            console.log(`No scheduled appointment found for queue position, skipping doctor ${doctorId}`);
+            console.log(`No scheduled appointment found for queue position appointment ID ${firstQueuePosition.appointment_id}`);
+            
+            // Check if this appointment exists with a different status
+            const { data: anyStatusAppt } = await supabase
+              .from('appointments')
+              .select('id, status, payment_status, booking_type')
+              .eq('id', firstQueuePosition.appointment_id)
+              .maybeSingle();
+            
+            console.log(`Appointment ${firstQueuePosition.appointment_id} with any status:`, anyStatusAppt);
             continue;
           }
 
