@@ -116,82 +116,84 @@ export default function DoctorSchedule() { // Fixed ordering syntax
             .select('appointment_id, queue_position')
             .eq('doctor_id', doctorId)
             .eq('appointment_date', today)
-            .order('queue_position', { ascending: true })
-            .limit(1);
+            .order('queue_position', { ascending: true });
           
           console.log(`Queue positions found for doctor ${doctorId}:`, queuePositions);
 
           if (queueError) {
             console.error('Error finding queue positions:', queueError);
-            console.error('Query details:', { doctorId, today });
             continue;
           }
 
-          const firstQueuePosition = queuePositions?.[0];
-          if (!firstQueuePosition) {
-            console.log(`No queue positions found for doctor ${doctorId}, but checking if we need to create them`);
-            
-            // If no queue positions but there are scheduled appointments, something is wrong
-            if (scheduledAppts && scheduledAppts.length > 0) {
-              console.log(`Doctor ${doctorId} has ${scheduledAppts.length} scheduled appointments but no queue positions - this is a data consistency issue`);
-            }
-            continue;
-          }
-
-          console.log(`First queue position appointment ID: ${firstQueuePosition.appointment_id}`);
-
-          // Now get the appointment details for the first in queue
-          const { data: firstInQueue, error } = await supabase
-            .from('appointments')
-            .select('id, payment_status, booking_type, payment_due_time, status')
-            .eq('id', firstQueuePosition.appointment_id)
-            .eq('status', 'scheduled') // Only process scheduled appointments
-            .maybeSingle();
-
-          if (error) {
-            console.error('Error finding first in queue:', error);
-            continue;
-          }
-
-          // Skip if no scheduled appointment found (could be completed/cancelled)
-          if (!firstInQueue) {
-            console.log(`No scheduled appointment found for queue position appointment ID ${firstQueuePosition.appointment_id}`);
-            
-            // Check if this appointment exists with a different status
-            const { data: anyStatusAppt } = await supabase
-              .from('appointments')
-              .select('id, status, payment_status, booking_type')
-              .eq('id', firstQueuePosition.appointment_id)
-              .maybeSingle();
-            
-            console.log(`Appointment ${firstQueuePosition.appointment_id} with any status:`, anyStatusAppt);
-            continue;
-          }
-
-          const firstAppointment = firstInQueue;
-          console.log(`Doctor ${doctorId} - First in queue:`, firstAppointment);
+          // Find the first scheduled appointment in the queue
+          let firstScheduledAppointment = null;
           
-          if (firstAppointment && 
-              firstAppointment.payment_status === 'pending' && 
-              firstAppointment.booking_type === 'online' && 
-              !firstAppointment.payment_due_time) {
+          if (queuePositions && queuePositions.length > 0) {
+            for (const queuePos of queuePositions) {
+              console.log(`Checking queue position appointment ID: ${queuePos.appointment_id}`);
+              
+              const { data: queueAppt } = await supabase
+                .from('appointments')
+                .select('id, payment_status, booking_type, payment_due_time, status')
+                .eq('id', queuePos.appointment_id)
+                .eq('status', 'scheduled')
+                .maybeSingle();
+              
+              if (queueAppt) {
+                firstScheduledAppointment = queueAppt;
+                console.log(`Found first scheduled appointment in queue:`, firstScheduledAppointment);
+                break;
+              } else {
+                // Check what status this appointment has
+                const { data: anyStatusAppt } = await supabase
+                  .from('appointments')
+                  .select('id, status')
+                  .eq('id', queuePos.appointment_id)
+                  .maybeSingle();
+                
+                console.log(`Queue position ${queuePos.appointment_id} has status: ${anyStatusAppt?.status || 'not found'}`);
+              }
+            }
+          }
+          
+          // If no scheduled appointments found in queue but there are scheduled appointments,
+          // we need to create/update queue positions
+          if (!firstScheduledAppointment && scheduledAppts && scheduledAppts.length > 0) {
+            console.log(`No scheduled appointments in queue, but ${scheduledAppts.length} scheduled appointments exist. Queue needs to be rebuilt.`);
+            
+            // For now, let's just use the first scheduled appointment and log this issue
+            firstScheduledAppointment = scheduledAppts[0];
+            console.log(`Using first scheduled appointment as fallback:`, firstScheduledAppointment);
+          }
+          
+          if (!firstScheduledAppointment) {
+            console.log(`No scheduled appointments found for doctor ${doctorId}`);
+            continue;
+          }
+
+          console.log(`Doctor ${doctorId} - First scheduled appointment:`, firstScheduledAppointment);
+          
+          if (firstScheduledAppointment && 
+              firstScheduledAppointment.payment_status === 'pending' && 
+              firstScheduledAppointment.booking_type === 'online' && 
+              !firstScheduledAppointment.payment_due_time) {
             
             // Set payment due time to 3 minutes from now
             const paymentDueTime = new Date(Date.now() + 3 * 60 * 1000).toISOString();
-            console.log(`Setting payment due time for appointment ${firstAppointment.id} to ${paymentDueTime}`);
+            console.log(`Setting payment due time for appointment ${firstScheduledAppointment.id} to ${paymentDueTime}`);
             
             const { error: updateError } = await supabase
               .from('appointments')
               .update({ payment_due_time: paymentDueTime })
-              .eq('id', firstAppointment.id);
+              .eq('id', firstScheduledAppointment.id);
 
             if (updateError) {
               console.error('Error setting payment due time:', updateError);
             } else {
-              console.log(`Successfully set 3-minute payment timer for first-in-queue appointment ${firstAppointment.id}`);
+              console.log(`Successfully set 3-minute payment timer for first-in-queue appointment ${firstScheduledAppointment.id}`);
             }
-          } else if (firstAppointment) {
-            console.log(`First appointment ${firstAppointment.id} does not need timer - payment_status: ${firstAppointment.payment_status}, booking_type: ${firstAppointment.booking_type}, existing timer: ${firstAppointment.payment_due_time}`);
+          } else if (firstScheduledAppointment) {
+            console.log(`First appointment ${firstScheduledAppointment.id} does not need timer - payment_status: ${firstScheduledAppointment.payment_status}, booking_type: ${firstScheduledAppointment.booking_type}, existing timer: ${firstScheduledAppointment.payment_due_time}`);
           }
         }
       } catch (error) {
