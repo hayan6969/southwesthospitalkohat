@@ -539,13 +539,21 @@ export default function DashboardAdmin() {
                           <label className="block text-sm font-medium text-gray-700 mb-2">
                             Opening Time
                           </label>
-                          <Input type="time" defaultValue="08:00" />
+                          <Input 
+                            type="time" 
+                            value={settings?.opening_time || "08:00"} 
+                            onChange={(e) => setFormData(prev => ({ ...prev, opening_time: e.target.value }))}
+                          />
                         </div>
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-2">
                             Closing Time
                           </label>
-                          <Input type="time" defaultValue="20:00" />
+                          <Input 
+                            type="time" 
+                            value={settings?.closing_time || "20:00"} 
+                            onChange={(e) => setFormData(prev => ({ ...prev, closing_time: e.target.value }))}
+                          />
                         </div>
                       </div>
                       <div>
