@@ -311,33 +311,45 @@ export type Database = {
           created_at: string | null
           doctor_id: string
           id: string
+          invoice_id: string | null
           notes: string | null
           patient_id: string
+          price: number | null
+          result_file_url: string | null
           results: string | null
           status: Database["public"]["Enums"]["lab_status"] | null
           test_date: string | null
+          test_id: string | null
           test_name: string
         }
         Insert: {
           created_at?: string | null
           doctor_id: string
           id?: string
+          invoice_id?: string | null
           notes?: string | null
           patient_id: string
+          price?: number | null
+          result_file_url?: string | null
           results?: string | null
           status?: Database["public"]["Enums"]["lab_status"] | null
           test_date?: string | null
+          test_id?: string | null
           test_name: string
         }
         Update: {
           created_at?: string | null
           doctor_id?: string
           id?: string
+          invoice_id?: string | null
           notes?: string | null
           patient_id?: string
+          price?: number | null
+          result_file_url?: string | null
           results?: string | null
           status?: Database["public"]["Enums"]["lab_status"] | null
           test_date?: string | null
+          test_id?: string | null
           test_name?: string
         }
         Relationships: [
@@ -355,7 +367,50 @@ export type Database = {
             referencedRelation: "patients"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "lab_reports_test_id_fkey"
+            columns: ["test_id"]
+            isOneToOne: false
+            referencedRelation: "lab_tests"
+            referencedColumns: ["id"]
+          },
         ]
+      }
+      lab_tests: {
+        Row: {
+          category: string | null
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          normal_range: string | null
+          preparation_instructions: string | null
+          price: number
+          updated_at: string
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          normal_range?: string | null
+          preparation_instructions?: string | null
+          price: number
+          updated_at?: string
+        }
+        Update: {
+          category?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          normal_range?: string | null
+          preparation_instructions?: string | null
+          price?: number
+          updated_at?: string
+        }
+        Relationships: []
       }
       medical_records: {
         Row: {

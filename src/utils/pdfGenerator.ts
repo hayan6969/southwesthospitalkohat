@@ -2,6 +2,80 @@
 import jsPDF from 'jspdf';
 import { formatPkrCurrency } from './currency';
 
+// Lab invoice generation
+export const generateLabInvoicePDF = async (data: {
+  invoiceNumber: string;
+  patientName: string;
+  patientEmail: string;
+  tests: Array<{
+    name: string;
+    price: number;
+    description?: string;
+  }>;
+  totalAmount: number;
+  issueDate: string;
+}) => {
+  const doc = new jsPDF();
+
+  // Header
+  doc.setFontSize(20);
+  doc.setTextColor(40, 40, 40);
+  doc.text('Lab Test Invoice', 20, 20);
+
+  // Invoice details
+  doc.setFontSize(12);
+  doc.text(`Invoice Number: ${data.invoiceNumber}`, 20, 40);
+  doc.text(`Date: ${data.issueDate}`, 20, 50);
+  doc.text(`Patient: ${data.patientName}`, 20, 60);
+  doc.text(`Email: ${data.patientEmail}`, 20, 70);
+
+  // Tests table
+  let yPosition = 90;
+  doc.setFontSize(14);
+  doc.text('Lab Tests Ordered:', 20, yPosition);
+  yPosition += 10;
+
+  doc.setFontSize(10);
+  doc.text('Test Name', 20, yPosition);
+  doc.text('Price', 150, yPosition);
+  yPosition += 5;
+
+  // Draw line
+  doc.line(20, yPosition, 190, yPosition);
+  yPosition += 10;
+
+  // Test items
+  data.tests.forEach((test) => {
+    doc.text(test.name, 20, yPosition);
+    doc.text(`PKR ${test.price.toFixed(2)}`, 150, yPosition);
+    if (test.description) {
+      yPosition += 5;
+      doc.setFontSize(8);
+      doc.setTextColor(100, 100, 100);
+      doc.text(test.description, 25, yPosition);
+      doc.setFontSize(10);
+      doc.setTextColor(40, 40, 40);
+    }
+    yPosition += 10;
+  });
+
+  // Total
+  yPosition += 10;
+  doc.line(20, yPosition, 190, yPosition);
+  yPosition += 10;
+  doc.setFontSize(12);
+  doc.text(`Total Amount: PKR ${data.totalAmount.toFixed(2)}`, 20, yPosition);
+
+  // Footer
+  yPosition += 30;
+  doc.setFontSize(10);
+  doc.setTextColor(100, 100, 100);
+  doc.text('Please bring this invoice when coming for your lab tests.', 20, yPosition);
+  doc.text('Payment is due before test collection.', 20, yPosition + 10);
+
+  return doc.output('blob');
+};
+
 export const generateInvoicePDF = (invoice: any) => {
   // Create new PDF document
   const doc = new jsPDF();

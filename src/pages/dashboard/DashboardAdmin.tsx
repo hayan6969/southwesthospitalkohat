@@ -21,6 +21,7 @@ import { format } from "date-fns";
 import { formatPkrCurrency } from "@/utils/currency";
 import { useHospitalSettings } from "@/hooks/useHospitalSettings";
 import { supabase } from "@/integrations/supabase/client";
+import AdminLabs from "./admin/AdminLabs";
 
 
 const chartData = {
@@ -212,11 +213,12 @@ export default function DashboardAdmin() {
           </div>
 
           <Tabs defaultValue="overview" className="space-y-6">
-            <TabsList className="grid w-full grid-cols-6 h-auto gap-1">
+            <TabsList className="grid w-full grid-cols-7 h-auto gap-1">
               <TabsTrigger value="overview" className="whitespace-nowrap">Overview</TabsTrigger>
               <TabsTrigger value="analytics" className="whitespace-nowrap">Analytics</TabsTrigger>
               <TabsTrigger value="accounts" className="whitespace-nowrap">Account Management</TabsTrigger>
               <TabsTrigger value="pharmacy" className="whitespace-nowrap">Pharmacy</TabsTrigger>
+              <TabsTrigger value="lab" className="whitespace-nowrap">Lab</TabsTrigger>
               <TabsTrigger value="logs" className="whitespace-nowrap">System Logs</TabsTrigger>
               <TabsTrigger value="settings" className="whitespace-nowrap">Settings</TabsTrigger>
             </TabsList>
@@ -492,6 +494,10 @@ export default function DashboardAdmin() {
 
             <TabsContent value="pharmacy">
               <PharmacyOverview />
+            </TabsContent>
+
+            <TabsContent value="lab">
+              <AdminLabs />
             </TabsContent>
 
             <TabsContent value="logs">
