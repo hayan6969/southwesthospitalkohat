@@ -2,17 +2,50 @@
 import AppLayout from "@/layouts/AppLayout";
 import { useInvoices } from "@/hooks/useDatabase";
 import { useAuth } from "@/hooks/useAuth";
-import { DollarSign, FileText, Calendar, CreditCard } from "lucide-react";
+import { DollarSign, FileText, Calendar, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { format } from "date-fns";
 import { formatPkrAmount } from "@/utils/currency";
+import { generateInvoicePDF } from "@/utils/pdfGenerator";
+import { useToast } from "@/hooks/use-toast";
 
 export default function PatientInvoices() {
   const { profile } = useAuth();
   const { data: invoices, isLoading } = useInvoices();
+  const { toast } = useToast();
 
   const patientInvoices = invoices?.filter(invoice => invoice.patient_id === profile?.id) || [];
+
+  const handleDownloadInvoice = async (invoice: any) => {
+    try {
+      // Create invoice data for PDF generation
+      const invoiceData = {
+        ...invoice,
+        patient: {
+          users: {
+            first_name: profile?.first_name || '',
+            last_name: profile?.last_name || '',
+            email: profile?.email || ''
+          }
+        }
+      };
+
+      await generateInvoicePDF(invoiceData);
+      
+      toast({
+        title: "Success",
+        description: "Invoice PDF opened in new tab",
+      });
+    } catch (error) {
+      console.error('Error generating invoice PDF:', error);
+      toast({
+        title: "Error",
+        description: "Failed to generate invoice PDF",
+        variant: "destructive",
+      });
+    }
+  };
 
   return (
     <div className="space-y-8">
@@ -89,17 +122,15 @@ export default function PatientInvoices() {
                       </span>
                     </TableCell>
                     <TableCell>
-                      <div className="flex items-center gap-2">
-                        {invoice.status === 'pending' && (
-                          <Button size="sm" className="bg-green-600 hover:bg-green-700">
-                            <CreditCard className="w-3 h-3 mr-1" />
-                            Pay Now
-                          </Button>
-                        )}
-                        <Button size="sm" variant="outline">
-                          Download
-                        </Button>
-                      </div>
+                      <Button 
+                        size="sm" 
+                        variant="outline"
+                        onClick={() => handleDownloadInvoice(invoice)}
+                        className="flex items-center gap-2"
+                      >
+                        <Download className="w-3 h-3" />
+                        Download PDF
+                      </Button>
                     </TableCell>
                   </TableRow>
                 ))
