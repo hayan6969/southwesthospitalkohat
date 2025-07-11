@@ -117,32 +117,32 @@ export const generateLabInvoicePDF = async (data: {
 
   // Invoice details in a box
   doc.setDrawColor(0, 0, 0);
-  doc.rect(15, yPosition - 5, pageWidth - 30, 25);
+  doc.rect(15, yPosition - 5, pageWidth - 30, 35);
   
   doc.setFontSize(11);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(40, 40, 40);
   doc.text('Invoice Number:', 20, yPosition + 5);
   doc.setFont('helvetica', 'normal');
-  doc.text(data.invoiceNumber, 70, yPosition + 5);
+  doc.text(data.invoiceNumber, 80, yPosition + 5);
   
   doc.setFont('helvetica', 'bold');
   doc.text('Date:', 120, yPosition + 5);
   doc.setFont('helvetica', 'normal');
-  doc.text(data.issueDate, 140, yPosition + 5);
+  doc.text(data.issueDate, 145, yPosition + 5);
   
-  yPosition += 10;
+  yPosition += 12;
   doc.setFont('helvetica', 'bold');
   doc.text('Patient:', 20, yPosition + 5);
   doc.setFont('helvetica', 'normal');
-  doc.text(data.patientName, 50, yPosition + 5);
+  doc.text(data.patientName, 55, yPosition + 5);
   
   doc.setFont('helvetica', 'bold');
   doc.text('Email:', 120, yPosition + 5);
   doc.setFont('helvetica', 'normal');
-  doc.text(data.patientEmail, 140, yPosition + 5);
+  doc.text(data.patientEmail, 145, yPosition + 5);
 
-  yPosition += 25;
+  yPosition += 35;
 
   // Tests table
   const tableStartY = yPosition;
@@ -161,7 +161,7 @@ export const generateLabInvoicePDF = async (data: {
     xPosition += colWidths[index];
   });
   
-  yPosition += 12;
+  yPosition += 15; // More spacing before first item
   
   // Test items
   doc.setFont('helvetica', 'normal');
@@ -197,12 +197,13 @@ export const generateLabInvoicePDF = async (data: {
   yPosition += 15;
 
   // Total section
-  const totalsX = pageWidth - 60;
+  const totalsX = pageWidth - 80;
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(12);
-  doc.rect(totalsX - 30, yPosition - 5, 50, 12);
-  doc.text('Total Amount:', totalsX - 25, yPosition + 3);
-  doc.text(formatPkrAmount(data.totalAmount), totalsX, yPosition + 3);
+  doc.setTextColor(40, 40, 40);
+  doc.rect(totalsX - 40, yPosition - 5, 70, 15);
+  doc.text('Total Amount:', totalsX - 35, yPosition + 4);
+  doc.text(formatPkrAmount(data.totalAmount), totalsX + 10, yPosition + 4);
 
   // Footer
   yPosition += 30;
@@ -225,34 +226,34 @@ export const generateInvoicePDF = async (invoice: any) => {
 
   // Invoice details in a box
   doc.setDrawColor(0, 0, 0);
-  doc.rect(15, yPosition - 5, pageWidth - 30, 25);
+  doc.rect(15, yPosition - 5, pageWidth - 30, 35);
   
   doc.setFontSize(11);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(40, 40, 40);
   doc.text('Invoice Number:', 20, yPosition + 5);
   doc.setFont('helvetica', 'normal');
-  doc.text(invoice.invoice_number, 70, yPosition + 5);
+  doc.text(invoice.invoice_number, 80, yPosition + 5);
   
   doc.setFont('helvetica', 'bold');
   doc.text('Date:', 120, yPosition + 5);
   doc.setFont('helvetica', 'normal');
-  doc.text(new Date(invoice.created_at).toLocaleDateString(), 140, yPosition + 5);
+  doc.text(new Date(invoice.created_at).toLocaleDateString(), 145, yPosition + 5);
   
-  yPosition += 10;
+  yPosition += 12;
   doc.setFont('helvetica', 'bold');
   doc.text('Status:', 20, yPosition + 5);
   doc.setFont('helvetica', 'normal');
-  doc.text(invoice.status, 50, yPosition + 5);
+  doc.text(invoice.status, 55, yPosition + 5);
   
   if (invoice.due_date) {
     doc.setFont('helvetica', 'bold');
     doc.text('Due Date:', 120, yPosition + 5);
     doc.setFont('helvetica', 'normal');
-    doc.text(new Date(invoice.due_date).toLocaleDateString(), 155, yPosition + 5);
+    doc.text(new Date(invoice.due_date).toLocaleDateString(), 165, yPosition + 5);
   }
 
-  yPosition += 25;
+  yPosition += 35;
 
   // Patient information section
   doc.setFontSize(12);
@@ -290,7 +291,7 @@ export const generateInvoicePDF = async (invoice: any) => {
     xPosition += colWidths[index];
   });
   
-  yPosition += 12;
+  yPosition += 15; // More spacing before first item
   
   // Service item
   doc.setFont('helvetica', 'normal');
@@ -315,13 +316,13 @@ export const generateInvoicePDF = async (invoice: any) => {
   yPosition += 15;
 
   // Total section
-  const totalsX = pageWidth - 60;
+  const totalsX = pageWidth - 80;
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(12);
   doc.setTextColor(40, 40, 40);
-  doc.rect(totalsX - 30, yPosition - 5, 50, 12);
-  doc.text('Total Amount:', totalsX - 25, yPosition + 3);
-  doc.text(formatPkrAmount(invoice.amount), totalsX, yPosition + 3);
+  doc.rect(totalsX - 40, yPosition - 5, 70, 15);
+  doc.text('Total Amount:', totalsX - 35, yPosition + 4);
+  doc.text(formatPkrAmount(invoice.amount), totalsX + 10, yPosition + 4);
 
   // Footer
   yPosition += 30;
@@ -360,32 +361,32 @@ export const generateOTPDF = async (data: {
 
   // Invoice details in a box
   doc.setDrawColor(0, 0, 0);
-  doc.rect(15, yPosition - 5, pageWidth - 30, 25);
+  doc.rect(15, yPosition - 5, pageWidth - 30, 35);
   
   doc.setFontSize(11);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(40, 40, 40);
   doc.text('Invoice Number:', 20, yPosition + 5);
   doc.setFont('helvetica', 'normal');
-  doc.text(data.invoiceNumber, 70, yPosition + 5);
+  doc.text(data.invoiceNumber, 80, yPosition + 5);
   
   doc.setFont('helvetica', 'bold');
   doc.text('Date:', 120, yPosition + 5);
   doc.setFont('helvetica', 'normal');
-  doc.text(data.date, 140, yPosition + 5);
+  doc.text(data.date, 145, yPosition + 5);
   
-  yPosition += 10;
+  yPosition += 12;
   doc.setFont('helvetica', 'bold');
   doc.text('Patient:', 20, yPosition + 5);
   doc.setFont('helvetica', 'normal');
-  doc.text(data.patientName, 55, yPosition + 5);
+  doc.text(data.patientName, 65, yPosition + 5);
   
   doc.setFont('helvetica', 'bold');
   doc.text('Doctor:', 120, yPosition + 5);
   doc.setFont('helvetica', 'normal');
-  doc.text(data.doctorName, 145, yPosition + 5);
+  doc.text(data.doctorName, 155, yPosition + 5);
 
-  yPosition += 25;
+  yPosition += 35;
 
   // Operation details section
   doc.setFontSize(12);
@@ -419,7 +420,7 @@ export const generateOTPDF = async (data: {
     xPosition += colWidths[index];
   });
   
-  yPosition += 12;
+  yPosition += 15; // More spacing before first item
   
   // Items
   doc.setFont('helvetica', 'normal');
@@ -460,13 +461,13 @@ export const generateOTPDF = async (data: {
   yPosition += 15;
 
   // Total section
-  const totalsX = pageWidth - 60;
+  const totalsX = pageWidth - 80;
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(12);
   doc.setTextColor(40, 40, 40);
-  doc.rect(totalsX - 30, yPosition - 5, 50, 12);
-  doc.text('Total Amount:', totalsX - 25, yPosition + 3);
-  doc.text(formatPkrAmount(data.totalAmount), totalsX, yPosition + 3);
+  doc.rect(totalsX - 40, yPosition - 5, 70, 15);
+  doc.text('Total Amount:', totalsX - 35, yPosition + 4);
+  doc.text(formatPkrAmount(data.totalAmount), totalsX + 10, yPosition + 4);
 
   // Footer
   yPosition += 30;

@@ -122,7 +122,7 @@ export const generatePharmacyInvoicePDF = async (invoiceData: PharmacyInvoiceDat
   
   // Invoice Details Box
   pdf.setDrawColor(0, 0, 0);
-  pdf.rect(15, yPosition - 5, pageWidth - 30, 25);
+  pdf.rect(15, yPosition - 5, pageWidth - 30, 35);
   
   // Invoice Number and Date
   pdf.setFontSize(11);
@@ -130,30 +130,30 @@ export const generatePharmacyInvoicePDF = async (invoiceData: PharmacyInvoiceDat
   pdf.setTextColor(40, 40, 40);
   pdf.text('Invoice Number:', 20, yPosition + 5);
   pdf.setFont('helvetica', 'normal');
-  pdf.text(invoiceData.invoice_number, 70, yPosition + 5);
+  pdf.text(invoiceData.invoice_number, 80, yPosition + 5);
   
   pdf.setFont('helvetica', 'bold');
   pdf.text('Date:', 120, yPosition + 5);
   pdf.setFont('helvetica', 'normal');
   const invoiceDate = new Date(invoiceData.created_at).toLocaleDateString();
-  pdf.text(invoiceDate, 140, yPosition + 5);
+  pdf.text(invoiceDate, 145, yPosition + 5);
   
   // Customer Info
-  yPosition += 10;
+  yPosition += 12;
   pdf.setFont('helvetica', 'bold');
   pdf.text('Customer:', 20, yPosition + 5);
   pdf.setFont('helvetica', 'normal');
   const customerName = invoiceData.customer_name || 'Walk-in Customer';
-  pdf.text(customerName, 55, yPosition + 5);
+  pdf.text(customerName, 70, yPosition + 5);
   
   if (invoiceData.customer_phone) {
     pdf.setFont('helvetica', 'bold');
     pdf.text('Phone:', 120, yPosition + 5);
     pdf.setFont('helvetica', 'normal');
-    pdf.text(invoiceData.customer_phone, 145, yPosition + 5);
+    pdf.text(invoiceData.customer_phone, 155, yPosition + 5);
   }
   
-  yPosition += 25;
+  yPosition += 35;
   
   // Items Table Header
   const tableStartY = yPosition;
@@ -172,7 +172,7 @@ export const generatePharmacyInvoicePDF = async (invoiceData: PharmacyInvoiceDat
     xPosition += colWidths[index];
   });
   
-  yPosition += 12;
+  yPosition += 15; // More spacing before first item
   
   // Items
   pdf.setFont('helvetica', 'normal');
@@ -238,9 +238,9 @@ export const generatePharmacyInvoicePDF = async (invoiceData: PharmacyInvoiceDat
   pdf.setFont('helvetica', 'bold');
   pdf.setFontSize(12);
   pdf.setTextColor(40, 40, 40);
-  pdf.rect(totalsX - 30, yPosition - 5, 50, 12);
-  pdf.text('Total:', totalsX - 25, yPosition + 3);
-  pdf.text(formatPkrCurrency(invoiceData.final_amount), totalsX, yPosition + 3);
+  pdf.rect(totalsX - 40, yPosition - 5, 70, 15);
+  pdf.text('Total:', totalsX - 35, yPosition + 4);
+  pdf.text(formatPkrCurrency(invoiceData.final_amount), totalsX + 10, yPosition + 4);
   
   yPosition += 25;
   
