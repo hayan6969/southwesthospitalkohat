@@ -2,18 +2,21 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Building2, Calendar, CreditCard, Clock, Users, Activity, Plus, Edit, DollarSign } from "lucide-react";
+import { Building2, Calendar, CreditCard, Clock, Users, Activity, Plus, Edit, DollarSign, Search, Check, X, Download } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Textarea } from "@/components/ui/textarea";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { formatPkrAmount } from "@/utils/currency";
 import { OTScheduleDialog } from "@/components/dialogs/OTScheduleDialog";
 import { usePatientNames, useDoctorNames, getPatientName, getDoctorName } from "@/hooks/useDisplayHelpers";
+import { generateOTPDF } from "@/utils/pdfGenerator";
 
 interface OTOperation {
   id: string;
@@ -46,9 +49,12 @@ interface OTScheduleItem {
 
 export function StaffOT() {
   const [otSchedule, setOtSchedule] = useState<OTScheduleItem[]>([]);
+  const [filteredOtSchedule, setFilteredOtSchedule] = useState<OTScheduleItem[]>([]);
   const [operations, setOperations] = useState<OTOperation[]>([]);
-  const [selectedOperation, setSelectedOperation] = useState<string>("");
-  const [invoiceDialog, setInvoiceDialog] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+  const [completeDialog, setCompleteDialog] = useState(false);
+  const [completionNotes, setCompletionNotes] = useState("");
   const [selectedScheduleItem, setSelectedScheduleItem] = useState<OTScheduleItem | null>(null);
   const { toast } = useToast();
   const { data: patientNames } = usePatientNames();
@@ -57,6 +63,21 @@ export function StaffOT() {
   useEffect(() => {
     fetchOperations();
     fetchOTSchedules();
+    
+    // Set up real-time subscription
+    const channel = supabase
+      .channel('ot_schedules_changes')
+      .on('postgres_changes', 
+        { event: '*', schema: 'public', table: 'ot_schedules' },
+        () => {
+          fetchOTSchedules();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   const fetchOTSchedules = async () => {
@@ -73,14 +94,41 @@ export function StaffOT() {
 
       if (error) throw error;
       setOtSchedule(data || []);
+      filterOTSchedules(data || [], searchTerm, selectedDate);
     } catch (error) {
       console.error("Error fetching OT schedules:", error);
     }
   };
 
   useEffect(() => {
-    fetchOperations();
-  }, []);
+    filterOTSchedules(otSchedule, searchTerm, selectedDate);
+  }, [searchTerm, selectedDate, otSchedule]);
+
+  const filterOTSchedules = (schedules: OTScheduleItem[], search: string, date: string) => {
+    let filtered = schedules;
+
+    // Filter by date
+    if (date) {
+      filtered = filtered.filter(ot => ot.operation_date === date);
+    }
+
+    // Filter by search term
+    if (search) {
+      const searchLower = search.toLowerCase();
+      filtered = filtered.filter(ot => {
+        const patientName = getPatientName(ot.patient_id, patientNames || []).toLowerCase();
+        return (
+          patientName.includes(searchLower) ||
+          ot.patient_id.toLowerCase().includes(searchLower) ||
+          ot.doctor_name.toLowerCase().includes(searchLower) ||
+          ot.operation?.operation_name?.toLowerCase().includes(searchLower) ||
+          ot.room?.room_name?.toLowerCase().includes(searchLower)
+        );
+      });
+    }
+
+    setFilteredOtSchedule(filtered);
+  };
 
   const fetchOperations = async () => {
     try {
@@ -109,65 +157,94 @@ export function StaffOT() {
     }
   };
 
-  const handleGenerateOTInvoice = (scheduleItem: OTScheduleItem) => {
+  const handleCompleteOT = (scheduleItem: OTScheduleItem) => {
     setSelectedScheduleItem(scheduleItem);
-    setInvoiceDialog(true);
+    setCompleteDialog(true);
   };
 
-  const generateInvoice = async () => {
-    if (!selectedScheduleItem || !selectedOperation) {
-      toast({
-        title: "Error",
-        description: "Please select an operation type",
-        variant: "destructive",
-      });
-      return;
-    }
+  const completeOT = async () => {
+    if (!selectedScheduleItem) return;
 
-    const operation = operations.find(op => op.id === selectedOperation);
-    if (!operation) return;
-
-    const totalCost = operation.expenses.reduce((sum, exp) => sum + exp.cost, 0);
-    
     try {
-      // Update the schedule with completed status and generate invoice
-      const { error: updateError } = await supabase
+      const { error } = await supabase
         .from("ot_schedules")
-        .update({ status: 'completed' })
+        .update({ 
+          status: 'completed',
+          notes: completionNotes 
+        })
         .eq("id", selectedScheduleItem.id);
 
-      if (updateError) throw updateError;
+      if (error) throw error;
 
-      const invoiceNumber = `OT-${Date.now()}`;
-      const { error: invoiceError } = await supabase
-        .from("invoices")
-        .insert({
-          patient_id: selectedScheduleItem.patient_id,
-          amount: totalCost,
-          status: 'paid',
-          invoice_number: invoiceNumber,
-          description: `OT Operation Completed: ${operation.operation_name}`,
-          due_date: new Date().toISOString().split('T')[0]
-        });
-
-      if (invoiceError) throw invoiceError;
-
-      const patientName = getPatientName(selectedScheduleItem.patient_id, patientNames || []);
-      
       toast({
-        title: "Invoice Generated",
-        description: `OT Invoice for ${patientName} - ${operation.operation_name} (${formatPkrAmount(totalCost)})`,
+        title: "OT Completed",
+        description: "Operation completed successfully",
       });
 
-      setInvoiceDialog(false);
-      setSelectedOperation("");
+      setCompleteDialog(false);
+      setCompletionNotes("");
       setSelectedScheduleItem(null);
-      fetchOTSchedules(); // Refresh the list
     } catch (error) {
-      console.error("Error generating invoice:", error);
+      console.error("Error completing OT:", error);
       toast({
         title: "Error",
-        description: "Failed to generate invoice",
+        description: "Failed to complete operation",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleCancelOT = async (scheduleId: string) => {
+    try {
+      const { error } = await supabase
+        .from("ot_schedules")
+        .update({ status: 'cancelled' })
+        .eq("id", scheduleId);
+
+      if (error) throw error;
+
+      toast({
+        title: "OT Cancelled",
+        description: "Operation cancelled successfully",
+      });
+    } catch (error) {
+      console.error("Error cancelling OT:", error);
+      toast({
+        title: "Error",
+        description: "Failed to cancel operation",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDownloadInvoice = async (scheduleItem: OTScheduleItem) => {
+    try {
+      const patientName = getPatientName(scheduleItem.patient_id, patientNames || []);
+      
+      const invoiceData = {
+        invoiceNumber: `OT-${scheduleItem.id.slice(0, 8)}`,
+        patientName: patientName,
+        doctorName: scheduleItem.doctor_name,
+        procedure: scheduleItem.operation?.operation_name || 'Unknown',
+        room: scheduleItem.room?.room_name || 'Unknown',
+        date: new Date(scheduleItem.operation_date).toLocaleDateString(),
+        totalAmount: scheduleItem.total_cost,
+        items: [
+          {
+            description: `OT Operation: ${scheduleItem.operation?.operation_name || 'Unknown'}`,
+            quantity: 1,
+            unitPrice: scheduleItem.total_cost,
+            totalPrice: scheduleItem.total_cost
+          }
+        ]
+      };
+
+      generateOTPDF(invoiceData);
+    } catch (error) {
+      console.error("Error generating PDF:", error);
+      toast({
+        title: "Error",
+        description: "Failed to generate invoice PDF",
         variant: "destructive",
       });
     }
@@ -223,16 +300,31 @@ export function StaffOT() {
         </Card>
       </div>
 
-      <div className="flex flex-wrap gap-3">
+      <div className="flex flex-wrap gap-3 items-center">
         <OTScheduleDialog />
-        <Button variant="outline">
-          <CreditCard className="w-4 h-4 mr-2" />
-          Generate Invoice
-        </Button>
-        <Button variant="outline">
-          <Activity className="w-4 h-4 mr-2" />
-          OT Analytics
-        </Button>
+        
+        <div className="flex gap-2 items-center">
+          <div className="relative">
+            <Search className="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" />
+            <Input
+              placeholder="Search OTs (patient name, ID, doctor...)"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10 w-80"
+            />
+          </div>
+          
+          <div className="flex items-center gap-2">
+            <Label htmlFor="date-filter" className="text-sm font-medium">Date:</Label>
+            <Input
+              id="date-filter"
+              type="date"
+              value={selectedDate}
+              onChange={(e) => setSelectedDate(e.target.value)}
+              className="w-40"
+            />
+          </div>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 gap-6">
@@ -260,7 +352,7 @@ export function StaffOT() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {otSchedule.map((ot) => {
+                  {filteredOtSchedule.map((ot) => {
                     const patientName = getPatientName(ot.patient_id, patientNames || []);
                     
                     return (
@@ -287,19 +379,56 @@ export function StaffOT() {
                           </span>
                         </TableCell>
                         <TableCell>
-                          <div className="flex gap-2">
+                          <div className="flex gap-1">
+                            {ot.status !== 'completed' && ot.status !== 'cancelled' && (
+                              <Button 
+                                size="sm" 
+                                variant="outline"
+                                onClick={() => handleCompleteOT(ot)}
+                                className="text-green-600 hover:text-green-700"
+                              >
+                                <Check className="w-3 h-3 mr-1" />
+                                Complete
+                              </Button>
+                            )}
+                            
+                            {ot.status !== 'completed' && ot.status !== 'cancelled' && (
+                              <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                  <Button 
+                                    size="sm" 
+                                    variant="outline"
+                                    className="text-red-600 hover:text-red-700"
+                                  >
+                                    <X className="w-3 h-3 mr-1" />
+                                    Cancel
+                                  </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>Cancel OT Operation</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                      Are you sure you want to cancel this OT operation? This action cannot be undone.
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel>No, Keep</AlertDialogCancel>
+                                    <AlertDialogAction onClick={() => handleCancelOT(ot.id)}>
+                                      Yes, Cancel
+                                    </AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
+                            )}
+                            
                             <Button 
                               size="sm" 
                               variant="outline"
-                              onClick={() => handleGenerateOTInvoice(ot)}
-                              disabled={ot.status === 'completed'}
+                              onClick={() => handleDownloadInvoice(ot)}
+                              className="text-blue-600 hover:text-blue-700"
                             >
-                              <CreditCard className="w-3 h-3 mr-1" />
-                              {ot.status === 'completed' ? 'Completed' : 'Invoice'}
-                            </Button>
-                            <Button size="sm" variant="outline">
-                              <Edit className="w-3 h-3 mr-1" />
-                              Edit
+                              <Download className="w-3 h-3 mr-1" />
+                              Invoice
                             </Button>
                           </div>
                         </TableCell>
@@ -351,76 +480,40 @@ export function StaffOT() {
         </CardContent>
       </Card>
 
-      {/* Invoice Generation Dialog */}
-      <Dialog open={invoiceDialog} onOpenChange={setInvoiceDialog}>
+      {/* Complete OT Dialog */}
+      <Dialog open={completeDialog} onOpenChange={setCompleteDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Generate OT Invoice</DialogTitle>
+            <DialogTitle>Complete OT Operation</DialogTitle>
           </DialogHeader>
           {selectedScheduleItem && (
             <div className="space-y-4">
               <div className="p-4 bg-gray-50 rounded-lg">
-                <h4 className="font-semibold mb-2">Patient Details</h4>
+                <h4 className="font-semibold mb-2">Operation Details</h4>
                 <p><strong>Patient:</strong> {getPatientName(selectedScheduleItem.patient_id, patientNames || [])}</p>
                 <p><strong>Doctor:</strong> {selectedScheduleItem.doctor_name}</p>
                 <p><strong>Procedure:</strong> {selectedScheduleItem.operation?.operation_name || 'Unknown'}</p>
                 <p><strong>Room:</strong> {selectedScheduleItem.room?.room_name || 'Unknown'}</p>
-                <p><strong>Total Cost:</strong> {formatPkrAmount(selectedScheduleItem.total_cost)}</p>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="operation-select">Select Operation Type</Label>
-                <Select value={selectedOperation} onValueChange={setSelectedOperation}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Choose operation type for billing" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {operations.map((operation) => {
-                      const totalCost = operation.expenses.reduce((sum, exp) => sum + exp.cost, 0);
-                      return (
-                        <SelectItem key={operation.id} value={operation.id}>
-                          {operation.operation_name} - {formatPkrAmount(totalCost)}
-                        </SelectItem>
-                      );
-                    })}
-                  </SelectContent>
-                </Select>
+                <Label htmlFor="completion-notes">Completion Notes (Optional)</Label>
+                <Textarea
+                  id="completion-notes"
+                  placeholder="Add any notes about the operation completion..."
+                  value={completionNotes}
+                  onChange={(e) => setCompletionNotes(e.target.value)}
+                  rows={3}
+                />
               </div>
 
-              {selectedOperation && (
-                <div className="p-4 bg-blue-50 rounded-lg">
-                  <h4 className="font-semibold mb-2 flex items-center gap-2">
-                    <DollarSign className="w-4 h-4" />
-                    Invoice Breakdown
-                  </h4>
-                  {(() => {
-                    const operation = operations.find(op => op.id === selectedOperation);
-                    if (!operation) return null;
-                    const totalCost = operation.expenses.reduce((sum, exp) => sum + exp.cost, 0);
-                    return (
-                      <div className="space-y-2">
-                        {operation.expenses.map((expense) => (
-                          <div key={expense.id} className="flex justify-between text-sm">
-                            <span>{expense.expense_name}:</span>
-                            <span className="font-medium">{formatPkrAmount(expense.cost)}</span>
-                          </div>
-                        ))}
-                        <div className="flex justify-between pt-2 border-t font-bold">
-                          <span>Total Amount:</span>
-                          <span className="text-green-600">{formatPkrAmount(totalCost)}</span>
-                        </div>
-                      </div>
-                    );
-                  })()}
-                </div>
-              )}
-
               <div className="flex justify-end gap-2 pt-4">
-                <Button variant="outline" onClick={() => setInvoiceDialog(false)}>
+                <Button variant="outline" onClick={() => setCompleteDialog(false)}>
                   Cancel
                 </Button>
-                <Button onClick={generateInvoice} disabled={!selectedOperation}>
-                  Generate Invoice
+                <Button onClick={completeOT} className="bg-green-600 hover:bg-green-700">
+                  <Check className="w-4 h-4 mr-2" />
+                  Complete Operation
                 </Button>
               </div>
             </div>

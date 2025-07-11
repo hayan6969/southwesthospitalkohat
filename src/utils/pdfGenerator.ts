@@ -144,3 +144,101 @@ export const generateInvoicePDF = (invoice: any) => {
   const pdfUrl = URL.createObjectURL(pdfBlob);
   window.open(pdfUrl, '_blank');
 };
+
+export const generateOTPDF = (data: {
+  invoiceNumber: string;
+  patientName: string;
+  doctorName: string;
+  procedure: string;
+  room: string;
+  date: string;
+  totalAmount: number;
+  items: Array<{
+    description: string;
+    quantity: number;
+    unitPrice: number;
+    totalPrice: number;
+  }>;
+}) => {
+  // Create new PDF document
+  const doc = new jsPDF();
+  
+  // Set font
+  doc.setFont('helvetica');
+  
+  // Title
+  doc.setFontSize(20);
+  doc.setTextColor(40, 40, 40);
+  doc.text('OT OPERATION INVOICE', 20, 30);
+  
+  // Invoice details
+  doc.setFontSize(12);
+  doc.setTextColor(60, 60, 60);
+  
+  // Invoice number and date
+  doc.text(`Invoice #: ${data.invoiceNumber}`, 20, 50);
+  doc.text(`Date: ${data.date}`, 20, 60);
+  
+  // Patient information
+  doc.setFontSize(14);
+  doc.setTextColor(40, 40, 40);
+  doc.text('Patient Information:', 20, 80);
+  
+  doc.setFontSize(12);
+  doc.setTextColor(60, 60, 60);
+  doc.text(`Patient: ${data.patientName}`, 20, 95);
+  doc.text(`Doctor: ${data.doctorName}`, 20, 105);
+  doc.text(`Procedure: ${data.procedure}`, 20, 115);
+  doc.text(`OT Room: ${data.room}`, 20, 125);
+  
+  // Items table header
+  doc.setFontSize(14);
+  doc.setTextColor(40, 40, 40);
+  doc.text('Operation Details:', 20, 145);
+  
+  // Table headers
+  doc.setFontSize(10);
+  doc.setTextColor(60, 60, 60);
+  doc.text('Description', 20, 160);
+  doc.text('Qty', 120, 160);
+  doc.text('Unit Price', 140, 160);
+  doc.text('Total', 170, 160);
+  
+  // Draw line under headers
+  doc.line(20, 165, 190, 165);
+  
+  // Items
+  let yPosition = 175;
+  data.items.forEach((item) => {
+    doc.setFontSize(10);
+    doc.setTextColor(60, 60, 60);
+    doc.text(item.description, 20, yPosition);
+    doc.text(item.quantity.toString(), 120, yPosition);
+    doc.text(formatPkrCurrency(item.unitPrice), 140, yPosition);
+    doc.text(formatPkrCurrency(item.totalPrice), 170, yPosition);
+    yPosition += 10;
+  });
+  
+  // Total line
+  yPosition += 10;
+  doc.line(20, yPosition, 190, yPosition);
+  yPosition += 10;
+  
+  // Total amount
+  doc.setFontSize(14);
+  doc.setTextColor(40, 40, 40);
+  doc.text(`Total Amount: ${formatPkrCurrency(data.totalAmount)}`, 20, yPosition);
+  
+  // Footer
+  yPosition += 30;
+  doc.setFontSize(10);
+  doc.setTextColor(100, 100, 100);
+  doc.text('Thank you for choosing our medical services!', 20, yPosition);
+  doc.text('HIMS Medical Center - OT Department', 20, yPosition + 10);
+  doc.text('This invoice serves as proof of completed operation.', 20, yPosition + 20);
+  
+  // Open PDF in new tab
+  const pdfBlob = doc.output('blob');
+  const pdfUrl = URL.createObjectURL(pdfBlob);
+  window.open(pdfUrl, '_blank');
+};
