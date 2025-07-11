@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useCreatePatientWithProfile, useDoctors } from "@/hooks/useDatabase";
 import { useSearchPatientsWithNames, useDoctorNames } from "@/hooks/useDisplayHelpers";
 import { useAuditLogger } from "@/hooks/useAuditLogger";
@@ -13,14 +13,32 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { toast } from "sonner";
-import { Plus, Search, UserPlus, Check, ChevronsUpDown, Building2 } from "lucide-react";
+import { Plus, Search, UserPlus, Check, ChevronsUpDown, Building2, DollarSign } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { formatPkrAmount } from "@/utils/currency";
 import { cn } from "@/lib/utils";
+
+interface OTOperation {
+  id: string;
+  operation_name: string;
+  expenses: {
+    id: string;
+    expense_name: string;
+    cost: number;
+  }[];
+}
+
+interface OTRoom {
+  id: string;
+  room_name: string;
+  is_available: boolean;
+}
 
 export function OTScheduleDialog() {
   const [open, setOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("search");
   const [doctorOpen, setDoctorOpen] = useState(false);
+  const [operationOpen, setOperationOpen] = useState(false);
   
   // Search existing patient
   const [searchTerm, setSearchTerm] = useState("");
@@ -40,10 +58,16 @@ export function OTScheduleDialog() {
   
   // OT Schedule details
   const [doctorId, setDoctorId] = useState("");
+  const [doctorName, setDoctorName] = useState("External Doctor");
+  const [doctorExpense, setDoctorExpense] = useState<number>(0);
   const [operationDate, setOperationDate] = useState(new Date().toISOString().split('T')[0]);
-  const [operationType, setOperationType] = useState("");
+  const [operationId, setOperationId] = useState("");
+  const [roomId, setRoomId] = useState("");
   const [notes, setNotes] = useState("");
-  const [room, setRoom] = useState("");
+  
+  // Data
+  const [operations, setOperations] = useState<OTOperation[]>([]);
+  const [rooms, setRooms] = useState<OTRoom[]>([]);
   
   const createPatientWithProfile = useCreatePatientWithProfile();
   const { data: doctors } = useDoctors();
@@ -51,7 +75,56 @@ export function OTScheduleDialog() {
   const { data: searchResults } = useSearchPatientsWithNames(searchTerm);
   const { logAction } = useAuditLogger();
 
-  const selectedDoctorName = doctorNames?.find(d => d.id === doctorId);
+  useEffect(() => {
+    fetchOperations();
+    fetchRooms();
+  }, []);
+
+  const fetchOperations = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("ot_operations")
+        .select(`
+          id,
+          operation_name,
+          ot_expenses (
+            id,
+            expense_name,
+            cost
+          )
+        `);
+
+      if (error) throw error;
+      
+      const formattedOperations = data?.map(op => ({
+        ...op,
+        expenses: op.ot_expenses || []
+      })) || [];
+
+      setOperations(formattedOperations);
+    } catch (error) {
+      console.error("Error fetching operations:", error);
+    }
+  };
+
+  const fetchRooms = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("ot_rooms")
+        .select("*")
+        .eq("is_available", true)
+        .order("room_name", { ascending: true });
+
+      if (error) throw error;
+      setRooms(data || []);
+    } catch (error) {
+      console.error("Error fetching rooms:", error);
+    }
+  };
+
+  const selectedOperation = operations.find(op => op.id === operationId);
+  const operationCost = selectedOperation?.expenses.reduce((sum, exp) => sum + exp.cost, 0) || 0;
+  const totalCost = operationCost + doctorExpense;
 
   const resetForm = () => {
     setSearchTerm("");
@@ -67,18 +140,46 @@ export function OTScheduleDialog() {
       allergies: ""
     });
     setDoctorId("");
+    setDoctorName("External Doctor");
+    setDoctorExpense(0);
     setOperationDate(new Date().toISOString().split('T')[0]);
-    setOperationType("");
+    setOperationId("");
+    setRoomId("");
     setNotes("");
-    setRoom("");
     setActiveTab("search");
+  };
+
+  const handleDoctorChange = (selectedDoctorId: string) => {
+    if (selectedDoctorId === "external") {
+      setDoctorId("");
+      setDoctorName("External Doctor");
+    } else {
+      setDoctorId(selectedDoctorId);
+      const selectedDoctorName = doctorNames?.find(d => d.id === selectedDoctorId);
+      setDoctorName(`Dr. ${selectedDoctorName?.first_name} ${selectedDoctorName?.last_name}`);
+    }
+  };
+
+  const getNextQueuePosition = async (roomUuid: string, opDate: string) => {
+    try {
+      const { data, error } = await supabase.rpc('get_next_ot_queue_position', {
+        room_uuid: roomUuid,
+        operation_date_param: opDate
+      });
+      
+      if (error) throw error;
+      return data || 1;
+    } catch (error) {
+      console.error("Error getting queue position:", error);
+      return 1;
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!doctorId || !operationDate || !operationType.trim() || !room.trim()) {
-      toast.error("Please fill in all required fields");
+    if (!operationId || !roomId) {
+      toast.error("Please select operation type and room");
       return;
     }
 
@@ -120,22 +221,60 @@ export function OTScheduleDialog() {
     }
 
     try {
-      // For now, we'll store OT schedules in a local state or simple approach
-      // In a real implementation, you'd want a dedicated ot_schedules table
-      
+      // Get next queue position
+      const queuePosition = await getNextQueuePosition(roomId, operationDate);
+
+      // Create OT schedule
+      const { data: scheduleData, error: scheduleError } = await supabase
+        .from("ot_schedules")
+        .insert({
+          patient_id: patientId,
+          doctor_id: doctorId || null,
+          doctor_name: doctorName,
+          doctor_expense: doctorExpense,
+          operation_id: operationId,
+          room_id: roomId,
+          operation_date: operationDate,
+          queue_position: queuePosition,
+          notes: notes.trim() || null,
+          total_cost: totalCost,
+          status: 'scheduled'
+        })
+        .select()
+        .single();
+
+      if (scheduleError) throw scheduleError;
+
+      // Generate invoice
+      const invoiceNumber = `OT-${Date.now()}`;
+      const { data: invoiceData, error: invoiceError } = await supabase
+        .from("invoices")
+        .insert({
+          patient_id: patientId,
+          amount: totalCost,
+          status: 'pending',
+          invoice_number: invoiceNumber,
+          description: `OT Operation: ${selectedOperation?.operation_name} - ${doctorName}`,
+          due_date: new Date().toISOString().split('T')[0]
+        })
+        .select()
+        .single();
+
+      if (invoiceError) throw invoiceError;
+
       const patientName = selectedPatient 
         ? `${selectedPatient.profile?.first_name} ${selectedPatient.profile?.last_name}`
         : `${newPatient.first_name} ${newPatient.last_name}`;
       
-      const doctorName = `Dr. ${selectedDoctorName?.first_name} ${selectedDoctorName?.last_name}`;
+      const roomName = rooms.find(r => r.id === roomId)?.room_name || "Unknown Room";
       
       // Log the audit event
       await logAction(
         "Scheduled OT operation",
-        `OT scheduled for ${patientName} on ${operationDate} - ${operationType} with ${doctorName} in ${room}`
+        `OT scheduled for ${patientName} on ${operationDate} - ${selectedOperation?.operation_name} with ${doctorName} in ${roomName}. Total cost: ${formatPkrAmount(totalCost)}`
       );
       
-      toast.success("OT operation scheduled successfully");
+      toast.success(`OT operation scheduled successfully! Queue position: ${queuePosition}. Invoice generated: ${invoiceNumber}`);
       
       setOpen(false);
       resetForm();
@@ -145,8 +284,6 @@ export function OTScheduleDialog() {
     }
   };
 
-  const rooms = ["OT-1", "OT-2", "OT-3", "OT-4"];
-
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
@@ -155,7 +292,7 @@ export function OTScheduleDialog() {
           Schedule OT
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Building2 className="w-5 h-5" />
@@ -346,7 +483,7 @@ export function OTScheduleDialog() {
             <CardContent className="space-y-4">
               {/* Doctor Selection */}
               <div className="space-y-2">
-                <Label htmlFor="doctor">Doctor *</Label>
+                <Label htmlFor="doctor">Doctor</Label>
                 <Popover open={doctorOpen} onOpenChange={setDoctorOpen}>
                   <PopoverTrigger asChild>
                     <Button
@@ -355,12 +492,7 @@ export function OTScheduleDialog() {
                       aria-expanded={doctorOpen}
                       className="w-full justify-between"
                     >
-                      {doctorId
-                        ? (() => {
-                            const doctorName = doctorNames?.find(d => d.id === doctorId);
-                            return `Dr. ${doctorName?.first_name} ${doctorName?.last_name}`;
-                          })()
-                        : "Select doctor..."}
+                      {doctorName}
                       <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                     </Button>
                   </PopoverTrigger>
@@ -370,6 +502,21 @@ export function OTScheduleDialog() {
                       <CommandList>
                         <CommandEmpty>No doctor found.</CommandEmpty>
                         <CommandGroup>
+                          <CommandItem
+                            value="external"
+                            onSelect={() => {
+                              handleDoctorChange("external");
+                              setDoctorOpen(false);
+                            }}
+                          >
+                            <Check
+                              className={cn(
+                                "mr-2 h-4 w-4",
+                                doctorId === "" ? "opacity-100" : "opacity-0"
+                              )}
+                            />
+                            External Doctor
+                          </CommandItem>
                           {doctors?.map((doctor) => {
                             const doctorName = doctorNames?.find(d => d.id === doctor.id);
                             return (
@@ -377,7 +524,7 @@ export function OTScheduleDialog() {
                                 key={doctor.id}
                                 value={`${doctorName?.first_name} ${doctorName?.last_name} ${doctor.specialization}`}
                                 onSelect={() => {
-                                  setDoctorId(doctor.id);
+                                  handleDoctorChange(doctor.id);
                                   setDoctorOpen(false);
                                 }}
                               >
@@ -405,6 +552,19 @@ export function OTScheduleDialog() {
                 </Popover>
               </div>
 
+              {/* Doctor Expense */}
+              <div className="space-y-2">
+                <Label htmlFor="doctorExpense">Doctor Expense (PKR)</Label>
+                <Input
+                  id="doctorExpense"
+                  type="number"
+                  value={doctorExpense}
+                  onChange={(e) => setDoctorExpense(Number(e.target.value) || 0)}
+                  placeholder="0"
+                  min="0"
+                />
+              </div>
+
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="operationDate">Operation Date *</Label>
@@ -418,14 +578,14 @@ export function OTScheduleDialog() {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="room">Operating Room *</Label>
-                  <Select value={room} onValueChange={setRoom} required>
+                  <Select value={roomId} onValueChange={setRoomId} required>
                     <SelectTrigger>
                       <SelectValue placeholder="Select room" />
                     </SelectTrigger>
                     <SelectContent>
-                      {rooms.map((roomOption) => (
-                        <SelectItem key={roomOption} value={roomOption}>
-                          {roomOption}
+                      {rooms.map((room) => (
+                        <SelectItem key={room.id} value={room.id}>
+                          {room.room_name}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -433,15 +593,60 @@ export function OTScheduleDialog() {
                 </div>
               </div>
 
+              {/* Operation Selection */}
               <div className="space-y-2">
-                <Label htmlFor="operationType">Operation Type *</Label>
-                <Input
-                  id="operationType"
-                  value={operationType}
-                  onChange={(e) => setOperationType(e.target.value)}
-                  placeholder="e.g., Appendectomy, Gallbladder Surgery"
-                  required
-                />
+                <Label htmlFor="operation">Operation Type *</Label>
+                <Popover open={operationOpen} onOpenChange={setOperationOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      role="combobox"
+                      aria-expanded={operationOpen}
+                      className="w-full justify-between"
+                    >
+                      {operationId
+                        ? selectedOperation?.operation_name
+                        : "Select operation type..."}
+                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-full p-0">
+                    <Command>
+                      <CommandInput placeholder="Search operations..." />
+                      <CommandList>
+                        <CommandEmpty>No operation found.</CommandEmpty>
+                        <CommandGroup>
+                          {operations.map((operation) => {
+                            const totalOperationCost = operation.expenses.reduce((sum, exp) => sum + exp.cost, 0);
+                            return (
+                              <CommandItem
+                                key={operation.id}
+                                value={operation.operation_name}
+                                onSelect={() => {
+                                  setOperationId(operation.id);
+                                  setOperationOpen(false);
+                                }}
+                              >
+                                <Check
+                                  className={cn(
+                                    "mr-2 h-4 w-4",
+                                    operationId === operation.id ? "opacity-100" : "opacity-0"
+                                  )}
+                                />
+                                <div className="flex flex-col">
+                                  <div className="font-medium">{operation.operation_name}</div>
+                                  <div className="text-sm text-gray-500">
+                                    Cost: {formatPkrAmount(totalOperationCost)}
+                                  </div>
+                                </div>
+                              </CommandItem>
+                            );
+                          })}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
               </div>
 
               <div className="space-y-2">
@@ -453,6 +658,44 @@ export function OTScheduleDialog() {
                   placeholder="Additional notes or special instructions"
                 />
               </div>
+
+              {/* Cost Summary */}
+              {(operationId || doctorExpense > 0) && (
+                <Card className="bg-blue-50">
+                  <CardHeader>
+                    <CardTitle className="text-lg flex items-center gap-2">
+                      <DollarSign className="w-5 h-5" />
+                      Cost Summary
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-2">
+                    {selectedOperation && (
+                      <>
+                        <div className="flex justify-between text-sm">
+                          <span>Operation: {selectedOperation.operation_name}</span>
+                          <span className="font-medium">{formatPkrAmount(operationCost)}</span>
+                        </div>
+                        {selectedOperation.expenses.map((expense) => (
+                          <div key={expense.id} className="flex justify-between text-xs text-gray-600 ml-4">
+                            <span>• {expense.expense_name}</span>
+                            <span>{formatPkrAmount(expense.cost)}</span>
+                          </div>
+                        ))}
+                      </>
+                    )}
+                    {doctorExpense > 0 && (
+                      <div className="flex justify-between text-sm">
+                        <span>Doctor Expense: {doctorName}</span>
+                        <span className="font-medium">{formatPkrAmount(doctorExpense)}</span>
+                      </div>
+                    )}
+                    <div className="flex justify-between font-bold text-lg pt-2 border-t">
+                      <span>Total Amount:</span>
+                      <span className="text-green-600">{formatPkrAmount(totalCost)}</span>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
             </CardContent>
           </Card>
 

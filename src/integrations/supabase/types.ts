@@ -570,6 +570,110 @@ export type Database = {
         }
         Relationships: []
       }
+      ot_rooms: {
+        Row: {
+          created_at: string | null
+          id: string
+          is_available: boolean
+          room_name: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          is_available?: boolean
+          room_name: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          is_available?: boolean
+          room_name?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      ot_schedules: {
+        Row: {
+          created_at: string | null
+          doctor_expense: number | null
+          doctor_id: string | null
+          doctor_name: string | null
+          id: string
+          notes: string | null
+          operation_date: string
+          operation_id: string | null
+          patient_id: string
+          queue_position: number
+          room_id: string | null
+          status: string | null
+          total_cost: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          doctor_expense?: number | null
+          doctor_id?: string | null
+          doctor_name?: string | null
+          id?: string
+          notes?: string | null
+          operation_date: string
+          operation_id?: string | null
+          patient_id: string
+          queue_position: number
+          room_id?: string | null
+          status?: string | null
+          total_cost?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          doctor_expense?: number | null
+          doctor_id?: string | null
+          doctor_name?: string | null
+          id?: string
+          notes?: string | null
+          operation_date?: string
+          operation_id?: string | null
+          patient_id?: string
+          queue_position?: number
+          room_id?: string | null
+          status?: string | null
+          total_cost?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ot_schedules_doctor_id_fkey"
+            columns: ["doctor_id"]
+            isOneToOne: false
+            referencedRelation: "doctors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ot_schedules_operation_id_fkey"
+            columns: ["operation_id"]
+            isOneToOne: false
+            referencedRelation: "ot_operations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ot_schedules_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ot_schedules_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "ot_rooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       patients: {
         Row: {
           address: string | null
@@ -846,6 +950,10 @@ export type Database = {
       generate_patient_number: {
         Args: Record<PropertyKey, never>
         Returns: string
+      }
+      get_next_ot_queue_position: {
+        Args: { room_uuid: string; operation_date_param: string }
+        Returns: number
       }
       get_next_queue_position: {
         Args: { doctor_uuid: string; appointment_date_param: string }

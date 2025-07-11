@@ -8,10 +8,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { formatPkrAmount } from "@/utils/currency";
 import { OTScheduleDialog } from "@/components/dialogs/OTScheduleDialog";
+import { usePatientNames, useDoctorNames, getPatientName, getDoctorName } from "@/hooks/useDisplayHelpers";
 
 interface OTOperation {
   id: string;
@@ -24,42 +26,57 @@ interface OTOperation {
 }
 
 interface OTScheduleItem {
-  id: number;
-  patient: string;
-  doctor: string;
-  procedure: string;
-  time: string;
-  room: string;
+  id: string;
+  patient_id: string;
+  doctor_id: string | null;
+  doctor_name: string;
+  doctor_expense: number;
+  operation_date: string;
+  queue_position: number;
   status: string;
+  notes: string | null;
+  total_cost: number;
+  operation: {
+    operation_name: string;
+  } | null;
+  room: {
+    room_name: string;
+  } | null;
 }
 
 export function StaffOT() {
-  const [otSchedule] = useState<OTScheduleItem[]>([
-    {
-      id: 1,
-      patient: "John Doe",
-      doctor: "Dr. Smith",
-      procedure: "Appendectomy",
-      time: "10:00 AM",
-      room: "OT-1",
-      status: "Scheduled"
-    },
-    {
-      id: 2,
-      patient: "Jane Smith",
-      doctor: "Dr. Johnson",
-      procedure: "Gallbladder Surgery",
-      time: "2:00 PM",
-      room: "OT-2",
-      status: "In Progress"
-    }
-  ]);
-
+  const [otSchedule, setOtSchedule] = useState<OTScheduleItem[]>([]);
   const [operations, setOperations] = useState<OTOperation[]>([]);
   const [selectedOperation, setSelectedOperation] = useState<string>("");
   const [invoiceDialog, setInvoiceDialog] = useState(false);
   const [selectedScheduleItem, setSelectedScheduleItem] = useState<OTScheduleItem | null>(null);
   const { toast } = useToast();
+  const { data: patientNames } = usePatientNames();
+  const { data: doctorNames } = useDoctorNames();
+
+  useEffect(() => {
+    fetchOperations();
+    fetchOTSchedules();
+  }, []);
+
+  const fetchOTSchedules = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("ot_schedules")
+        .select(`
+          *,
+          operation:ot_operations(operation_name),
+          room:ot_rooms(room_name)
+        `)
+        .order("operation_date", { ascending: true })
+        .order("queue_position", { ascending: true });
+
+      if (error) throw error;
+      setOtSchedule(data || []);
+    } catch (error) {
+      console.error("Error fetching OT schedules:", error);
+    }
+  };
 
   useEffect(() => {
     fetchOperations();
@@ -97,7 +114,7 @@ export function StaffOT() {
     setInvoiceDialog(true);
   };
 
-  const generateInvoice = () => {
+  const generateInvoice = async () => {
     if (!selectedScheduleItem || !selectedOperation) {
       toast({
         title: "Error",
@@ -112,14 +129,48 @@ export function StaffOT() {
 
     const totalCost = operation.expenses.reduce((sum, exp) => sum + exp.cost, 0);
     
-    toast({
-      title: "Invoice Generated",
-      description: `OT Invoice for ${selectedScheduleItem.patient} - ${operation.operation_name} (${formatPkrAmount(totalCost)})`,
-    });
+    try {
+      // Update the schedule with completed status and generate invoice
+      const { error: updateError } = await supabase
+        .from("ot_schedules")
+        .update({ status: 'completed' })
+        .eq("id", selectedScheduleItem.id);
 
-    setInvoiceDialog(false);
-    setSelectedOperation("");
-    setSelectedScheduleItem(null);
+      if (updateError) throw updateError;
+
+      const invoiceNumber = `OT-${Date.now()}`;
+      const { error: invoiceError } = await supabase
+        .from("invoices")
+        .insert({
+          patient_id: selectedScheduleItem.patient_id,
+          amount: totalCost,
+          status: 'paid',
+          invoice_number: invoiceNumber,
+          description: `OT Operation Completed: ${operation.operation_name}`,
+          due_date: new Date().toISOString().split('T')[0]
+        });
+
+      if (invoiceError) throw invoiceError;
+
+      const patientName = getPatientName(selectedScheduleItem.patient_id, patientNames || []);
+      
+      toast({
+        title: "Invoice Generated",
+        description: `OT Invoice for ${patientName} - ${operation.operation_name} (${formatPkrAmount(totalCost)})`,
+      });
+
+      setInvoiceDialog(false);
+      setSelectedOperation("");
+      setSelectedScheduleItem(null);
+      fetchOTSchedules(); // Refresh the list
+    } catch (error) {
+      console.error("Error generating invoice:", error);
+      toast({
+        title: "Error",
+        description: "Failed to generate invoice",
+        variant: "destructive",
+      });
+    }
   };
 
   return (
@@ -143,7 +194,7 @@ export function StaffOT() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {otSchedule.filter(ot => ot.status === 'In Progress').length}
+              {otSchedule.filter(ot => ot.status === 'in_progress').length}
             </div>
             <p className="text-xs text-muted-foreground">Active operations</p>
           </CardContent>
@@ -197,50 +248,64 @@ export function StaffOT() {
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead>Queue #</TableHead>
                     <TableHead>Patient</TableHead>
                     <TableHead>Doctor</TableHead>
                     <TableHead>Procedure</TableHead>
-                    <TableHead>Time</TableHead>
+                    <TableHead>Date</TableHead>
                     <TableHead>Room</TableHead>
                     <TableHead>Status</TableHead>
+                    <TableHead>Total Cost</TableHead>
                     <TableHead>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {otSchedule.map((ot) => (
-                    <TableRow key={ot.id}>
-                      <TableCell className="font-medium">{ot.patient}</TableCell>
-                      <TableCell>{ot.doctor}</TableCell>
-                      <TableCell>{ot.procedure}</TableCell>
-                      <TableCell>{ot.time}</TableCell>
-                      <TableCell>{ot.room}</TableCell>
-                      <TableCell>
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                          ot.status === 'In Progress' ? 'bg-blue-100 text-blue-700' :
-                          ot.status === 'Scheduled' ? 'bg-yellow-100 text-yellow-700' :
-                          'bg-green-100 text-green-700'
-                        }`}>
-                          {ot.status}
-                        </span>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex gap-2">
-                          <Button 
-                            size="sm" 
-                            variant="outline"
-                            onClick={() => handleGenerateOTInvoice(ot)}
-                          >
-                            <CreditCard className="w-3 h-3 mr-1" />
-                            Invoice
-                          </Button>
-                          <Button size="sm" variant="outline">
-                            <Edit className="w-3 h-3 mr-1" />
-                            Edit
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                  {otSchedule.map((ot) => {
+                    const patientName = getPatientName(ot.patient_id, patientNames || []);
+                    
+                    return (
+                      <TableRow key={ot.id}>
+                        <TableCell className="font-medium">#{ot.queue_position}</TableCell>
+                        <TableCell className="font-medium">{patientName}</TableCell>
+                        <TableCell>{ot.doctor_name}</TableCell>
+                        <TableCell>{ot.operation?.operation_name || 'Unknown'}</TableCell>
+                        <TableCell>{new Date(ot.operation_date).toLocaleDateString()}</TableCell>
+                        <TableCell>{ot.room?.room_name || 'Unknown'}</TableCell>
+                        <TableCell>
+                          <Badge variant={
+                            ot.status === 'in_progress' ? 'default' :
+                            ot.status === 'scheduled' ? 'secondary' :
+                            ot.status === 'completed' ? 'outline' :
+                            'destructive'
+                          }>
+                            {ot.status.charAt(0).toUpperCase() + ot.status.slice(1)}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <span className="font-bold text-green-600">
+                            {formatPkrAmount(ot.total_cost)}
+                          </span>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex gap-2">
+                            <Button 
+                              size="sm" 
+                              variant="outline"
+                              onClick={() => handleGenerateOTInvoice(ot)}
+                              disabled={ot.status === 'completed'}
+                            >
+                              <CreditCard className="w-3 h-3 mr-1" />
+                              {ot.status === 'completed' ? 'Completed' : 'Invoice'}
+                            </Button>
+                            <Button size="sm" variant="outline">
+                              <Edit className="w-3 h-3 mr-1" />
+                              Edit
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
                 </TableBody>
               </Table>
             </div>
@@ -296,10 +361,11 @@ export function StaffOT() {
             <div className="space-y-4">
               <div className="p-4 bg-gray-50 rounded-lg">
                 <h4 className="font-semibold mb-2">Patient Details</h4>
-                <p><strong>Patient:</strong> {selectedScheduleItem.patient}</p>
-                <p><strong>Doctor:</strong> {selectedScheduleItem.doctor}</p>
-                <p><strong>Procedure:</strong> {selectedScheduleItem.procedure}</p>
-                <p><strong>Room:</strong> {selectedScheduleItem.room}</p>
+                <p><strong>Patient:</strong> {getPatientName(selectedScheduleItem.patient_id, patientNames || [])}</p>
+                <p><strong>Doctor:</strong> {selectedScheduleItem.doctor_name}</p>
+                <p><strong>Procedure:</strong> {selectedScheduleItem.operation?.operation_name || 'Unknown'}</p>
+                <p><strong>Room:</strong> {selectedScheduleItem.room?.room_name || 'Unknown'}</p>
+                <p><strong>Total Cost:</strong> {formatPkrAmount(selectedScheduleItem.total_cost)}</p>
               </div>
 
               <div className="space-y-2">
