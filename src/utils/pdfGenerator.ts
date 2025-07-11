@@ -197,13 +197,14 @@ export const generateLabInvoicePDF = async (data: {
   yPosition += 15;
 
   // Total section
-  const totalsX = pageWidth - 80;
+  yPosition += 15;
+  const totalsX = pageWidth - 85; // Position box from right edge
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(12);
   doc.setTextColor(40, 40, 40);
-  doc.rect(totalsX - 40, yPosition - 5, 70, 15);
-  doc.text('Total Amount:', totalsX - 35, yPosition + 4);
-  doc.text(formatPkrAmount(data.totalAmount), totalsX + 10, yPosition + 4);
+  doc.rect(totalsX, yPosition - 5, 80, 18); // Wider box for better fit
+  doc.text('Total Amount:', totalsX + 5, yPosition + 4); // Text starts inside box
+  doc.text(formatPkrAmount(data.totalAmount), totalsX + 5, yPosition + 12); // Amount below label
 
   // Footer
   yPosition += 30;
@@ -316,13 +317,14 @@ export const generateInvoicePDF = async (invoice: any) => {
   yPosition += 15;
 
   // Total section
-  const totalsX = pageWidth - 80;
+  yPosition += 15;
+  const totalsX = pageWidth - 85; // Position box from right edge
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(12);
   doc.setTextColor(40, 40, 40);
-  doc.rect(totalsX - 40, yPosition - 5, 70, 15);
-  doc.text('Total Amount:', totalsX - 35, yPosition + 4);
-  doc.text(formatPkrAmount(invoice.amount), totalsX + 10, yPosition + 4);
+  doc.rect(totalsX, yPosition - 5, 80, 18); // Wider box for better fit
+  doc.text('Total Amount:', totalsX + 5, yPosition + 4); // Text starts inside box
+  doc.text(formatPkrAmount(invoice.amount), totalsX + 5, yPosition + 12); // Amount below label
 
   // Footer
   yPosition += 30;
@@ -461,13 +463,14 @@ export const generateOTPDF = async (data: {
   yPosition += 15;
 
   // Total section
-  const totalsX = pageWidth - 80;
+  yPosition += 15;
+  const totalsX = pageWidth - 85; // Position box from right edge
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(12);
   doc.setTextColor(40, 40, 40);
-  doc.rect(totalsX - 40, yPosition - 5, 70, 15);
-  doc.text('Total Amount:', totalsX - 35, yPosition + 4);
-  doc.text(formatPkrAmount(data.totalAmount), totalsX + 10, yPosition + 4);
+  doc.rect(totalsX, yPosition - 5, 80, 18); // Wider box for better fit
+  doc.text('Total Amount:', totalsX + 5, yPosition + 4); // Text starts inside box
+  doc.text(formatPkrAmount(data.totalAmount), totalsX + 5, yPosition + 12); // Amount below label
 
   // Footer
   yPosition += 30;

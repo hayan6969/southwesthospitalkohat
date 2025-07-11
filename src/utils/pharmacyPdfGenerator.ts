@@ -235,12 +235,14 @@ export const generatePharmacyInvoicePDF = async (invoiceData: PharmacyInvoiceDat
   }
   
   // Final total with border
+  yPosition += 8;
+  const finalTotalX = pageWidth - 85; // Position box from right edge
   pdf.setFont('helvetica', 'bold');
   pdf.setFontSize(12);
   pdf.setTextColor(40, 40, 40);
-  pdf.rect(totalsX - 40, yPosition - 5, 70, 15);
-  pdf.text('Total:', totalsX - 35, yPosition + 4);
-  pdf.text(formatPkrCurrency(invoiceData.final_amount), totalsX + 10, yPosition + 4);
+  pdf.rect(finalTotalX, yPosition - 5, 80, 18); // Wider box for better fit
+  pdf.text('Total Amount:', finalTotalX + 5, yPosition + 4); // Text starts inside box
+  pdf.text(formatPkrCurrency(invoiceData.final_amount), finalTotalX + 5, yPosition + 12); // Amount below label
   
   yPosition += 25;
   
