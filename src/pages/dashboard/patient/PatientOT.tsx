@@ -82,22 +82,30 @@ export default function PatientOT() {
       const invoiceData = {
         invoiceNumber: `OT-${ot.id.slice(0, 8)}`,
         patientName: `${profile?.first_name || ''} ${profile?.last_name || ''}`.trim(),
-        doctorName: ot.doctor_name,
+        patientId: profile?.id || 'N/A',
+        patientPhone: profile?.email || 'N/A',
+        doctorName: ot.doctor_name || 'Unknown',
         procedure: ot.operation?.operation_name || 'Unknown',
         room: ot.room?.room_name || 'Unknown',
         date: new Date(ot.operation_date).toLocaleDateString(),
-        totalAmount: ot.total_cost,
+        totalAmount: ot.total_cost || 0,
         items: [
           {
-            description: `OT Operation: ${ot.operation?.operation_name || 'Unknown'}`,
+            description: `Doctor Charges (${ot.doctor_name || 'Unknown'})`,
             quantity: 1,
-            unitPrice: ot.total_cost,
-            totalPrice: ot.total_cost
+            unitPrice: ot.doctor_expense || 0,
+            totalPrice: ot.doctor_expense || 0
+          },
+          {
+            description: `OT Room Charges (${ot.room?.room_name || 'Unknown'})`,
+            quantity: 1,
+            unitPrice: (ot.total_cost || 0) - (ot.doctor_expense || 0),
+            totalPrice: (ot.total_cost || 0) - (ot.doctor_expense || 0)
           }
         ]
       };
 
-      generateOTPDF(invoiceData);
+      await generateOTPDF(invoiceData);
     } catch (error) {
       console.error("Error generating PDF:", error);
       toast({

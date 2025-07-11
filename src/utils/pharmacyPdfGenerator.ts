@@ -120,40 +120,52 @@ export const generatePharmacyInvoicePDF = async (invoiceData: PharmacyInvoiceDat
   let yPosition = await addHospitalHeader(pdf, 'PHARMACY INVOICE');
   yPosition += 10;
   
-  // Invoice Details Box
+  // Invoice Details Box - Comprehensive format
   pdf.setDrawColor(0, 0, 0);
-  pdf.rect(15, yPosition - 5, pageWidth - 30, 35);
+  pdf.rect(15, yPosition - 5, pageWidth - 30, 50); // Taller box for more info
   
   // Invoice Number and Date
   pdf.setFontSize(11);
   pdf.setFont('helvetica', 'bold');
   pdf.setTextColor(40, 40, 40);
+  
+  // First row
   pdf.text('Invoice Number:', 20, yPosition + 5);
   pdf.setFont('helvetica', 'normal');
-  pdf.text(invoiceData.invoice_number, 70, yPosition + 5); // Reduced spacing
+  pdf.text(invoiceData.invoice_number, 70, yPosition + 5);
   
   pdf.setFont('helvetica', 'bold');
   pdf.text('Date:', 120, yPosition + 5);
   pdf.setFont('helvetica', 'normal');
   const invoiceDate = new Date(invoiceData.created_at).toLocaleDateString();
-  pdf.text(invoiceDate, 135, yPosition + 5); // Reduced spacing
+  pdf.text(invoiceDate, 135, yPosition + 5);
   
-  // Customer Info
-  yPosition += 12;
+  // Second row
+  yPosition += 10;
   pdf.setFont('helvetica', 'bold');
-  pdf.text('Customer:', 20, yPosition + 5);
+  pdf.text('Customer Name:', 20, yPosition + 5);
   pdf.setFont('helvetica', 'normal');
   const customerName = invoiceData.customer_name || 'Walk-in Customer';
-  pdf.text(customerName, 60, yPosition + 5); // Reduced spacing
+  pdf.text(customerName, 75, yPosition + 5);
   
-  if (invoiceData.customer_phone) {
-    pdf.setFont('helvetica', 'bold');
-    pdf.text('Phone:', 120, yPosition + 5);
-    pdf.setFont('helvetica', 'normal');
-    pdf.text(invoiceData.customer_phone, 145, yPosition + 5); // Reduced spacing
-  }
+  pdf.setFont('helvetica', 'bold');
+  pdf.text('Customer ID:', 120, yPosition + 5);
+  pdf.setFont('helvetica', 'normal');
+  pdf.text('WALK-IN', 170, yPosition + 5);
   
-  yPosition += 35;
+  // Third row
+  yPosition += 10;
+  pdf.setFont('helvetica', 'bold');
+  pdf.text('Contact:', 20, yPosition + 5);
+  pdf.setFont('helvetica', 'normal');
+  pdf.text(invoiceData.customer_phone || 'N/A', 55, yPosition + 5);
+  
+  pdf.setFont('helvetica', 'bold');
+  pdf.text('Payment:', 120, yPosition + 5);
+  pdf.setFont('helvetica', 'normal');
+  pdf.text('Cash Sale', 155, yPosition + 5);
+  
+  yPosition += 50;
   
   // Items Table Header
   const tableStartY = yPosition;

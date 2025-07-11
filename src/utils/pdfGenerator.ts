@@ -100,6 +100,8 @@ export const generateLabInvoicePDF = async (data: {
   invoiceNumber: string;
   patientName: string;
   patientEmail: string;
+  patientId?: string;
+  patientPhone?: string;
   tests: Array<{
     name: string;
     price: number;
@@ -115,34 +117,49 @@ export const generateLabInvoicePDF = async (data: {
   let yPosition = await addHospitalHeader(doc, 'LAB TEST INVOICE');
   yPosition += 10;
 
-  // Invoice details in a box
+  // Invoice details in a comprehensive box
   doc.setDrawColor(0, 0, 0);
-  doc.rect(15, yPosition - 5, pageWidth - 30, 35);
+  doc.rect(15, yPosition - 5, pageWidth - 30, 50); // Taller box for more info
   
   doc.setFontSize(11);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(40, 40, 40);
+  
+  // First row
   doc.text('Invoice Number:', 20, yPosition + 5);
   doc.setFont('helvetica', 'normal');
-  doc.text(data.invoiceNumber, 70, yPosition + 5); // Reduced spacing
+  doc.text(data.invoiceNumber, 70, yPosition + 5);
   
   doc.setFont('helvetica', 'bold');
   doc.text('Date:', 120, yPosition + 5);
   doc.setFont('helvetica', 'normal');
-  doc.text(data.issueDate, 135, yPosition + 5); // Reduced spacing
+  doc.text(data.issueDate, 135, yPosition + 5);
   
-  yPosition += 12;
+  // Second row
+  yPosition += 10;
   doc.setFont('helvetica', 'bold');
-  doc.text('Patient:', 20, yPosition + 5);
+  doc.text('Patient Name:', 20, yPosition + 5);
   doc.setFont('helvetica', 'normal');
-  doc.text(data.patientName, 45, yPosition + 5); // Reduced spacing
+  doc.text(data.patientName, 70, yPosition + 5);
   
   doc.setFont('helvetica', 'bold');
-  doc.text('Email:', 120, yPosition + 5);
+  doc.text('Patient ID:', 120, yPosition + 5);
   doc.setFont('helvetica', 'normal');
-  doc.text(data.patientEmail, 135, yPosition + 5); // Reduced spacing
+  doc.text(data.patientId || 'N/A', 160, yPosition + 5);
+  
+  // Third row
+  yPosition += 10;
+  doc.setFont('helvetica', 'bold');
+  doc.text('Email:', 20, yPosition + 5);
+  doc.setFont('helvetica', 'normal');
+  doc.text(data.patientEmail, 45, yPosition + 5);
+  
+  doc.setFont('helvetica', 'bold');
+  doc.text('Contact:', 120, yPosition + 5);
+  doc.setFont('helvetica', 'normal');
+  doc.text(data.patientPhone || 'N/A', 155, yPosition + 5);
 
-  yPosition += 35;
+  yPosition += 50;
 
   // Tests table
   const tableStartY = yPosition;
@@ -225,36 +242,58 @@ export const generateInvoicePDF = async (invoice: any) => {
   let yPosition = await addHospitalHeader(doc, 'MEDICAL INVOICE');
   yPosition += 10;
 
-  // Invoice details in a box
+  // Invoice details in a comprehensive box
   doc.setDrawColor(0, 0, 0);
-  doc.rect(15, yPosition - 5, pageWidth - 30, 35);
+  doc.rect(15, yPosition - 5, pageWidth - 30, 50); // Taller box for more info
   
   doc.setFontSize(11);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(40, 40, 40);
+  
+  // First row
   doc.text('Invoice Number:', 20, yPosition + 5);
   doc.setFont('helvetica', 'normal');
-  doc.text(invoice.invoice_number, 70, yPosition + 5); // Reduced spacing
+  doc.text(invoice.invoice_number, 70, yPosition + 5);
   
   doc.setFont('helvetica', 'bold');
   doc.text('Date:', 120, yPosition + 5);
   doc.setFont('helvetica', 'normal');
-  doc.text(new Date(invoice.created_at).toLocaleDateString(), 135, yPosition + 5); // Reduced spacing
+  doc.text(new Date(invoice.created_at).toLocaleDateString(), 135, yPosition + 5);
   
-  yPosition += 12;
+  yPosition += 10;
+  const invoicePatientName = `${invoice.patient?.users?.first_name || ''} ${invoice.patient?.users?.last_name || ''}`.trim();
   doc.setFont('helvetica', 'bold');
-  doc.text('Status:', 20, yPosition + 5);
+  doc.text('Patient Name:', 20, yPosition + 5);
   doc.setFont('helvetica', 'normal');
-  doc.text(invoice.status, 45, yPosition + 5); // Reduced spacing
+  doc.text(invoicePatientName || 'Patient', 70, yPosition + 5);
   
+  doc.setFont('helvetica', 'bold');
+  doc.text('Patient ID:', 120, yPosition + 5);
+  doc.setFont('helvetica', 'normal');
+  doc.text(invoice.patient?.patient_number || 'N/A', 160, yPosition + 5);
+  
+  // Third row
+  yPosition += 10;
+  doc.setFont('helvetica', 'bold');
+  doc.text('Email:', 20, yPosition + 5);
+  doc.setFont('helvetica', 'normal');
+  doc.text(invoice.patient?.users?.email || 'N/A', 45, yPosition + 5);
+  
+  doc.setFont('helvetica', 'bold');
+  doc.text('Status:', 120, yPosition + 5);
+  doc.setFont('helvetica', 'normal');
+  doc.text(invoice.status, 155, yPosition + 5);
+  
+  // Fourth row (if due date exists)
   if (invoice.due_date) {
+    yPosition += 10;
     doc.setFont('helvetica', 'bold');
-    doc.text('Due Date:', 120, yPosition + 5);
+    doc.text('Due Date:', 20, yPosition + 5);
     doc.setFont('helvetica', 'normal');
-    doc.text(new Date(invoice.due_date).toLocaleDateString(), 155, yPosition + 5); // Reduced spacing
+    doc.text(new Date(invoice.due_date).toLocaleDateString(), 65, yPosition + 5);
   }
 
-  yPosition += 35;
+  yPosition += 50;
 
   // Patient information section
   doc.setFontSize(12);
@@ -264,8 +303,8 @@ export const generateInvoicePDF = async (invoice: any) => {
   
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(60, 60, 60);
-  const patientName = `${invoice.patient?.users?.first_name || ''} ${invoice.patient?.users?.last_name || ''}`.trim();
-  doc.text(patientName || 'Patient', 20, yPosition);
+  const billToPatientName = `${invoice.patient?.users?.first_name || ''} ${invoice.patient?.users?.last_name || ''}`.trim();
+  doc.text(billToPatientName || 'Patient', 20, yPosition);
   
   if (invoice.patient?.users?.email) {
     yPosition += 6;
@@ -342,6 +381,8 @@ export const generateInvoicePDF = async (invoice: any) => {
 export const generateOTPDF = async (data: {
   invoiceNumber: string;
   patientName: string;
+  patientId?: string;
+  patientPhone?: string;
   doctorName: string;
   procedure: string;
   room: string;
@@ -361,34 +402,61 @@ export const generateOTPDF = async (data: {
   let yPosition = await addHospitalHeader(doc, 'OT OPERATION INVOICE');
   yPosition += 10;
 
-  // Invoice details in a box
+  // Invoice details in a comprehensive box
   doc.setDrawColor(0, 0, 0);
-  doc.rect(15, yPosition - 5, pageWidth - 30, 35);
+  doc.rect(15, yPosition - 5, pageWidth - 30, 65); // Even taller for OT details
   
   doc.setFontSize(11);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(40, 40, 40);
+  
+  // First row
   doc.text('Invoice Number:', 20, yPosition + 5);
   doc.setFont('helvetica', 'normal');
-  doc.text(data.invoiceNumber, 70, yPosition + 5); // Reduced spacing
+  doc.text(data.invoiceNumber, 70, yPosition + 5);
   
   doc.setFont('helvetica', 'bold');
   doc.text('Date:', 120, yPosition + 5);
   doc.setFont('helvetica', 'normal');
-  doc.text(data.date, 135, yPosition + 5); // Reduced spacing
+  doc.text(data.date, 135, yPosition + 5);
   
-  yPosition += 12;
+  // Second row
+  yPosition += 10;
   doc.setFont('helvetica', 'bold');
-  doc.text('Patient:', 20, yPosition + 5);
+  doc.text('Patient Name:', 20, yPosition + 5);
   doc.setFont('helvetica', 'normal');
-  doc.text(data.patientName, 50, yPosition + 5); // Reduced spacing
+  doc.text(data.patientName, 70, yPosition + 5);
   
   doc.setFont('helvetica', 'bold');
-  doc.text('Doctor:', 120, yPosition + 5);
+  doc.text('Patient ID:', 120, yPosition + 5);
   doc.setFont('helvetica', 'normal');
-  doc.text(data.doctorName, 145, yPosition + 5); // Reduced spacing
+  doc.text(data.patientId || 'N/A', 160, yPosition + 5);
+  
+  // Third row
+  yPosition += 10;
+  doc.setFont('helvetica', 'bold');
+  doc.text('Doctor:', 20, yPosition + 5);
+  doc.setFont('helvetica', 'normal');
+  doc.text(data.doctorName, 50, yPosition + 5);
+  
+  doc.setFont('helvetica', 'bold');
+  doc.text('Contact:', 120, yPosition + 5);
+  doc.setFont('helvetica', 'normal');
+  doc.text(data.patientPhone || 'N/A', 155, yPosition + 5);
+  
+  // Fourth row
+  yPosition += 10;
+  doc.setFont('helvetica', 'bold');
+  doc.text('Procedure:', 20, yPosition + 5);
+  doc.setFont('helvetica', 'normal');
+  doc.text(data.procedure, 60, yPosition + 5);
+  
+  doc.setFont('helvetica', 'bold');
+  doc.text('OT Room:', 120, yPosition + 5);
+  doc.setFont('helvetica', 'normal');
+  doc.text(data.room, 155, yPosition + 5);
 
-  yPosition += 35;
+  yPosition += 65;
 
   // Operation details section
   doc.setFontSize(12);
@@ -404,9 +472,9 @@ export const generateOTPDF = async (data: {
   
   yPosition += 20;
 
-  // Items table
+  // Items table with detailed breakdown for OT
   const tableStartY = yPosition;
-  const colWidths = [80, 25, 40, 40];
+  const colWidths = [60, 25, 40, 40];
   const headers = ['Description', 'Qty', 'Unit Price', 'Total'];
   
   // Table header
