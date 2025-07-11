@@ -2,10 +2,13 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Building2, Calendar, Clock, User, FileText, DollarSign } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Building2, Calendar, Clock, User, FileText, DollarSign, Download } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { formatPkrAmount } from "@/utils/currency";
+import { generateOTPDF } from "@/utils/pdfGenerator";
+import { useToast } from "@/hooks/use-toast";
 
 interface OTSchedule {
   id: string;
@@ -28,6 +31,7 @@ export default function PatientOT() {
   const [otSchedules, setOtSchedules] = useState<OTSchedule[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const { profile } = useAuth();
+  const { toast } = useToast();
 
   useEffect(() => {
     if (profile?.id) {
@@ -70,6 +74,37 @@ export default function PatientOT() {
         return 'destructive';
       default:
         return 'secondary';
+    }
+  };
+
+  const handleDownloadInvoice = async (ot: OTSchedule) => {
+    try {
+      const invoiceData = {
+        invoiceNumber: `OT-${ot.id.slice(0, 8)}`,
+        patientName: `${profile?.first_name || ''} ${profile?.last_name || ''}`.trim(),
+        doctorName: ot.doctor_name,
+        procedure: ot.operation?.operation_name || 'Unknown',
+        room: ot.room?.room_name || 'Unknown',
+        date: new Date(ot.operation_date).toLocaleDateString(),
+        totalAmount: ot.total_cost,
+        items: [
+          {
+            description: `OT Operation: ${ot.operation?.operation_name || 'Unknown'}`,
+            quantity: 1,
+            unitPrice: ot.total_cost,
+            totalPrice: ot.total_cost
+          }
+        ]
+      };
+
+      generateOTPDF(invoiceData);
+    } catch (error) {
+      console.error("Error generating PDF:", error);
+      toast({
+        title: "Error",
+        description: "Failed to generate invoice PDF",
+        variant: "destructive",
+      });
     }
   };
 
@@ -162,6 +197,7 @@ export default function PatientOT() {
                     <TableHead>Status</TableHead>
                     <TableHead>Total Cost</TableHead>
                     <TableHead>Notes</TableHead>
+                    <TableHead>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -207,6 +243,17 @@ export default function PatientOT() {
                         ) : (
                           <span className="text-gray-400">No notes</span>
                         )}
+                      </TableCell>
+                      <TableCell>
+                        <Button 
+                          size="sm" 
+                          variant="outline"
+                          onClick={() => handleDownloadInvoice(ot)}
+                          className="text-blue-600 hover:text-blue-700"
+                        >
+                          <Download className="w-3 h-3 mr-1" />
+                          Invoice
+                        </Button>
                       </TableCell>
                     </TableRow>
                   ))}

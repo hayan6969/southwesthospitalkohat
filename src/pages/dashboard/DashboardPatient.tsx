@@ -149,7 +149,7 @@ export default function DashboardPatient() {
           </TabsTrigger>
           <TabsTrigger value="ot" className="flex items-center gap-2">
             <Building2 className="w-4 h-4" />
-            OT Operations
+            OT
           </TabsTrigger>
         </TabsList>
 
