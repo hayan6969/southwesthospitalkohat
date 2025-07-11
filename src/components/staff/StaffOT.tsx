@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { formatPkrAmount } from "@/utils/currency";
+import { OTScheduleDialog } from "@/components/dialogs/OTScheduleDialog";
 
 interface OTOperation {
   id: string;
@@ -172,10 +173,7 @@ export function StaffOT() {
       </div>
 
       <div className="flex flex-wrap gap-3">
-        <Button>
-          <Plus className="w-4 h-4 mr-2" />
-          Schedule OT
-        </Button>
+        <OTScheduleDialog />
         <Button variant="outline">
           <CreditCard className="w-4 h-4 mr-2" />
           Generate Invoice
