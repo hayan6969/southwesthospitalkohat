@@ -51,22 +51,44 @@ const addHospitalHeader = async (pdf: jsPDF, title: string) => {
   // Hospital logo (if available)
   if (settings.logo_url) {
     try {
-      // Add logo placeholder - in a real implementation, you'd load and add the actual image
-      pdf.setFontSize(10);
-      pdf.setTextColor(100, 100, 100);
-      pdf.text('[LOGO]', 20, yPosition);
+      // Create a new image element to load the logo
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      
+      await new Promise((resolve, reject) => {
+        img.onload = () => {
+          try {
+            // Add the logo to PDF (top-left corner)
+            pdf.addImage(img, 'JPEG', 20, yPosition - 5, 30, 20);
+            resolve(true);
+          } catch (error) {
+            console.error('Error adding logo to PDF:', error);
+            resolve(false);
+          }
+        };
+        img.onerror = () => {
+          console.error('Failed to load logo image');
+          resolve(false);
+        };
+        // Set a timeout to avoid hanging
+        setTimeout(() => {
+          console.warn('Logo loading timeout');
+          resolve(false);
+        }, 5000);
+        img.src = settings.logo_url;
+      });
     } catch (error) {
       console.error('Error loading logo:', error);
     }
   }
 
-  // Hospital name
+  // Hospital name (center-aligned)
   pdf.setFontSize(18);
   pdf.setFont('helvetica', 'bold');
   pdf.setTextColor(40, 40, 40);
-  pdf.text(`${settings.hospital_name} - Pharmacy`, pageWidth / 2, yPosition, { align: 'center' });
+  pdf.text(`${settings.hospital_name} - Pharmacy`, pageWidth / 2, yPosition + 8, { align: 'center' });
   
-  yPosition += 8;
+  yPosition += 16;
   
   // Hospital address
   pdf.setFontSize(10);
