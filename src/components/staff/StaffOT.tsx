@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { formatPkrCurrency } from "@/utils/currency";
+import { formatPkrAmount } from "@/utils/currency";
 
 interface OTOperation {
   id: string;
@@ -113,7 +113,7 @@ export function StaffOT() {
     
     toast({
       title: "Invoice Generated",
-      description: `OT Invoice for ${selectedScheduleItem.patient} - ${operation.operation_name} (${formatPkrCurrency(totalCost)})`,
+      description: `OT Invoice for ${selectedScheduleItem.patient} - ${operation.operation_name} (${formatPkrAmount(totalCost)})`,
     });
 
     setInvoiceDialog(false);
@@ -272,13 +272,13 @@ export function StaffOT() {
                       {operation.expenses.map((expense) => (
                         <div key={expense.id} className="flex justify-between">
                           <span>{expense.expense_name}:</span>
-                          <span className="font-medium">{formatPkrCurrency(expense.cost)}</span>
+                          <span className="font-medium">{formatPkrAmount(expense.cost)}</span>
                         </div>
                       ))}
                     </div>
                     <div className="flex items-center justify-between pt-2 border-t">
                       <span className="font-semibold">Total:</span>
-                      <span className="font-bold text-green-600">{formatPkrCurrency(totalCost)}</span>
+                      <span className="font-bold text-green-600">{formatPkrAmount(totalCost)}</span>
                     </div>
                   </div>
                 );
@@ -315,7 +315,7 @@ export function StaffOT() {
                       const totalCost = operation.expenses.reduce((sum, exp) => sum + exp.cost, 0);
                       return (
                         <SelectItem key={operation.id} value={operation.id}>
-                          {operation.operation_name} - {formatPkrCurrency(totalCost)}
+                          {operation.operation_name} - {formatPkrAmount(totalCost)}
                         </SelectItem>
                       );
                     })}
@@ -338,12 +338,12 @@ export function StaffOT() {
                         {operation.expenses.map((expense) => (
                           <div key={expense.id} className="flex justify-between text-sm">
                             <span>{expense.expense_name}:</span>
-                            <span className="font-medium">{formatPkrCurrency(expense.cost)}</span>
+                            <span className="font-medium">{formatPkrAmount(expense.cost)}</span>
                           </div>
                         ))}
                         <div className="flex justify-between pt-2 border-t font-bold">
                           <span>Total Amount:</span>
-                          <span className="text-green-600">{formatPkrCurrency(totalCost)}</span>
+                          <span className="text-green-600">{formatPkrAmount(totalCost)}</span>
                         </div>
                       </div>
                     );

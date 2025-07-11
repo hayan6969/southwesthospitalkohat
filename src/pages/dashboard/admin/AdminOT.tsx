@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Building2, Edit, Trash2, DollarSign, Activity } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { formatPkrCurrency } from "@/utils/currency";
+import { formatPkrAmount } from "@/utils/currency";
 import { OTOperationDialog } from "@/components/dialogs/OTOperationDialog";
 
 interface OTOperation {
@@ -160,7 +160,7 @@ export function AdminOT() {
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{formatPkrCurrency(averageCostPerOperation)}</div>
+            <div className="text-2xl font-bold">{formatPkrAmount(averageCostPerOperation)}</div>
             <p className="text-xs text-muted-foreground">Per operation</p>
           </CardContent>
         </Card>
@@ -208,7 +208,7 @@ export function AdminOT() {
                                   {expense.expense_name}
                                 </Badge>
                                 <span className="text-sm font-medium ml-2">
-                                  {formatPkrCurrency(expense.cost)}
+                                  {formatPkrAmount(expense.cost)}
                                 </span>
                               </div>
                             ))}
@@ -219,7 +219,7 @@ export function AdminOT() {
                         </TableCell>
                         <TableCell>
                           <span className="font-bold text-green-600">
-                            {formatPkrCurrency(totalCost)}
+                            {formatPkrAmount(totalCost)}
                           </span>
                         </TableCell>
                         <TableCell>

@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Plus, Trash2, DollarSign } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { formatPkrCurrency } from "@/utils/currency";
+import { formatPkrAmount } from "@/utils/currency";
 
 interface Expense {
   expense_name: string;
@@ -195,7 +195,7 @@ export function OTOperationDialog({ onOperationAdded }: OTOperationDialogProps) 
                   <span className="font-medium">Total Cost:</span>
                 </div>
                 <span className="text-lg font-bold text-green-600">
-                  {formatPkrCurrency(totalCost)}
+                  {formatPkrAmount(totalCost)}
                 </span>
               </div>
             )}
