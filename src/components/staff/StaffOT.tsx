@@ -35,6 +35,7 @@ interface OTScheduleItem {
   doctor_name: string;
   doctor_expense: number;
   operation_date: string;
+  operation_id: string | null;
   queue_position: number;
   status: string;
   notes: string | null;
@@ -221,30 +222,69 @@ export function StaffOT() {
     try {
       const patientName = getPatientName(scheduleItem.patient_id, patientNames || []);
       
+      // Fetch patient data to get patient number and contact
+      const { data: patientData } = await supabase
+        .from('patients')
+        .select(`
+          patient_number,
+          profiles!patients_id_fkey(email, phone)
+        `)
+        .eq('id', scheduleItem.patient_id)
+        .single();
+
+      // Fetch detailed OT expenses for this operation
+      const { data: expensesData } = await supabase
+        .from('ot_expenses')
+        .select('expense_name, cost')
+        .eq('operation_id', scheduleItem.operation_id || '');
+
+      const phoneNumber = patientData?.profiles?.phone || 
+        (patientData?.profiles?.email ? patientData.profiles.email.split('@')[0].replace(/[^0-9]/g, '') : 'N/A');
+
+      // Build items array with detailed breakdown
+      const items = [
+        {
+          description: `Doctor Charges (${scheduleItem.doctor_name || 'Unknown'})`,
+          quantity: 1,
+          unitPrice: scheduleItem.doctor_expense || 0,
+          totalPrice: scheduleItem.doctor_expense || 0
+        }
+      ];
+
+      // Add OT expenses if available
+      if (expensesData && expensesData.length > 0) {
+        expensesData.forEach(expense => {
+          items.push({
+            description: expense.expense_name,
+            quantity: 1,
+            unitPrice: expense.cost,
+            totalPrice: expense.cost
+          });
+        });
+      } else {
+        // Fallback to room charges
+        const roomCharges = (scheduleItem.total_cost || 0) - (scheduleItem.doctor_expense || 0);
+        if (roomCharges > 0) {
+          items.push({
+            description: `OT Room Charges (${scheduleItem.room?.room_name || 'Unknown'})`,
+            quantity: 1,
+            unitPrice: roomCharges,
+            totalPrice: roomCharges
+          });
+        }
+      }
+      
       const invoiceData = {
         invoiceNumber: `OT-${scheduleItem.id.slice(0, 8)}`,
         patientName: patientName,
-        patientId: 'PAT-' + scheduleItem.patient_id.slice(0, 8),
-        patientPhone: 'N/A', // Add patient contact if available
+        patientId: patientData?.patient_number || 'N/A',
+        patientPhone: phoneNumber,
         doctorName: scheduleItem.doctor_name || 'Unknown',
         procedure: scheduleItem.operation?.operation_name || 'Unknown',
         room: scheduleItem.room?.room_name || 'Unknown',
         date: new Date(scheduleItem.operation_date).toLocaleDateString(),
         totalAmount: scheduleItem.total_cost || 0,
-        items: [
-          {
-            description: `Doctor Charges (${scheduleItem.doctor_name || 'Unknown'})`,
-            quantity: 1,
-            unitPrice: scheduleItem.doctor_expense || 0,
-            totalPrice: scheduleItem.doctor_expense || 0
-          },
-          {
-            description: `OT Room Charges (${scheduleItem.room?.room_name || 'Unknown'})`,
-            quantity: 1,
-            unitPrice: (scheduleItem.total_cost || 0) - (scheduleItem.doctor_expense || 0),
-            totalPrice: (scheduleItem.total_cost || 0) - (scheduleItem.doctor_expense || 0)
-          }
-        ]
+        items: items
       };
 
       await generateOTPDF(invoiceData);

@@ -12,9 +12,11 @@ import { useToast } from "@/hooks/use-toast";
 
 interface OTSchedule {
   id: string;
+  patient_id: string;
   doctor_name: string;
   doctor_expense: number;
   operation_date: string;
+  operation_id: string | null;
   queue_position: number;
   status: string;
   notes: string | null;
@@ -79,30 +81,65 @@ export default function PatientOT() {
 
   const handleDownloadInvoice = async (ot: OTSchedule) => {
     try {
+      // Fetch patient data to get patient number
+      const { data: patientData } = await supabase
+        .from('patients')
+        .select('patient_number')
+        .eq('id', ot.patient_id)
+        .single();
+
+      // Fetch detailed OT expenses for this operation
+      const { data: expensesData } = await supabase
+        .from('ot_expenses')
+        .select('expense_name, cost')
+        .eq('operation_id', ot.operation_id || '');
+
+      const phoneNumber = profile?.email ? profile.email.split('@')[0].replace(/[^0-9]/g, '') : 'N/A';
+
+      // Build items array with detailed breakdown
+      const items = [
+        {
+          description: `Doctor Charges (${ot.doctor_name || 'Unknown'})`,
+          quantity: 1,
+          unitPrice: ot.doctor_expense || 0,
+          totalPrice: ot.doctor_expense || 0
+        }
+      ];
+
+      // Add OT expenses if available
+      if (expensesData && expensesData.length > 0) {
+        expensesData.forEach(expense => {
+          items.push({
+            description: expense.expense_name,
+            quantity: 1,
+            unitPrice: expense.cost,
+            totalPrice: expense.cost
+          });
+        });
+      } else {
+        // Fallback to room charges
+        const roomCharges = (ot.total_cost || 0) - (ot.doctor_expense || 0);
+        if (roomCharges > 0) {
+          items.push({
+            description: `OT Room Charges (${ot.room?.room_name || 'Unknown'})`,
+            quantity: 1,
+            unitPrice: roomCharges,
+            totalPrice: roomCharges
+          });
+        }
+      }
+      
       const invoiceData = {
         invoiceNumber: `OT-${ot.id.slice(0, 8)}`,
         patientName: `${profile?.first_name || ''} ${profile?.last_name || ''}`.trim(),
-        patientId: profile?.id || 'N/A',
-        patientPhone: profile?.email || 'N/A',
+        patientId: patientData?.patient_number || 'N/A',
+        patientPhone: phoneNumber,
         doctorName: ot.doctor_name || 'Unknown',
         procedure: ot.operation?.operation_name || 'Unknown',
         room: ot.room?.room_name || 'Unknown',
         date: new Date(ot.operation_date).toLocaleDateString(),
         totalAmount: ot.total_cost || 0,
-        items: [
-          {
-            description: `Doctor Charges (${ot.doctor_name || 'Unknown'})`,
-            quantity: 1,
-            unitPrice: ot.doctor_expense || 0,
-            totalPrice: ot.doctor_expense || 0
-          },
-          {
-            description: `OT Room Charges (${ot.room?.room_name || 'Unknown'})`,
-            quantity: 1,
-            unitPrice: (ot.total_cost || 0) - (ot.doctor_expense || 0),
-            totalPrice: (ot.total_cost || 0) - (ot.doctor_expense || 0)
-          }
-        ]
+        items: items
       };
 
       await generateOTPDF(invoiceData);

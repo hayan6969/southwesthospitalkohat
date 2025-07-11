@@ -158,7 +158,8 @@ export const generatePharmacyInvoicePDF = async (invoiceData: PharmacyInvoiceDat
   pdf.setFont('helvetica', 'bold');
   pdf.text('Contact:', 20, yPosition + 5);
   pdf.setFont('helvetica', 'normal');
-  pdf.text(invoiceData.customer_phone || 'N/A', 55, yPosition + 5);
+  const phoneNumber = invoiceData.customer_phone ? invoiceData.customer_phone.replace(/[^0-9]/g, '') : 'N/A';
+  pdf.text(phoneNumber, 60, yPosition + 5);
   
   pdf.setFont('helvetica', 'bold');
   pdf.text('Payment:', 120, yPosition + 5);

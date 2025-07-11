@@ -149,15 +149,11 @@ export const generateLabInvoicePDF = async (data: {
   
   // Third row
   yPosition += 10;
+  const phoneNumber = data.patientEmail ? data.patientEmail.split('@')[0].replace(/[^0-9]/g, '') : 'N/A';
   doc.setFont('helvetica', 'bold');
-  doc.text('Email:', 20, yPosition + 5);
+  doc.text('Contact:', 20, yPosition + 5);
   doc.setFont('helvetica', 'normal');
-  doc.text(data.patientEmail, 45, yPosition + 5);
-  
-  doc.setFont('helvetica', 'bold');
-  doc.text('Contact:', 120, yPosition + 5);
-  doc.setFont('helvetica', 'normal');
-  doc.text(data.patientPhone || 'N/A', 155, yPosition + 5);
+  doc.text(phoneNumber, 60, yPosition + 5);
 
   yPosition += 50;
 
@@ -274,10 +270,11 @@ export const generateInvoicePDF = async (invoice: any) => {
   
   // Third row
   yPosition += 10;
+  const phoneNumber = invoice.patient?.users?.email ? invoice.patient.users.email.split('@')[0].replace(/[^0-9]/g, '') : 'N/A';
   doc.setFont('helvetica', 'bold');
-  doc.text('Email:', 20, yPosition + 5);
+  doc.text('Contact:', 20, yPosition + 5);
   doc.setFont('helvetica', 'normal');
-  doc.text(invoice.patient?.users?.email || 'N/A', 45, yPosition + 5);
+  doc.text(phoneNumber, 60, yPosition + 5);
   
   doc.setFont('helvetica', 'bold');
   doc.text('Status:', 120, yPosition + 5);
@@ -294,24 +291,6 @@ export const generateInvoicePDF = async (invoice: any) => {
   }
 
   yPosition += 50;
-
-  // Patient information section
-  doc.setFontSize(12);
-  doc.setFont('helvetica', 'bold');
-  doc.text('BILL TO:', 20, yPosition);
-  yPosition += 8;
-  
-  doc.setFont('helvetica', 'normal');
-  doc.setTextColor(60, 60, 60);
-  const billToPatientName = `${invoice.patient?.users?.first_name || ''} ${invoice.patient?.users?.last_name || ''}`.trim();
-  doc.text(billToPatientName || 'Patient', 20, yPosition);
-  
-  if (invoice.patient?.users?.email) {
-    yPosition += 6;
-    doc.text(`Email: ${invoice.patient.users.email}`, 20, yPosition);
-  }
-
-  yPosition += 20;
 
   // Services table
   const tableStartY = yPosition;
@@ -434,15 +413,16 @@ export const generateOTPDF = async (data: {
   
   // Third row
   yPosition += 10;
+  const otPhoneNumber = data.patientPhone || 'N/A';
   doc.setFont('helvetica', 'bold');
-  doc.text('Doctor:', 20, yPosition + 5);
+  doc.text('Contact:', 20, yPosition + 5);
   doc.setFont('helvetica', 'normal');
-  doc.text(data.doctorName, 50, yPosition + 5);
+  doc.text(otPhoneNumber, 60, yPosition + 5);
   
   doc.setFont('helvetica', 'bold');
-  doc.text('Contact:', 120, yPosition + 5);
+  doc.text('Doctor:', 120, yPosition + 5);
   doc.setFont('helvetica', 'normal');
-  doc.text(data.patientPhone || 'N/A', 155, yPosition + 5);
+  doc.text(data.doctorName, 155, yPosition + 5);
   
   // Fourth row
   yPosition += 10;
@@ -457,20 +437,6 @@ export const generateOTPDF = async (data: {
   doc.text(data.room, 155, yPosition + 5);
 
   yPosition += 65;
-
-  // Operation details section
-  doc.setFontSize(12);
-  doc.setFont('helvetica', 'bold');
-  doc.text('OPERATION DETAILS:', 20, yPosition);
-  yPosition += 8;
-  
-  doc.setFont('helvetica', 'normal');
-  doc.setTextColor(60, 60, 60);
-  doc.text(`Procedure: ${data.procedure}`, 20, yPosition);
-  yPosition += 6;
-  doc.text(`OT Room: ${data.room}`, 20, yPosition);
-  
-  yPosition += 20;
 
   // Items table with detailed breakdown for OT
   const tableStartY = yPosition;
