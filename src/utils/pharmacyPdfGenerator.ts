@@ -130,13 +130,13 @@ export const generatePharmacyInvoicePDF = async (invoiceData: PharmacyInvoiceDat
   pdf.setTextColor(40, 40, 40);
   pdf.text('Invoice Number:', 20, yPosition + 5);
   pdf.setFont('helvetica', 'normal');
-  pdf.text(invoiceData.invoice_number, 80, yPosition + 5);
+  pdf.text(invoiceData.invoice_number, 70, yPosition + 5); // Reduced spacing
   
   pdf.setFont('helvetica', 'bold');
   pdf.text('Date:', 120, yPosition + 5);
   pdf.setFont('helvetica', 'normal');
   const invoiceDate = new Date(invoiceData.created_at).toLocaleDateString();
-  pdf.text(invoiceDate, 145, yPosition + 5);
+  pdf.text(invoiceDate, 135, yPosition + 5); // Reduced spacing
   
   // Customer Info
   yPosition += 12;
@@ -144,13 +144,13 @@ export const generatePharmacyInvoicePDF = async (invoiceData: PharmacyInvoiceDat
   pdf.text('Customer:', 20, yPosition + 5);
   pdf.setFont('helvetica', 'normal');
   const customerName = invoiceData.customer_name || 'Walk-in Customer';
-  pdf.text(customerName, 70, yPosition + 5);
+  pdf.text(customerName, 60, yPosition + 5); // Reduced spacing
   
   if (invoiceData.customer_phone) {
     pdf.setFont('helvetica', 'bold');
     pdf.text('Phone:', 120, yPosition + 5);
     pdf.setFont('helvetica', 'normal');
-    pdf.text(invoiceData.customer_phone, 155, yPosition + 5);
+    pdf.text(invoiceData.customer_phone, 145, yPosition + 5); // Reduced spacing
   }
   
   yPosition += 35;

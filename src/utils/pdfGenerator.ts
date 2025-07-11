@@ -124,23 +124,23 @@ export const generateLabInvoicePDF = async (data: {
   doc.setTextColor(40, 40, 40);
   doc.text('Invoice Number:', 20, yPosition + 5);
   doc.setFont('helvetica', 'normal');
-  doc.text(data.invoiceNumber, 80, yPosition + 5);
+  doc.text(data.invoiceNumber, 70, yPosition + 5); // Reduced spacing
   
   doc.setFont('helvetica', 'bold');
   doc.text('Date:', 120, yPosition + 5);
   doc.setFont('helvetica', 'normal');
-  doc.text(data.issueDate, 145, yPosition + 5);
+  doc.text(data.issueDate, 135, yPosition + 5); // Reduced spacing
   
   yPosition += 12;
   doc.setFont('helvetica', 'bold');
   doc.text('Patient:', 20, yPosition + 5);
   doc.setFont('helvetica', 'normal');
-  doc.text(data.patientName, 55, yPosition + 5);
+  doc.text(data.patientName, 45, yPosition + 5); // Reduced spacing
   
   doc.setFont('helvetica', 'bold');
   doc.text('Email:', 120, yPosition + 5);
   doc.setFont('helvetica', 'normal');
-  doc.text(data.patientEmail, 145, yPosition + 5);
+  doc.text(data.patientEmail, 135, yPosition + 5); // Reduced spacing
 
   yPosition += 35;
 
@@ -234,24 +234,24 @@ export const generateInvoicePDF = async (invoice: any) => {
   doc.setTextColor(40, 40, 40);
   doc.text('Invoice Number:', 20, yPosition + 5);
   doc.setFont('helvetica', 'normal');
-  doc.text(invoice.invoice_number, 80, yPosition + 5);
+  doc.text(invoice.invoice_number, 70, yPosition + 5); // Reduced spacing
   
   doc.setFont('helvetica', 'bold');
   doc.text('Date:', 120, yPosition + 5);
   doc.setFont('helvetica', 'normal');
-  doc.text(new Date(invoice.created_at).toLocaleDateString(), 145, yPosition + 5);
+  doc.text(new Date(invoice.created_at).toLocaleDateString(), 135, yPosition + 5); // Reduced spacing
   
   yPosition += 12;
   doc.setFont('helvetica', 'bold');
   doc.text('Status:', 20, yPosition + 5);
   doc.setFont('helvetica', 'normal');
-  doc.text(invoice.status, 55, yPosition + 5);
+  doc.text(invoice.status, 45, yPosition + 5); // Reduced spacing
   
   if (invoice.due_date) {
     doc.setFont('helvetica', 'bold');
     doc.text('Due Date:', 120, yPosition + 5);
     doc.setFont('helvetica', 'normal');
-    doc.text(new Date(invoice.due_date).toLocaleDateString(), 165, yPosition + 5);
+    doc.text(new Date(invoice.due_date).toLocaleDateString(), 155, yPosition + 5); // Reduced spacing
   }
 
   yPosition += 35;
@@ -370,23 +370,23 @@ export const generateOTPDF = async (data: {
   doc.setTextColor(40, 40, 40);
   doc.text('Invoice Number:', 20, yPosition + 5);
   doc.setFont('helvetica', 'normal');
-  doc.text(data.invoiceNumber, 80, yPosition + 5);
+  doc.text(data.invoiceNumber, 70, yPosition + 5); // Reduced spacing
   
   doc.setFont('helvetica', 'bold');
   doc.text('Date:', 120, yPosition + 5);
   doc.setFont('helvetica', 'normal');
-  doc.text(data.date, 145, yPosition + 5);
+  doc.text(data.date, 135, yPosition + 5); // Reduced spacing
   
   yPosition += 12;
   doc.setFont('helvetica', 'bold');
   doc.text('Patient:', 20, yPosition + 5);
   doc.setFont('helvetica', 'normal');
-  doc.text(data.patientName, 65, yPosition + 5);
+  doc.text(data.patientName, 50, yPosition + 5); // Reduced spacing
   
   doc.setFont('helvetica', 'bold');
   doc.text('Doctor:', 120, yPosition + 5);
   doc.setFont('helvetica', 'normal');
-  doc.text(data.doctorName, 155, yPosition + 5);
+  doc.text(data.doctorName, 145, yPosition + 5); // Reduced spacing
 
   yPosition += 35;
 
