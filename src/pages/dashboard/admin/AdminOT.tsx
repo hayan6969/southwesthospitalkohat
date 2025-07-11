@@ -166,13 +166,14 @@ export function AdminOT() {
         </Card>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Building2 className="w-5 h-5" />
-            OT Operations & Expenses
-          </CardTitle>
-        </CardHeader>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Building2 className="w-5 h-5" />
+              OT Operations & Expenses
+            </CardTitle>
+          </CardHeader>
         <CardContent>
           {operations.length === 0 ? (
             <div className="text-center py-8">
@@ -249,8 +250,60 @@ export function AdminOT() {
               </Table>
             </div>
           )}
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Home className="w-5 h-5" />
+              OT Rooms
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {rooms.length === 0 ? (
+              <div className="text-center py-8">
+                <Home className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                <p className="text-gray-500">No OT rooms configured</p>
+                <p className="text-sm text-gray-400">Add rooms to start managing OT schedules</p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Room Name</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {rooms.map((room) => (
+                      <TableRow key={room.id}>
+                        <TableCell className="font-medium">{room.room_name}</TableCell>
+                        <TableCell>
+                          <Badge variant={room.is_available ? "default" : "destructive"}>
+                            {room.is_available ? "Available" : "Unavailable"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => toggleRoomAvailability(room.id, room.is_available)}
+                          >
+                            {room.is_available ? "Deactivate" : "Activate"}
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }
