@@ -514,6 +514,62 @@ export type Database = {
         }
         Relationships: []
       }
+      ot_expenses: {
+        Row: {
+          cost: number
+          created_at: string
+          expense_name: string
+          id: string
+          operation_id: string
+          updated_at: string
+        }
+        Insert: {
+          cost: number
+          created_at?: string
+          expense_name: string
+          id?: string
+          operation_id: string
+          updated_at?: string
+        }
+        Update: {
+          cost?: number
+          created_at?: string
+          expense_name?: string
+          id?: string
+          operation_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ot_expenses_operation_id_fkey"
+            columns: ["operation_id"]
+            isOneToOne: false
+            referencedRelation: "ot_operations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ot_operations: {
+        Row: {
+          created_at: string
+          id: string
+          operation_name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          operation_name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          operation_name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       patients: {
         Row: {
           address: string | null
