@@ -1,5 +1,6 @@
 import jsPDF from 'jspdf';
 import { formatPkrCurrency } from './currency';
+import { supabase } from '@/integrations/supabase/client';
 
 interface InvoiceItem {
   medicine_name: string;
@@ -19,28 +20,83 @@ interface PharmacyInvoiceData {
   items: InvoiceItem[];
 }
 
-export const generatePharmacyInvoicePDF = (invoiceData: PharmacyInvoiceData): void => {
-  const pdf = new jsPDF();
+// Get hospital settings for PDF branding
+const getHospitalSettings = async () => {
+  try {
+    const { data, error } = await supabase
+      .from('hospital_settings')
+      .select('*')
+      .limit(1)
+      .single();
+    
+    if (error) throw error;
+    return data;
+  } catch (error) {
+    console.error('Error fetching hospital settings:', error);
+    return {
+      hospital_name: 'Medical Center',
+      hospital_address: 'Healthcare District',
+      contact_number: '+92-XXX-XXXXXXX',
+      logo_url: null
+    };
+  }
+};
+
+// Add hospital header to PDF
+const addHospitalHeader = async (pdf: jsPDF, title: string) => {
+  const settings = await getHospitalSettings();
   const pageWidth = pdf.internal.pageSize.width;
   let yPosition = 20;
 
-  // Header
-  pdf.setFontSize(20);
+  // Hospital logo (if available)
+  if (settings.logo_url) {
+    try {
+      // Add logo placeholder - in a real implementation, you'd load and add the actual image
+      pdf.setFontSize(10);
+      pdf.setTextColor(100, 100, 100);
+      pdf.text('[LOGO]', 20, yPosition);
+    } catch (error) {
+      console.error('Error loading logo:', error);
+    }
+  }
+
+  // Hospital name
+  pdf.setFontSize(18);
   pdf.setFont('helvetica', 'bold');
-  pdf.text('PHARMACY INVOICE', pageWidth / 2, yPosition, { align: 'center' });
+  pdf.setTextColor(40, 40, 40);
+  pdf.text(`${settings.hospital_name} - Pharmacy`, pageWidth / 2, yPosition, { align: 'center' });
+  
+  yPosition += 8;
+  
+  // Hospital address
+  pdf.setFontSize(10);
+  pdf.setFont('helvetica', 'normal');
+  pdf.setTextColor(60, 60, 60);
+  pdf.text(settings.hospital_address, pageWidth / 2, yPosition, { align: 'center' });
+  
+  yPosition += 6;
+  
+  // Contact number
+  pdf.text(`Phone: ${settings.contact_number}`, pageWidth / 2, yPosition, { align: 'center' });
   
   yPosition += 15;
   
-  // Hospital/Pharmacy Info
-  pdf.setFontSize(12);
-  pdf.setFont('helvetica', 'normal');
-  pdf.text('Health Nexus Pharmacy', pageWidth / 2, yPosition, { align: 'center' });
-  yPosition += 6;
-  pdf.text('123 Medical Street, Healthcare City', pageWidth / 2, yPosition, { align: 'center' });
-  yPosition += 6;
-  pdf.text('Phone: +92 300 1234567', pageWidth / 2, yPosition, { align: 'center' });
+  // Document title
+  pdf.setFontSize(16);
+  pdf.setFont('helvetica', 'bold');
+  pdf.setTextColor(40, 40, 40);
+  pdf.text(title, pageWidth / 2, yPosition, { align: 'center' });
   
-  yPosition += 20;
+  return yPosition + 15;
+};
+
+export const generatePharmacyInvoicePDF = async (invoiceData: PharmacyInvoiceData): Promise<void> => {
+  const pdf = new jsPDF();
+  const pageWidth = pdf.internal.pageSize.width;
+
+  // Add hospital header
+  let yPosition = await addHospitalHeader(pdf, 'PHARMACY INVOICE');
+  yPosition += 10;
   
   // Invoice Details Box
   pdf.setDrawColor(0, 0, 0);
@@ -49,9 +105,10 @@ export const generatePharmacyInvoicePDF = (invoiceData: PharmacyInvoiceData): vo
   // Invoice Number and Date
   pdf.setFontSize(11);
   pdf.setFont('helvetica', 'bold');
+  pdf.setTextColor(40, 40, 40);
   pdf.text('Invoice Number:', 20, yPosition + 5);
   pdf.setFont('helvetica', 'normal');
-  pdf.text(invoiceData.invoice_number, 65, yPosition + 5);
+  pdf.text(invoiceData.invoice_number, 70, yPosition + 5);
   
   pdf.setFont('helvetica', 'bold');
   pdf.text('Date:', 120, yPosition + 5);
@@ -62,16 +119,16 @@ export const generatePharmacyInvoicePDF = (invoiceData: PharmacyInvoiceData): vo
   // Customer Info
   yPosition += 10;
   pdf.setFont('helvetica', 'bold');
-  pdf.text('Customer Name:', 20, yPosition + 5);
+  pdf.text('Customer:', 20, yPosition + 5);
   pdf.setFont('helvetica', 'normal');
   const customerName = invoiceData.customer_name || 'Walk-in Customer';
-  pdf.text(customerName, 65, yPosition + 5);
+  pdf.text(customerName, 55, yPosition + 5);
   
   if (invoiceData.customer_phone) {
     pdf.setFont('helvetica', 'bold');
     pdf.text('Phone:', 120, yPosition + 5);
     pdf.setFont('helvetica', 'normal');
-    pdf.text(invoiceData.customer_phone, 140, yPosition + 5);
+    pdf.text(invoiceData.customer_phone, 145, yPosition + 5);
   }
   
   yPosition += 25;
@@ -86,6 +143,7 @@ export const generatePharmacyInvoicePDF = (invoiceData: PharmacyInvoiceData): vo
   
   pdf.setFont('helvetica', 'bold');
   pdf.setFontSize(10);
+  pdf.setTextColor(40, 40, 40);
   let xPosition = 20;
   headers.forEach((header, index) => {
     pdf.text(header, xPosition, yPosition + 7);
@@ -96,6 +154,7 @@ export const generatePharmacyInvoicePDF = (invoiceData: PharmacyInvoiceData): vo
   
   // Items
   pdf.setFont('helvetica', 'normal');
+  pdf.setTextColor(60, 60, 60);
   invoiceData.items.forEach((item) => {
     if (yPosition > 250) {
       pdf.addPage();
@@ -142,6 +201,7 @@ export const generatePharmacyInvoicePDF = (invoiceData: PharmacyInvoiceData): vo
   const totalsX = pageWidth - 80;
   
   pdf.setFont('helvetica', 'normal');
+  pdf.setTextColor(60, 60, 60);
   pdf.text('Subtotal:', totalsX - 25, yPosition);
   pdf.text(formatPkrCurrency(invoiceData.total_amount), totalsX, yPosition);
   yPosition += 8;
@@ -155,6 +215,7 @@ export const generatePharmacyInvoicePDF = (invoiceData: PharmacyInvoiceData): vo
   // Final total with border
   pdf.setFont('helvetica', 'bold');
   pdf.setFontSize(12);
+  pdf.setTextColor(40, 40, 40);
   pdf.rect(totalsX - 30, yPosition - 5, 50, 12);
   pdf.text('Total:', totalsX - 25, yPosition + 3);
   pdf.text(formatPkrCurrency(invoiceData.final_amount), totalsX, yPosition + 3);
@@ -164,6 +225,7 @@ export const generatePharmacyInvoicePDF = (invoiceData: PharmacyInvoiceData): vo
   // Footer
   pdf.setFont('helvetica', 'italic');
   pdf.setFontSize(9);
+  pdf.setTextColor(100, 100, 100);
   pdf.text('Thank you for your business!', pageWidth / 2, yPosition, { align: 'center' });
   yPosition += 8;
   pdf.text('For any queries, please contact us at the above number.', pageWidth / 2, yPosition, { align: 'center' });

@@ -75,7 +75,7 @@ export default function StaffAppointments() {
         status: 'paid'
       };
 
-      generateInvoicePDF(invoiceData);
+      await generateInvoicePDF(invoiceData);
       toast.success('Invoice generated and payment confirmed');
     } catch (error) {
       console.error('Error generating invoice:', error);

@@ -156,8 +156,8 @@ export default function PharmacyInvoices() {
     }
   };
 
-  const handleDownloadPDF = (invoice: any) => {
-    generatePharmacyInvoicePDF(invoice);
+  const handleDownloadPDF = async (invoice: any) => {
+    await generatePharmacyInvoicePDF(invoice);
     logDownload('Pharmacy Invoice PDF', `Downloaded PDF for invoice ${invoice.invoice_number}`);
   };
 

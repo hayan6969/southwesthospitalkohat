@@ -193,7 +193,7 @@ export function EnhancedAppointmentDialog() {
         }
       };
       
-      generateInvoicePDF(invoiceData);
+      await generateInvoicePDF(invoiceData);
       
       setOpen(false);
       resetForm();

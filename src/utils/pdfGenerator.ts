@@ -1,6 +1,77 @@
 
 import jsPDF from 'jspdf';
 import { formatPkrAmount } from './currency';
+import { supabase } from '@/integrations/supabase/client';
+
+// Get hospital settings for PDF branding
+const getHospitalSettings = async () => {
+  try {
+    const { data, error } = await supabase
+      .from('hospital_settings')
+      .select('*')
+      .limit(1)
+      .single();
+    
+    if (error) throw error;
+    return data;
+  } catch (error) {
+    console.error('Error fetching hospital settings:', error);
+    return {
+      hospital_name: 'Medical Center',
+      hospital_address: 'Healthcare District',
+      contact_number: '+92-XXX-XXXXXXX',
+      logo_url: null
+    };
+  }
+};
+
+// Add hospital header to PDF
+const addHospitalHeader = async (doc: jsPDF, title: string) => {
+  const settings = await getHospitalSettings();
+  const pageWidth = doc.internal.pageSize.width;
+  let yPosition = 20;
+
+  // Hospital logo (if available)
+  if (settings.logo_url) {
+    try {
+      // Add logo placeholder - in a real implementation, you'd load and add the actual image
+      doc.setFontSize(10);
+      doc.setTextColor(100, 100, 100);
+      doc.text('[LOGO]', 20, yPosition);
+    } catch (error) {
+      console.error('Error loading logo:', error);
+    }
+  }
+
+  // Hospital name
+  doc.setFontSize(18);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(40, 40, 40);
+  doc.text(settings.hospital_name, pageWidth / 2, yPosition, { align: 'center' });
+  
+  yPosition += 8;
+  
+  // Hospital address
+  doc.setFontSize(10);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(60, 60, 60);
+  doc.text(settings.hospital_address, pageWidth / 2, yPosition, { align: 'center' });
+  
+  yPosition += 6;
+  
+  // Contact number
+  doc.text(`Phone: ${settings.contact_number}`, pageWidth / 2, yPosition, { align: 'center' });
+  
+  yPosition += 15;
+  
+  // Document title
+  doc.setFontSize(16);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(40, 40, 40);
+  doc.text(title, pageWidth / 2, yPosition, { align: 'center' });
+  
+  return yPosition + 15;
+};
 
 // Lab invoice generation
 export const generateLabInvoicePDF = async (data: {
@@ -16,136 +87,234 @@ export const generateLabInvoicePDF = async (data: {
   issueDate: string;
 }) => {
   const doc = new jsPDF();
+  const pageWidth = doc.internal.pageSize.width;
 
-  // Header
-  doc.setFontSize(20);
+  // Add hospital header
+  let yPosition = await addHospitalHeader(doc, 'LAB TEST INVOICE');
+  yPosition += 10;
+
+  // Invoice details in a box
+  doc.setDrawColor(0, 0, 0);
+  doc.rect(15, yPosition - 5, pageWidth - 30, 25);
+  
+  doc.setFontSize(11);
+  doc.setFont('helvetica', 'bold');
   doc.setTextColor(40, 40, 40);
-  doc.text('Lab Test Invoice', 20, 20);
+  doc.text('Invoice Number:', 20, yPosition + 5);
+  doc.setFont('helvetica', 'normal');
+  doc.text(data.invoiceNumber, 70, yPosition + 5);
+  
+  doc.setFont('helvetica', 'bold');
+  doc.text('Date:', 120, yPosition + 5);
+  doc.setFont('helvetica', 'normal');
+  doc.text(data.issueDate, 140, yPosition + 5);
+  
+  yPosition += 10;
+  doc.setFont('helvetica', 'bold');
+  doc.text('Patient:', 20, yPosition + 5);
+  doc.setFont('helvetica', 'normal');
+  doc.text(data.patientName, 50, yPosition + 5);
+  
+  doc.setFont('helvetica', 'bold');
+  doc.text('Email:', 120, yPosition + 5);
+  doc.setFont('helvetica', 'normal');
+  doc.text(data.patientEmail, 140, yPosition + 5);
 
-  // Invoice details
-  doc.setFontSize(12);
-  doc.text(`Invoice Number: ${data.invoiceNumber}`, 20, 40);
-  doc.text(`Date: ${data.issueDate}`, 20, 50);
-  doc.text(`Patient: ${data.patientName}`, 20, 60);
-  doc.text(`Email: ${data.patientEmail}`, 20, 70);
+  yPosition += 25;
 
   // Tests table
-  let yPosition = 90;
-  doc.setFontSize(14);
-  doc.text('Lab Tests Ordered:', 20, yPosition);
-  yPosition += 10;
-
+  const tableStartY = yPosition;
+  const colWidths = [100, 40, 40];
+  const headers = ['Test Name', 'Description', 'Price'];
+  
+  // Table header
+  doc.setFillColor(240, 240, 240);
+  doc.rect(15, yPosition, pageWidth - 30, 10, 'F');
+  
+  doc.setFont('helvetica', 'bold');
   doc.setFontSize(10);
-  doc.text('Test Name', 20, yPosition);
-  doc.text('Price', 150, yPosition);
-  yPosition += 5;
-
-  // Draw line
-  doc.line(20, yPosition, 190, yPosition);
-  yPosition += 10;
-
-  // Test items
-  data.tests.forEach((test) => {
-    doc.text(test.name, 20, yPosition);
-    doc.text(`PKR ${test.price.toFixed(2)}`, 150, yPosition);
-    if (test.description) {
-      yPosition += 5;
-      doc.setFontSize(8);
-      doc.setTextColor(100, 100, 100);
-      doc.text(test.description, 25, yPosition);
-      doc.setFontSize(10);
-      doc.setTextColor(40, 40, 40);
-    }
-    yPosition += 10;
+  let xPosition = 20;
+  headers.forEach((header, index) => {
+    doc.text(header, xPosition, yPosition + 7);
+    xPosition += colWidths[index];
   });
+  
+  yPosition += 12;
+  
+  // Test items
+  doc.setFont('helvetica', 'normal');
+  data.tests.forEach((test) => {
+    xPosition = 20;
+    
+    // Test name
+    doc.text(test.name, xPosition, yPosition);
+    xPosition += colWidths[0];
+    
+    // Description
+    const description = test.description || '-';
+    doc.text(description.length > 20 ? description.substring(0, 17) + '...' : description, xPosition, yPosition);
+    xPosition += colWidths[1];
+    
+    // Price
+    doc.text(formatPkrAmount(test.price), xPosition, yPosition);
+    
+    yPosition += 8;
+  });
+  
+  // Draw table border
+  doc.setDrawColor(0, 0, 0);
+  doc.rect(15, tableStartY, pageWidth - 30, yPosition - tableStartY);
+  
+  // Vertical lines for table
+  xPosition = 15;
+  for (let i = 0; i < colWidths.length - 1; i++) {
+    xPosition += colWidths[i];
+    doc.line(xPosition, tableStartY, xPosition, yPosition);
+  }
 
-  // Total
-  yPosition += 10;
-  doc.line(20, yPosition, 190, yPosition);
-  yPosition += 10;
+  yPosition += 15;
+
+  // Total section
+  const totalsX = pageWidth - 60;
+  doc.setFont('helvetica', 'bold');
   doc.setFontSize(12);
-  doc.text(`Total Amount: PKR ${data.totalAmount.toFixed(2)}`, 20, yPosition);
+  doc.rect(totalsX - 30, yPosition - 5, 50, 12);
+  doc.text('Total Amount:', totalsX - 25, yPosition + 3);
+  doc.text(formatPkrAmount(data.totalAmount), totalsX, yPosition + 3);
 
   // Footer
   yPosition += 30;
-  doc.setFontSize(10);
+  doc.setFontSize(9);
+  doc.setFont('helvetica', 'italic');
   doc.setTextColor(100, 100, 100);
-  doc.text('Please bring this invoice when coming for your lab tests.', 20, yPosition);
-  doc.text('Payment is due before test collection.', 20, yPosition + 10);
+  doc.text('Please bring this invoice when coming for your lab tests.', pageWidth / 2, yPosition, { align: 'center' });
+  doc.text('Payment is due before test collection.', pageWidth / 2, yPosition + 8, { align: 'center' });
 
   return doc.output('blob');
 };
 
-export const generateInvoicePDF = (invoice: any) => {
-  // Create new PDF document
+export const generateInvoicePDF = async (invoice: any) => {
   const doc = new jsPDF();
+  const pageWidth = doc.internal.pageSize.width;
+
+  // Add hospital header
+  let yPosition = await addHospitalHeader(doc, 'MEDICAL INVOICE');
+  yPosition += 10;
+
+  // Invoice details in a box
+  doc.setDrawColor(0, 0, 0);
+  doc.rect(15, yPosition - 5, pageWidth - 30, 25);
   
-  // Set font
-  doc.setFont('helvetica');
-  
-  // Title
-  doc.setFontSize(20);
+  doc.setFontSize(11);
+  doc.setFont('helvetica', 'bold');
   doc.setTextColor(40, 40, 40);
-  doc.text('MEDICAL INVOICE', 20, 30);
+  doc.text('Invoice Number:', 20, yPosition + 5);
+  doc.setFont('helvetica', 'normal');
+  doc.text(invoice.invoice_number, 70, yPosition + 5);
   
-  // Invoice details
-  doc.setFontSize(12);
-  doc.setTextColor(60, 60, 60);
+  doc.setFont('helvetica', 'bold');
+  doc.text('Date:', 120, yPosition + 5);
+  doc.setFont('helvetica', 'normal');
+  doc.text(new Date(invoice.created_at).toLocaleDateString(), 140, yPosition + 5);
   
-  // Invoice number and date
-  doc.text(`Invoice #: ${invoice.invoice_number}`, 20, 50);
-  doc.text(`Date: ${new Date(invoice.created_at).toLocaleDateString()}`, 20, 60);
+  yPosition += 10;
+  doc.setFont('helvetica', 'bold');
+  doc.text('Status:', 20, yPosition + 5);
+  doc.setFont('helvetica', 'normal');
+  doc.text(invoice.status, 50, yPosition + 5);
   
-  // Patient information
-  doc.setFontSize(14);
-  doc.setTextColor(40, 40, 40);
-  doc.text('Bill To:', 20, 80);
-  
-  doc.setFontSize(12);
-  doc.setTextColor(60, 60, 60);
-  doc.text(`${invoice.patient?.users?.first_name || ''} ${invoice.patient?.users?.last_name || ''}`, 20, 95);
-  if (invoice.patient?.users?.email) {
-    doc.text(`Email: ${invoice.patient.users.email}`, 20, 105);
-  }
-  
-  // Description
-  doc.setFontSize(14);
-  doc.setTextColor(40, 40, 40);
-  doc.text('Description:', 20, 125);
-  
-  doc.setFontSize(12);
-  doc.setTextColor(60, 60, 60);
-  doc.text(invoice.description || 'Medical services', 20, 140);
-  
-  // Amount
-  doc.setFontSize(16);
-  doc.setTextColor(40, 40, 40);
-  doc.text(`Amount: ${formatPkrAmount(invoice.amount)}`, 20, 170);
-  
-  // Due date
   if (invoice.due_date) {
-    doc.setFontSize(12);
-    doc.setTextColor(60, 60, 60);
-    doc.text(`Due Date: ${new Date(invoice.due_date).toLocaleDateString()}`, 20, 190);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Due Date:', 120, yPosition + 5);
+    doc.setFont('helvetica', 'normal');
+    doc.text(new Date(invoice.due_date).toLocaleDateString(), 155, yPosition + 5);
   }
-  
-  // Status
+
+  yPosition += 25;
+
+  // Patient information section
   doc.setFontSize(12);
-  doc.text(`Status: ${invoice.status}`, 20, 210);
+  doc.setFont('helvetica', 'bold');
+  doc.text('BILL TO:', 20, yPosition);
+  yPosition += 8;
   
-  // Footer
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(60, 60, 60);
+  const patientName = `${invoice.patient?.users?.first_name || ''} ${invoice.patient?.users?.last_name || ''}`.trim();
+  doc.text(patientName || 'Patient', 20, yPosition);
+  
+  if (invoice.patient?.users?.email) {
+    yPosition += 6;
+    doc.text(`Email: ${invoice.patient.users.email}`, 20, yPosition);
+  }
+
+  yPosition += 20;
+
+  // Services table
+  const tableStartY = yPosition;
+  const colWidths = [120, 60];
+  const headers = ['Description', 'Amount'];
+  
+  // Table header
+  doc.setFillColor(240, 240, 240);
+  doc.rect(15, yPosition, pageWidth - 30, 10, 'F');
+  
+  doc.setFont('helvetica', 'bold');
   doc.setFontSize(10);
-  doc.setTextColor(100, 100, 100);
-  doc.text('Thank you for choosing our medical services!', 20, 250);
-  doc.text('HIMS Medical Center', 20, 260);
+  doc.setTextColor(40, 40, 40);
+  let xPosition = 20;
+  headers.forEach((header, index) => {
+    doc.text(header, xPosition, yPosition + 7);
+    xPosition += colWidths[index];
+  });
   
-  // Open PDF in new tab instead of downloading
+  yPosition += 12;
+  
+  // Service item
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(60, 60, 60);
+  xPosition = 20;
+  
+  const description = invoice.description || 'Medical services';
+  doc.text(description, xPosition, yPosition);
+  xPosition += colWidths[0];
+  
+  doc.text(formatPkrAmount(invoice.amount), xPosition, yPosition);
+  
+  yPosition += 8;
+  
+  // Draw table border
+  doc.setDrawColor(0, 0, 0);
+  doc.rect(15, tableStartY, pageWidth - 30, yPosition - tableStartY);
+  
+  // Vertical line for table
+  doc.line(15 + colWidths[0], tableStartY, 15 + colWidths[0], yPosition);
+
+  yPosition += 15;
+
+  // Total section
+  const totalsX = pageWidth - 60;
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(12);
+  doc.setTextColor(40, 40, 40);
+  doc.rect(totalsX - 30, yPosition - 5, 50, 12);
+  doc.text('Total Amount:', totalsX - 25, yPosition + 3);
+  doc.text(formatPkrAmount(invoice.amount), totalsX, yPosition + 3);
+
+  // Footer
+  yPosition += 30;
+  doc.setFontSize(9);
+  doc.setFont('helvetica', 'italic');
+  doc.setTextColor(100, 100, 100);
+  doc.text('Thank you for choosing our medical services!', pageWidth / 2, yPosition, { align: 'center' });
+
+  // Open PDF in new tab
   const pdfBlob = doc.output('blob');
   const pdfUrl = URL.createObjectURL(pdfBlob);
   window.open(pdfUrl, '_blank');
 };
 
-export const generateOTPDF = (data: {
+export const generateOTPDF = async (data: {
   invoiceNumber: string;
   patientName: string;
   doctorName: string;
@@ -160,83 +329,131 @@ export const generateOTPDF = (data: {
     totalPrice: number;
   }>;
 }) => {
-  // Create new PDF document
   const doc = new jsPDF();
+  const pageWidth = doc.internal.pageSize.width;
+
+  // Add hospital header
+  let yPosition = await addHospitalHeader(doc, 'OT OPERATION INVOICE');
+  yPosition += 10;
+
+  // Invoice details in a box
+  doc.setDrawColor(0, 0, 0);
+  doc.rect(15, yPosition - 5, pageWidth - 30, 25);
   
-  // Set font
-  doc.setFont('helvetica');
-  
-  // Title
-  doc.setFontSize(20);
+  doc.setFontSize(11);
+  doc.setFont('helvetica', 'bold');
   doc.setTextColor(40, 40, 40);
-  doc.text('OT OPERATION INVOICE', 20, 30);
+  doc.text('Invoice Number:', 20, yPosition + 5);
+  doc.setFont('helvetica', 'normal');
+  doc.text(data.invoiceNumber, 70, yPosition + 5);
   
-  // Invoice details
+  doc.setFont('helvetica', 'bold');
+  doc.text('Date:', 120, yPosition + 5);
+  doc.setFont('helvetica', 'normal');
+  doc.text(data.date, 140, yPosition + 5);
+  
+  yPosition += 10;
+  doc.setFont('helvetica', 'bold');
+  doc.text('Patient:', 20, yPosition + 5);
+  doc.setFont('helvetica', 'normal');
+  doc.text(data.patientName, 55, yPosition + 5);
+  
+  doc.setFont('helvetica', 'bold');
+  doc.text('Doctor:', 120, yPosition + 5);
+  doc.setFont('helvetica', 'normal');
+  doc.text(data.doctorName, 145, yPosition + 5);
+
+  yPosition += 25;
+
+  // Operation details section
   doc.setFontSize(12);
+  doc.setFont('helvetica', 'bold');
+  doc.text('OPERATION DETAILS:', 20, yPosition);
+  yPosition += 8;
+  
+  doc.setFont('helvetica', 'normal');
   doc.setTextColor(60, 60, 60);
+  doc.text(`Procedure: ${data.procedure}`, 20, yPosition);
+  yPosition += 6;
+  doc.text(`OT Room: ${data.room}`, 20, yPosition);
   
-  // Invoice number and date
-  doc.text(`Invoice #: ${data.invoiceNumber}`, 20, 50);
-  doc.text(`Date: ${data.date}`, 20, 60);
+  yPosition += 20;
+
+  // Items table
+  const tableStartY = yPosition;
+  const colWidths = [80, 25, 40, 40];
+  const headers = ['Description', 'Qty', 'Unit Price', 'Total'];
   
-  // Patient information
-  doc.setFontSize(14);
-  doc.setTextColor(40, 40, 40);
-  doc.text('Patient Information:', 20, 80);
+  // Table header
+  doc.setFillColor(240, 240, 240);
+  doc.rect(15, yPosition, pageWidth - 30, 10, 'F');
   
-  doc.setFontSize(12);
-  doc.setTextColor(60, 60, 60);
-  doc.text(`Patient: ${data.patientName}`, 20, 95);
-  doc.text(`Doctor: ${data.doctorName}`, 20, 105);
-  doc.text(`Procedure: ${data.procedure}`, 20, 115);
-  doc.text(`OT Room: ${data.room}`, 20, 125);
-  
-  // Items table header
-  doc.setFontSize(14);
-  doc.setTextColor(40, 40, 40);
-  doc.text('Operation Details:', 20, 145);
-  
-  // Table headers
+  doc.setFont('helvetica', 'bold');
   doc.setFontSize(10);
-  doc.setTextColor(60, 60, 60);
-  doc.text('Description', 20, 160);
-  doc.text('Qty', 120, 160);
-  doc.text('Unit Price', 140, 160);
-  doc.text('Total', 170, 160);
-  
-  // Draw line under headers
-  doc.line(20, 165, 190, 165);
-  
-  // Items
-  let yPosition = 175;
-  data.items.forEach((item) => {
-    doc.setFontSize(10);
-    doc.setTextColor(60, 60, 60);
-    doc.text(item.description, 20, yPosition);
-    doc.text(item.quantity.toString(), 120, yPosition);
-    doc.text(formatPkrAmount(item.unitPrice), 140, yPosition);
-    doc.text(formatPkrAmount(item.totalPrice), 170, yPosition);
-    yPosition += 10;
+  doc.setTextColor(40, 40, 40);
+  let xPosition = 20;
+  headers.forEach((header, index) => {
+    doc.text(header, xPosition, yPosition + 7);
+    xPosition += colWidths[index];
   });
   
-  // Total line
-  yPosition += 10;
-  doc.line(20, yPosition, 190, yPosition);
-  yPosition += 10;
+  yPosition += 12;
   
-  // Total amount
-  doc.setFontSize(14);
+  // Items
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(60, 60, 60);
+  data.items.forEach((item) => {
+    xPosition = 20;
+    
+    // Description
+    const description = item.description.length > 35 ? item.description.substring(0, 32) + '...' : item.description;
+    doc.text(description, xPosition, yPosition);
+    xPosition += colWidths[0];
+    
+    // Quantity
+    doc.text(item.quantity.toString(), xPosition, yPosition);
+    xPosition += colWidths[1];
+    
+    // Unit Price
+    doc.text(formatPkrAmount(item.unitPrice), xPosition, yPosition);
+    xPosition += colWidths[2];
+    
+    // Total Price
+    doc.text(formatPkrAmount(item.totalPrice), xPosition, yPosition);
+    
+    yPosition += 8;
+  });
+  
+  // Draw table border
+  doc.setDrawColor(0, 0, 0);
+  doc.rect(15, tableStartY, pageWidth - 30, yPosition - tableStartY);
+  
+  // Vertical lines for table
+  xPosition = 15;
+  for (let i = 0; i < colWidths.length - 1; i++) {
+    xPosition += colWidths[i];
+    doc.line(xPosition, tableStartY, xPosition, yPosition);
+  }
+
+  yPosition += 15;
+
+  // Total section
+  const totalsX = pageWidth - 60;
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(12);
   doc.setTextColor(40, 40, 40);
-  doc.text(`Total Amount: ${formatPkrAmount(data.totalAmount)}`, 20, yPosition);
-  
+  doc.rect(totalsX - 30, yPosition - 5, 50, 12);
+  doc.text('Total Amount:', totalsX - 25, yPosition + 3);
+  doc.text(formatPkrAmount(data.totalAmount), totalsX, yPosition + 3);
+
   // Footer
   yPosition += 30;
-  doc.setFontSize(10);
+  doc.setFontSize(9);
+  doc.setFont('helvetica', 'italic');
   doc.setTextColor(100, 100, 100);
-  doc.text('Thank you for choosing our medical services!', 20, yPosition);
-  doc.text('HIMS Medical Center - OT Department', 20, yPosition + 10);
-  doc.text('This invoice serves as proof of completed operation.', 20, yPosition + 20);
-  
+  doc.text('Thank you for choosing our medical services!', pageWidth / 2, yPosition, { align: 'center' });
+  doc.text('This invoice serves as proof of completed operation.', pageWidth / 2, yPosition + 8, { align: 'center' });
+
   // Open PDF in new tab
   const pdfBlob = doc.output('blob');
   const pdfUrl = URL.createObjectURL(pdfBlob);

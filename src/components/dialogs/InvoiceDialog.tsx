@@ -79,7 +79,7 @@ export function InvoiceDialog() {
         }
       };
       
-      generateInvoicePDF(invoiceData);
+      await generateInvoicePDF(invoiceData);
       
       setOpen(false);
       

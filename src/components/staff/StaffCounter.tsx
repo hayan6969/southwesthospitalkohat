@@ -132,7 +132,7 @@ export function StaffCounter() {
       };
 
       // Generate and open PDF
-      generateInvoicePDF(invoiceForPDF);
+      await generateInvoicePDF(invoiceForPDF);
       
       toast({
         title: "Invoice Generated",

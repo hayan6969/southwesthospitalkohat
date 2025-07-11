@@ -153,7 +153,7 @@ export default function PharmacySell() {
         }))
       };
       
-      generatePharmacyInvoicePDF(pdfData);
+      await generatePharmacyInvoicePDF(pdfData);
       
       // Clear the form
       setCart([]);

@@ -27,9 +27,9 @@ export default function StaffInvoices() {
     }
   };
 
-  const handleDownloadPDF = (invoice: any) => {
+  const handleDownloadPDF = async (invoice: any) => {
     try {
-      generateInvoicePDF(invoice);
+      await generateInvoicePDF(invoice);
       toast.success('Invoice PDF downloaded');
     } catch (error) {
       toast.error('Failed to generate PDF');

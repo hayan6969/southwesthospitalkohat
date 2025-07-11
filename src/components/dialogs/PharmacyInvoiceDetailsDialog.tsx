@@ -33,7 +33,7 @@ export function PharmacyInvoiceDetailsDialog({
 }: PharmacyInvoiceDetailsDialogProps) {
   const { data: invoiceItems = [] } = useInvoiceItems(invoice?.id);
 
-  const handleGeneratePDF = () => {
+  const handleGeneratePDF = async () => {
     if (!invoice) return;
 
     const invoiceData = {
@@ -52,7 +52,7 @@ export function PharmacyInvoiceDetailsDialog({
       })),
     };
 
-    generatePharmacyInvoicePDF(invoiceData);
+    await generatePharmacyInvoicePDF(invoiceData);
   };
 
   if (!invoice) return null;

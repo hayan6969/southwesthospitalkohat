@@ -282,7 +282,7 @@ export function OTScheduleDialog() {
       };
       
       // Generate and open PDF
-      generateInvoicePDF(invoiceForPDF);
+      await generateInvoicePDF(invoiceForPDF);
       
       // Log the audit event
       await logAction(
