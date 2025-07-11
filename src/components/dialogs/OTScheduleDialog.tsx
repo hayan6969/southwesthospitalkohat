@@ -268,6 +268,22 @@ export function OTScheduleDialog() {
       
       const roomName = rooms.find(r => r.id === roomId)?.room_name || "Unknown Room";
       
+      // Generate and open PDF invoice
+      const { generateInvoicePDF } = await import("@/utils/pdfGenerator");
+      const invoiceForPDF = {
+        ...invoiceData,
+        patient: {
+          users: {
+            first_name: patientName.split(' ')[0] || '',
+            last_name: patientName.split(' ').slice(1).join(' ') || '',
+            email: selectedPatient?.profile?.email || ''
+          }
+        }
+      };
+      
+      // Generate and open PDF
+      generateInvoicePDF(invoiceForPDF);
+      
       // Log the audit event
       await logAction(
         "Scheduled OT operation",

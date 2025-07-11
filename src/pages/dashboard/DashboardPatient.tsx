@@ -5,13 +5,14 @@ import { StatsCard } from "@/components/StatsCard";
 import { DemoTable } from "@/components/DemoTable";
 import { AuditLog } from "@/components/AuditLog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Calendar, FileText, DollarSign, Activity, Clock, Users, TestTube, Upload } from "lucide-react";
+import { Calendar, FileText, DollarSign, Activity, Clock, Users, TestTube, Upload, Building2 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { AppointmentBooking } from "@/components/AppointmentBooking";
 import { MyAppointments } from "@/components/MyAppointments";
 import PatientRecords from "./patient/PatientRecords";
 import PatientLabs from "./patient/PatientLabs";
 import PatientInvoices from "./patient/PatientInvoices";
+import PatientOT from "./patient/PatientOT";
 
 export default function DashboardPatient() {
   const { profile } = useAuth();
@@ -112,10 +113,16 @@ export default function DashboardPatient() {
     </div>
   );
 
+  const renderOTTab = () => (
+    <div className="space-y-6">
+      <PatientOT />
+    </div>
+  );
+
   return (
     <PatientLayout>
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-6 mb-8">
+        <TabsList className="grid w-full grid-cols-7 mb-8">
           <TabsTrigger value="overview" className="flex items-center gap-2">
             <Activity className="w-4 h-4" />
             Overview
@@ -139,6 +146,10 @@ export default function DashboardPatient() {
           <TabsTrigger value="invoices" className="flex items-center gap-2">
             <DollarSign className="w-4 h-4" />
             Invoices
+          </TabsTrigger>
+          <TabsTrigger value="ot" className="flex items-center gap-2">
+            <Building2 className="w-4 h-4" />
+            OT Operations
           </TabsTrigger>
         </TabsList>
 
@@ -164,6 +175,10 @@ export default function DashboardPatient() {
 
         <TabsContent value="invoices" className="space-y-4">
           {renderInvoicesTab()}
+        </TabsContent>
+
+        <TabsContent value="ot" className="space-y-4">
+          {renderOTTab()}
         </TabsContent>
       </Tabs>
     </PatientLayout>
