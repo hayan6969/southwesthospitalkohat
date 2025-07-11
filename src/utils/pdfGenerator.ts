@@ -1,6 +1,6 @@
 
 import jsPDF from 'jspdf';
-import { formatPkrCurrency } from './currency';
+import { formatPkrAmount } from './currency';
 
 // Lab invoice generation
 export const generateLabInvoicePDF = async (data: {
@@ -120,7 +120,7 @@ export const generateInvoicePDF = (invoice: any) => {
   // Amount
   doc.setFontSize(16);
   doc.setTextColor(40, 40, 40);
-  doc.text(`Amount: ${formatPkrCurrency(invoice.amount)}`, 20, 170);
+  doc.text(`Amount: ${formatPkrAmount(invoice.amount)}`, 20, 170);
   
   // Due date
   if (invoice.due_date) {
@@ -214,8 +214,8 @@ export const generateOTPDF = (data: {
     doc.setTextColor(60, 60, 60);
     doc.text(item.description, 20, yPosition);
     doc.text(item.quantity.toString(), 120, yPosition);
-    doc.text(formatPkrCurrency(item.unitPrice), 140, yPosition);
-    doc.text(formatPkrCurrency(item.totalPrice), 170, yPosition);
+    doc.text(formatPkrAmount(item.unitPrice), 140, yPosition);
+    doc.text(formatPkrAmount(item.totalPrice), 170, yPosition);
     yPosition += 10;
   });
   
@@ -227,7 +227,7 @@ export const generateOTPDF = (data: {
   // Total amount
   doc.setFontSize(14);
   doc.setTextColor(40, 40, 40);
-  doc.text(`Total Amount: ${formatPkrCurrency(data.totalAmount)}`, 20, yPosition);
+  doc.text(`Total Amount: ${formatPkrAmount(data.totalAmount)}`, 20, yPosition);
   
   // Footer
   yPosition += 30;
