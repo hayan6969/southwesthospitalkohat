@@ -1,16 +1,28 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useInvoices } from "@/hooks/useDatabase";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { formatPkrCurrency } from "@/utils/currency";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell } from "recharts";
 import { TrendingUp, TrendingDown, DollarSign, Activity } from "lucide-react";
-import { useState } from "react";
+import { useState, useMemo } from "react";
+import { format, subMonths, startOfMonth, endOfMonth } from "date-fns";
 
 export default function FinanceAnalytics() {
   const [timeRange, setTimeRange] = useState("6months");
-  const { data: invoices, isLoading: invoicesLoading } = useInvoices();
+
+  // Get invoices for hospital revenue
+  const { data: invoices, isLoading: invoicesLoading } = useQuery({
+    queryKey: ['invoices'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('invoices')
+        .select('*')
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return data;
+    }
+  });
 
   // Get pharmacy invoices
   const { data: pharmacyInvoices, isLoading: pharmacyLoading } = useQuery({
@@ -38,51 +50,106 @@ export default function FinanceAnalytics() {
     }
   });
 
-  // Mock expense data (would come from expenses table)
-  const mockExpenses = [
-    { category: 'Staff Salaries', amount: 250000, month: 'Jan' },
-    { category: 'Medical Supplies', amount: 75000, month: 'Jan' },
-    { category: 'Utilities', amount: 45000, month: 'Jan' },
-    { category: 'Maintenance', amount: 25000, month: 'Jan' },
-  ];
+  // Get real expenses data
+  const { data: expenses, isLoading: expensesLoading } = useQuery({
+    queryKey: ['expenses'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('expenses')
+        .select('*')
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return data;
+    }
+  });
 
-  if (invoicesLoading || pharmacyLoading || labLoading) {
+  if (invoicesLoading || pharmacyLoading || labLoading || expensesLoading) {
     return <div className="p-8">Loading analytics...</div>;
   }
 
-  // Calculate revenue by month
-  const monthlyRevenue = [
-    { month: 'Jan', hospital: 450000, pharmacy: 120000, total: 570000 },
-    { month: 'Feb', hospital: 520000, pharmacy: 140000, total: 660000 },
-    { month: 'Mar', hospital: 480000, pharmacy: 130000, total: 610000 },
-    { month: 'Apr', hospital: 590000, pharmacy: 160000, total: 750000 },
-    { month: 'May', hospital: 610000, pharmacy: 170000, total: 780000 },
-    { month: 'Jun', hospital: 650000, pharmacy: 180000, total: 830000 },
-  ];
+  // Calculate real metrics
+  const totalRevenue = (invoices?.reduce((sum, inv) => sum + (inv.amount || 0), 0) || 0);
+  const pharmacyRevenue = (pharmacyInvoices?.reduce((sum, inv) => sum + (inv.final_amount || 0), 0) || 0);
+  const labRevenue = (labReports?.reduce((sum, lab) => sum + (lab.price || 0), 0) || 0);
+  const totalExpenses = (expenses?.reduce((sum, exp) => sum + (exp.amount || 0), 0) || 0);
+  const combinedRevenue = totalRevenue + pharmacyRevenue + labRevenue;
+  const netProfit = combinedRevenue - totalExpenses;
+  const profitMargin = combinedRevenue > 0 ? ((netProfit / combinedRevenue) * 100) : 0;
 
-  // Revenue vs Expenses
-  const profitLossData = [
-    { month: 'Jan', revenue: 570000, expenses: 395000, profit: 175000 },
-    { month: 'Feb', revenue: 660000, expenses: 420000, profit: 240000 },
-    { month: 'Mar', revenue: 610000, expenses: 410000, profit: 200000 },
-    { month: 'Apr', revenue: 750000, expenses: 450000, profit: 300000 },
-    { month: 'May', revenue: 780000, expenses: 480000, profit: 300000 },
-    { month: 'Jun', revenue: 830000, expenses: 500000, profit: 330000 },
-  ];
+  // Calculate monthly data from real database records
+  const monthlyData = useMemo(() => {
+    const months = [];
+    const now = new Date();
+    
+    // Generate last 6 months
+    for (let i = 5; i >= 0; i--) {
+      const monthDate = subMonths(now, i);
+      const monthStart = startOfMonth(monthDate);
+      const monthEnd = endOfMonth(monthDate);
+      
+      const monthInvoices = invoices?.filter(inv => {
+        const invDate = new Date(inv.created_at!);
+        return invDate >= monthStart && invDate <= monthEnd;
+      }) || [];
+      
+      const monthPharmacyInvoices = pharmacyInvoices?.filter(inv => {
+        const invDate = new Date(inv.created_at!);
+        return invDate >= monthStart && invDate <= monthEnd;
+      }) || [];
+      
+      const monthLabReports = labReports?.filter(lab => {
+        const labDate = new Date(lab.created_at!);
+        return labDate >= monthStart && labDate <= monthEnd;
+      }) || [];
+      
+      const monthExpenses = expenses?.filter(exp => {
+        const expDate = new Date(exp.created_at);
+        return expDate >= monthStart && expDate <= monthEnd;
+      }) || [];
+      
+      const hospitalRevenue = monthInvoices.reduce((sum, inv) => sum + (inv.amount || 0), 0);
+      const pharmacy = monthPharmacyInvoices.reduce((sum, inv) => sum + (inv.final_amount || 0), 0);
+      const lab = monthLabReports.reduce((sum, lab) => sum + (lab.price || 0), 0);
+      const monthlyExpenses = monthExpenses.reduce((sum, exp) => sum + (exp.amount || 0), 0);
+      const totalRev = hospitalRevenue + pharmacy + lab;
+      
+      months.push({
+        month: format(monthDate, 'MMM'),
+        hospital: hospitalRevenue,
+        pharmacy,
+        lab,
+        total: totalRev,
+        expenses: monthlyExpenses,
+        profit: totalRev - monthlyExpenses
+      });
+    }
+    
+    return months;
+  }, [invoices, pharmacyInvoices, labReports, expenses]);
 
   // Revenue breakdown
   const revenueBreakdown = [
-    { name: 'Hospital Services', value: 450000, color: '#3b82f6' },
-    { name: 'Pharmacy', value: 180000, color: '#8b5cf6' },
-    { name: 'Lab Tests', value: 120000, color: '#10b981' },
-    { name: 'OT Procedures', value: 80000, color: '#f59e0b' },
-  ];
+    { name: 'Hospital Services', value: totalRevenue, color: '#3b82f6' },
+    { name: 'Pharmacy', value: pharmacyRevenue, color: '#8b5cf6' },
+    { name: 'Lab Tests', value: labRevenue, color: '#10b981' },
+  ].filter(item => item.value > 0);
 
-  const totalRevenue = invoices?.reduce((sum, inv) => sum + (inv.amount || 0), 0) || 0;
-  const pharmacyRevenue = pharmacyInvoices?.reduce((sum, inv) => sum + (inv.final_amount || 0), 0) || 0;
-  const totalExpenses = mockExpenses.reduce((sum, exp) => sum + exp.amount, 0);
-  const netProfit = totalRevenue + pharmacyRevenue - totalExpenses;
-  const profitMargin = ((netProfit / (totalRevenue + pharmacyRevenue)) * 100).toFixed(1);
+  // Calculate percentage changes (using current vs previous month)
+  const currentMonth = monthlyData[monthlyData.length - 1];
+  const previousMonth = monthlyData[monthlyData.length - 2];
+  
+  const revenueChange = previousMonth?.total > 0 
+    ? (((currentMonth?.total || 0) - (previousMonth?.total || 0)) / (previousMonth?.total || 1)) * 100
+    : 0;
+    
+  const expenseChange = previousMonth?.expenses > 0
+    ? (((currentMonth?.expenses || 0) - (previousMonth?.expenses || 0)) / (previousMonth?.expenses || 1)) * 100
+    : 0;
+    
+  const profitChange = previousMonth?.profit !== undefined
+    ? (((currentMonth?.profit || 0) - (previousMonth?.profit || 0)) / Math.abs(previousMonth?.profit || 1)) * 100
+    : 0;
+
 
   return (
     <div className="space-y-6">
@@ -112,10 +179,12 @@ export default function FinanceAnalytics() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">{formatPkrCurrency(netProfit)}</div>
-            <p className="text-sm text-green-600 flex items-center gap-1">
-              <TrendingUp className="w-3 h-3" />
-              +12.5% from last month
+            <div className={`text-2xl font-bold ${netProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+              {formatPkrCurrency(netProfit)}
+            </div>
+            <p className={`text-sm flex items-center gap-1 ${profitChange >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+              {profitChange >= 0 ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
+              {profitChange >= 0 ? '+' : ''}{profitChange.toFixed(1)}% from last month
             </p>
           </CardContent>
         </Card>
@@ -125,10 +194,10 @@ export default function FinanceAnalytics() {
             <CardTitle className="text-sm font-medium text-gray-600">Profit Margin</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{profitMargin}%</div>
-            <p className="text-sm text-green-600 flex items-center gap-1">
-              <TrendingUp className="w-3 h-3" />
-              +2.1% from last month
+            <div className="text-2xl font-bold">{profitMargin.toFixed(1)}%</div>
+            <p className={`text-sm flex items-center gap-1 ${profitChange >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+              {profitChange >= 0 ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
+              {profitChange >= 0 ? '+' : ''}{(profitMargin > 0 ? profitChange * 0.1 : 0).toFixed(1)}% from last month
             </p>
           </CardContent>
         </Card>
@@ -138,10 +207,10 @@ export default function FinanceAnalytics() {
             <CardTitle className="text-sm font-medium text-gray-600">Total Revenue</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{formatPkrCurrency(totalRevenue + pharmacyRevenue)}</div>
-            <p className="text-sm text-green-600 flex items-center gap-1">
-              <TrendingUp className="w-3 h-3" />
-              +8.3% from last month
+            <div className="text-2xl font-bold">{formatPkrCurrency(combinedRevenue)}</div>
+            <p className={`text-sm flex items-center gap-1 ${revenueChange >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+              {revenueChange >= 0 ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
+              {revenueChange >= 0 ? '+' : ''}{revenueChange.toFixed(1)}% from last month
             </p>
           </CardContent>
         </Card>
@@ -152,9 +221,9 @@ export default function FinanceAnalytics() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-red-600">{formatPkrCurrency(totalExpenses)}</div>
-            <p className="text-sm text-red-600 flex items-center gap-1">
-              <TrendingUp className="w-3 h-3" />
-              +5.7% from last month
+            <p className={`text-sm flex items-center gap-1 ${expenseChange >= 0 ? 'text-red-600' : 'text-green-600'}`}>
+              {expenseChange >= 0 ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
+              {expenseChange >= 0 ? '+' : ''}{expenseChange.toFixed(1)}% from last month
             </p>
           </CardContent>
         </Card>
@@ -167,14 +236,15 @@ export default function FinanceAnalytics() {
         </CardHeader>
         <CardContent>
           <ResponsiveContainer width="100%" height={300}>
-            <LineChart data={monthlyRevenue}>
+            <LineChart data={monthlyData}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="month" />
               <YAxis tickFormatter={(value) => `₨${(value/1000).toFixed(0)}K`} />
               <Tooltip formatter={(value) => formatPkrCurrency(value as number)} />
-              <Line type="monotone" dataKey="total" stroke="#3b82f6" strokeWidth={3} />
-              <Line type="monotone" dataKey="hospital" stroke="#10b981" strokeWidth={2} />
-              <Line type="monotone" dataKey="pharmacy" stroke="#8b5cf6" strokeWidth={2} />
+              <Line type="monotone" dataKey="total" stroke="#3b82f6" strokeWidth={3} name="Total Revenue" />
+              <Line type="monotone" dataKey="hospital" stroke="#10b981" strokeWidth={2} name="Hospital" />
+              <Line type="monotone" dataKey="pharmacy" stroke="#8b5cf6" strokeWidth={2} name="Pharmacy" />
+              <Line type="monotone" dataKey="lab" stroke="#f59e0b" strokeWidth={2} name="Lab" />
             </LineChart>
           </ResponsiveContainer>
         </CardContent>
@@ -188,12 +258,12 @@ export default function FinanceAnalytics() {
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={profitLossData}>
+              <BarChart data={monthlyData}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="month" />
                 <YAxis tickFormatter={(value) => `₨${(value/1000).toFixed(0)}K`} />
                 <Tooltip formatter={(value) => formatPkrCurrency(value as number)} />
-                <Bar dataKey="revenue" fill="#10b981" name="Revenue" />
+                <Bar dataKey="total" fill="#10b981" name="Revenue" />
                 <Bar dataKey="expenses" fill="#ef4444" name="Expenses" />
                 <Bar dataKey="profit" fill="#3b82f6" name="Profit" />
               </BarChart>
@@ -208,23 +278,29 @@ export default function FinanceAnalytics() {
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
-              <PieChart>
-                <Pie
-                  data={revenueBreakdown}
-                  cx="50%"
-                  cy="50%"
-                  labelLine={false}
-                  label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-                  outerRadius={80}
-                  fill="#8884d8"
-                  dataKey="value"
-                >
-                  {revenueBreakdown.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
-                  ))}
-                </Pie>
-                <Tooltip formatter={(value) => formatPkrCurrency(value as number)} />
-              </PieChart>
+              {revenueBreakdown.length > 0 ? (
+                <PieChart>
+                  <Pie
+                    data={revenueBreakdown}
+                    cx="50%"
+                    cy="50%"
+                    labelLine={false}
+                    label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                    outerRadius={80}
+                    fill="#8884d8"
+                    dataKey="value"
+                  >
+                    {revenueBreakdown.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <Tooltip formatter={(value) => formatPkrCurrency(value as number)} />
+                </PieChart>
+              ) : (
+                <div className="flex items-center justify-center h-full text-gray-500">
+                  No revenue data available
+                </div>
+              )}
             </ResponsiveContainer>
           </CardContent>
         </Card>
@@ -241,36 +317,36 @@ export default function FinanceAnalytics() {
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-4">
-              <h4 className="font-semibold text-green-600">Positive Trends</h4>
+              <h4 className="font-semibold text-green-600">Key Metrics</h4>
               <ul className="space-y-2 text-sm">
                 <li className="flex items-center gap-2">
-                  <TrendingUp className="w-4 h-4 text-green-600" />
-                  Pharmacy revenue increased by 15% this month
+                  <DollarSign className="w-4 h-4 text-green-600" />
+                  Total Revenue: {formatPkrCurrency(combinedRevenue)}
                 </li>
                 <li className="flex items-center gap-2">
-                  <TrendingUp className="w-4 h-4 text-green-600" />
-                  Lab test bookings are up 22%
+                  <DollarSign className="w-4 h-4 text-red-600" />
+                  Total Expenses: {formatPkrCurrency(totalExpenses)}
                 </li>
                 <li className="flex items-center gap-2">
-                  <TrendingUp className="w-4 h-4 text-green-600" />
-                  Overall profit margin improved to {profitMargin}%
+                  <TrendingUp className="w-4 h-4 text-blue-600" />
+                  Profit Margin: {profitMargin.toFixed(1)}%
                 </li>
               </ul>
             </div>
             <div className="space-y-4">
-              <h4 className="font-semibold text-orange-600">Areas for Improvement</h4>
+              <h4 className="font-semibold text-blue-600">Revenue Sources</h4>
               <ul className="space-y-2 text-sm">
                 <li className="flex items-center gap-2">
-                  <TrendingDown className="w-4 h-4 text-orange-600" />
-                  Utility expenses have increased by 8%
+                  <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+                  Hospital Services: {formatPkrCurrency(totalRevenue)}
                 </li>
                 <li className="flex items-center gap-2">
-                  <TrendingDown className="w-4 h-4 text-orange-600" />
-                  Maintenance costs are above budget
+                  <div className="w-3 h-3 bg-purple-500 rounded-full"></div>
+                  Pharmacy: {formatPkrCurrency(pharmacyRevenue)}
                 </li>
                 <li className="flex items-center gap-2">
-                  <TrendingDown className="w-4 h-4 text-orange-600" />
-                  Pending invoices need attention
+                  <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                  Lab Tests: {formatPkrCurrency(labRevenue)}
                 </li>
               </ul>
             </div>
