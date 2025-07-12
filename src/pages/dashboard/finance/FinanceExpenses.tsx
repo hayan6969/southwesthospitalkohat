@@ -8,82 +8,71 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { formatPkrCurrency } from "@/utils/currency";
-import { Plus, Receipt, TrendingDown, Calendar, Edit, Trash2 } from "lucide-react";
+import { Plus, Receipt, TrendingDown, Calendar as CalendarIcon, Edit, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
+import { cn } from "@/lib/utils";
+import { useAuth } from "@/hooks/useAuth";
 
 interface Expense {
   id: string;
   category: string;
   description: string;
   amount: number;
-  date: string;
+  expense_date: string;
   created_at: string;
+  created_by: string;
 }
 
 export default function FinanceExpenses() {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [formData, setFormData] = useState({
     category: "",
     description: "",
     amount: "",
-    date: new Date().toISOString().split('T')[0]
   });
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { user } = useAuth();
 
-  // Create expenses table migration would be needed here
+  // Fetch expenses from database
   const { data: expenses, isLoading } = useQuery({
     queryKey: ['expenses'],
     queryFn: async () => {
-      // For now, return mock data since expenses table doesn't exist
-      // In real implementation, you'd query from expenses table
-      return [
-        {
-          id: '1',
-          category: 'Medical Supplies',
-          description: 'Surgical instruments and medical equipment',
-          amount: 75000,
-          date: '2024-01-15',
-          created_at: '2024-01-15T10:00:00Z'
-        },
-        {
-          id: '2',
-          category: 'Staff Salaries',
-          description: 'Monthly staff payments',
-          amount: 250000,
-          date: '2024-01-01',
-          created_at: '2024-01-01T09:00:00Z'
-        },
-        {
-          id: '3',
-          category: 'Utilities',
-          description: 'Electricity and water bills',
-          amount: 45000,
-          date: '2024-01-10',
-          created_at: '2024-01-10T14:00:00Z'
-        },
-        {
-          id: '4',
-          category: 'Maintenance',
-          description: 'Equipment maintenance and repairs',
-          amount: 25000,
-          date: '2024-01-20',
-          created_at: '2024-01-20T11:00:00Z'
-        }
-      ] as Expense[];
+      const { data, error } = await supabase
+        .from('expenses')
+        .select('*')
+        .order('expense_date', { ascending: false });
+      if (error) throw error;
+      return data as Expense[];
     }
   });
 
   const addExpenseMutation = useMutation({
-    mutationFn: async (expenseData: any) => {
-      // This would insert into expenses table
-      // For now, just simulate success
-      return { success: true };
+    mutationFn: async (expenseData: {
+      category: string;
+      description: string;
+      amount: number;
+      expense_date: string;
+    }) => {
+      const { data, error } = await supabase
+        .from('expenses')
+        .insert([{
+          ...expenseData,
+          created_by: user?.id
+        }])
+        .select()
+        .single();
+      
+      if (error) throw error;
+      return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['expenses'] });
@@ -92,14 +81,15 @@ export default function FinanceExpenses() {
         category: "",
         description: "",
         amount: "",
-        date: new Date().toISOString().split('T')[0]
       });
+      setSelectedDate(new Date());
       toast({
         title: "Success",
         description: "Expense added successfully",
       });
     },
-    onError: () => {
+    onError: (error) => {
+      console.error('Error adding expense:', error);
       toast({
         title: "Error",
         description: "Failed to add expense",
@@ -108,18 +98,56 @@ export default function FinanceExpenses() {
     }
   });
 
+  const deleteExpenseMutation = useMutation({
+    mutationFn: async (expenseId: string) => {
+      const { error } = await supabase
+        .from('expenses')
+        .delete()
+        .eq('id', expenseId);
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['expenses'] });
+      toast({
+        title: "Success",
+        description: "Expense deleted successfully",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to delete expense",
+        variant: "destructive",
+      });
+    }
+  });
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!selectedDate) {
+      toast({
+        title: "Error",
+        description: "Please select a date",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     addExpenseMutation.mutate({
       ...formData,
-      amount: parseFloat(formData.amount)
+      amount: parseFloat(formData.amount),
+      expense_date: format(selectedDate, 'yyyy-MM-dd')
     });
   };
 
   const totalExpenses = expenses?.reduce((sum, expense) => sum + expense.amount, 0) || 0;
-  const monthlyExpenses = expenses?.filter(exp => 
-    new Date(exp.date).getMonth() === new Date().getMonth()
-  ).reduce((sum, expense) => sum + expense.amount, 0) || 0;
+  const currentMonth = new Date().getMonth();
+  const currentYear = new Date().getFullYear();
+  const monthlyExpenses = expenses?.filter(exp => {
+    const expenseDate = new Date(exp.expense_date);
+    return expenseDate.getMonth() === currentMonth && expenseDate.getFullYear() === currentYear;
+  }).reduce((sum, expense) => sum + expense.amount, 0) || 0;
 
   const expensesByCategory = expenses?.reduce((acc, expense) => {
     acc[expense.category] = (acc[expense.category] || 0) + expense.amount;
@@ -241,13 +269,29 @@ export default function FinanceExpenses() {
                 </div>
                 <div>
                   <Label htmlFor="date">Date</Label>
-                  <Input
-                    id="date"
-                    type="date"
-                    value={formData.date}
-                    onChange={(e) => setFormData(prev => ({ ...prev, date: e.target.value }))}
-                    required
-                  />
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className={cn(
+                          "w-full justify-start text-left font-normal",
+                          !selectedDate && "text-muted-foreground"
+                        )}
+                      >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {selectedDate ? format(selectedDate, "PPP") : <span>Pick a date</span>}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={selectedDate}
+                        onSelect={setSelectedDate}
+                        initialFocus
+                        className={cn("p-3 pointer-events-auto")}
+                      />
+                    </PopoverContent>
+                  </Popover>
                 </div>
                 <Button type="submit" className="w-full" disabled={addExpenseMutation.isPending}>
                   {addExpenseMutation.isPending ? "Adding..." : "Add Expense"}
@@ -277,13 +321,18 @@ export default function FinanceExpenses() {
                   <TableCell className="font-medium text-red-600">
                     -{formatPkrCurrency(expense.amount)}
                   </TableCell>
-                  <TableCell>{format(new Date(expense.date), 'MMM dd, yyyy')}</TableCell>
+                  <TableCell>{format(new Date(expense.expense_date), 'MMM dd, yyyy')}</TableCell>
                   <TableCell>
                     <div className="flex gap-2">
                       <Button size="sm" variant="outline">
                         <Edit className="w-4 h-4" />
                       </Button>
-                      <Button size="sm" variant="outline">
+                      <Button 
+                        size="sm" 
+                        variant="outline"
+                        onClick={() => deleteExpenseMutation.mutate(expense.id)}
+                        disabled={deleteExpenseMutation.isPending}
+                      >
                         <Trash2 className="w-4 h-4" />
                       </Button>
                     </div>
