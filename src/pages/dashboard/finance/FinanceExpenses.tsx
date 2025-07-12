@@ -32,6 +32,7 @@ interface Expense {
 export default function FinanceExpenses() {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
+  const [filterDate, setFilterDate] = useState<Date | undefined>();
   const [formData, setFormData] = useState({
     category: "",
     description: "",
@@ -43,7 +44,7 @@ export default function FinanceExpenses() {
   const { user } = useAuth();
 
   // Fetch expenses from database
-  const { data: expenses, isLoading } = useQuery({
+  const { data: allExpenses, isLoading } = useQuery({
     queryKey: ['expenses'],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -54,6 +55,14 @@ export default function FinanceExpenses() {
       return data as Expense[];
     }
   });
+
+  // Filter expenses by date if selected
+  const expenses = filterDate
+    ? allExpenses?.filter(expense => {
+        const expenseDate = new Date(expense.expense_date);
+        return expenseDate.toDateString() === filterDate.toDateString();
+      })
+    : allExpenses;
 
   const addExpenseMutation = useMutation({
     mutationFn: async (expenseData: {
@@ -217,13 +226,37 @@ export default function FinanceExpenses() {
             <Receipt className="w-5 h-5" />
             Recent Expenses
           </CardTitle>
-          <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-            <DialogTrigger asChild>
-              <Button>
-                <Plus className="w-4 h-4 mr-2" />
-                Add Expense
-              </Button>
-            </DialogTrigger>
+          <div className="flex gap-4">
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className={cn(
+                    "w-48 justify-start text-left font-normal",
+                    !filterDate && "text-muted-foreground"
+                  )}
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {filterDate ? format(filterDate, "PPP") : <span>Filter by date</span>}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="single"
+                  selected={filterDate}
+                  onSelect={setFilterDate}
+                  initialFocus
+                  className={cn("p-3 pointer-events-auto")}
+                />
+              </PopoverContent>
+            </Popover>
+            <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+              <DialogTrigger asChild>
+                <Button>
+                  <Plus className="w-4 h-4 mr-2" />
+                  Add Expense
+                </Button>
+              </DialogTrigger>
             <DialogContent>
               <DialogHeader>
                 <DialogTitle>Add New Expense</DialogTitle>
@@ -299,6 +332,7 @@ export default function FinanceExpenses() {
               </form>
             </DialogContent>
           </Dialog>
+          </div>
         </CardHeader>
         <CardContent>
           <Table>

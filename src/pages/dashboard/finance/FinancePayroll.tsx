@@ -10,9 +10,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { formatPkrCurrency } from "@/utils/currency";
-import { Users, DollarSign, Calendar, Plus, Download, Check, CheckCircle } from "lucide-react";
+import { Users, DollarSign, Calendar, Plus, Download, Check, CheckCircle, CalendarIcon } from "lucide-react";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
+import { Calendar as CalendarComponent } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
 // Fixed CheckAll import issue
 
 interface PayrollRecord {
@@ -34,6 +37,7 @@ export default function FinancePayroll() {
   const [isPayrollDialogOpen, setIsPayrollDialogOpen] = useState(false);
   const [isCreatePayrollDialogOpen, setIsCreatePayrollDialogOpen] = useState(false);
   const [selectedMonth, setSelectedMonth] = useState(new Date().toISOString().slice(0, 7));
+  const [filterDate, setFilterDate] = useState<Date | undefined>();
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>("");
   const [baseSalary, setBaseSalary] = useState<string>("");
   const [allowances, setAllowances] = useState<string>("0");
@@ -57,7 +61,7 @@ export default function FinancePayroll() {
   });
 
   // Fetch payroll records
-  const { data: payrollRecords, isLoading: payrollLoading } = useQuery({
+  const { data: allPayrollRecords, isLoading: payrollLoading } = useQuery({
     queryKey: ['payroll-records', selectedMonth],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -70,6 +74,14 @@ export default function FinancePayroll() {
       return data as PayrollRecord[];
     }
   });
+
+  // Filter payroll records by date if selected
+  const payrollRecords = filterDate
+    ? allPayrollRecords?.filter(record => {
+        const recordDate = new Date(record.created_at);
+        return recordDate.toDateString() === filterDate.toDateString();
+      })
+    : allPayrollRecords;
 
   const createPayrollMutation = useMutation({
     mutationFn: async (payrollData: {
@@ -167,7 +179,7 @@ export default function FinancePayroll() {
   const markAllPaidMutation = useMutation({
     mutationFn: async () => {
       const { data: userData } = await supabase.auth.getUser();
-      const pendingRecords = payrollRecords?.filter(r => r.status === 'pending') || [];
+      const pendingRecords = allPayrollRecords?.filter(r => r.status === 'pending') || [];
       
       if (pendingRecords.length === 0) return;
 
@@ -313,6 +325,29 @@ export default function FinancePayroll() {
             Payroll Management
           </CardTitle>
             <div className="flex gap-4 items-center">
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className={cn(
+                    "w-48 justify-start text-left font-normal",
+                    !filterDate && "text-muted-foreground"
+                  )}
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {filterDate ? format(filterDate, "PPP") : <span>Filter by date</span>}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <CalendarComponent
+                  mode="single"
+                  selected={filterDate}
+                  onSelect={setFilterDate}
+                  initialFocus
+                  className={cn("p-3 pointer-events-auto")}
+                />
+              </PopoverContent>
+            </Popover>
             <Select value={selectedMonth} onValueChange={setSelectedMonth}>
               <SelectTrigger className="w-48">
                 <SelectValue />
@@ -326,7 +361,7 @@ export default function FinancePayroll() {
               </SelectContent>
             </Select>
             <div className="flex gap-2">
-              {payrollRecords?.some(r => r.status === 'pending') && (
+              {allPayrollRecords?.some(r => r.status === 'pending') && (
                 <Button 
                   variant="outline"
                   onClick={() => markAllPaidMutation.mutate()}

@@ -6,14 +6,27 @@ import { useInvoices } from "@/hooks/useDatabase";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { formatPkrCurrency } from "@/utils/currency";
-import { Download, Receipt, Calendar } from "lucide-react";
+import { Download, Receipt, Calendar as CalendarIcon } from "lucide-react";
 import { format } from "date-fns";
 import { generateInvoicePDF } from "@/utils/pdfGenerator";
 import { useToast } from "@/hooks/use-toast";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
+import { useState } from "react";
 
 export default function FinanceIncome() {
-  const { data: invoices, isLoading: invoicesLoading } = useInvoices();
+  const [filterDate, setFilterDate] = useState<Date | undefined>();
+  const { data: allInvoices, isLoading: invoicesLoading } = useInvoices();
   const { toast } = useToast();
+
+  // Filter invoices by date if selected
+  const invoices = filterDate
+    ? allInvoices?.filter(invoice => {
+        const invoiceDate = new Date(invoice.created_at!);
+        return invoiceDate.toDateString() === filterDate.toDateString();
+      })
+    : allInvoices;
 
   // Get pharmacy invoices
   const { data: pharmacyInvoices, isLoading: pharmacyLoading } = useQuery({
@@ -132,11 +145,34 @@ export default function FinanceIncome() {
 
       {/* Recent Transactions */}
       <Card>
-        <CardHeader>
+        <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle className="flex items-center gap-2">
             <Receipt className="w-5 h-5" />
             Recent Transactions
           </CardTitle>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                className={cn(
+                  "w-48 justify-start text-left font-normal",
+                  !filterDate && "text-muted-foreground"
+                )}
+              >
+                <CalendarIcon className="mr-2 h-4 w-4" />
+                {filterDate ? format(filterDate, "PPP") : <span>Filter by date</span>}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+              <Calendar
+                mode="single"
+                selected={filterDate}
+                onSelect={setFilterDate}
+                initialFocus
+                className={cn("p-3 pointer-events-auto")}
+              />
+            </PopoverContent>
+          </Popover>
         </CardHeader>
         <CardContent>
           <Table>
