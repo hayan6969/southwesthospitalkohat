@@ -13,6 +13,7 @@ import { formatPkrCurrency } from "@/utils/currency";
 import { Users, DollarSign, Calendar, Plus, Download, Check, CheckCircle } from "lucide-react";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
+// Fixed CheckAll import issue
 
 interface PayrollRecord {
   id: string;
