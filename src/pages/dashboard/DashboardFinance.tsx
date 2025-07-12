@@ -1,19 +1,38 @@
 
 import AppLayout from "@/layouts/AppLayout";
 import { StatsCard } from "@/components/StatsCard";
-import { Calculator, TrendingUp, Users, Receipt, DollarSign, Minus } from "lucide-react";
+import { Calculator, TrendingUp, Users, Receipt, DollarSign, Minus, Pill } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useInvoices, useStats } from "@/hooks/useDatabase";
 import { formatPkrCurrency } from "@/utils/currency";
 import { useHospitalSettings } from "@/hooks/useHospitalSettings";
+import { supabase } from "@/integrations/supabase/client";
+import { useQuery } from "@tanstack/react-query";
 
 export default function DashboardFinance() {
   const { data: invoices, isLoading: invoicesLoading } = useInvoices();
   const { data: stats, isLoading: statsLoading } = useStats();
   const { settings: hospitalSettings } = useHospitalSettings();
 
-  const totalRevenue = invoices?.reduce((sum, invoice) => sum + (invoice.amount || 0), 0) || 0;
+  // Get pharmacy invoices
+  const { data: pharmacyInvoices, isLoading: pharmacyLoading } = useQuery({
+    queryKey: ['pharmacy-invoices'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('pharmacy_invoices')
+        .select('*')
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return data;
+    }
+  });
+
+  // Calculate total revenue including pharmacy
+  const hospitalRevenue = invoices?.reduce((sum, invoice) => sum + (invoice.amount || 0), 0) || 0;
+  const pharmacyRevenue = pharmacyInvoices?.reduce((sum, invoice) => sum + (invoice.final_amount || 0), 0) || 0;
+  const totalRevenue = hospitalRevenue + pharmacyRevenue;
+  
   const paidInvoices = invoices?.filter(inv => inv.status === 'paid') || [];
   const pendingInvoices = invoices?.filter(inv => inv.status === 'pending') || [];
 
@@ -41,24 +60,25 @@ export default function DashboardFinance() {
             title="Total Revenue"
             value={formatPkrCurrency(totalRevenue)}
             icon={<DollarSign className="w-5 h-5 text-green-600" />}
+            loading={invoicesLoading || pharmacyLoading}
+          />
+          <StatsCard
+            title="Hospital Revenue"
+            value={formatPkrCurrency(hospitalRevenue)}
+            icon={<Receipt className="w-5 h-5 text-blue-600" />}
             loading={invoicesLoading}
           />
           <StatsCard
-            title="Paid Invoices"
-            value={paidInvoices.length}
-            icon={<Receipt className="w-5 h-5 text-blue-600" />}
-            loading={invoicesLoading}
+            title="Pharmacy Revenue"
+            value={formatPkrCurrency(pharmacyRevenue)}
+            icon={<Pill className="w-5 h-5 text-purple-600" />}
+            loading={pharmacyLoading}
           />
           <StatsCard
             title="Pending Payments"
             value={formatPkrCurrency(pendingInvoices.reduce((sum, inv) => sum + (inv.amount || 0), 0))}
             icon={<TrendingUp className="w-5 h-5 text-orange-600" />}
             loading={invoicesLoading}
-          />
-          <StatsCard
-            title="Staff Payroll"
-            value="₨ 250,000"
-            icon={<Users className="w-5 h-5 text-purple-600" />}
           />
         </div>
 
@@ -99,24 +119,28 @@ export default function DashboardFinance() {
             <CardContent>
               <div className="space-y-4">
                 <div className="flex justify-between items-center">
-                  <span>Appointments</span>
-                  <span className="font-medium">{formatPkrCurrency(totalRevenue * 0.7)}</span>
+                  <span>Hospital Services</span>
+                  <span className="font-medium">{formatPkrCurrency(hospitalRevenue)}</span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span>Lab Tests</span>
-                  <span className="font-medium">{formatPkrCurrency(totalRevenue * 0.2)}</span>
+                  <span>Pharmacy Sales</span>
+                  <span className="font-medium">{formatPkrCurrency(pharmacyRevenue)}</span>
                 </div>
-                <div className="flex justify-between items-center">
-                  <span>OT Procedures</span>
-                  <span className="font-medium">{formatPkrCurrency(totalRevenue * 0.1)}</span>
+                <div className="flex justify-between items-center text-sm text-gray-500">
+                  <span className="ml-4">• Lab Tests</span>
+                  <span>{formatPkrCurrency(hospitalRevenue * 0.3)}</span>
                 </div>
-                <div className="flex justify-between items-center text-green-600">
-                  <span>Free Appointments</span>
-                  <span className="font-medium">₨ 0 (No profit)</span>
+                <div className="flex justify-between items-center text-sm text-gray-500">
+                  <span className="ml-4">• Appointments</span>
+                  <span>{formatPkrCurrency(hospitalRevenue * 0.5)}</span>
+                </div>
+                <div className="flex justify-between items-center text-sm text-gray-500">
+                  <span className="ml-4">• Other Services</span>
+                  <span>{formatPkrCurrency(hospitalRevenue * 0.2)}</span>
                 </div>
                 <hr />
                 <div className="flex justify-between items-center font-bold text-lg">
-                  <span>Total</span>
+                  <span>Total Revenue</span>
                   <span>{formatPkrCurrency(totalRevenue)}</span>
                 </div>
               </div>

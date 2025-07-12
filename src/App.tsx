@@ -17,6 +17,7 @@ import DashboardDoctor from "./pages/dashboard/DashboardDoctor";
 import DashboardStaff from "./pages/dashboard/DashboardStaff";
 import DashboardAdmin from "./pages/dashboard/DashboardAdmin";
 import DashboardPharmacy from "./pages/dashboard/DashboardPharmacy";
+import DashboardFinance from "./pages/dashboard/DashboardFinance";
 
 // Doctor pages
 import DoctorSchedule from "./pages/dashboard/doctor/DoctorSchedule";
@@ -224,7 +225,7 @@ const App = () => (
             {/* Finance dashboard routes */}
             <Route path="/dashboard/finance" element={
               <ProtectedRoute allowedRoles={['finance']}>
-                <DashboardAdmin />
+                <DashboardFinance />
               </ProtectedRoute>
             } />
             
