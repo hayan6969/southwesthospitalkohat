@@ -50,11 +50,8 @@ import PharmacyAnalytics from "./pages/dashboard/pharmacy/PharmacyAnalytics";
 import PharmacySell from "./pages/dashboard/pharmacy/PharmacySell";
 import PharmacyStock from "./pages/dashboard/pharmacy/PharmacyStock";
 
-// Finance pages
-import FinanceIncome from "./pages/dashboard/finance/FinanceIncome";
-import FinanceExpenses from "./pages/dashboard/finance/FinanceExpenses";
-import FinanceAnalytics from "./pages/dashboard/finance/FinanceAnalytics";
-import FinancePayroll from "./pages/dashboard/finance/FinancePayroll";
+// Finance routes component
+import FinanceRoutes from "./pages/dashboard/FinanceRoutes";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -228,30 +225,10 @@ const App = () => (
               </ProtectedRoute>
             } />
 
-            {/* Finance dashboard routes */}
-            <Route path="/dashboard/finance" element={
+            {/* Finance dashboard routes - All wrapped in FinanceLayout */}
+            <Route path="/dashboard/finance/*" element={
               <ProtectedRoute allowedRoles={['finance']}>
-                <DashboardFinance />
-              </ProtectedRoute>
-            } />
-            <Route path="/dashboard/finance/income" element={
-              <ProtectedRoute allowedRoles={['finance']}>
-                <FinanceIncome />
-              </ProtectedRoute>
-            } />
-            <Route path="/dashboard/finance/expenses" element={
-              <ProtectedRoute allowedRoles={['finance']}>
-                <FinanceExpenses />
-              </ProtectedRoute>
-            } />
-            <Route path="/dashboard/finance/analytics" element={
-              <ProtectedRoute allowedRoles={['finance']}>
-                <FinanceAnalytics />
-              </ProtectedRoute>
-            } />
-            <Route path="/dashboard/finance/payroll" element={
-              <ProtectedRoute allowedRoles={['finance']}>
-                <FinancePayroll />
+                <FinanceRoutes />
               </ProtectedRoute>
             } />
             

@@ -1,5 +1,4 @@
 
-import FinanceLayout from "@/layouts/FinanceLayout";
 import { StatsCard } from "@/components/StatsCard";
 import { Calculator, TrendingUp, Users, Receipt, DollarSign, Minus, Pill } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -39,8 +38,7 @@ export default function DashboardFinance() {
   const pendingInvoices = invoices?.filter(inv => inv.status === 'pending') || [];
 
   return (
-    <FinanceLayout>
-      <div className="space-y-8">
+    <div className="space-y-8">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           <StatsCard
             title="Total Revenue"
@@ -148,8 +146,7 @@ export default function DashboardFinance() {
             </CardContent>
           </Card>
         </div>
-      </div>
-    </FinanceLayout>
+    </div>
   );
 }
 
