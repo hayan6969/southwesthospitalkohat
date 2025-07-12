@@ -8,7 +8,7 @@ import { Pill, ShoppingCart, DollarSign, AlertTriangle, TrendingUp, FileText } f
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { formatPkrCurrency } from "@/utils/currency";
+import { formatPkrAmount } from "@/utils/currency";
 import { PharmacyInvoiceDetailsDialog } from "@/components/dialogs/PharmacyInvoiceDetailsDialog";
 import { useHospitalSettings } from "@/hooks/useHospitalSettings";
 
@@ -71,7 +71,7 @@ export default function DashboardPharmacy() {
           />
           <StatsCard
             title="Total Revenue"
-            value={formatPkrCurrency(stats?.totalRevenue || 0)}
+            value={formatPkrAmount(stats?.totalRevenue || 0)}
             icon={<DollarSign className="w-5 h-5 text-purple-600" />}
             loading={statsLoading}
           />
@@ -200,7 +200,7 @@ export default function DashboardPharmacy() {
                           <TableCell className="font-medium">{invoice.invoice_number}</TableCell>
                           <TableCell>{invoice.customer_name || "Walk-in Customer"}</TableCell>
                           <TableCell>{new Date(invoice.created_at).toLocaleDateString()}</TableCell>
-                          <TableCell>{formatPkrCurrency(invoice.final_amount)}</TableCell>
+                          <TableCell>{formatPkrAmount(invoice.final_amount)}</TableCell>
                           <TableCell>
                             <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
                               {invoice.status || "Completed"}

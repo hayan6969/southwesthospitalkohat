@@ -3,7 +3,7 @@ import { usePharmacyStats, usePharmacyInvoices } from "@/hooks/useDatabase";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Pill, ShoppingCart, DollarSign, TrendingUp, Calendar } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { formatPkrCurrency } from "@/utils/currency";
+import { formatPkrAmount } from "@/utils/currency";
 
 export function PharmacyOverview() {
   const { data: stats, isLoading: statsLoading } = usePharmacyStats();
@@ -61,7 +61,7 @@ export function PharmacyOverview() {
             {statsLoading ? (
               <div className="h-6 bg-gray-100 rounded animate-pulse"></div>
             ) : (
-              <div className="text-2xl font-bold">{formatPkrCurrency(stats?.totalRevenue || 0)}</div>
+              <div className="text-2xl font-bold">{formatPkrAmount(stats?.totalRevenue || 0)}</div>
             )}
           </CardContent>
         </Card>
@@ -104,7 +104,7 @@ export function PharmacyOverview() {
                     </p>
                   </div>
                   <div className="text-right">
-                    <p className="font-bold">{formatPkrCurrency(invoice.final_amount)}</p>
+                    <p className="font-bold">{formatPkrAmount(invoice.final_amount)}</p>
                     <p className="text-xs text-gray-500">
                       {new Date(invoice.created_at).toLocaleDateString()}
                     </p>

@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ShoppingCart, Plus, Trash2, Receipt, Download } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { generatePharmacyInvoicePDF } from "@/utils/pharmacyPdfGenerator";
-import { formatPkrCurrency, convertUsdToPkr } from "@/utils/currency";
+import { formatPkrAmount, convertUsdToPkr } from "@/utils/currency";
 
 type InvoiceItem = {
   medicine_id: string;
@@ -142,7 +142,7 @@ export default function PharmacyInvoices() {
         }))
       });
 
-      logCreate('Pharmacy Invoice', `Invoice ${invoiceNumber} created for ${customerName || 'Walk-in Customer'} - Total: ${formatPkrCurrency(total / convertUsdToPkr(1))}`);
+      logCreate('Pharmacy Invoice', `Invoice ${invoiceNumber} created for ${customerName || 'Walk-in Customer'} - Total: ${formatPkrAmount(total / convertUsdToPkr(1))}`);
       toast({ title: "Invoice created successfully" });
       
       // Reset form
@@ -221,7 +221,7 @@ export default function PharmacyInvoices() {
                       <SelectContent>
                         {medicines?.map((medicine) => (
                           <SelectItem key={medicine.id} value={medicine.id}>
-                            {medicine.name} - {formatPkrCurrency(medicine.selling_price)} (Stock: {medicine.stock_quantity})
+                            {medicine.name} - {formatPkrAmount(medicine.selling_price)} (Stock: {medicine.stock_quantity})
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -259,7 +259,7 @@ export default function PharmacyInvoices() {
                       {items.map((item, index) => (
                         <TableRow key={index}>
                           <TableCell>{item.medicine_name}</TableCell>
-                          <TableCell>{formatPkrCurrency(item.unit_price / convertUsdToPkr(1))}</TableCell>
+                          <TableCell>{formatPkrAmount(item.unit_price / convertUsdToPkr(1))}</TableCell>
                           <TableCell>
                             <Input
                               type="number"
@@ -269,7 +269,7 @@ export default function PharmacyInvoices() {
                               className="w-20"
                             />
                           </TableCell>
-                          <TableCell>{formatPkrCurrency(item.total_price / convertUsdToPkr(1))}</TableCell>
+                          <TableCell>{formatPkrAmount(item.total_price / convertUsdToPkr(1))}</TableCell>
                           <TableCell>
                             <Button
                               variant="ghost"
@@ -301,11 +301,11 @@ export default function PharmacyInvoices() {
                   />
                 </div>
                 <div className="text-right">
-                  <div className="text-sm text-gray-600">Subtotal: {formatPkrCurrency(subtotal / convertUsdToPkr(1))}</div>
+                  <div className="text-sm text-gray-600">Subtotal: {formatPkrAmount(subtotal / convertUsdToPkr(1))}</div>
                   {discount > 0 && (
-                    <div className="text-sm text-gray-600">Discount: -{formatPkrCurrency(discountAmount / convertUsdToPkr(1))}</div>
+                    <div className="text-sm text-gray-600">Discount: -{formatPkrAmount(discountAmount / convertUsdToPkr(1))}</div>
                   )}
-                  <div className="text-lg font-bold">Total: {formatPkrCurrency(total / convertUsdToPkr(1))}</div>
+                  <div className="text-lg font-bold">Total: {formatPkrAmount(total / convertUsdToPkr(1))}</div>
                 </div>
               </div>
 
@@ -375,7 +375,7 @@ export default function PharmacyInvoices() {
                         {invoice.pharmacy_invoice_items?.length || 0} items
                       </TableCell>
                       <TableCell className="font-medium">
-                        {formatPkrCurrency(invoice.final_amount)}
+                        {formatPkrAmount(invoice.final_amount)}
                       </TableCell>
                       <TableCell>
                         <span className="px-2 py-1 rounded-full text-xs bg-green-100 text-green-800">

@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { useMedicines, useCreatePharmacyInvoice } from "@/hooks/useDatabase";
-import { formatPkrCurrency } from "@/utils/currency";
+import { formatPkrAmount } from "@/utils/currency";
 import { generatePharmacyInvoicePDF } from "@/utils/pharmacyPdfGenerator";
 import { toast } from "sonner";
 import { ShoppingCart, Plus, Trash2 } from "lucide-react";
@@ -195,7 +195,7 @@ export default function PharmacySell() {
                   <SelectContent>
                     {medicines?.filter(m => m.stock_quantity > 0).map((medicine) => (
                       <SelectItem key={medicine.id} value={medicine.id}>
-                        {medicine.name} - {formatPkrCurrency(medicine.selling_price)} (Stock: {medicine.stock_quantity})
+                        {medicine.name} - {formatPkrAmount(medicine.selling_price)} (Stock: {medicine.stock_quantity})
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -280,7 +280,7 @@ export default function PharmacySell() {
                     <div className="flex-1">
                       <h4 className="font-medium">{item.name}</h4>
                       <p className="text-sm text-gray-600">
-                        {formatPkrCurrency(item.unitPrice)} × {item.quantity} = {formatPkrCurrency(item.totalPrice)}
+                        {formatPkrAmount(item.unitPrice)} × {item.quantity} = {formatPkrAmount(item.totalPrice)}
                       </p>
                     </div>
                     <div className="flex items-center gap-2">
@@ -308,17 +308,17 @@ export default function PharmacySell() {
                 <div className="space-y-2">
                   <div className="flex justify-between">
                     <span>Subtotal:</span>
-                    <span>{formatPkrCurrency(subtotal)}</span>
+                    <span>{formatPkrAmount(subtotal)}</span>
                   </div>
                   {discount > 0 && (
                     <div className="flex justify-between text-green-600">
                       <span>Discount ({discount}%):</span>
-                      <span>-{formatPkrCurrency(discountAmount)}</span>
+                      <span>-{formatPkrAmount(discountAmount)}</span>
                     </div>
                   )}
                   <div className="flex justify-between font-bold text-lg">
                     <span>Total:</span>
-                    <span>{formatPkrCurrency(total)}</span>
+                    <span>{formatPkrAmount(total)}</span>
                   </div>
                 </div>
 

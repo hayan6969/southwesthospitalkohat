@@ -18,7 +18,7 @@ import { AccountManagementDialog } from "@/components/dialogs/AccountManagementD
 import { EditUserDialog } from "@/components/dialogs/EditUserDialog";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { format } from "date-fns";
-import { formatPkrCurrency } from "@/utils/currency";
+import { formatPkrAmount } from "@/utils/currency";
 import { useHospitalSettings } from "@/hooks/useHospitalSettings";
 import { supabase } from "@/integrations/supabase/client";
 import AdminLabs from "./admin/AdminLabs";
@@ -256,7 +256,7 @@ export default function DashboardAdmin() {
                 />
                 <StatsCard
                   title="Revenue"
-                  value={formatPkrCurrency(stats?.totalRevenue || 0)}
+                  value={formatPkrAmount(stats?.totalRevenue || 0)}
                   change="+23%"
                   changeType="positive"
                   icon={<DollarSign className="w-5 h-5 text-green-600" />}

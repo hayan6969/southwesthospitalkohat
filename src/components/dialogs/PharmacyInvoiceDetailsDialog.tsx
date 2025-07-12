@@ -4,7 +4,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { FileText, Download, Eye } from "lucide-react";
-import { formatPkrCurrency } from "@/utils/currency";
+import { formatPkrAmount } from "@/utils/currency";
 import { generatePharmacyInvoicePDF } from "@/utils/pharmacyPdfGenerator";
 import { useInvoiceItems } from "@/hooks/useDatabase";
 
@@ -115,10 +115,10 @@ export function PharmacyInvoiceDetailsDialog({
                     </TableCell>
                     <TableCell className="text-right">{item.quantity}</TableCell>
                     <TableCell className="text-right">
-                      {formatPkrCurrency(item.unit_price)}
+                      {formatPkrAmount(item.unit_price)}
                     </TableCell>
                     <TableCell className="text-right">
-                      {formatPkrCurrency(item.total_price)}
+                      {formatPkrAmount(item.total_price)}
                     </TableCell>
                   </TableRow>
                 ))}
@@ -132,17 +132,17 @@ export function PharmacyInvoiceDetailsDialog({
               <div className="w-64 space-y-2">
                 <div className="flex justify-between">
                   <span className="text-gray-600">Subtotal:</span>
-                  <span>{formatPkrCurrency(invoice.total_amount)}</span>
+                  <span>{formatPkrAmount(invoice.total_amount)}</span>
                 </div>
                 {invoice.discount_amount && invoice.discount_amount > 0 && (
                   <div className="flex justify-between">
                     <span className="text-gray-600">Discount:</span>
-                    <span className="text-red-600">-{formatPkrCurrency(invoice.discount_amount)}</span>
+                    <span className="text-red-600">-{formatPkrAmount(invoice.discount_amount)}</span>
                   </div>
                 )}
                 <div className="flex justify-between font-semibold text-lg border-t pt-2">
                   <span>Total:</span>
-                  <span>{formatPkrCurrency(invoice.final_amount)}</span>
+                  <span>{formatPkrAmount(invoice.final_amount)}</span>
                 </div>
               </div>
             </div>

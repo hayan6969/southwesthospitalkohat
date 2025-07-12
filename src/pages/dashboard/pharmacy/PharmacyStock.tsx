@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useMedicines, useUpdateMedicine } from "@/hooks/useDatabase";
-import { formatPkrCurrency } from "@/utils/currency";
+import { formatPkrAmount } from "@/utils/currency";
 import { toast } from "sonner";
 import { AlertTriangle, TrendingDown, TrendingUp, Package, Search, Edit } from "lucide-react";
 
@@ -94,7 +94,7 @@ export default function PharmacyStock() {
                     <h4 className="font-semibold text-lg">{medicine.name}</h4>
                     <p className="text-sm text-gray-600">
                       {medicine.company_name && `${medicine.company_name} • `}
-                      Selling Price: {formatPkrCurrency(medicine.selling_price)}
+                      Selling Price: {formatPkrAmount(medicine.selling_price)}
                     </p>
                   </div>
                   {getStockBadge(medicine)}
@@ -157,7 +157,7 @@ export default function PharmacyStock() {
                   <div>
                     <Label className="text-sm font-medium">Stock Value</Label>
                     <p className="font-medium mt-1">
-                      {formatPkrCurrency(medicine.stock_quantity * medicine.selling_price)}
+                      {formatPkrAmount(medicine.stock_quantity * medicine.selling_price)}
                     </p>
                   </div>
                 </div>

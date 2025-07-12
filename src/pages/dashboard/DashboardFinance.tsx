@@ -4,7 +4,7 @@ import { Calculator, TrendingUp, Users, Receipt, DollarSign, Minus, Pill } from 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useInvoices, useStats } from "@/hooks/useDatabase";
-import { formatPkrCurrency } from "@/utils/currency";
+import { formatPkrAmount } from "@/utils/currency";
 import { useHospitalSettings } from "@/hooks/useHospitalSettings";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
@@ -42,25 +42,25 @@ export default function DashboardFinance() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           <StatsCard
             title="Total Revenue"
-            value={formatPkrCurrency(totalRevenue)}
+            value={formatPkrAmount(totalRevenue)}
             icon={<DollarSign className="w-5 h-5 text-green-600" />}
             loading={invoicesLoading || pharmacyLoading}
           />
           <StatsCard
             title="Hospital Revenue"
-            value={formatPkrCurrency(hospitalRevenue)}
+            value={formatPkrAmount(hospitalRevenue)}
             icon={<Receipt className="w-5 h-5 text-blue-600" />}
             loading={invoicesLoading}
           />
           <StatsCard
             title="Pharmacy Revenue"
-            value={formatPkrCurrency(pharmacyRevenue)}
+            value={formatPkrAmount(pharmacyRevenue)}
             icon={<Pill className="w-5 h-5 text-purple-600" />}
             loading={pharmacyLoading}
           />
           <StatsCard
             title="Pending Payments"
-            value={formatPkrCurrency(pendingInvoices.reduce((sum, inv) => sum + (inv.amount || 0), 0))}
+            value={formatPkrAmount(pendingInvoices.reduce((sum, inv) => sum + (inv.amount || 0), 0))}
             icon={<TrendingUp className="w-5 h-5 text-orange-600" />}
             loading={invoicesLoading}
           />
@@ -119,28 +119,28 @@ export default function DashboardFinance() {
               <div className="space-y-4">
                 <div className="flex justify-between items-center">
                   <span>Hospital Services</span>
-                  <span className="font-medium">{formatPkrCurrency(hospitalRevenue)}</span>
+                  <span className="font-medium">{formatPkrAmount(hospitalRevenue)}</span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span>Pharmacy Sales</span>
-                  <span className="font-medium">{formatPkrCurrency(pharmacyRevenue)}</span>
+                  <span className="font-medium">{formatPkrAmount(pharmacyRevenue)}</span>
                 </div>
                 <div className="flex justify-between items-center text-sm text-gray-500">
                   <span className="ml-4">• Lab Tests</span>
-                  <span>{formatPkrCurrency(hospitalRevenue * 0.3)}</span>
+                  <span>{formatPkrAmount(hospitalRevenue * 0.3)}</span>
                 </div>
                 <div className="flex justify-between items-center text-sm text-gray-500">
                   <span className="ml-4">• Appointments</span>
-                  <span>{formatPkrCurrency(hospitalRevenue * 0.5)}</span>
+                  <span>{formatPkrAmount(hospitalRevenue * 0.5)}</span>
                 </div>
                 <div className="flex justify-between items-center text-sm text-gray-500">
                   <span className="ml-4">• Other Services</span>
-                  <span>{formatPkrCurrency(hospitalRevenue * 0.2)}</span>
+                  <span>{formatPkrAmount(hospitalRevenue * 0.2)}</span>
                 </div>
                 <hr />
                 <div className="flex justify-between items-center font-bold text-lg">
                   <span>Total Revenue</span>
-                  <span>{formatPkrCurrency(totalRevenue)}</span>
+                  <span>{formatPkrAmount(totalRevenue)}</span>
                 </div>
               </div>
             </CardContent>

@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Pill, Plus, Edit, Trash2, Search } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { formatPkrCurrency } from "@/utils/currency";
+import { formatPkrAmount } from "@/utils/currency";
 
 type Medicine = {
   id?: string;
@@ -359,8 +359,8 @@ export default function PharmacyMedicines() {
                           {new Date(medicine.expiry_date).toLocaleDateString()}
                         </div>
                       </TableCell>
-                      <TableCell>{formatPkrCurrency(medicine.purchase_price)}</TableCell>
-                      <TableCell>{formatPkrCurrency(medicine.selling_price)}</TableCell>
+                      <TableCell>{formatPkrAmount(medicine.purchase_price)}</TableCell>
+                      <TableCell>{formatPkrAmount(medicine.selling_price)}</TableCell>
                       <TableCell>
                         <span className={`px-2 py-1 rounded-full text-xs ${
                           medicine.stock_quantity <= (medicine.minimum_stock_level || 10)
