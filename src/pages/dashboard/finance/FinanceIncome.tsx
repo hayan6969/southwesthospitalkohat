@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { useInvoices } from "@/hooks/useDatabase";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { formatPkrCurrency } from "@/utils/currency";
+import { formatPkrAmount } from "@/utils/currency";
 import { Download, Receipt, Calendar as CalendarIcon } from "lucide-react";
 import { format } from "date-fns";
 import { generateInvoicePDF } from "@/utils/pdfGenerator";
@@ -102,7 +102,7 @@ export default function FinanceIncome() {
             <CardTitle className="text-sm font-medium text-gray-600">Total Revenue</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">{formatPkrCurrency(totalRevenue)}</div>
+            <div className="text-2xl font-bold text-green-600">{formatPkrAmount(totalRevenue)}</div>
           </CardContent>
         </Card>
         
@@ -111,7 +111,7 @@ export default function FinanceIncome() {
             <CardTitle className="text-sm font-medium text-gray-600">Hospital Services</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{formatPkrCurrency(hospitalRevenue)}</div>
+            <div className="text-2xl font-bold">{formatPkrAmount(hospitalRevenue)}</div>
           </CardContent>
         </Card>
 
@@ -120,7 +120,7 @@ export default function FinanceIncome() {
             <CardTitle className="text-sm font-medium text-gray-600">Pharmacy</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{formatPkrCurrency(pharmacyRevenue)}</div>
+            <div className="text-2xl font-bold">{formatPkrAmount(pharmacyRevenue)}</div>
           </CardContent>
         </Card>
 
@@ -129,7 +129,7 @@ export default function FinanceIncome() {
             <CardTitle className="text-sm font-medium text-gray-600">Lab Tests</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{formatPkrCurrency(labRevenue)}</div>
+            <div className="text-2xl font-bold">{formatPkrAmount(labRevenue)}</div>
           </CardContent>
         </Card>
 
@@ -138,7 +138,7 @@ export default function FinanceIncome() {
             <CardTitle className="text-sm font-medium text-gray-600">OT Procedures</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{formatPkrCurrency(otRevenue)}</div>
+            <div className="text-2xl font-bold">{formatPkrAmount(otRevenue)}</div>
           </CardContent>
         </Card>
       </div>
@@ -191,7 +191,7 @@ export default function FinanceIncome() {
                 <TableRow key={invoice.id}>
                   <TableCell className="font-mono">{invoice.invoice_number}</TableCell>
                   <TableCell>Hospital Service</TableCell>
-                  <TableCell>{formatPkrCurrency(invoice.amount)}</TableCell>
+                  <TableCell>{formatPkrAmount(invoice.amount)}</TableCell>
                   <TableCell>
                     <Badge variant={invoice.status === 'paid' ? 'default' : 'secondary'}>
                       {invoice.status}
@@ -214,7 +214,7 @@ export default function FinanceIncome() {
                 <TableRow key={`pharmacy-${invoice.id}`}>
                   <TableCell className="font-mono">{invoice.invoice_number}</TableCell>
                   <TableCell>Pharmacy</TableCell>
-                  <TableCell>{formatPkrCurrency(invoice.final_amount)}</TableCell>
+                  <TableCell>{formatPkrAmount(invoice.final_amount)}</TableCell>
                   <TableCell>
                     <Badge variant="default">Completed</Badge>
                   </TableCell>

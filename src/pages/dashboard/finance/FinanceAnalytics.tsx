@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { formatPkrCurrency } from "@/utils/currency";
+import { formatPkrAmount } from "@/utils/currency";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell } from "recharts";
 import { TrendingUp, TrendingDown, DollarSign, Activity } from "lucide-react";
 import { useState, useMemo } from "react";
@@ -211,7 +211,7 @@ export default function FinanceAnalytics() {
           </CardHeader>
           <CardContent>
             <div className={`text-2xl font-bold ${netProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-              {formatPkrCurrency(netProfit)}
+              {formatPkrAmount(netProfit)}
             </div>
             <p className={`text-sm flex items-center gap-1 ${profitChange >= 0 ? 'text-green-600' : 'text-red-600'}`}>
               {profitChange >= 0 ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
@@ -238,7 +238,7 @@ export default function FinanceAnalytics() {
             <CardTitle className="text-sm font-medium text-gray-600">Total Revenue</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{formatPkrCurrency(combinedRevenue)}</div>
+            <div className="text-2xl font-bold">{formatPkrAmount(combinedRevenue)}</div>
             <p className={`text-sm flex items-center gap-1 ${revenueChange >= 0 ? 'text-green-600' : 'text-red-600'}`}>
               {revenueChange >= 0 ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
               {revenueChange >= 0 ? '+' : ''}{revenueChange.toFixed(1)}% from last month
@@ -251,7 +251,7 @@ export default function FinanceAnalytics() {
             <CardTitle className="text-sm font-medium text-gray-600">Total Expenses</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-red-600">{formatPkrCurrency(totalExpenses)}</div>
+            <div className="text-2xl font-bold text-red-600">{formatPkrAmount(totalExpenses)}</div>
             <p className={`text-sm flex items-center gap-1 ${expenseChange >= 0 ? 'text-red-600' : 'text-green-600'}`}>
               {expenseChange >= 0 ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
               {expenseChange >= 0 ? '+' : ''}{expenseChange.toFixed(1)}% from last month
@@ -271,7 +271,7 @@ export default function FinanceAnalytics() {
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="month" />
               <YAxis tickFormatter={(value) => `₨${(value/1000).toFixed(0)}K`} />
-              <Tooltip formatter={(value) => formatPkrCurrency(value as number)} />
+              <Tooltip formatter={(value) => formatPkrAmount(value as number)} />
               <Line type="monotone" dataKey="total" stroke="#3b82f6" strokeWidth={3} name="Total Revenue" />
               <Line type="monotone" dataKey="hospital" stroke="#10b981" strokeWidth={2} name="Hospital" />
               <Line type="monotone" dataKey="pharmacy" stroke="#8b5cf6" strokeWidth={2} name="Pharmacy" />
@@ -293,7 +293,7 @@ export default function FinanceAnalytics() {
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="month" />
                 <YAxis tickFormatter={(value) => `₨${(value/1000).toFixed(0)}K`} />
-                <Tooltip formatter={(value) => formatPkrCurrency(value as number)} />
+                <Tooltip formatter={(value) => formatPkrAmount(value as number)} />
                 <Bar dataKey="total" fill="#10b981" name="Revenue" />
                 <Bar dataKey="expenses" fill="#ef4444" name="Expenses" />
                 <Bar dataKey="profit" fill="#3b82f6" name="Profit" />
@@ -325,7 +325,7 @@ export default function FinanceAnalytics() {
                       <Cell key={`cell-${index}`} fill={entry.color} />
                     ))}
                   </Pie>
-                  <Tooltip formatter={(value) => formatPkrCurrency(value as number)} />
+                  <Tooltip formatter={(value) => formatPkrAmount(value as number)} />
                 </PieChart>
               ) : (
                 <div className="flex items-center justify-center h-full text-gray-500">
@@ -352,11 +352,11 @@ export default function FinanceAnalytics() {
               <ul className="space-y-2 text-sm">
                 <li className="flex items-center gap-2">
                   <DollarSign className="w-4 h-4 text-green-600" />
-                  Total Revenue: {formatPkrCurrency(combinedRevenue)}
+                  Total Revenue: {formatPkrAmount(combinedRevenue)}
                 </li>
                 <li className="flex items-center gap-2">
                   <DollarSign className="w-4 h-4 text-red-600" />
-                  Total Expenses: {formatPkrCurrency(totalExpenses)}
+                  Total Expenses: {formatPkrAmount(totalExpenses)}
                 </li>
                 <li className="flex items-center gap-2">
                   <TrendingUp className="w-4 h-4 text-blue-600" />
@@ -369,15 +369,15 @@ export default function FinanceAnalytics() {
               <ul className="space-y-2 text-sm">
                 <li className="flex items-center gap-2">
                   <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
-                  Hospital Services: {formatPkrCurrency(totalRevenue)}
+                  Hospital Services: {formatPkrAmount(totalRevenue)}
                 </li>
                 <li className="flex items-center gap-2">
                   <div className="w-3 h-3 bg-purple-500 rounded-full"></div>
-                  Pharmacy: {formatPkrCurrency(pharmacyRevenue)}
+                  Pharmacy: {formatPkrAmount(pharmacyRevenue)}
                 </li>
                 <li className="flex items-center gap-2">
                   <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                  Lab Tests: {formatPkrCurrency(labRevenue)}
+                  Lab Tests: {formatPkrAmount(labRevenue)}
                 </li>
               </ul>
             </div>

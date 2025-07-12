@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { formatPkrCurrency } from "@/utils/currency";
+import { formatPkrAmount } from "@/utils/currency";
 import { Users, DollarSign, Calendar, Plus, Download, Check, CheckCircle, CalendarIcon } from "lucide-react";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
@@ -282,7 +282,7 @@ export default function FinancePayroll() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{formatPkrCurrency(totalPayroll)}</div>
+            <div className="text-2xl font-bold">{formatPkrAmount(totalPayroll)}</div>
           </CardContent>
         </Card>
 
@@ -291,7 +291,7 @@ export default function FinancePayroll() {
             <CardTitle className="text-sm font-medium text-gray-600">Paid</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">{formatPkrCurrency(paidPayroll)}</div>
+            <div className="text-2xl font-bold text-green-600">{formatPkrAmount(paidPayroll)}</div>
           </CardContent>
         </Card>
 
@@ -300,7 +300,7 @@ export default function FinancePayroll() {
             <CardTitle className="text-sm font-medium text-gray-600">Pending</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-orange-600">{formatPkrCurrency(pendingPayroll)}</div>
+            <div className="text-2xl font-bold text-orange-600">{formatPkrAmount(pendingPayroll)}</div>
           </CardContent>
         </Card>
 
@@ -434,19 +434,19 @@ export default function FinancePayroll() {
                         <div className="space-y-1 text-sm">
                           <div className="flex justify-between">
                             <span>Base Salary:</span>
-                            <span>{formatPkrCurrency(parseFloat(baseSalary) || 0)}</span>
+                            <span>{formatPkrAmount(parseFloat(baseSalary) || 0)}</span>
                           </div>
                           <div className="flex justify-between text-green-600">
                             <span>Allowances:</span>
-                            <span>+{formatPkrCurrency(parseFloat(allowances) || 0)}</span>
+                            <span>+{formatPkrAmount(parseFloat(allowances) || 0)}</span>
                           </div>
                           <div className="flex justify-between text-red-600">
                             <span>Deductions:</span>
-                            <span>-{formatPkrCurrency(parseFloat(deductions) || 0)}</span>
+                            <span>-{formatPkrAmount(parseFloat(deductions) || 0)}</span>
                           </div>
                           <div className="flex justify-between font-medium border-t pt-1">
                             <span>Net Salary:</span>
-                            <span>{formatPkrCurrency((parseFloat(baseSalary) || 0) + (parseFloat(allowances) || 0) - (parseFloat(deductions) || 0))}</span>
+                            <span>{formatPkrAmount((parseFloat(baseSalary) || 0) + (parseFloat(allowances) || 0) - (parseFloat(deductions) || 0))}</span>
                           </div>
                         </div>
                       </div>
@@ -494,15 +494,15 @@ export default function FinancePayroll() {
                       {record.role}
                     </Badge>
                   </TableCell>
-                  <TableCell>{formatPkrCurrency(record.base_salary)}</TableCell>
+                  <TableCell>{formatPkrAmount(record.base_salary)}</TableCell>
                   <TableCell className="text-green-600">
-                    +{formatPkrCurrency(record.allowances)}
+                    +{formatPkrAmount(record.allowances)}
                   </TableCell>
                   <TableCell className="text-red-600">
-                    -{formatPkrCurrency(record.deductions)}
+                    -{formatPkrAmount(record.deductions)}
                   </TableCell>
                   <TableCell className="font-medium">
-                    {formatPkrCurrency(record.net_salary)}
+                    {formatPkrAmount(record.net_salary)}
                   </TableCell>
                   <TableCell>
                     <Badge variant={record.status === 'paid' ? 'default' : 'secondary'}>

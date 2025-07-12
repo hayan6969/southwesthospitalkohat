@@ -12,7 +12,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { formatPkrCurrency } from "@/utils/currency";
+import { formatPkrAmount } from "@/utils/currency";
 import { Plus, Receipt, TrendingDown, Calendar as CalendarIcon, Edit, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
@@ -176,7 +176,7 @@ export default function FinanceExpenses() {
             <CardTitle className="text-sm font-medium text-gray-600">Total Expenses</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-red-600">{formatPkrCurrency(totalExpenses)}</div>
+            <div className="text-2xl font-bold text-red-600">{formatPkrAmount(totalExpenses)}</div>
           </CardContent>
         </Card>
         
@@ -185,7 +185,7 @@ export default function FinanceExpenses() {
             <CardTitle className="text-sm font-medium text-gray-600">This Month</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{formatPkrCurrency(monthlyExpenses)}</div>
+            <div className="text-2xl font-bold">{formatPkrAmount(monthlyExpenses)}</div>
           </CardContent>
         </Card>
 
@@ -212,7 +212,7 @@ export default function FinanceExpenses() {
             {Object.entries(expensesByCategory).map(([category, amount]) => (
               <div key={category} className="flex justify-between items-center">
                 <span className="font-medium">{category}</span>
-                <span className="text-lg">{formatPkrCurrency(amount)}</span>
+                <span className="text-lg">{formatPkrAmount(amount)}</span>
               </div>
             ))}
           </div>
@@ -353,7 +353,7 @@ export default function FinanceExpenses() {
                   </TableCell>
                   <TableCell>{expense.description}</TableCell>
                   <TableCell className="font-medium text-red-600">
-                    -{formatPkrCurrency(expense.amount)}
+                    -{formatPkrAmount(expense.amount)}
                   </TableCell>
                   <TableCell>{format(new Date(expense.expense_date), 'MMM dd, yyyy')}</TableCell>
                   <TableCell>
