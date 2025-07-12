@@ -50,6 +50,12 @@ import PharmacyAnalytics from "./pages/dashboard/pharmacy/PharmacyAnalytics";
 import PharmacySell from "./pages/dashboard/pharmacy/PharmacySell";
 import PharmacyStock from "./pages/dashboard/pharmacy/PharmacyStock";
 
+// Finance pages
+import FinanceIncome from "./pages/dashboard/finance/FinanceIncome";
+import FinanceExpenses from "./pages/dashboard/finance/FinanceExpenses";
+import FinanceAnalytics from "./pages/dashboard/finance/FinanceAnalytics";
+import FinancePayroll from "./pages/dashboard/finance/FinancePayroll";
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -226,6 +232,26 @@ const App = () => (
             <Route path="/dashboard/finance" element={
               <ProtectedRoute allowedRoles={['finance']}>
                 <DashboardFinance />
+              </ProtectedRoute>
+            } />
+            <Route path="/dashboard/finance/income" element={
+              <ProtectedRoute allowedRoles={['finance']}>
+                <FinanceIncome />
+              </ProtectedRoute>
+            } />
+            <Route path="/dashboard/finance/expenses" element={
+              <ProtectedRoute allowedRoles={['finance']}>
+                <FinanceExpenses />
+              </ProtectedRoute>
+            } />
+            <Route path="/dashboard/finance/analytics" element={
+              <ProtectedRoute allowedRoles={['finance']}>
+                <FinanceAnalytics />
+              </ProtectedRoute>
+            } />
+            <Route path="/dashboard/finance/payroll" element={
+              <ProtectedRoute allowedRoles={['finance']}>
+                <FinancePayroll />
               </ProtectedRoute>
             } />
             

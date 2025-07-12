@@ -1,5 +1,5 @@
 
-import AppLayout from "@/layouts/AppLayout";
+import FinanceLayout from "@/layouts/FinanceLayout";
 import { StatsCard } from "@/components/StatsCard";
 import { Calculator, TrendingUp, Users, Receipt, DollarSign, Minus, Pill } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,11 +9,13 @@ import { formatPkrCurrency } from "@/utils/currency";
 import { useHospitalSettings } from "@/hooks/useHospitalSettings";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
+import { useNavigate } from "react-router-dom";
 
 export default function DashboardFinance() {
   const { data: invoices, isLoading: invoicesLoading } = useInvoices();
   const { data: stats, isLoading: statsLoading } = useStats();
   const { settings: hospitalSettings } = useHospitalSettings();
+  const navigate = useNavigate();
 
   // Get pharmacy invoices
   const { data: pharmacyInvoices, isLoading: pharmacyLoading } = useQuery({
@@ -37,24 +39,8 @@ export default function DashboardFinance() {
   const pendingInvoices = invoices?.filter(inv => inv.status === 'pending') || [];
 
   return (
-    <AppLayout>
+    <FinanceLayout>
       <div className="space-y-8">
-        <div>
-          <div className="flex items-center gap-3">
-            {hospitalSettings?.logo_url ? (
-              <img 
-                src={hospitalSettings.logo_url} 
-                alt="Hospital Logo" 
-                className="w-8 h-8 object-contain"
-              />
-            ) : (
-              <span className="inline-block w-2 h-8 bg-blue-500 rounded-full" />
-            )}
-            <h1 className="text-3xl font-bold text-gray-900">{hospitalSettings?.hospital_name || "HIMS"} - Finance</h1>
-          </div>
-          <p className="text-gray-600 mt-1">Hospital financial overview and management</p>
-        </div>
-
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           <StatsCard
             title="Total Revenue"
@@ -92,19 +78,34 @@ export default function DashboardFinance() {
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-2 gap-4">
-                <Button className="h-20 flex flex-col items-center justify-center">
+                <Button 
+                  className="h-20 flex flex-col items-center justify-center"
+                  onClick={() => navigate('/dashboard/finance/expenses')}
+                >
                   <Minus className="w-6 h-6 mb-2" />
                   Add Expense
                 </Button>
-                <Button className="h-20 flex flex-col items-center justify-center" variant="outline">
+                <Button 
+                  className="h-20 flex flex-col items-center justify-center" 
+                  variant="outline"
+                  onClick={() => navigate('/dashboard/finance/payroll')}
+                >
                   <Users className="w-6 h-6 mb-2" />
                   Payroll
                 </Button>
-                <Button className="h-20 flex flex-col items-center justify-center" variant="outline">
+                <Button 
+                  className="h-20 flex flex-col items-center justify-center" 
+                  variant="outline"
+                  onClick={() => navigate('/dashboard/finance/analytics')}
+                >
                   <TrendingUp className="w-6 h-6 mb-2" />
                   Analytics
                 </Button>
-                <Button className="h-20 flex flex-col items-center justify-center" variant="outline">
+                <Button 
+                  className="h-20 flex flex-col items-center justify-center" 
+                  variant="outline"
+                  onClick={() => navigate('/dashboard/finance/income')}
+                >
                   <Receipt className="w-6 h-6 mb-2" />
                   Reports
                 </Button>
@@ -148,7 +149,7 @@ export default function DashboardFinance() {
           </Card>
         </div>
       </div>
-    </AppLayout>
+    </FinanceLayout>
   );
 }
 
