@@ -751,6 +751,72 @@ export type Database = {
           },
         ]
       }
+      payroll: {
+        Row: {
+          allowances: number | null
+          base_salary: number
+          created_at: string
+          created_by: string | null
+          deductions: number | null
+          employee_id: string
+          employee_name: string
+          id: string
+          net_salary: number
+          paid_at: string | null
+          pay_period: string
+          role: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          allowances?: number | null
+          base_salary: number
+          created_at?: string
+          created_by?: string | null
+          deductions?: number | null
+          employee_id: string
+          employee_name: string
+          id?: string
+          net_salary: number
+          paid_at?: string | null
+          pay_period: string
+          role: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          allowances?: number | null
+          base_salary?: number
+          created_at?: string
+          created_by?: string | null
+          deductions?: number | null
+          employee_id?: string
+          employee_name?: string
+          id?: string
+          net_salary?: number
+          paid_at?: string | null
+          pay_period?: string
+          role?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payroll_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payroll_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       pharmacy_invoice_items: {
         Row: {
           created_at: string | null
