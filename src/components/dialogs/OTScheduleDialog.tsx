@@ -59,7 +59,7 @@ export function OTScheduleDialog() {
   // OT Schedule details
   const [doctorId, setDoctorId] = useState("");
   const [doctorName, setDoctorName] = useState("External Doctor");
-  const [doctorExpense, setDoctorExpense] = useState<number>(0);
+  const [doctorExpense, setDoctorExpense] = useState<string>("");
   const [operationDate, setOperationDate] = useState(new Date().toISOString().split('T')[0]);
   const [operationId, setOperationId] = useState("");
   const [roomId, setRoomId] = useState("");
@@ -124,7 +124,7 @@ export function OTScheduleDialog() {
 
   const selectedOperation = operations.find(op => op.id === operationId);
   const operationCost = selectedOperation?.expenses.reduce((sum, exp) => sum + exp.cost, 0) || 0;
-  const totalCost = operationCost + doctorExpense;
+  const totalCost = operationCost + (parseFloat(doctorExpense) || 0);
 
   const resetForm = () => {
     setSearchTerm("");
@@ -141,7 +141,7 @@ export function OTScheduleDialog() {
     });
     setDoctorId("");
     setDoctorName("External Doctor");
-    setDoctorExpense(0);
+    setDoctorExpense("");
     setOperationDate(new Date().toISOString().split('T')[0]);
     setOperationId("");
     setRoomId("");
@@ -231,7 +231,7 @@ export function OTScheduleDialog() {
           patient_id: patientId,
           doctor_id: doctorId || null,
           doctor_name: doctorName,
-          doctor_expense: doctorExpense,
+          doctor_expense: parseFloat(doctorExpense) || 0,
           operation_id: operationId,
           room_id: roomId,
           operation_date: operationDate,
@@ -252,7 +252,8 @@ export function OTScheduleDialog() {
         .insert({
           patient_id: patientId,
           amount: totalCost,
-          status: 'pending',
+          status: 'paid',
+          paid_at: new Date().toISOString(),
           invoice_number: invoiceNumber,
           description: `OT Operation: ${selectedOperation?.operation_name} - ${doctorName}`,
           due_date: new Date().toISOString().split('T')[0]
@@ -575,8 +576,8 @@ export function OTScheduleDialog() {
                   id="doctorExpense"
                   type="number"
                   value={doctorExpense}
-                  onChange={(e) => setDoctorExpense(Number(e.target.value) || 0)}
-                  placeholder="0"
+                  onChange={(e) => setDoctorExpense(e.target.value)}
+                  placeholder="Enter doctor expense"
                   min="0"
                 />
               </div>
@@ -676,7 +677,7 @@ export function OTScheduleDialog() {
               </div>
 
               {/* Cost Summary */}
-              {(operationId || doctorExpense > 0) && (
+              {(operationId || (parseFloat(doctorExpense) || 0) > 0) && (
                 <Card className="bg-blue-50">
                   <CardHeader>
                     <CardTitle className="text-lg flex items-center gap-2">
@@ -699,10 +700,10 @@ export function OTScheduleDialog() {
                         ))}
                       </>
                     )}
-                    {doctorExpense > 0 && (
+                    {(parseFloat(doctorExpense) || 0) > 0 && (
                       <div className="flex justify-between text-sm">
                         <span>Doctor Expense: {doctorName}</span>
-                        <span className="font-medium">{formatPkrAmount(doctorExpense)}</span>
+                        <span className="font-medium">{formatPkrAmount(parseFloat(doctorExpense) || 0)}</span>
                       </div>
                     )}
                     <div className="flex justify-between font-bold text-lg pt-2 border-t">
