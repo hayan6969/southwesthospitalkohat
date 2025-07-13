@@ -93,12 +93,18 @@ export default function DashboardFinance() {
           </div>
           
           {/* Second Row - Revenue Breakdown */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <StatsCard
               title="Hospital Revenue"
               value={formatPkrAmount(hospitalRevenue)}
               icon={<Receipt className="w-5 h-5 text-blue-600" />}
               loading={invoicesLoading}
+            />
+            <StatsCard
+              title="Pharmacy Revenue"
+              value={formatPkrAmount(pharmacyRevenue)}
+              icon={<Pill className="w-5 h-5 text-purple-600" />}
+              loading={pharmacyLoading}
             />
             <StatsCard
               title="Pending Payments"
