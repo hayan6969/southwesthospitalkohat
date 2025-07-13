@@ -39,6 +39,9 @@ export default function FinancePayroll() {
   const [selectedMonth, setSelectedMonth] = useState(new Date().toISOString().slice(0, 7));
   const [filterDate, setFilterDate] = useState<Date | undefined>();
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>("");
+  const [employeeName, setEmployeeName] = useState<string>("");
+  const [employeeRole, setEmployeeRole] = useState<string>("");
+  const [searchQuery, setSearchQuery] = useState<string>("");
   const [baseSalary, setBaseSalary] = useState<string>("");
   const [allowances, setAllowances] = useState<string>("0");
   const [deductions, setDeductions] = useState<string>("0");
@@ -112,6 +115,9 @@ export default function FinancePayroll() {
       queryClient.invalidateQueries({ queryKey: ['payroll-records'] });
       setIsCreatePayrollDialogOpen(false);
       setSelectedEmployeeId("");
+      setEmployeeName("");
+      setEmployeeRole("");
+      setSearchQuery("");
       setBaseSalary("");
       setAllowances("0");
       setDeductions("0");
@@ -230,8 +236,7 @@ export default function FinancePayroll() {
   });
 
   const handleCreatePayroll = () => {
-    const selectedEmployee = staff?.find(s => s.id === selectedEmployeeId);
-    if (!selectedEmployee || !baseSalary) return;
+    if (!employeeName || !employeeRole || !baseSalary) return;
 
     const baseSalaryNum = parseFloat(baseSalary);
     const allowancesNum = parseFloat(allowances) || 0;
@@ -239,9 +244,9 @@ export default function FinancePayroll() {
     const netSalary = baseSalaryNum + allowancesNum - deductionsNum;
 
     createPayrollMutation.mutate({
-      employee_id: selectedEmployeeId,
-      employee_name: `${selectedEmployee.first_name} ${selectedEmployee.last_name}`,
-      role: selectedEmployee.role,
+      employee_id: selectedEmployeeId || crypto.randomUUID(),
+      employee_name: employeeName,
+      role: employeeRole,
       base_salary: baseSalaryNum,
       allowances: allowancesNum,
       deductions: deductionsNum,
@@ -384,19 +389,65 @@ export default function FinancePayroll() {
                   </DialogHeader>
                   <div className="space-y-4">
                     <div>
-                      <Label htmlFor="employee">Employee</Label>
-                      <Select value={selectedEmployeeId} onValueChange={setSelectedEmployeeId}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select employee" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {staff?.map(employee => (
-                            <SelectItem key={employee.id} value={employee.id}>
-                              {employee.first_name} {employee.last_name} ({employee.role})
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <Label htmlFor="employeeSearch">Search Employee</Label>
+                      <Input
+                        id="employeeSearch"
+                        value={searchQuery}
+                        onChange={(e) => {
+                          setSearchQuery(e.target.value);
+                          // Auto-select if exact match found
+                          const exactMatch = staff?.find(emp => 
+                            `${emp.first_name} ${emp.last_name}`.toLowerCase() === e.target.value.toLowerCase()
+                          );
+                          if (exactMatch) {
+                            setSelectedEmployeeId(exactMatch.id);
+                            setEmployeeName(`${exactMatch.first_name} ${exactMatch.last_name}`);
+                            setEmployeeRole(exactMatch.role);
+                          }
+                        }}
+                        placeholder="Type employee name..."
+                      />
+                      {searchQuery && staff && (
+                        <div className="mt-2 border rounded-md bg-white max-h-32 overflow-y-auto">
+                          {staff
+                            .filter(emp => 
+                              `${emp.first_name} ${emp.last_name}`.toLowerCase().includes(searchQuery.toLowerCase())
+                            )
+                            .slice(0, 5)
+                            .map(employee => (
+                              <div
+                                key={employee.id}
+                                className="p-2 hover:bg-gray-100 cursor-pointer text-sm"
+                                onClick={() => {
+                                  setSelectedEmployeeId(employee.id);
+                                  setEmployeeName(`${employee.first_name} ${employee.last_name}`);
+                                  setEmployeeRole(employee.role);
+                                  setSearchQuery(`${employee.first_name} ${employee.last_name}`);
+                                }}
+                              >
+                                {employee.first_name} {employee.last_name} ({employee.role})
+                              </div>
+                            ))}
+                        </div>
+                      )}
+                    </div>
+                    <div>
+                      <Label htmlFor="employeeName">Employee Name</Label>
+                      <Input
+                        id="employeeName"
+                        value={employeeName}
+                        onChange={(e) => setEmployeeName(e.target.value)}
+                        placeholder="Enter employee name"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="employeeRole">Role</Label>
+                      <Input
+                        id="employeeRole"
+                        value={employeeRole}
+                        onChange={(e) => setEmployeeRole(e.target.value)}
+                        placeholder="Enter employee role"
+                      />
                     </div>
                     <div>
                       <Label htmlFor="baseSalary">Base Salary (PKR)</Label>
@@ -454,7 +505,7 @@ export default function FinancePayroll() {
                     <Button 
                       onClick={handleCreatePayroll} 
                       className="w-full"
-                      disabled={createPayrollMutation.isPending || !selectedEmployeeId || !baseSalary}
+                      disabled={createPayrollMutation.isPending || !employeeName || !employeeRole || !baseSalary}
                     >
                       {createPayrollMutation.isPending ? "Creating..." : "Create Payroll Record"}
                     </Button>
