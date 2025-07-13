@@ -68,37 +68,45 @@ export default function DashboardFinance() {
 
   return (
     <div className="space-y-8">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
-          <StatsCard
-            title="Total Revenue"
-            value={formatPkrAmount(totalRevenue)}
-            icon={<DollarSign className="w-5 h-5 text-green-600" />}
-            loading={invoicesLoading || pharmacyLoading || labLoading}
-          />
-          <StatsCard
-            title="Total Expenses"
-            value={formatPkrAmount(totalExpenses)}
-            icon={<Minus className="w-5 h-5 text-red-600" />}
-            loading={expensesLoading}
-          />
-          <StatsCard
-            title="Total Profit"
-            value={formatPkrAmount(totalProfit)}
-            icon={totalProfit >= 0 ? <TrendingUp className="w-5 h-5 text-green-600" /> : <TrendingDown className="w-5 h-5 text-red-600" />}
-            loading={invoicesLoading || pharmacyLoading || labLoading || expensesLoading}
-          />
-          <StatsCard
-            title="Hospital Revenue"
-            value={formatPkrAmount(hospitalRevenue)}
-            icon={<Receipt className="w-5 h-5 text-blue-600" />}
-            loading={invoicesLoading}
-          />
-          <StatsCard
-            title="Pending Payments"
-            value={formatPkrAmount(pendingInvoices.reduce((sum, inv) => sum + (inv.amount || 0), 0))}
-            icon={<TrendingUp className="w-5 h-5 text-orange-600" />}
-            loading={invoicesLoading}
-          />
+        {/* Financial Stats - Two Rows */}
+        <div className="space-y-4">
+          {/* First Row - Main Financial Metrics */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <StatsCard
+              title="Total Revenue"
+              value={formatPkrAmount(totalRevenue)}
+              icon={<DollarSign className="w-5 h-5 text-green-600" />}
+              loading={invoicesLoading || pharmacyLoading || labLoading}
+            />
+            <StatsCard
+              title="Total Expenses"
+              value={formatPkrAmount(totalExpenses)}
+              icon={<Minus className="w-5 h-5 text-red-600" />}
+              loading={expensesLoading}
+            />
+            <StatsCard
+              title="Total Profit"
+              value={formatPkrAmount(totalProfit)}
+              icon={totalProfit >= 0 ? <TrendingUp className="w-5 h-5 text-green-600" /> : <TrendingDown className="w-5 h-5 text-red-600" />}
+              loading={invoicesLoading || pharmacyLoading || labLoading || expensesLoading}
+            />
+          </div>
+          
+          {/* Second Row - Revenue Breakdown */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <StatsCard
+              title="Hospital Revenue"
+              value={formatPkrAmount(hospitalRevenue)}
+              icon={<Receipt className="w-5 h-5 text-blue-600" />}
+              loading={invoicesLoading}
+            />
+            <StatsCard
+              title="Pending Payments"
+              value={formatPkrAmount(pendingInvoices.reduce((sum, inv) => sum + (inv.amount || 0), 0))}
+              icon={<TrendingUp className="w-5 h-5 text-orange-600" />}
+              loading={invoicesLoading}
+            />
+          </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
