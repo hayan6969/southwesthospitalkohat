@@ -84,6 +84,11 @@ export default function FinanceAnalytics() {
 
   // Calculate monthly data from real database records
   const monthlyData = useMemo(() => {
+    // Return empty array if data is still loading
+    if (!invoices || !pharmacyInvoices || !labReports || !expenses) {
+      return [];
+    }
+    
     const months = [];
     const now = new Date();
     
@@ -93,25 +98,25 @@ export default function FinanceAnalytics() {
       const monthStart = startOfMonth(monthDate);
       const monthEnd = endOfMonth(monthDate);
       
-      const monthInvoices = invoices?.filter(inv => {
+      const monthInvoices = invoices.filter(inv => {
         const invDate = new Date(inv.created_at!);
         return invDate >= monthStart && invDate <= monthEnd;
-      }) || [];
+      });
       
-      const monthPharmacyInvoices = pharmacyInvoices?.filter(inv => {
+      const monthPharmacyInvoices = pharmacyInvoices.filter(inv => {
         const invDate = new Date(inv.created_at!);
         return invDate >= monthStart && invDate <= monthEnd;
-      }) || [];
+      });
       
-      const monthLabReports = labReports?.filter(lab => {
+      const monthLabReports = labReports.filter(lab => {
         const labDate = new Date(lab.created_at!);
         return labDate >= monthStart && labDate <= monthEnd;
-      }) || [];
+      });
       
-      const monthExpenses = expenses?.filter(exp => {
+      const monthExpenses = expenses.filter(exp => {
         const expDate = new Date(exp.created_at);
         return expDate >= monthStart && expDate <= monthEnd;
-      }) || [];
+      });
       
       const hospitalRevenue = monthInvoices.reduce((sum, inv) => sum + (inv.amount || 0), 0);
       const pharmacy = monthPharmacyInvoices.reduce((sum, inv) => sum + (inv.final_amount || 0), 0);
