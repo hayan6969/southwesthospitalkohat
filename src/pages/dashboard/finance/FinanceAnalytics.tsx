@@ -84,58 +84,84 @@ export default function FinanceAnalytics() {
 
   // Calculate monthly data from real database records
   const monthlyData = useMemo(() => {
-    // Return empty array if data is still loading
+    // Return empty array if data is still loading or null
     if (!invoices || !pharmacyInvoices || !labReports || !expenses) {
       return [];
     }
     
-    const months = [];
-    const now = new Date();
-    
-    // Generate last 6 months
-    for (let i = 5; i >= 0; i--) {
-      const monthDate = subMonths(now, i);
-      const monthStart = startOfMonth(monthDate);
-      const monthEnd = endOfMonth(monthDate);
+    try {
+      const months = [];
+      const now = new Date();
       
-      const monthInvoices = invoices.filter(inv => {
-        const invDate = new Date(inv.created_at!);
-        return invDate >= monthStart && invDate <= monthEnd;
-      });
+      // Generate last 6 months
+      for (let i = 5; i >= 0; i--) {
+        const monthDate = subMonths(now, i);
+        const monthStart = startOfMonth(monthDate);
+        const monthEnd = endOfMonth(monthDate);
+        
+        // Safe filtering with null checks
+        const monthInvoices = (invoices || []).filter(inv => {
+          if (!inv.created_at) return false;
+          try {
+            const invDate = new Date(inv.created_at);
+            return invDate >= monthStart && invDate <= monthEnd;
+          } catch {
+            return false;
+          }
+        });
+        
+        const monthPharmacyInvoices = (pharmacyInvoices || []).filter(inv => {
+          if (!inv.created_at) return false;
+          try {
+            const invDate = new Date(inv.created_at);
+            return invDate >= monthStart && invDate <= monthEnd;
+          } catch {
+            return false;
+          }
+        });
+        
+        const monthLabReports = (labReports || []).filter(lab => {
+          if (!lab.created_at) return false;
+          try {
+            const labDate = new Date(lab.created_at);
+            return labDate >= monthStart && labDate <= monthEnd;
+          } catch {
+            return false;
+          }
+        });
+        
+        const monthExpenses = (expenses || []).filter(exp => {
+          if (!exp.created_at) return false;
+          try {
+            const expDate = new Date(exp.created_at);
+            return expDate >= monthStart && expDate <= monthEnd;
+          } catch {
+            return false;
+          }
+        });
+        
+        const hospitalRevenue = monthInvoices.reduce((sum, inv) => sum + (Number(inv.amount) || 0), 0);
+        const pharmacy = monthPharmacyInvoices.reduce((sum, inv) => sum + (Number(inv.final_amount) || 0), 0);
+        const lab = monthLabReports.reduce((sum, lab) => sum + (Number(lab.price) || 0), 0);
+        const monthlyExpenses = monthExpenses.reduce((sum, exp) => sum + (Number(exp.amount) || 0), 0);
+        const totalRev = hospitalRevenue + pharmacy + lab;
+        
+        months.push({
+          month: format(monthDate, 'MMM'),
+          hospital: hospitalRevenue,
+          pharmacy,
+          lab,
+          total: totalRev,
+          expenses: monthlyExpenses,
+          profit: totalRev - monthlyExpenses
+        });
+      }
       
-      const monthPharmacyInvoices = pharmacyInvoices.filter(inv => {
-        const invDate = new Date(inv.created_at!);
-        return invDate >= monthStart && invDate <= monthEnd;
-      });
-      
-      const monthLabReports = labReports.filter(lab => {
-        const labDate = new Date(lab.created_at!);
-        return labDate >= monthStart && labDate <= monthEnd;
-      });
-      
-      const monthExpenses = expenses.filter(exp => {
-        const expDate = new Date(exp.created_at);
-        return expDate >= monthStart && expDate <= monthEnd;
-      });
-      
-      const hospitalRevenue = monthInvoices.reduce((sum, inv) => sum + (inv.amount || 0), 0);
-      const pharmacy = monthPharmacyInvoices.reduce((sum, inv) => sum + (inv.final_amount || 0), 0);
-      const lab = monthLabReports.reduce((sum, lab) => sum + (lab.price || 0), 0);
-      const monthlyExpenses = monthExpenses.reduce((sum, exp) => sum + (exp.amount || 0), 0);
-      const totalRev = hospitalRevenue + pharmacy + lab;
-      
-      months.push({
-        month: format(monthDate, 'MMM'),
-        hospital: hospitalRevenue,
-        pharmacy,
-        lab,
-        total: totalRev,
-        expenses: monthlyExpenses,
-        profit: totalRev - monthlyExpenses
-      });
+      return months;
+    } catch (error) {
+      console.error('Error calculating monthly data:', error);
+      return [];
     }
-    
-    return months;
   }, [invoices, pharmacyInvoices, labReports, expenses]);
 
   // Revenue breakdown
