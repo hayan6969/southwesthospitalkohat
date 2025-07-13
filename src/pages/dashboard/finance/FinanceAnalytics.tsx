@@ -146,19 +146,19 @@ export default function FinanceAnalytics() {
   ].filter(item => item.value > 0);
 
   // Calculate percentage changes (using current vs previous month)
-  const currentMonth = monthlyData[monthlyData.length - 1];
-  const previousMonth = monthlyData[monthlyData.length - 2];
+  const currentMonth = monthlyData.length > 0 ? monthlyData[monthlyData.length - 1] : null;
+  const previousMonth = monthlyData.length > 1 ? monthlyData[monthlyData.length - 2] : null;
   
-  const revenueChange = previousMonth?.total > 0 
-    ? (((currentMonth?.total || 0) - (previousMonth?.total || 0)) / (previousMonth?.total || 1)) * 100
+  const revenueChange = (previousMonth?.total && currentMonth?.total && previousMonth.total > 0) 
+    ? (((currentMonth.total || 0) - (previousMonth.total || 0)) / previousMonth.total) * 100
     : 0;
     
-  const expenseChange = previousMonth?.expenses > 0
-    ? (((currentMonth?.expenses || 0) - (previousMonth?.expenses || 0)) / (previousMonth?.expenses || 1)) * 100
+  const expenseChange = (previousMonth?.expenses && currentMonth?.expenses && previousMonth.expenses > 0)
+    ? (((currentMonth.expenses || 0) - (previousMonth.expenses || 0)) / previousMonth.expenses) * 100
     : 0;
     
-  const profitChange = previousMonth?.profit !== undefined
-    ? (((currentMonth?.profit || 0) - (previousMonth?.profit || 0)) / Math.abs(previousMonth?.profit || 1)) * 100
+  const profitChange = (previousMonth?.profit !== undefined && currentMonth?.profit !== undefined && Math.abs(previousMonth.profit) > 0)
+    ? (((currentMonth.profit || 0) - (previousMonth.profit || 0)) / Math.abs(previousMonth.profit)) * 100
     : 0;
 
 
@@ -220,7 +220,7 @@ export default function FinanceAnalytics() {
             </div>
             <p className={`text-sm flex items-center gap-1 ${profitChange >= 0 ? 'text-green-600' : 'text-red-600'}`}>
               {profitChange >= 0 ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
-              {profitChange >= 0 ? '+' : ''}{profitChange.toFixed(1)}% from last month
+              {profitChange >= 0 ? '+' : ''}{isFinite(profitChange) ? profitChange.toFixed(1) : '0.0'}% from last month
             </p>
           </CardContent>
         </Card>
@@ -230,10 +230,10 @@ export default function FinanceAnalytics() {
             <CardTitle className="text-sm font-medium text-gray-600">Profit Margin</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{profitMargin.toFixed(1)}%</div>
+            <div className="text-2xl font-bold">{isFinite(profitMargin) ? profitMargin.toFixed(1) : '0.0'}%</div>
             <p className={`text-sm flex items-center gap-1 ${profitChange >= 0 ? 'text-green-600' : 'text-red-600'}`}>
               {profitChange >= 0 ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
-              {profitChange >= 0 ? '+' : ''}{(profitMargin > 0 ? profitChange * 0.1 : 0).toFixed(1)}% from last month
+              {profitChange >= 0 ? '+' : ''}{isFinite(profitChange) && isFinite(profitMargin) && profitMargin > 0 ? (profitChange * 0.1).toFixed(1) : '0.0'}% from last month
             </p>
           </CardContent>
         </Card>
@@ -246,7 +246,7 @@ export default function FinanceAnalytics() {
             <div className="text-2xl font-bold">{formatPkrAmount(combinedRevenue)}</div>
             <p className={`text-sm flex items-center gap-1 ${revenueChange >= 0 ? 'text-green-600' : 'text-red-600'}`}>
               {revenueChange >= 0 ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
-              {revenueChange >= 0 ? '+' : ''}{revenueChange.toFixed(1)}% from last month
+              {revenueChange >= 0 ? '+' : ''}{isFinite(revenueChange) ? revenueChange.toFixed(1) : '0.0'}% from last month
             </p>
           </CardContent>
         </Card>
@@ -259,7 +259,7 @@ export default function FinanceAnalytics() {
             <div className="text-2xl font-bold text-red-600">{formatPkrAmount(totalExpenses)}</div>
             <p className={`text-sm flex items-center gap-1 ${expenseChange >= 0 ? 'text-red-600' : 'text-green-600'}`}>
               {expenseChange >= 0 ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
-              {expenseChange >= 0 ? '+' : ''}{expenseChange.toFixed(1)}% from last month
+              {expenseChange >= 0 ? '+' : ''}{isFinite(expenseChange) ? expenseChange.toFixed(1) : '0.0'}% from last month
             </p>
           </CardContent>
         </Card>
@@ -365,7 +365,7 @@ export default function FinanceAnalytics() {
                 </li>
                 <li className="flex items-center gap-2">
                   <TrendingUp className="w-4 h-4 text-blue-600" />
-                  Profit Margin: {profitMargin.toFixed(1)}%
+                  Profit Margin: {isFinite(profitMargin) ? profitMargin.toFixed(1) : '0.0'}%
                 </li>
               </ul>
             </div>
