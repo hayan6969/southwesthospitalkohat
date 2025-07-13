@@ -316,10 +316,17 @@ export const useCreateAppointmentWithInvoice = () => {
   
   return useMutation({
     mutationFn: async (appointmentData: any) => {
-      // Create appointment
+      // Create appointment with paid status for staff bookings
+      const appointmentWithPayment = {
+        ...appointmentData.appointment,
+        payment_status: 'paid',
+        booking_type: 'counter',
+        invoice_generated_at: new Date().toISOString()
+      };
+
       const { data: appointment, error: appointmentError } = await supabase
         .from('appointments')
-        .insert([appointmentData.appointment])
+        .insert([appointmentWithPayment])
         .select()
         .single();
 
@@ -333,7 +340,8 @@ export const useCreateAppointmentWithInvoice = () => {
           amount: appointmentData.consultationFee,
           description: `Consultation with Dr. ${appointmentData.doctorName}`,
           invoice_number: `INV-${Date.now()}`,
-          status: 'pending'
+          status: 'paid', // Staff appointments are paid at counter
+          paid_at: new Date().toISOString()
         }])
         .select()
         .single();

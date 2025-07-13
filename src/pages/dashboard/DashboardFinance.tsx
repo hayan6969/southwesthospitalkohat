@@ -1,6 +1,6 @@
 
 import { StatsCard } from "@/components/StatsCard";
-import { Calculator, TrendingUp, Users, Receipt, DollarSign, Minus, Pill } from "lucide-react";
+import { Calculator, TrendingUp, Users, Receipt, DollarSign, Minus, Pill, TrendingDown } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useInvoices, useStats } from "@/hooks/useDatabase";
@@ -29,34 +29,69 @@ export default function DashboardFinance() {
     }
   });
 
-  // Calculate total revenue including pharmacy
+  // Get lab reports for revenue
+  const { data: labReports, isLoading: labLoading } = useQuery({
+    queryKey: ['lab-reports-revenue'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('lab_reports')
+        .select('*')
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return data;
+    }
+  });
+
+  // Get expenses
+  const { data: expenses, isLoading: expensesLoading } = useQuery({
+    queryKey: ['expenses'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('expenses')
+        .select('*')
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return data;
+    }
+  });
+
+  // Calculate revenues and profit
   const hospitalRevenue = invoices?.reduce((sum, invoice) => sum + (invoice.amount || 0), 0) || 0;
   const pharmacyRevenue = pharmacyInvoices?.reduce((sum, invoice) => sum + (invoice.final_amount || 0), 0) || 0;
-  const totalRevenue = hospitalRevenue + pharmacyRevenue;
+  const labRevenue = labReports?.reduce((sum, lab) => sum + (lab.price || 0), 0) || 0;
+  const totalRevenue = hospitalRevenue + pharmacyRevenue + labRevenue;
+  const totalExpenses = expenses?.reduce((sum, exp) => sum + (exp.amount || 0), 0) || 0;
+  const totalProfit = totalRevenue - totalExpenses;
   
   const paidInvoices = invoices?.filter(inv => inv.status === 'paid') || [];
   const pendingInvoices = invoices?.filter(inv => inv.status === 'pending') || [];
 
   return (
     <div className="space-y-8">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
           <StatsCard
             title="Total Revenue"
             value={formatPkrAmount(totalRevenue)}
             icon={<DollarSign className="w-5 h-5 text-green-600" />}
-            loading={invoicesLoading || pharmacyLoading}
+            loading={invoicesLoading || pharmacyLoading || labLoading}
+          />
+          <StatsCard
+            title="Total Expenses"
+            value={formatPkrAmount(totalExpenses)}
+            icon={<Minus className="w-5 h-5 text-red-600" />}
+            loading={expensesLoading}
+          />
+          <StatsCard
+            title="Total Profit"
+            value={formatPkrAmount(totalProfit)}
+            icon={totalProfit >= 0 ? <TrendingUp className="w-5 h-5 text-green-600" /> : <TrendingDown className="w-5 h-5 text-red-600" />}
+            loading={invoicesLoading || pharmacyLoading || labLoading || expensesLoading}
           />
           <StatsCard
             title="Hospital Revenue"
             value={formatPkrAmount(hospitalRevenue)}
             icon={<Receipt className="w-5 h-5 text-blue-600" />}
             loading={invoicesLoading}
-          />
-          <StatsCard
-            title="Pharmacy Revenue"
-            value={formatPkrAmount(pharmacyRevenue)}
-            icon={<Pill className="w-5 h-5 text-purple-600" />}
-            loading={pharmacyLoading}
           />
           <StatsCard
             title="Pending Payments"
@@ -113,7 +148,7 @@ export default function DashboardFinance() {
 
           <Card>
             <CardHeader>
-              <CardTitle>Income Breakdown</CardTitle>
+              <CardTitle>Financial Summary</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
@@ -125,22 +160,25 @@ export default function DashboardFinance() {
                   <span>Pharmacy Sales</span>
                   <span className="font-medium">{formatPkrAmount(pharmacyRevenue)}</span>
                 </div>
-                <div className="flex justify-between items-center text-sm text-gray-500">
-                  <span className="ml-4">• Lab Tests</span>
-                  <span>{formatPkrAmount(hospitalRevenue * 0.3)}</span>
-                </div>
-                <div className="flex justify-between items-center text-sm text-gray-500">
-                  <span className="ml-4">• Appointments</span>
-                  <span>{formatPkrAmount(hospitalRevenue * 0.5)}</span>
-                </div>
-                <div className="flex justify-between items-center text-sm text-gray-500">
-                  <span className="ml-4">• Other Services</span>
-                  <span>{formatPkrAmount(hospitalRevenue * 0.2)}</span>
+                <div className="flex justify-between items-center">
+                  <span>Lab Tests</span>
+                  <span className="font-medium">{formatPkrAmount(labRevenue)}</span>
                 </div>
                 <hr />
                 <div className="flex justify-between items-center font-bold text-lg">
                   <span>Total Revenue</span>
-                  <span>{formatPkrAmount(totalRevenue)}</span>
+                  <span className="text-green-600">{formatPkrAmount(totalRevenue)}</span>
+                </div>
+                <div className="flex justify-between items-center font-bold text-lg">
+                  <span>Total Expenses</span>
+                  <span className="text-red-600">-{formatPkrAmount(totalExpenses)}</span>
+                </div>
+                <hr className="border-2" />
+                <div className="flex justify-between items-center font-bold text-xl">
+                  <span>Net Profit</span>
+                  <span className={totalProfit >= 0 ? "text-green-600" : "text-red-600"}>
+                    {formatPkrAmount(totalProfit)}
+                  </span>
                 </div>
               </div>
             </CardContent>
