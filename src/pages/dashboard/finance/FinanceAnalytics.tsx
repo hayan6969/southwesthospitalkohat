@@ -13,6 +13,19 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { cn } from "@/lib/utils";
 import { CalendarIcon } from "lucide-react";
 
+// Helper function to format large numbers with abbreviations
+const formatLargeNumber = (amount: number) => {
+  if (amount >= 1000000000) {
+    return `Rs. ${(amount / 1000000000).toFixed(1)}B`;
+  } else if (amount >= 1000000) {
+    return `Rs. ${(amount / 1000000).toFixed(1)}M`;
+  } else if (amount >= 1000) {
+    return `Rs. ${(amount / 1000).toFixed(0)}K`;
+  } else {
+    return formatPkrAmount(amount);
+  }
+};
+
 export default function FinanceAnalytics() {
   const [timeRange, setTimeRange] = useState("6months");
   const [selectedDate, setSelectedDate] = useState<Date | undefined>();
@@ -232,58 +245,71 @@ export default function FinanceAnalytics() {
       </div>
 
       {/* Key Metrics */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600 flex items-center gap-2">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
+        <Card className="min-w-0">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
               <DollarSign className="w-4 h-4" />
               Net Profit
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className={`text-2xl font-bold ${netProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+          <CardContent className="pt-0">
+            <div className={`text-xl xl:text-2xl font-bold break-words ${netProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+              {formatLargeNumber(netProfit)}
+            </div>
+            <div className="text-xs text-muted-foreground mt-1">
               {formatPkrAmount(netProfit)}
             </div>
-            <p className={`text-sm flex items-center gap-1 ${profitChange >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+            <p className={`text-xs flex items-center gap-1 mt-2 ${profitChange >= 0 ? 'text-green-600' : 'text-red-600'}`}>
               {profitChange >= 0 ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
               {profitChange >= 0 ? '+' : ''}{isFinite(profitChange) ? profitChange.toFixed(1) : '0.0'}% from last month
             </p>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Profit Margin</CardTitle>
+        <Card className="min-w-0">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Profit Margin</CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{isFinite(profitMargin) ? profitMargin.toFixed(1) : '0.0'}%</div>
-            <p className={`text-sm flex items-center gap-1 ${profitChange >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+          <CardContent className="pt-0">
+            <div className="text-xl xl:text-2xl font-bold break-words">{isFinite(profitMargin) ? profitMargin.toFixed(1) : '0.0'}%</div>
+            <p className={`text-xs flex items-center gap-1 mt-2 ${profitChange >= 0 ? 'text-green-600' : 'text-red-600'}`}>
               {profitChange >= 0 ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
               {profitChange >= 0 ? '+' : ''}{isFinite(profitChange) && isFinite(profitMargin) && profitMargin > 0 ? (profitChange * 0.1).toFixed(1) : '0.0'}% from last month
             </p>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Total Revenue</CardTitle>
+        <Card className="min-w-0">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Total Revenue</CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{formatPkrAmount(combinedRevenue)}</div>
-            <p className={`text-sm flex items-center gap-1 ${revenueChange >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+          <CardContent className="pt-0">
+            <div className="text-xl xl:text-2xl font-bold break-words text-green-600">
+              {formatLargeNumber(combinedRevenue)}
+            </div>
+            <div className="text-xs text-muted-foreground mt-1">
+              {formatPkrAmount(combinedRevenue)}
+            </div>
+            <p className={`text-xs flex items-center gap-1 mt-2 ${revenueChange >= 0 ? 'text-green-600' : 'text-red-600'}`}>
               {revenueChange >= 0 ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
               {revenueChange >= 0 ? '+' : ''}{isFinite(revenueChange) ? revenueChange.toFixed(1) : '0.0'}% from last month
             </p>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Total Expenses</CardTitle>
+        <Card className="min-w-0">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Total Expenses</CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-red-600">{formatPkrAmount(totalExpenses)}</div>
-            <p className={`text-sm flex items-center gap-1 ${expenseChange >= 0 ? 'text-red-600' : 'text-green-600'}`}>
+          <CardContent className="pt-0">
+            <div className="text-xl xl:text-2xl font-bold break-words text-red-600">
+              {formatLargeNumber(totalExpenses)}
+            </div>
+            <div className="text-xs text-muted-foreground mt-1">
+              {formatPkrAmount(totalExpenses)}
+            </div>
+            <p className={`text-xs flex items-center gap-1 mt-2 ${expenseChange >= 0 ? 'text-red-600' : 'text-green-600'}`}>
               {expenseChange >= 0 ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
               {expenseChange >= 0 ? '+' : ''}{isFinite(expenseChange) ? expenseChange.toFixed(1) : '0.0'}% from last month
             </p>
@@ -301,7 +327,7 @@ export default function FinanceAnalytics() {
             <LineChart data={monthlyData}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="month" />
-              <YAxis tickFormatter={(value) => `₨${(value/1000).toFixed(0)}K`} />
+              <YAxis tickFormatter={(value) => value >= 1000000 ? `₨${(value/1000000).toFixed(0)}M` : `₨${(value/1000).toFixed(0)}K`} />
               <Tooltip formatter={(value) => formatPkrAmount(value as number)} />
               <Line type="monotone" dataKey="total" stroke="#3b82f6" strokeWidth={3} name="Total Revenue" />
               <Line type="monotone" dataKey="hospital" stroke="#10b981" strokeWidth={2} name="Hospital" />
@@ -323,21 +349,21 @@ export default function FinanceAnalytics() {
               <BarChart data={monthlyData}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="month" />
-                <YAxis tickFormatter={(value) => `₨${(value/1000).toFixed(0)}K`} />
-                <Tooltip formatter={(value) => formatPkrAmount(value as number)} />
-                <Bar dataKey="total" fill="#10b981" name="Revenue" />
-                <Bar dataKey="expenses" fill="#ef4444" name="Expenses" />
-                <Bar dataKey="profit" fill="#3b82f6" name="Profit" />
-              </BarChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
+               <YAxis tickFormatter={(value) => value >= 1000000 ? `₨${(value/1000000).toFixed(0)}M` : `₨${(value/1000).toFixed(0)}K`} />
+               <Tooltip formatter={(value) => formatPkrAmount(value as number)} />
+               <Bar dataKey="total" fill="#10b981" name="Revenue" />
+               <Bar dataKey="expenses" fill="#ef4444" name="Expenses" />
+               <Bar dataKey="profit" fill="#3b82f6" name="Profit" />
+             </BarChart>
+           </ResponsiveContainer>
+         </CardContent>
+       </Card>
 
-        {/* Revenue Breakdown Pie Chart */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Revenue Breakdown</CardTitle>
-          </CardHeader>
+       {/* Revenue Breakdown Pie Chart */}
+       <Card>
+         <CardHeader>
+           <CardTitle>Revenue Breakdown</CardTitle>
+         </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
               {revenueBreakdown.length > 0 ? (
@@ -380,38 +406,38 @@ export default function FinanceAnalytics() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-4">
               <h4 className="font-semibold text-green-600">Key Metrics</h4>
-              <ul className="space-y-2 text-sm">
-                <li className="flex items-center gap-2">
-                  <DollarSign className="w-4 h-4 text-green-600" />
-                  Total Revenue: {formatPkrAmount(combinedRevenue)}
-                </li>
-                <li className="flex items-center gap-2">
-                  <DollarSign className="w-4 h-4 text-red-600" />
-                  Total Expenses: {formatPkrAmount(totalExpenses)}
-                </li>
-                <li className="flex items-center gap-2">
-                  <TrendingUp className="w-4 h-4 text-blue-600" />
-                  Profit Margin: {isFinite(profitMargin) ? profitMargin.toFixed(1) : '0.0'}%
-                </li>
-              </ul>
-            </div>
-            <div className="space-y-4">
-              <h4 className="font-semibold text-blue-600">Revenue Sources</h4>
-              <ul className="space-y-2 text-sm">
-                <li className="flex items-center gap-2">
-                  <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
-                  Hospital Services: {formatPkrAmount(totalRevenue)}
-                </li>
-                <li className="flex items-center gap-2">
-                  <div className="w-3 h-3 bg-purple-500 rounded-full"></div>
-                  Pharmacy: {formatPkrAmount(pharmacyRevenue)}
-                </li>
-                <li className="flex items-center gap-2">
-                  <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                  Lab Tests: {formatPkrAmount(labRevenue)}
-                </li>
-              </ul>
-            </div>
+               <ul className="space-y-2 text-sm">
+                 <li className="flex items-center gap-2">
+                   <DollarSign className="w-4 h-4 text-green-600" />
+                   <span className="break-all">Total Revenue: {formatLargeNumber(combinedRevenue)}</span>
+                 </li>
+                 <li className="flex items-center gap-2">
+                   <DollarSign className="w-4 h-4 text-red-600" />
+                   <span className="break-all">Total Expenses: {formatLargeNumber(totalExpenses)}</span>
+                 </li>
+                 <li className="flex items-center gap-2">
+                   <TrendingUp className="w-4 h-4 text-blue-600" />
+                   Profit Margin: {isFinite(profitMargin) ? profitMargin.toFixed(1) : '0.0'}%
+                 </li>
+               </ul>
+             </div>
+             <div className="space-y-4">
+               <h4 className="font-semibold text-blue-600">Revenue Sources</h4>
+               <ul className="space-y-2 text-sm">
+                 <li className="flex items-center gap-2">
+                   <div className="w-3 h-3 bg-blue-500 rounded-full flex-shrink-0"></div>
+                   <span className="break-all">Hospital Services: {formatLargeNumber(totalRevenue)}</span>
+                 </li>
+                 <li className="flex items-center gap-2">
+                   <div className="w-3 h-3 bg-purple-500 rounded-full flex-shrink-0"></div>
+                   <span className="break-all">Pharmacy: {formatLargeNumber(pharmacyRevenue)}</span>
+                 </li>
+                 <li className="flex items-center gap-2">
+                   <div className="w-3 h-3 bg-green-500 rounded-full flex-shrink-0"></div>
+                   <span className="break-all">Lab Tests: {formatLargeNumber(labRevenue)}</span>
+                 </li>
+               </ul>
+             </div>
           </div>
         </CardContent>
       </Card>
