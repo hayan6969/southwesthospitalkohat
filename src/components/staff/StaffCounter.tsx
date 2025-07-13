@@ -1,5 +1,5 @@
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -28,6 +28,7 @@ export function StaffCounter() {
   const [searchTerm, setSearchTerm] = useState("");
   const [processingInvoice, setProcessingInvoice] = useState<string | null>(null);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [patientNumbers, setPatientNumbers] = useState<{[key: string]: string}>({});
 
   // Get appointments for selected date (including all statuses)
   const filteredAppointments = useMemo(() => {
@@ -37,6 +38,30 @@ export function StaffCounter() {
       return isSameDay(appointmentDate, selectedDate);
     });
   }, [appointments, selectedDate]);
+
+  // Fetch patient numbers for appointments
+  useEffect(() => {
+    const fetchPatientNumbers = async () => {
+      if (!filteredAppointments?.length) return;
+      
+      const uniquePatientIds = [...new Set(filteredAppointments.map(apt => apt.patient_id))];
+      
+      const { data: patientData } = await supabase
+        .from('patients')
+        .select('id, patient_number')
+        .in('id', uniquePatientIds);
+      
+      if (patientData) {
+        const numbers: {[key: string]: string} = {};
+        patientData.forEach(patient => {
+          numbers[patient.id] = patient.patient_number || 'N/A';
+        });
+        setPatientNumbers(numbers);
+      }
+    };
+    
+    fetchPatientNumbers();
+  }, [filteredAppointments]);
 
   // Get queue appointments (scheduled only)
   const queueAppointments = useMemo(() => {
@@ -62,6 +87,13 @@ export function StaffCounter() {
   const handleGenerateInvoice = async (appointment: any) => {
     setProcessingInvoice(appointment.id);
     try {
+      // Get patient data with patient_number
+      const { data: patientData } = await supabase
+        .from('patients')
+        .select('patient_number')
+        .eq('id', appointment.patient_id)
+        .single();
+
       // First, check if invoice already exists
       const { data: existingInvoice } = await supabase
         .from('invoices')
@@ -119,10 +151,11 @@ export function StaffCounter() {
       const patientName = getPatientName(appointment.patient_id, patientNames || []);
       const doctorName = getDoctorName(appointment.doctor_id, doctorNames || []);
       
-      // Create invoice object for PDF generation
+      // Create invoice object for PDF generation with patient_number
       const invoiceForPDF = {
         ...invoiceData,
         patient: {
+          patient_number: patientData?.patient_number || 'N/A',
           users: {
             first_name: patientName.split(' ')[0] || '',
             last_name: patientName.split(' ').slice(1).join(' ') || '',
@@ -296,8 +329,8 @@ export function StaffCounter() {
                   queueAppointments.map((appointment, index) => (
                     <TableRow key={appointment.id}>
                       <TableCell className="font-bold">#{index + 1}</TableCell>
-                      <TableCell className="font-mono text-xs">
-                        {appointment.patient_id.substring(0, 8)}...
+                      <TableCell className="font-mono text-sm font-medium">
+                        {patientNumbers[appointment.patient_id] || 'Loading...'}
                       </TableCell>
                       <TableCell className="font-medium">
                         {getPatientName(appointment.patient_id, patientNames || [])}
