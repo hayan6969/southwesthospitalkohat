@@ -244,77 +244,83 @@ export default function FinanceAnalytics() {
         </div>
       </div>
 
-      {/* Key Metrics */}
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
-        <Card className="min-w-0">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-              <DollarSign className="w-4 h-4" />
-              Net Profit
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="pt-0">
-            <div className={`text-xl xl:text-2xl font-bold break-words ${netProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-              {formatLargeNumber(netProfit)}
-            </div>
-            <div className="text-xs text-muted-foreground mt-1">
-              {formatPkrAmount(netProfit)}
-            </div>
-            <p className={`text-xs flex items-center gap-1 mt-2 ${profitChange >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-              {profitChange >= 0 ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
-              {profitChange >= 0 ? '+' : ''}{isFinite(profitChange) ? profitChange.toFixed(1) : '0.0'}% from last month
-            </p>
-          </CardContent>
-        </Card>
+      {/* Key Metrics - Two Rows */}
+      <div className="space-y-4">
+        {/* First Row - Net Profit and Profit Margin */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <Card className="min-w-0">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                <DollarSign className="w-4 h-4" />
+                Net Profit
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <div className={`text-lg xl:text-xl font-bold break-words ${netProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                {formatLargeNumber(netProfit)}
+              </div>
+              <div className="text-xs text-muted-foreground mt-1">
+                {formatPkrAmount(netProfit)}
+              </div>
+              <p className={`text-xs flex items-center gap-1 mt-2 ${profitChange >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                {profitChange >= 0 ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
+                {profitChange >= 0 ? '+' : ''}{isFinite(profitChange) ? profitChange.toFixed(1) : '0.0'}% from last month
+              </p>
+            </CardContent>
+          </Card>
 
-        <Card className="min-w-0">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Profit Margin</CardTitle>
-          </CardHeader>
-          <CardContent className="pt-0">
-            <div className="text-xl xl:text-2xl font-bold break-words">{isFinite(profitMargin) ? profitMargin.toFixed(1) : '0.0'}%</div>
-            <p className={`text-xs flex items-center gap-1 mt-2 ${profitChange >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-              {profitChange >= 0 ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
-              {profitChange >= 0 ? '+' : ''}{isFinite(profitChange) && isFinite(profitMargin) && profitMargin > 0 ? (profitChange * 0.1).toFixed(1) : '0.0'}% from last month
-            </p>
-          </CardContent>
-        </Card>
+          <Card className="min-w-0">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">Profit Margin</CardTitle>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <div className="text-lg xl:text-xl font-bold break-words">{isFinite(profitMargin) ? profitMargin.toFixed(1) : '0.0'}%</div>
+              <p className={`text-xs flex items-center gap-1 mt-2 ${profitChange >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                {profitChange >= 0 ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
+                {profitChange >= 0 ? '+' : ''}{isFinite(profitChange) && isFinite(profitMargin) && profitMargin > 0 ? (profitChange * 0.1).toFixed(1) : '0.0'}% from last month
+              </p>
+            </CardContent>
+          </Card>
+        </div>
 
-        <Card className="min-w-0">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Total Revenue</CardTitle>
-          </CardHeader>
-          <CardContent className="pt-0">
-            <div className="text-xl xl:text-2xl font-bold break-words text-green-600">
-              {formatLargeNumber(combinedRevenue)}
-            </div>
-            <div className="text-xs text-muted-foreground mt-1">
-              {formatPkrAmount(combinedRevenue)}
-            </div>
-            <p className={`text-xs flex items-center gap-1 mt-2 ${revenueChange >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-              {revenueChange >= 0 ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
-              {revenueChange >= 0 ? '+' : ''}{isFinite(revenueChange) ? revenueChange.toFixed(1) : '0.0'}% from last month
-            </p>
-          </CardContent>
-        </Card>
+        {/* Second Row - Total Revenue and Total Expenses */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <Card className="min-w-0">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">Total Revenue</CardTitle>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <div className="text-lg xl:text-xl font-bold break-words text-green-600">
+                {formatLargeNumber(combinedRevenue)}
+              </div>
+              <div className="text-xs text-muted-foreground mt-1">
+                {formatPkrAmount(combinedRevenue)}
+              </div>
+              <p className={`text-xs flex items-center gap-1 mt-2 ${revenueChange >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                {revenueChange >= 0 ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
+                {revenueChange >= 0 ? '+' : ''}{isFinite(revenueChange) ? revenueChange.toFixed(1) : '0.0'}% from last month
+              </p>
+            </CardContent>
+          </Card>
 
-        <Card className="min-w-0">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Total Expenses</CardTitle>
-          </CardHeader>
-          <CardContent className="pt-0">
-            <div className="text-xl xl:text-2xl font-bold break-words text-red-600">
-              {formatLargeNumber(totalExpenses)}
-            </div>
-            <div className="text-xs text-muted-foreground mt-1">
-              {formatPkrAmount(totalExpenses)}
-            </div>
-            <p className={`text-xs flex items-center gap-1 mt-2 ${expenseChange >= 0 ? 'text-red-600' : 'text-green-600'}`}>
-              {expenseChange >= 0 ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
-              {expenseChange >= 0 ? '+' : ''}{isFinite(expenseChange) ? expenseChange.toFixed(1) : '0.0'}% from last month
-            </p>
-          </CardContent>
-        </Card>
+          <Card className="min-w-0">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">Total Expenses</CardTitle>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <div className="text-lg xl:text-xl font-bold break-words text-red-600">
+                {formatLargeNumber(totalExpenses)}
+              </div>
+              <div className="text-xs text-muted-foreground mt-1">
+                {formatPkrAmount(totalExpenses)}
+              </div>
+              <p className={`text-xs flex items-center gap-1 mt-2 ${expenseChange >= 0 ? 'text-red-600' : 'text-green-600'}`}>
+                {expenseChange >= 0 ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
+                {expenseChange >= 0 ? '+' : ''}{isFinite(expenseChange) ? expenseChange.toFixed(1) : '0.0'}% from last month
+              </p>
+            </CardContent>
+          </Card>
+        </div>
       </div>
 
       {/* Revenue Trend Chart */}
