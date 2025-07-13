@@ -69,10 +69,6 @@ export default function FinanceAnalytics() {
     }
   });
 
-  if (invoicesLoading || pharmacyLoading || labLoading || expensesLoading) {
-    return <div className="p-8">Loading analytics...</div>;
-  }
-
   // Calculate real metrics
   const totalRevenue = (invoices?.reduce((sum, inv) => sum + (inv.amount || 0), 0) || 0);
   const pharmacyRevenue = (pharmacyInvoices?.reduce((sum, inv) => sum + (inv.final_amount || 0), 0) || 0);
@@ -187,6 +183,10 @@ export default function FinanceAnalytics() {
     ? (((currentMonth.profit || 0) - (previousMonth.profit || 0)) / Math.abs(previousMonth.profit)) * 100
     : 0;
 
+  // Show loading state after all hooks are processed
+  if (invoicesLoading || pharmacyLoading || labLoading || expensesLoading) {
+    return <div className="p-8">Loading analytics...</div>;
+  }
 
   return (
     <div className="space-y-6">
