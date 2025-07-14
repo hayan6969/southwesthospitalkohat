@@ -66,6 +66,27 @@ export default function DashboardFinance() {
   const paidInvoices = invoices?.filter(inv => inv.status === 'paid') || [];
   const pendingInvoices = invoices?.filter(inv => inv.status === 'pending') || [];
 
+  // Calculate current month's revenue
+  const currentMonth = new Date().getMonth();
+  const currentYear = new Date().getFullYear();
+  
+  const currentMonthHospitalRevenue = invoices?.filter(invoice => {
+    const invoiceDate = new Date(invoice.paid_at || invoice.created_at);
+    return invoiceDate.getMonth() === currentMonth && invoiceDate.getFullYear() === currentYear && invoice.status === 'paid';
+  }).reduce((sum, invoice) => sum + (invoice.amount || 0), 0) || 0;
+  
+  const currentMonthPharmacyRevenue = pharmacyInvoices?.filter(invoice => {
+    const invoiceDate = new Date(invoice.created_at);
+    return invoiceDate.getMonth() === currentMonth && invoiceDate.getFullYear() === currentYear;
+  }).reduce((sum, invoice) => sum + (invoice.final_amount || 0), 0) || 0;
+  
+  const currentMonthLabRevenue = labReports?.filter(report => {
+    const reportDate = new Date(report.created_at);
+    return reportDate.getMonth() === currentMonth && reportDate.getFullYear() === currentYear;
+  }).reduce((sum, report) => sum + (report.price || 0), 0) || 0;
+  
+  const monthlyRevenue = currentMonthHospitalRevenue + currentMonthPharmacyRevenue + currentMonthLabRevenue;
+
   return (
     <div className="space-y-8">
         {/* Financial Stats - Two Rows */}
@@ -107,10 +128,10 @@ export default function DashboardFinance() {
               loading={pharmacyLoading}
             />
             <StatsCard
-              title="Pending Payments"
-              value={formatPkrAmount(pendingInvoices.reduce((sum, inv) => sum + (inv.amount || 0), 0))}
+              title="Monthly Revenue"
+              value={formatPkrAmount(monthlyRevenue)}
               icon={<TrendingUp className="w-5 h-5 text-orange-600" />}
-              loading={invoicesLoading}
+              loading={invoicesLoading || pharmacyLoading || labLoading}
             />
           </div>
         </div>
