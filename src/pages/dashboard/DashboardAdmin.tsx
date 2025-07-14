@@ -10,8 +10,9 @@ import { AppointmentDialog } from "@/components/dialogs/AppointmentDialog";
 import { useUsers, useDepartments, useAuditLogs } from "@/hooks/useDatabase";
 import { useRealStatsData } from "@/hooks/useRealStatsData";
 import { useRecentActivity } from "@/hooks/useRecentActivity";
+import { useFinancialAnalytics } from "@/hooks/useFinancialAnalytics";
 import { useAuth } from "@/hooks/useAuth";
-import { Users, UserCheck, Calendar, DollarSign, Shield, Activity, Filter, User, LogOut } from "lucide-react";
+import { Users, UserCheck, Calendar, DollarSign, Shield, Activity, Filter, User, LogOut, TrendingUp, CreditCard } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
@@ -36,6 +37,7 @@ export default function DashboardAdmin() {
   const { data: departments } = useDepartments();
   const { data: auditLogs } = useAuditLogs();
   const { data: recentActivity } = useRecentActivity();
+  const { data: financialAnalytics } = useFinancialAnalytics();
   const { settings: hospitalSettings, updateSettings } = useHospitalSettings();
   const { toast } = useToast();
   const [editingUser, setEditingUser] = useState<any>(null);
@@ -306,42 +308,86 @@ export default function DashboardAdmin() {
             <TabsContent value="analytics">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
                 <StatsCard
-                  title="Total Users"
+                  title="Total Revenue"
+                  value={formatPkrAmount(financialAnalytics?.totalRevenue || 0)}
+                  change={realStats?.revenueChange}
+                  changeType={realStats?.revenueChangeType}
+                  icon={<DollarSign className="w-5 h-5 text-green-600" />}
+                  chart={<MiniChart data={financialAnalytics?.monthlyRevenue?.map(m => ({value: m.amount})) || []} type="bar" color="#10b981" />}
+                />
+                <StatsCard
+                  title="Net Profit"
+                  value={formatPkrAmount(financialAnalytics?.netProfit || 0)}
+                  change={financialAnalytics?.profitMargin ? `${financialAnalytics.profitMargin.toFixed(1)}%` : "0%"}
+                  changeType={financialAnalytics?.netProfit && financialAnalytics.netProfit > 0 ? "positive" : "negative"}
+                  icon={<TrendingUp className="w-5 h-5 text-blue-600" />}
+                  chart={<MiniChart data={financialAnalytics?.monthlyRevenue?.map(m => ({value: m.amount - (financialAnalytics?.monthlyExpenses?.find(e => e.month === m.month)?.amount || 0)})) || []} type="area" color="#3b82f6" />}
+                />
+                <StatsCard
+                  title="Total Expenses"
+                  value={formatPkrAmount(financialAnalytics?.totalExpenses || 0)}
+                  change="Monthly"
+                  changeType="negative"
+                  icon={<CreditCard className="w-5 h-5 text-red-600" />}
+                  chart={<MiniChart data={financialAnalytics?.monthlyExpenses?.map(m => ({value: m.amount})) || []} type="bar" color="#ef4444" />}
+                />
+                <StatsCard
+                  title="Active Users"
                   value={users?.length?.toString() || "0"}
                   change={realStats?.patientsChange}
                   changeType={realStats?.patientsChangeType}
-                  icon={<Users className="w-5 h-5 text-blue-600" />}
-                  chart={<MiniChart data={realStats?.chartData?.patients || []} type="bar" color="#3b82f6" />}
-                />
-                <StatsCard
-                  title="Active Sessions"
-                  value={auditLogs?.filter(log => 
-                    new Date(log.created_at || '').getTime() > Date.now() - 24 * 60 * 60 * 1000
-                  ).length?.toString() || "0"}
-                  change={realStats?.appointmentsChange}
-                  changeType={realStats?.appointmentsChangeType}
-                  icon={<Activity className="w-5 h-5 text-green-600" />}
-                  chart={<MiniChart data={realStats?.chartData?.appointments || []} type="area" color="#10b981" />}
-                />
-                <StatsCard
-                  title="System Health"
-                  value="99.9%"
-                  change="0%"
-                  changeType="positive"
-                  icon={<Shield className="w-5 h-5 text-purple-600" />}
-                  chart={<MiniChart data={[{value: 99.9}, {value: 99.8}, {value: 99.9}, {value: 100}, {value: 99.9}]} type="line" color="#8b5cf6" />}
-                />
-                <StatsCard
-                  title="Revenue Growth"
-                  value={formatPkrAmount(realStats?.totalRevenue || 0)}
-                  change={realStats?.revenueChange}
-                  changeType={realStats?.revenueChangeType}
-                  icon={<DollarSign className="w-5 h-5 text-orange-600" />}
-                  chart={<MiniChart data={realStats?.chartData?.revenue || []} type="bar" color="#f97316" />}
+                  icon={<Users className="w-5 h-5 text-purple-600" />}
+                  chart={<MiniChart data={realStats?.chartData?.patients || []} type="line" color="#8b5cf6" />}
                 />
               </div>
-              <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
+              <div className="grid grid-cols-1 xl:grid-cols-2 gap-8 mb-8">
                 <RealAppointmentChart />
+                <div className="bg-white rounded-lg border shadow-sm p-6">
+                  <h3 className="font-semibold mb-4">Revenue by Source</h3>
+                  <div className="space-y-3">
+                    {financialAnalytics?.revenueBySource && Object.entries(financialAnalytics.revenueBySource).map(([source, amount]) => {
+                      const percentage = financialAnalytics.totalRevenue > 0 ? Math.round((amount / financialAnalytics.totalRevenue) * 100) : 0;
+                      return (
+                        <div key={source} className="flex items-center justify-between">
+                          <div className="flex items-center space-x-3">
+                            <div className={`w-3 h-3 rounded-full ${
+                              source === 'hospital' ? 'bg-blue-500' :
+                              source === 'pharmacy' ? 'bg-green-500' :
+                              source === 'lab' ? 'bg-yellow-500' : 'bg-purple-500'
+                            }`} />
+                            <span className="text-sm font-medium capitalize">{source}</span>
+                          </div>
+                          <div className="text-right">
+                            <div className="text-sm font-semibold">{formatPkrAmount(amount)}</div>
+                            <div className="text-xs text-gray-500">{percentage}%</div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
+                <div className="bg-white rounded-lg border shadow-sm p-6">
+                  <h3 className="font-semibold mb-4">Recent Financial Activities</h3>
+                  <div className="space-y-3">
+                    {financialAnalytics?.recentActivities?.slice(0, 8).map((activity) => (
+                      <div key={activity.id} className="flex items-center justify-between">
+                        <div className="flex items-center space-x-3">
+                          <div className={`w-2 h-2 rounded-full ${activity.amount > 0 ? 'bg-green-500' : 'bg-red-500'}`} />
+                          <div>
+                            <div className="text-sm font-medium">{activity.type}</div>
+                            <div className="text-xs text-gray-500">{activity.description}</div>
+                          </div>
+                        </div>
+                        <div className={`text-sm font-semibold ${activity.amount > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                          {activity.amount > 0 ? '+' : ''}{formatPkrAmount(Math.abs(activity.amount))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
                 <div className="bg-white rounded-lg border shadow-sm p-6">
                   <h3 className="font-semibold mb-4">User Role Distribution</h3>
                   <div className="space-y-3">

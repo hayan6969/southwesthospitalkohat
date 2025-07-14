@@ -4,11 +4,12 @@ import { StatsCard } from "@/components/StatsCard";
 import { MiniChart } from "@/components/MiniChart";
 import { useAppointments, useMedicalRecords } from "@/hooks/useDatabase";
 import { useRealStatsData } from "@/hooks/useRealStatsData";
+import { useFinancialAnalytics } from "@/hooks/useFinancialAnalytics";
 import { usePatientNames, useDoctorNames, getPatientName, getDoctorName } from "@/hooks/useDisplayHelpers";
 import { useDoctorTodayAppointments } from "@/hooks/useDoctorData";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
-import { Calendar, Users, Clock, CheckCircle, Plus, User, LogOut, Stethoscope, FileText, CalendarDays, ClipboardList } from "lucide-react";
+import { Calendar, Users, Clock, CheckCircle, Plus, User, LogOut, Stethoscope, FileText, CalendarDays, ClipboardList, DollarSign } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -26,12 +27,14 @@ import { DoctorProfileSettings } from "@/components/DoctorProfileSettings";
 import { DoctorAvailabilityManager } from "@/components/DoctorAvailabilityManager";
 import { StopAppointmentsButton } from "@/components/StopAppointmentsButton";
 import { useHospitalSettings } from "@/hooks/useHospitalSettings";
+import { formatPkrAmount } from "@/utils/currency";
 
 export default function DashboardDoctor() {
   const { profile, signOut } = useAuth();
   const { settings: hospitalSettings } = useHospitalSettings();
   const { data: appointments, isLoading: appointmentsLoading } = useAppointments();
   const { data: realStats, isLoading: statsLoading } = useRealStatsData();
+  const { data: financialAnalytics } = useFinancialAnalytics();
   const { data: medicalRecords, isLoading: recordsLoading } = useMedicalRecords();
   const { data: patientNames } = usePatientNames();
   const { data: doctorNames } = useDoctorNames();
@@ -378,31 +381,69 @@ export default function DashboardDoctor() {
             </TabsContent>
 
             <TabsContent value="analytics">
-              <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
-                <h3 className="text-lg font-semibold mb-4">Doctor Analytics</h3>
-                <p className="text-gray-600 mb-4">View performance metrics and patient statistics</p>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6">
+              <div className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   <StatsCard
-                    title="This Month"
-                    value="78"
-                    change="+12%"
-                    changeType="positive"
+                    title="Monthly Appointments"
+                    value={realStats?.totalAppointments?.toString() || "0"}
+                    change={realStats?.appointmentsChange}
+                    changeType={realStats?.appointmentsChangeType}
                     icon={<Calendar className="w-5 h-5 text-blue-600" />}
+                    chart={<MiniChart data={realStats?.chartData?.appointments || []} type="bar" color="#3b82f6" />}
                   />
                   <StatsCard
-                    title="Avg Rating"
-                    value="4.8"
-                    change="+0.2"
-                    changeType="positive"
-                    icon={<CheckCircle className="w-5 h-5 text-green-600" />}
+                    title="Revenue Generated"
+                    value={formatPkrAmount(financialAnalytics?.revenueBySource?.hospital || 0)}
+                    change={realStats?.revenueChange}
+                    changeType={realStats?.revenueChangeType}
+                    icon={<DollarSign className="w-5 h-5 text-green-600" />}
+                    chart={<MiniChart data={financialAnalytics?.monthlyRevenue?.map(m => ({value: m.amount})) || []} type="area" color="#10b981" />}
                   />
                   <StatsCard
-                    title="Response Time"
-                    value="12min"
-                    change="-3min"
-                    changeType="positive"
-                    icon={<Clock className="w-5 h-5 text-orange-600" />}
+                    title="Total Patients"
+                    value={realStats?.totalPatients?.toString() || "0"}
+                    change={realStats?.patientsChange}
+                    changeType={realStats?.patientsChangeType}
+                    icon={<Users className="w-5 h-5 text-purple-600" />}
+                    chart={<MiniChart data={realStats?.chartData?.patients || []} type="line" color="#8b5cf6" />}
                   />
+                </div>
+                
+                <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+                  <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+                    <h3 className="text-lg font-semibold mb-4">Financial Performance</h3>
+                    <div className="space-y-4">
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm text-gray-600">Monthly Revenue</span>
+                        <span className="font-semibold">{formatPkrAmount(financialAnalytics?.monthlyRevenue?.[0]?.amount || 0)}</span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm text-gray-600">Total Revenue</span>
+                        <span className="font-semibold">{formatPkrAmount(financialAnalytics?.totalRevenue || 0)}</span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm text-gray-600">Profit Margin</span>
+                        <span className="font-semibold">{financialAnalytics?.profitMargin?.toFixed(1) || '0'}%</span>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+                    <h3 className="text-lg font-semibold mb-4">Recent Financial Activities</h3>
+                    <div className="space-y-3">
+                      {financialAnalytics?.recentActivities?.slice(0, 5).map((activity) => (
+                        <div key={activity.id} className="flex items-center justify-between">
+                          <div>
+                            <div className="text-sm font-medium">{activity.type}</div>
+                            <div className="text-xs text-gray-500">{activity.description}</div>
+                          </div>
+                          <div className={`text-sm font-semibold ${activity.amount > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                            {activity.amount > 0 ? '+' : ''}{formatPkrAmount(Math.abs(activity.amount))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
                 </div>
               </div>
             </TabsContent>
