@@ -217,6 +217,7 @@ export function EnhancedLabDialog() {
             .insert([{
               patient_id: selectedPatient.id,
               doctor_id: isExternalDoctor ? null : selectedDoctor,
+              external_doctor_name: isExternalDoctor ? externalDoctorName.trim() : null,
               test_id: testId,
               test_name: test?.name || '',
               price: test?.price || 0,

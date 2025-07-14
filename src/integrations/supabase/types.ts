@@ -345,7 +345,8 @@ export type Database = {
       lab_reports: {
         Row: {
           created_at: string | null
-          doctor_id: string
+          doctor_id: string | null
+          external_doctor_name: string | null
           id: string
           invoice_id: string | null
           notes: string | null
@@ -360,7 +361,8 @@ export type Database = {
         }
         Insert: {
           created_at?: string | null
-          doctor_id: string
+          doctor_id?: string | null
+          external_doctor_name?: string | null
           id?: string
           invoice_id?: string | null
           notes?: string | null
@@ -375,7 +377,8 @@ export type Database = {
         }
         Update: {
           created_at?: string | null
-          doctor_id?: string
+          doctor_id?: string | null
+          external_doctor_name?: string | null
           id?: string
           invoice_id?: string | null
           notes?: string | null
