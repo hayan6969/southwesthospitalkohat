@@ -91,7 +91,7 @@ export default function FinanceAnalytics() {
   const netProfit = combinedRevenue - totalExpenses;
   const profitMargin = combinedRevenue > 0 ? ((netProfit / combinedRevenue) * 100) : 0;
 
-  // Calculate monthly data from real database records
+  // Calculate monthly data from real database records with filtering
   const monthlyData = useMemo(() => {
     // Return empty array if data is still loading or null
     if (!invoices || !pharmacyInvoices || !labReports || !expenses) {
@@ -102,11 +102,39 @@ export default function FinanceAnalytics() {
       const months = [];
       const now = new Date();
       
-      // Generate last 6 months
-      for (let i = 5; i >= 0; i--) {
+      // Determine the number of months to show based on timeRange
+      let monthsToShow = 6; // default
+      switch (timeRange) {
+        case "1month":
+          monthsToShow = 1;
+          break;
+        case "3months":
+          monthsToShow = 3;
+          break;
+        case "6months":
+          monthsToShow = 6;
+          break;
+        case "1year":
+          monthsToShow = 12;
+          break;
+      }
+      
+      // Generate months based on selected time range
+      for (let i = monthsToShow - 1; i >= 0; i--) {
         const monthDate = subMonths(now, i);
         const monthStart = startOfMonth(monthDate);
         const monthEnd = endOfMonth(monthDate);
+        
+        // If a specific date is selected, only show data for that month
+        if (selectedDate) {
+          const selectedMonth = startOfMonth(selectedDate);
+          const selectedMonthEnd = endOfMonth(selectedDate);
+          
+          // Only include the month that contains the selected date
+          if (monthStart.getTime() !== selectedMonth.getTime()) {
+            continue;
+          }
+        }
         
         // Safe filtering with null checks
         const monthInvoices = (invoices || []).filter(inv => {
@@ -166,12 +194,26 @@ export default function FinanceAnalytics() {
         });
       }
       
+      // If a specific date is selected and no data found, show empty month
+      if (selectedDate && months.length === 0) {
+        const selectedMonthStart = startOfMonth(selectedDate);
+        months.push({
+          month: format(selectedDate, 'MMM'),
+          hospital: 0,
+          pharmacy: 0,
+          lab: 0,
+          total: 0,
+          expenses: 0,
+          profit: 0
+        });
+      }
+      
       return months;
     } catch (error) {
       console.error('Error calculating monthly data:', error);
       return [];
     }
-  }, [invoices, pharmacyInvoices, labReports, expenses]);
+  }, [invoices, pharmacyInvoices, labReports, expenses, timeRange, selectedDate]);
 
   // Revenue breakdown
   const revenueBreakdown = [
@@ -230,6 +272,15 @@ export default function FinanceAnalytics() {
               />
             </PopoverContent>
           </Popover>
+          {selectedDate && (
+            <Button 
+              variant="outline" 
+              onClick={() => setSelectedDate(undefined)}
+              className="px-3"
+            >
+              Clear Filter
+            </Button>
+          )}
           <Select value={timeRange} onValueChange={setTimeRange}>
             <SelectTrigger className="w-48">
               <SelectValue />
