@@ -63,6 +63,53 @@ export function StaffCounter() {
     fetchPatientNumbers();
   }, [filteredAppointments]);
 
+  // Fetch queue positions to calculate people ahead
+  const [queuePositions, setQueuePositions] = useState<{[key: string]: { position: number; aheadCount: number }}>({});
+
+  useEffect(() => {
+    const fetchQueuePositions = async () => {
+      if (!filteredAppointments?.length) return;
+      
+      const appointmentIds = filteredAppointments.map(apt => apt.id);
+      
+      const { data: queueData } = await supabase
+        .from('queue_positions')
+        .select('appointment_id, queue_position, doctor_id, appointment_date')
+        .in('appointment_id', appointmentIds);
+      
+      if (queueData) {
+        const positions: {[key: string]: { position: number; aheadCount: number }} = {};
+        
+        // Group by doctor and date to calculate ahead count
+        const groupedByDoctorDate: {[key: string]: any[]} = {};
+        
+        queueData.forEach(queue => {
+          const key = `${queue.doctor_id}-${queue.appointment_date}`;
+          if (!groupedByDoctorDate[key]) {
+            groupedByDoctorDate[key] = [];
+          }
+          groupedByDoctorDate[key].push(queue);
+        });
+        
+        // Calculate ahead count for each appointment
+        Object.values(groupedByDoctorDate).forEach(doctorQueue => {
+          doctorQueue.sort((a, b) => a.queue_position - b.queue_position);
+          
+          doctorQueue.forEach((queue, index) => {
+            positions[queue.appointment_id] = {
+              position: queue.queue_position,
+              aheadCount: index // Number of people ahead is the index
+            };
+          });
+        });
+        
+        setQueuePositions(positions);
+      }
+    };
+    
+    fetchQueuePositions();
+  }, [filteredAppointments]);
+
   // Get queue appointments (scheduled only)
   const queueAppointments = useMemo(() => {
     let filtered = filteredAppointments.filter(apt => apt.status === 'scheduled');
@@ -81,8 +128,18 @@ export function StaffCounter() {
       });
     }
     
-    return filtered.sort((a, b) => new Date(a.appointment_date).getTime() - new Date(b.appointment_date).getTime());
-  }, [filteredAppointments, searchTerm, patientNames, doctorNames]);
+    // Sort by queue position if available, otherwise by appointment time
+    return filtered.sort((a, b) => {
+      const aQueue = queuePositions[a.id];
+      const bQueue = queuePositions[b.id];
+      
+      if (aQueue && bQueue) {
+        return aQueue.position - bQueue.position;
+      }
+      
+      return new Date(a.appointment_date).getTime() - new Date(b.appointment_date).getTime();
+    });
+  }, [filteredAppointments, searchTerm, patientNames, doctorNames, queuePositions]);
 
   const handleGenerateInvoice = async (appointment: any) => {
     setProcessingInvoice(appointment.id);
@@ -312,7 +369,7 @@ export function StaffCounter() {
                   <TableHead>Patient ID</TableHead>
                   <TableHead>Patient Name</TableHead>
                   <TableHead>Doctor</TableHead>
-                  <TableHead>Time</TableHead>
+                  <TableHead>People Ahead</TableHead>
                   <TableHead>Booking Type</TableHead>
                   <TableHead>Payment Status</TableHead>
                   <TableHead>Actions</TableHead>
@@ -339,7 +396,14 @@ export function StaffCounter() {
                         {getDoctorName(appointment.doctor_id, doctorNames || [])}
                       </TableCell>
                       <TableCell>
-                        {format(new Date(appointment.appointment_date), 'h:mm a')}
+                        <div className="flex items-center gap-2">
+                          <Badge variant="outline" className="font-mono">
+                            {queuePositions[appointment.id]?.aheadCount ?? 0}
+                          </Badge>
+                          <span className="text-sm text-gray-500">
+                            {queuePositions[appointment.id]?.aheadCount === 0 ? "Next" : "waiting"}
+                          </span>
+                        </div>
                       </TableCell>
                       <TableCell>
                         <Badge variant={appointment.booking_type === 'online' ? 'default' : 'secondary'}>
