@@ -363,6 +363,16 @@ export default function FinancePayroll() {
 
   const handleSaveTemplate = () => {
     if (!employeeName || !employeeRole || !baseSalary) return;
+    
+    // Ensure we have a valid employee_id when creating new templates
+    if (!editingTemplate && !selectedEmployeeId) {
+      toast({
+        title: "Error",
+        description: "Please select an employee from the dropdown",
+        variant: "destructive"
+      });
+      return;
+    }
 
     const baseSalaryNum = parseFloat(baseSalary);
     const allowancesNum = parseFloat(allowances) || 0;
@@ -370,7 +380,7 @@ export default function FinancePayroll() {
     const netSalary = baseSalaryNum + allowancesNum - deductionsNum;
 
     saveTemplateMutation.mutate({
-      employee_id: selectedEmployeeId || crypto.randomUUID(),
+      employee_id: editingTemplate ? editingTemplate.employee_id : selectedEmployeeId!,
       employee_name: employeeName,
       role: employeeRole,
       base_salary: baseSalaryNum,
