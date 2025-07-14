@@ -21,6 +21,7 @@ import { format } from "date-fns";
 import { formatPkrAmount } from "@/utils/currency";
 import { useHospitalSettings } from "@/hooks/useHospitalSettings";
 import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 import AdminLabs from "./admin/AdminLabs";
 import { AdminOT } from "./admin/AdminOT";
 
@@ -39,6 +40,7 @@ export default function DashboardAdmin() {
   const { data: departments } = useDepartments();
   const { data: auditLogs } = useAuditLogs();
   const { settings: hospitalSettings, updateSettings } = useHospitalSettings();
+  const { toast } = useToast();
   const [editingUser, setEditingUser] = useState<any>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   
@@ -51,7 +53,8 @@ export default function DashboardAdmin() {
   const [timingsForm, setTimingsForm] = useState({
     opening_time: '',
     closing_time: '',
-    working_days: [] as string[]
+    working_days: [] as string[],
+    payroll_payment_date: 1
   });
   const [appointmentForm, setAppointmentForm] = useState({
     max_appointments_per_doctor: 50,
@@ -719,6 +722,44 @@ export default function DashboardAdmin() {
                         <Input type="number" defaultValue="20" min="0" max="50" />
                       </div>
                       <Button className="w-full">Save Appointment Settings</Button>
+                    </div>
+                  </div>
+
+                  <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+                    <h4 className="text-lg font-semibold mb-4">Payroll Settings</h4>
+                    <div className="space-y-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Monthly Payment Date (Day of Month)
+                        </label>
+                        <Input 
+                          type="number" 
+                          value={hospitalSettings?.payroll_payment_date || 1}
+                          onChange={(e) => setTimingsForm(prev => ({ ...prev, payroll_payment_date: parseInt(e.target.value) }))}
+                          min="1" 
+                          max="31" 
+                          placeholder="Enter day of month (1-31)"
+                        />
+                        <p className="text-sm text-gray-500 mt-1">
+                          Day of month when salaries should be paid (e.g., 1 for 1st of every month)
+                        </p>
+                      </div>
+                      <Button 
+                        className="w-full"
+                        onClick={async () => {
+                          const success = await updateSettings({
+                            payroll_payment_date: timingsForm.payroll_payment_date || hospitalSettings?.payroll_payment_date || 1
+                          });
+                          if (success) {
+                            toast({
+                              title: "Success",
+                              description: "Payroll settings updated successfully",
+                            });
+                          }
+                        }}
+                      >
+                        Save Payroll Settings
+                      </Button>
                     </div>
                   </div>
                 </div>

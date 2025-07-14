@@ -7,16 +7,16 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { formatPkrAmount } from "@/utils/currency";
-import { Users, DollarSign, Calendar, Plus, Download, Check, CheckCircle, CalendarIcon } from "lucide-react";
+import { Users, DollarSign, Calendar, Plus, Download, Check, CheckCircle, CalendarIcon, Settings, RefreshCw, UserPlus, Edit, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
-// Fixed CheckAll import issue
 
 interface PayrollRecord {
   id: string;
@@ -33,9 +33,21 @@ interface PayrollRecord {
   paid_at?: string;
 }
 
+interface PayrollTemplate {
+  id: string;
+  employee_id: string;
+  employee_name: string;
+  role: string;
+  base_salary: number;
+  allowances: number;
+  deductions: number;
+  net_salary: number;
+  is_active: boolean;
+  created_at: string;
+}
+
 export default function FinancePayroll() {
-  const [isPayrollDialogOpen, setIsPayrollDialogOpen] = useState(false);
-  const [isCreatePayrollDialogOpen, setIsCreatePayrollDialogOpen] = useState(false);
+  const [isTemplateDialogOpen, setIsTemplateDialogOpen] = useState(false);
   const [selectedMonth, setSelectedMonth] = useState(new Date().toISOString().slice(0, 7));
   const [filterDate, setFilterDate] = useState<Date | undefined>();
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>("");
@@ -45,6 +57,7 @@ export default function FinancePayroll() {
   const [baseSalary, setBaseSalary] = useState<string>("");
   const [allowances, setAllowances] = useState<string>("0");
   const [deductions, setDeductions] = useState<string>("0");
+  const [editingTemplate, setEditingTemplate] = useState<PayrollTemplate | null>(null);
   
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -60,6 +73,21 @@ export default function FinancePayroll() {
         .eq('is_active', true);
       if (error) throw error;
       return data;
+    }
+  });
+
+  // Fetch payroll templates
+  const { data: payrollTemplates, isLoading: templatesLoading } = useQuery({
+    queryKey: ['payroll-templates'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('payroll_templates')
+        .select('*')
+        .eq('is_active', true)
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      return data as PayrollTemplate[];
     }
   });
 
@@ -86,8 +114,9 @@ export default function FinancePayroll() {
       })
     : allPayrollRecords;
 
-  const createPayrollMutation = useMutation({
-    mutationFn: async (payrollData: {
+  // Create/Update Payroll Template Mutation
+  const saveTemplateMutation = useMutation({
+    mutationFn: async (templateData: {
       employee_id: string;
       employee_name: string;
       role: string;
@@ -95,46 +124,77 @@ export default function FinancePayroll() {
       allowances: number;
       deductions: number;
       net_salary: number;
-      pay_period: string;
     }) => {
       const { data: userData } = await supabase.auth.getUser();
       
-      const { data, error } = await supabase
-        .from('payroll')
-        .insert([{
-          ...payrollData,
-          created_by: userData.user?.id
-        }])
-        .select()
-        .single();
-
-      if (error) throw error;
-      return data;
+      if (editingTemplate) {
+        // Update existing template
+        const { data, error } = await supabase
+          .from('payroll_templates')
+          .update(templateData)
+          .eq('id', editingTemplate.id)
+          .select()
+          .single();
+        if (error) throw error;
+        return data;
+      } else {
+        // Create new template
+        const { data, error } = await supabase
+          .from('payroll_templates')
+          .insert([{
+            ...templateData,
+            created_by: userData.user?.id
+          }])
+          .select()
+          .single();
+        if (error) throw error;
+        return data;
+      }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['payroll-records'] });
-      setIsCreatePayrollDialogOpen(false);
-      setSelectedEmployeeId("");
-      setEmployeeName("");
-      setEmployeeRole("");
-      setSearchQuery("");
-      setBaseSalary("");
-      setAllowances("0");
-      setDeductions("0");
+      queryClient.invalidateQueries({ queryKey: ['payroll-templates'] });
+      setIsTemplateDialogOpen(false);
+      resetForm();
       toast({
         title: "Success",
-        description: "Payroll record created successfully",
+        description: editingTemplate ? "Payroll template updated successfully" : "Payroll template created successfully",
       });
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast({
         title: "Error",
-        description: "Failed to create payroll record",
+        description: error.message?.includes('unique') ? "Employee already has a payroll template" : "Failed to save payroll template",
         variant: "destructive",
       });
     }
   });
 
+  // Generate Monthly Payroll Mutation
+  const generatePayrollMutation = useMutation({
+    mutationFn: async (month: string) => {
+      const { data, error } = await supabase.rpc('generate_monthly_payroll', {
+        target_month: month
+      });
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (count) => {
+      queryClient.invalidateQueries({ queryKey: ['payroll-records'] });
+      toast({
+        title: "Success",
+        description: `Generated ${count} payroll records for ${format(new Date(selectedMonth + '-01'), 'MMMM yyyy')}`,
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to generate payroll",
+        variant: "destructive",
+      });
+    }
+  });
+
+  // Mark Paid Mutation
   const markPaidMutation = useMutation({
     mutationFn: async ({ recordId, record }: { recordId: string; record: PayrollRecord }) => {
       const { data: userData } = await supabase.auth.getUser();
@@ -182,6 +242,7 @@ export default function FinancePayroll() {
     }
   });
 
+  // Mark All Paid Mutation
   const markAllPaidMutation = useMutation({
     mutationFn: async () => {
       const { data: userData } = await supabase.auth.getUser();
@@ -235,7 +296,43 @@ export default function FinancePayroll() {
     }
   });
 
-  const handleCreatePayroll = () => {
+  // Delete Template Mutation
+  const deleteTemplateMutation = useMutation({
+    mutationFn: async (templateId: string) => {
+      const { error } = await supabase
+        .from('payroll_templates')
+        .delete()
+        .eq('id', templateId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['payroll-templates'] });
+      toast({
+        title: "Success",
+        description: "Payroll template deleted successfully",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to delete payroll template",
+        variant: "destructive",
+      });
+    }
+  });
+
+  const resetForm = () => {
+    setSelectedEmployeeId("");
+    setEmployeeName("");
+    setEmployeeRole("");
+    setSearchQuery("");
+    setBaseSalary("");
+    setAllowances("0");
+    setDeductions("0");
+    setEditingTemplate(null);
+  };
+
+  const handleSaveTemplate = () => {
     if (!employeeName || !employeeRole || !baseSalary) return;
 
     const baseSalaryNum = parseFloat(baseSalary);
@@ -243,7 +340,7 @@ export default function FinancePayroll() {
     const deductionsNum = parseFloat(deductions) || 0;
     const netSalary = baseSalaryNum + allowancesNum - deductionsNum;
 
-    createPayrollMutation.mutate({
+    saveTemplateMutation.mutate({
       employee_id: selectedEmployeeId || crypto.randomUUID(),
       employee_name: employeeName,
       role: employeeRole,
@@ -251,8 +348,19 @@ export default function FinancePayroll() {
       allowances: allowancesNum,
       deductions: deductionsNum,
       net_salary: netSalary,
-      pay_period: selectedMonth
     });
+  };
+
+  const handleEditTemplate = (template: PayrollTemplate) => {
+    setEditingTemplate(template);
+    setSelectedEmployeeId(template.employee_id);
+    setEmployeeName(template.employee_name);
+    setEmployeeRole(template.role);
+    setBaseSalary(template.base_salary.toString());
+    setAllowances(template.allowances.toString());
+    setDeductions(template.deductions.toString());
+    setSearchQuery(template.employee_name);
+    setIsTemplateDialogOpen(true);
   };
 
   const getMonthOptions = () => {
@@ -271,7 +379,7 @@ export default function FinancePayroll() {
   const paidPayroll = payrollRecords?.filter(r => r.status === 'paid').reduce((sum, record) => sum + record.net_salary, 0) || 0;
   const pendingPayroll = payrollRecords?.filter(r => r.status === 'pending').reduce((sum, record) => sum + record.net_salary, 0) || 0;
 
-  if (staffLoading || payrollLoading) {
+  if (staffLoading || templatesLoading || payrollLoading) {
     return <div className="p-8">Loading payroll data...</div>;
   }
 
@@ -313,79 +421,188 @@ export default function FinancePayroll() {
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-gray-600 flex items-center gap-2">
               <Users className="w-4 h-4" />
-              Employees
+              Templates
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{staff?.length || 0}</div>
+            <div className="text-2xl font-bold">{payrollTemplates?.length || 0}</div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Payroll Controls */}
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle className="flex items-center gap-2">
-            <Calendar className="w-5 h-5" />
-            Payroll Management
-          </CardTitle>
-            <div className="flex gap-4 items-center">
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  className={cn(
-                    "w-48 justify-start text-left font-normal",
-                    !filterDate && "text-muted-foreground"
+      {/* Payroll Management Tabs */}
+      <Tabs defaultValue="records" className="space-y-6">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="records">Monthly Payroll</TabsTrigger>
+          <TabsTrigger value="templates">Employee Templates</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="records" className="space-y-6">
+          {/* Payroll Controls */}
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle className="flex items-center gap-2">
+                <Calendar className="w-5 h-5" />
+                Monthly Payroll Records
+              </CardTitle>
+              <div className="flex gap-4 items-center">
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "w-48 justify-start text-left font-normal",
+                        !filterDate && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {filterDate ? format(filterDate, "PPP") : <span>Filter by date</span>}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <CalendarComponent
+                      mode="single"
+                      selected={filterDate}
+                      onSelect={setFilterDate}
+                      initialFocus
+                      className={cn("p-3 pointer-events-auto")}
+                    />
+                  </PopoverContent>
+                </Popover>
+                <Select value={selectedMonth} onValueChange={setSelectedMonth}>
+                  <SelectTrigger className="w-48">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {getMonthOptions().map(option => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    onClick={() => generatePayrollMutation.mutate(selectedMonth)}
+                    disabled={generatePayrollMutation.isPending}
+                  >
+                    <RefreshCw className="w-4 h-4 mr-2" />
+                    Generate Payroll
+                  </Button>
+                  {allPayrollRecords?.some(r => r.status === 'pending') && (
+                    <Button 
+                      variant="outline"
+                      onClick={() => markAllPaidMutation.mutate()}
+                      disabled={markAllPaidMutation.isPending}
+                    >
+                      <CheckCircle className="w-4 h-4 mr-2" />
+                      Mark All Paid
+                    </Button>
                   )}
-                >
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {filterDate ? format(filterDate, "PPP") : <span>Filter by date</span>}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
-                <CalendarComponent
-                  mode="single"
-                  selected={filterDate}
-                  onSelect={setFilterDate}
-                  initialFocus
-                  className={cn("p-3 pointer-events-auto")}
-                />
-              </PopoverContent>
-            </Popover>
-            <Select value={selectedMonth} onValueChange={setSelectedMonth}>
-              <SelectTrigger className="w-48">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {getMonthOptions().map(option => (
-                  <SelectItem key={option.value} value={option.value}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <div className="flex gap-2">
-              {allPayrollRecords?.some(r => r.status === 'pending') && (
-                <Button 
-                  variant="outline"
-                  onClick={() => markAllPaidMutation.mutate()}
-                  disabled={markAllPaidMutation.isPending}
-                >
-                  <CheckCircle className="w-4 h-4 mr-2" />
-                  Mark All Paid
-                </Button>
+                </div>
+              </div>
+            </CardHeader>
+          </Card>
+
+          {/* Payroll Records Table */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Payroll Records - {format(new Date(selectedMonth + '-01'), 'MMMM yyyy')}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {payrollRecords?.length === 0 ? (
+                <div className="text-center py-8 text-gray-500">
+                  <p>No payroll records found for this month.</p>
+                  <p className="text-sm mt-2">Click "Generate Payroll" to create records from templates.</p>
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Employee</TableHead>
+                      <TableHead>Role</TableHead>
+                      <TableHead>Base Salary</TableHead>
+                      <TableHead>Allowances</TableHead>
+                      <TableHead>Deductions</TableHead>
+                      <TableHead>Net Salary</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {payrollRecords?.map((record) => (
+                      <TableRow key={record.id}>
+                        <TableCell className="font-medium">{record.employee_name}</TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className="capitalize">
+                            {record.role}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>{formatPkrAmount(record.base_salary)}</TableCell>
+                        <TableCell className="text-green-600">
+                          +{formatPkrAmount(record.allowances)}
+                        </TableCell>
+                        <TableCell className="text-red-600">
+                          -{formatPkrAmount(record.deductions)}
+                        </TableCell>
+                        <TableCell className="font-medium">
+                          {formatPkrAmount(record.net_salary)}
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={record.status === 'paid' ? 'default' : 'secondary'}>
+                            {record.status}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex gap-2">
+                            {record.status === 'pending' && (
+                              <Button 
+                                size="sm" 
+                                onClick={() => markPaidMutation.mutate({ recordId: record.id, record })}
+                                disabled={markPaidMutation.isPending}
+                              >
+                                <Check className="w-4 h-4 mr-1" />
+                                Mark Paid
+                              </Button>
+                            )}
+                            <Button size="sm" variant="outline">
+                              <Download className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
               )}
-              <Dialog open={isCreatePayrollDialogOpen} onOpenChange={setIsCreatePayrollDialogOpen}>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="templates" className="space-y-6">
+          {/* Templates Header */}
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle className="flex items-center gap-2">
+                <UserPlus className="w-5 h-5" />
+                Employee Salary Templates
+              </CardTitle>
+              <Dialog open={isTemplateDialogOpen} onOpenChange={(open) => {
+                setIsTemplateDialogOpen(open);
+                if (!open) resetForm();
+              }}>
                 <DialogTrigger asChild>
                   <Button>
                     <Plus className="w-4 h-4 mr-2" />
-                    Add Payroll
+                    Add Employee Template
                   </Button>
                 </DialogTrigger>
                 <DialogContent>
                   <DialogHeader>
-                    <DialogTitle>Create Payroll Record</DialogTitle>
+                    <DialogTitle>
+                      {editingTemplate ? 'Edit Employee Template' : 'Create Employee Template'}
+                    </DialogTitle>
                   </DialogHeader>
                   <div className="space-y-4">
                     <div>
@@ -407,7 +624,7 @@ export default function FinancePayroll() {
                         }}
                         placeholder="Type employee name..."
                       />
-                      {searchQuery && staff && (
+                      {searchQuery && staff && !editingTemplate && (
                         <div className="mt-2 border rounded-md bg-white max-h-32 overflow-y-auto">
                           {staff
                             .filter(emp => 
@@ -438,6 +655,7 @@ export default function FinancePayroll() {
                         value={employeeName}
                         onChange={(e) => setEmployeeName(e.target.value)}
                         placeholder="Enter employee name"
+                        readOnly={!!editingTemplate}
                       />
                     </div>
                     <div>
@@ -447,6 +665,7 @@ export default function FinancePayroll() {
                         value={employeeRole}
                         onChange={(e) => setEmployeeRole(e.target.value)}
                         placeholder="Enter employee role"
+                        readOnly={!!editingTemplate}
                       />
                     </div>
                     <div>
@@ -503,86 +722,89 @@ export default function FinancePayroll() {
                       </div>
                     )}
                     <Button 
-                      onClick={handleCreatePayroll} 
+                      onClick={handleSaveTemplate} 
                       className="w-full"
-                      disabled={createPayrollMutation.isPending || !employeeName || !employeeRole || !baseSalary}
+                      disabled={saveTemplateMutation.isPending || !employeeName || !employeeRole || !baseSalary}
                     >
-                      {createPayrollMutation.isPending ? "Creating..." : "Create Payroll Record"}
+                      {saveTemplateMutation.isPending ? "Saving..." : editingTemplate ? "Update Template" : "Create Template"}
                     </Button>
                   </div>
                 </DialogContent>
               </Dialog>
-            </div>
-          </div>
-        </CardHeader>
-      </Card>
+            </CardHeader>
+          </Card>
 
-      {/* Payroll Records Table */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Payroll Records</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Employee</TableHead>
-                <TableHead>Role</TableHead>
-                <TableHead>Base Salary</TableHead>
-                <TableHead>Allowances</TableHead>
-                <TableHead>Deductions</TableHead>
-                <TableHead>Net Salary</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {payrollRecords?.map((record) => (
-                <TableRow key={record.id}>
-                  <TableCell className="font-medium">{record.employee_name}</TableCell>
-                  <TableCell>
-                    <Badge variant="outline" className="capitalize">
-                      {record.role}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>{formatPkrAmount(record.base_salary)}</TableCell>
-                  <TableCell className="text-green-600">
-                    +{formatPkrAmount(record.allowances)}
-                  </TableCell>
-                  <TableCell className="text-red-600">
-                    -{formatPkrAmount(record.deductions)}
-                  </TableCell>
-                  <TableCell className="font-medium">
-                    {formatPkrAmount(record.net_salary)}
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant={record.status === 'paid' ? 'default' : 'secondary'}>
-                      {record.status}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex gap-2">
-                      {record.status === 'pending' && (
-                        <Button 
-                          size="sm" 
-                          onClick={() => markPaidMutation.mutate({ recordId: record.id, record })}
-                          disabled={markPaidMutation.isPending}
-                        >
-                          <Check className="w-4 h-4 mr-1" />
-                          Mark Paid
-                        </Button>
-                      )}
-                      <Button size="sm" variant="outline">
-                        <Download className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+          {/* Templates Table */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Employee Salary Templates</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {payrollTemplates?.length === 0 ? (
+                <div className="text-center py-8 text-gray-500">
+                  <p>No employee templates found.</p>
+                  <p className="text-sm mt-2">Add templates to automatically generate monthly payroll.</p>
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Employee</TableHead>
+                      <TableHead>Role</TableHead>
+                      <TableHead>Base Salary</TableHead>
+                      <TableHead>Allowances</TableHead>
+                      <TableHead>Deductions</TableHead>
+                      <TableHead>Net Salary</TableHead>
+                      <TableHead>Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {payrollTemplates?.map((template) => (
+                      <TableRow key={template.id}>
+                        <TableCell className="font-medium">{template.employee_name}</TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className="capitalize">
+                            {template.role}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>{formatPkrAmount(template.base_salary)}</TableCell>
+                        <TableCell className="text-green-600">
+                          +{formatPkrAmount(template.allowances)}
+                        </TableCell>
+                        <TableCell className="text-red-600">
+                          -{formatPkrAmount(template.deductions)}
+                        </TableCell>
+                        <TableCell className="font-medium">
+                          {formatPkrAmount(template.net_salary)}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex gap-2">
+                            <Button 
+                              size="sm" 
+                              variant="outline"
+                              onClick={() => handleEditTemplate(template)}
+                            >
+                              <Edit className="w-4 h-4" />
+                            </Button>
+                            <Button 
+                              size="sm" 
+                              variant="outline"
+                              onClick={() => deleteTemplateMutation.mutate(template.id)}
+                              disabled={deleteTemplateMutation.isPending}
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

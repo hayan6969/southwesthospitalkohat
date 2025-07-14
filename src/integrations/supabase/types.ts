@@ -260,6 +260,7 @@ export type Database = {
           logo_url: string | null
           max_appointments_per_doctor: number
           opening_time: string
+          payroll_payment_date: number | null
           updated_at: string | null
           working_days: string[]
         }
@@ -275,6 +276,7 @@ export type Database = {
           logo_url?: string | null
           max_appointments_per_doctor?: number
           opening_time?: string
+          payroll_payment_date?: number | null
           updated_at?: string | null
           working_days?: string[]
         }
@@ -290,6 +292,7 @@ export type Database = {
           logo_url?: string | null
           max_appointments_per_doctor?: number
           opening_time?: string
+          payroll_payment_date?: number | null
           updated_at?: string | null
           working_days?: string[]
         }
@@ -817,6 +820,66 @@ export type Database = {
           },
         ]
       }
+      payroll_templates: {
+        Row: {
+          allowances: number | null
+          base_salary: number
+          created_at: string
+          created_by: string | null
+          deductions: number | null
+          employee_id: string
+          employee_name: string
+          id: string
+          is_active: boolean | null
+          net_salary: number
+          role: string
+          updated_at: string
+        }
+        Insert: {
+          allowances?: number | null
+          base_salary: number
+          created_at?: string
+          created_by?: string | null
+          deductions?: number | null
+          employee_id: string
+          employee_name: string
+          id?: string
+          is_active?: boolean | null
+          net_salary: number
+          role: string
+          updated_at?: string
+        }
+        Update: {
+          allowances?: number | null
+          base_salary?: number
+          created_at?: string
+          created_by?: string | null
+          deductions?: number | null
+          employee_id?: string
+          employee_name?: string
+          id?: string
+          is_active?: boolean | null
+          net_salary?: number
+          role?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payroll_templates_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payroll_templates_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       pharmacy_invoice_items: {
         Row: {
           created_at: string | null
@@ -1045,6 +1108,10 @@ export type Database = {
       auto_cancel_overdue_appointments: {
         Args: Record<PropertyKey, never>
         Returns: undefined
+      }
+      generate_monthly_payroll: {
+        Args: { target_month: string }
+        Returns: number
       }
       generate_patient_number: {
         Args: Record<PropertyKey, never>
