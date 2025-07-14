@@ -2,7 +2,6 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuditLogger } from './useAuditLogger';
 
 type UserProfile = {
   id: string;
@@ -35,7 +34,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
-  const { logLogin, logLogout, logCreate } = useAuditLogger();
 
   const fetchUserProfile = async (userId: string) => {
     try {
@@ -181,9 +179,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
       if (data.user) {
         const profileData = await fetchUserProfile(data.user.id);
-        if (profileData) {
-          await logLogin(data.user.id, data.user.email || '');
-        }
+        // Audit logging can be added later via a separate hook
+        console.log('User signed in:', data.user.email);
       }
 
       return { error: null };
@@ -256,7 +253,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           console.error('Error updating profile:', profileError);
         }
 
-        await logCreate('User Account', `Created ${userData.role} account for ${userData.email}`, user?.id);
+        // Audit logging can be added later via a separate hook
+        console.log('User account created:', userData.email);
       }
 
       return { error: null };
@@ -268,7 +266,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const signOut = async () => {
     try {
       if (user) {
-        await logLogout(user.id, user.email || '');
+        // Audit logging can be added later via a separate hook
+        console.log('User signed out:', user.email);
       }
       
       const { error } = await supabase.auth.signOut();
@@ -302,6 +301,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (context === undefined) {
+    console.error('useAuth called outside of AuthProvider context');
     throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;
