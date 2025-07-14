@@ -143,12 +143,9 @@ export default function FinancePayroll() {
         // Create new template using upsert to handle duplicates
         const { data, error } = await supabase
           .from('payroll_templates')
-          .upsert([{
+          .upsert({
             ...templateData,
             created_by: userData.user?.id
-          }], { 
-            onConflict: 'employee_id',
-            ignoreDuplicates: false 
           })
           .select()
           .single();
