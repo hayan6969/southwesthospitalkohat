@@ -367,13 +367,37 @@ export const useCreatePatientWithProfile = () => {
       phone: string;
       cnic: string;
     }) => {
+      // Check for existing patient with same CNIC
+      const { data: existingPatientByCnic } = await supabase
+        .from('patients')
+        .select('id')
+        .eq('cnic', patientData.cnic)
+        .maybeSingle();
+
+      if (existingPatientByCnic) {
+        throw new Error('DUPLICATE_CNIC');
+      }
+
+      // Check for existing profile with same phone number
+      const { data: existingProfileByPhone } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('phone', patientData.phone)
+        .maybeSingle();
+
+      if (existingProfileByPhone) {
+        throw new Error('DUPLICATE_PHONE');
+      }
+
+      // Create user account first with phone as email and CNIC as password
+      const email = `${patientData.phone}@patient.local`;
+
       // Store current session and access token
       const { data: currentSession } = await supabase.auth.getSession();
       const originalAccessToken = currentSession?.session?.access_token;
       const originalRefreshToken = currentSession?.session?.refresh_token;
       
       // Create user account first with phone as email and CNIC as password
-      const email = `${patientData.phone}@patient.local`;
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email,
         password: patientData.cnic,
@@ -386,7 +410,12 @@ export const useCreatePatientWithProfile = () => {
         }
       });
 
-      if (authError) throw authError;
+      if (authError) {
+        if (authError.message.includes('already registered')) {
+          throw new Error('DUPLICATE_PHONE');
+        }
+        throw authError;
+      }
       if (!authData.user) throw new Error('Failed to create user account');
 
       const patientId = authData.user.id;
@@ -401,7 +430,12 @@ export const useCreatePatientWithProfile = () => {
         .select()
         .single();
 
-      if (patientError) throw patientError;
+      if (patientError) {
+        if (patientError.code === '23505') {
+          throw new Error('DUPLICATE_CNIC');
+        }
+        throw patientError;
+      }
 
       // Immediately sign out the new patient account
       await supabase.auth.signOut();

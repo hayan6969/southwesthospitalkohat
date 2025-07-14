@@ -53,9 +53,16 @@ export function PatientDialog() {
       setLastName("");
       setPhone("");
       setCnic("");
-    } catch (error) {
-      toast.error("Failed to register patient");
+    } catch (error: any) {
       console.error("Error creating patient:", error);
+      
+      if (error.message === 'DUPLICATE_CNIC') {
+        toast.error("A patient with this CNIC already exists. Please check the CNIC number and try again.");
+      } else if (error.message === 'DUPLICATE_PHONE') {
+        toast.error("A patient with this phone number already exists. Please use a different phone number.");
+      } else {
+        toast.error("Failed to register patient. Please try again.");
+      }
     }
   };
 
