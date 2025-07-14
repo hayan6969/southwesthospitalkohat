@@ -48,9 +48,10 @@ interface PayrollTemplate {
 
 export default function FinancePayroll() {
   const [isTemplateDialogOpen, setIsTemplateDialogOpen] = useState(false);
-  const [selectedYear, setSelectedYear] = useState<string>("");
-  const [selectedMonthName, setSelectedMonthName] = useState<string>("");
-  const [filterDate, setFilterDate] = useState<Date | undefined>();
+  // Initialize with current month and year
+  const currentDate = new Date();
+  const [selectedYear, setSelectedYear] = useState<string>(currentDate.getFullYear().toString());
+  const [selectedMonthName, setSelectedMonthName] = useState<string>(String(currentDate.getMonth() + 1).padStart(2, '0'));
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>("");
   const [employeeName, setEmployeeName] = useState<string>("");
   const [employeeRole, setEmployeeRole] = useState<string>("");
@@ -114,25 +115,8 @@ export default function FinancePayroll() {
     }
   });
 
-  // Filter payroll records by date if selected (filter by paid_at date)
-  const payrollRecords = filterDate
-    ? allPayrollRecords?.filter(record => {
-        if (!record.paid_at) return false;
-        const paidDate = new Date(record.paid_at);
-        const filterDateStart = new Date(filterDate);
-        
-        // Compare just the date parts (YYYY-MM-DD) to avoid timezone issues
-        const paidDateStr = paidDate.getFullYear() + '-' + 
-          String(paidDate.getMonth() + 1).padStart(2, '0') + '-' + 
-          String(paidDate.getDate()).padStart(2, '0');
-        
-        const filterDateStr = filterDateStart.getFullYear() + '-' + 
-          String(filterDateStart.getMonth() + 1).padStart(2, '0') + '-' + 
-          String(filterDateStart.getDate()).padStart(2, '0');
-        
-        return paidDateStr === filterDateStr;
-      })
-    : allPayrollRecords;
+  // Use all payroll records since we're only filtering by month/year now
+  const payrollRecords = allPayrollRecords;
 
   // Create/Update Payroll Template Mutation
   const saveTemplateMutation = useMutation({
@@ -453,8 +437,8 @@ export default function FinancePayroll() {
   const getYearOptions = () => {
     const currentYear = new Date().getFullYear();
     const years = [];
-    // Show years from 5 years ago to 2 years in the future
-    for (let year = currentYear - 5; year <= currentYear + 2; year++) {
+    // Show years from 10 years ago to 5 years in the future (dynamic range)
+    for (let year = currentYear - 10; year <= currentYear + 5; year++) {
       years.push({ value: year.toString(), label: year.toString() });
     }
     return years;
@@ -531,29 +515,6 @@ export default function FinancePayroll() {
                 Monthly Payroll Records
               </CardTitle>
               <div className="flex gap-4 items-center">
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className={cn(
-                        "w-48 justify-start text-left font-normal",
-                        !filterDate && "text-muted-foreground"
-                      )}
-                    >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {filterDate ? format(filterDate, "PPP") : <span>Filter by paid date</span>}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <CalendarComponent
-                      mode="single"
-                      selected={filterDate}
-                      onSelect={setFilterDate}
-                      initialFocus
-                      className={cn("p-3 pointer-events-auto")}
-                    />
-                  </PopoverContent>
-                </Popover>
                 <Select value={selectedMonthName} onValueChange={setSelectedMonthName}>
                   <SelectTrigger className="w-40">
                     <SelectValue placeholder="Select month" />
