@@ -1,8 +1,10 @@
 import { ReactNode } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useLocation, useNavigate } from "react-router-dom";
-import { Calculator, ChartBar, Receipt, Users, Info } from "lucide-react";
+import { Calculator, ChartBar, Receipt, Users, Info, User, LogOut } from "lucide-react";
 import { useHospitalSettings } from "@/hooks/useHospitalSettings";
+import { useAuth } from "@/hooks/useAuth";
+import { Button } from "@/components/ui/button";
 
 interface FinanceLayoutProps {
   children: ReactNode;
@@ -12,6 +14,7 @@ export default function FinanceLayout({ children }: FinanceLayoutProps) {
   const location = useLocation();
   const navigate = useNavigate();
   const { settings: hospitalSettings } = useHospitalSettings();
+  const { profile, signOut } = useAuth();
 
   const getCurrentTab = () => {
     const path = location.pathname;
@@ -44,22 +47,47 @@ export default function FinanceLayout({ children }: FinanceLayoutProps) {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
-      <div className="mb-8">
-        <div className="flex items-center gap-3">
-          {hospitalSettings?.logo_url ? (
-            <img 
-              src={hospitalSettings.logo_url} 
-              alt="Hospital Logo" 
-              className="w-8 h-8 object-contain"
-            />
-          ) : (
-            <span className="inline-block w-2 h-8 bg-blue-500 rounded-full" />
+    <div className="min-h-screen bg-gray-50">
+      {/* Header */}
+      <header className="bg-white shadow-sm border-b border-gray-200 px-6 py-4">
+        <div className="flex justify-between items-center">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+              {hospitalSettings?.logo_url ? (
+                <img 
+                  src={hospitalSettings.logo_url} 
+                  alt="Hospital Logo" 
+                  className="w-8 h-8 object-contain"
+                />
+              ) : (
+                <span className="inline-block w-2 h-8 bg-blue-500 rounded-full" />
+              )}
+              {hospitalSettings?.hospital_name || "HIMS"}
+            </h1>
+          </div>
+          {profile && (
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2 text-sm text-gray-600">
+                <User className="w-4 h-4" />
+                <span>{profile.first_name} {profile.last_name}</span>
+                <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs">
+                  {profile.role}
+                </span>
+              </div>
+              <Button variant="outline" size="sm" onClick={signOut} className="flex items-center gap-2">
+                <LogOut className="w-4 h-4" />
+                Sign Out
+              </Button>
+            </div>
           )}
-          <h1 className="text-3xl font-bold text-gray-900">{hospitalSettings?.hospital_name || "HIMS"} - Finance Management</h1>
         </div>
-        <p className="text-gray-600 mt-1">Comprehensive financial management and reporting</p>
-      </div>
+      </header>
+
+      {/* Main Content */}
+      <main className="p-6">
+        <div className="mb-8">
+          <p className="text-gray-600 mt-1">Comprehensive financial management and reporting</p>
+        </div>
 
       <Tabs value={getCurrentTab()} onValueChange={handleTabChange} className="w-full">
         <TabsList className="grid w-full grid-cols-5 mb-8">
@@ -89,6 +117,7 @@ export default function FinanceLayout({ children }: FinanceLayoutProps) {
           {children}
         </TabsContent>
       </Tabs>
+      </main>
     </div>
   );
 }
