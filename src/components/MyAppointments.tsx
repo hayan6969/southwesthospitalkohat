@@ -199,7 +199,6 @@ export const MyAppointments = () => {
       // Move up all appointments that were behind this one in the queue
       if (cancelledQueueData) {
         const { error: reorderError } = await supabase
-          .from('queue_positions')
           .rpc('reorder_queue_after_cancellation', {
             p_doctor_id: cancelledQueueData.doctor_id,
             p_appointment_date: cancelledQueueData.appointment_date,

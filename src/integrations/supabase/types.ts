@@ -1165,6 +1165,14 @@ export type Database = {
         Args: { doctor_uuid: string; appointment_date_param: string }
         Returns: number
       }
+      reorder_queue_after_cancellation: {
+        Args: {
+          p_doctor_id: string
+          p_appointment_date: string
+          p_cancelled_position: number
+        }
+        Returns: undefined
+      }
     }
     Enums: {
       appointment_status:
