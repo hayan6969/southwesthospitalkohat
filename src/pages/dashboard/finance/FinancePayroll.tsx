@@ -48,7 +48,7 @@ interface PayrollTemplate {
 
 export default function FinancePayroll() {
   const [isTemplateDialogOpen, setIsTemplateDialogOpen] = useState(false);
-  const [selectedMonth, setSelectedMonth] = useState(new Date().toISOString().slice(0, 7));
+  const [selectedMonth, setSelectedMonth] = useState<string>("");
   const [filterDate, setFilterDate] = useState<Date | undefined>();
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>("");
   const [employeeName, setEmployeeName] = useState<string>("");
@@ -95,6 +95,8 @@ export default function FinancePayroll() {
   const { data: allPayrollRecords, isLoading: payrollLoading } = useQuery({
     queryKey: ['payroll-records', selectedMonth],
     queryFn: async () => {
+      if (!selectedMonth) return [];
+      
       const { data, error } = await supabase
         .from('payroll')
         .select('*')
@@ -324,6 +326,31 @@ export default function FinancePayroll() {
     }
   });
 
+  // Clear All Payroll Records Mutation
+  const clearAllPayrollMutation = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase
+        .from('payroll')
+        .delete()
+        .neq('id', '00000000-0000-0000-0000-000000000000'); // Delete all records
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['payroll-records'] });
+      toast({
+        title: "Success",
+        description: "All payroll records cleared successfully",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to clear payroll records",
+        variant: "destructive",
+      });
+    }
+  });
+
   const resetForm = () => {
     setSelectedEmployeeId("");
     setEmployeeName("");
@@ -369,7 +396,8 @@ export default function FinancePayroll() {
   const getMonthOptions = () => {
     const options = [];
     const currentDate = new Date();
-    for (let i = 0; i < 12; i++) {
+    // Show months in chronological order (oldest first, but starting from 12 months ago)
+    for (let i = 11; i >= 0; i--) {
       const date = new Date(currentDate.getFullYear(), currentDate.getMonth() - i, 1);
       const value = date.toISOString().slice(0, 7);
       const label = date.toLocaleDateString('en-US', { year: 'numeric', month: 'long' });
@@ -474,7 +502,7 @@ export default function FinancePayroll() {
                 </Popover>
                 <Select value={selectedMonth} onValueChange={setSelectedMonth}>
                   <SelectTrigger className="w-48">
-                    <SelectValue />
+                    <SelectValue placeholder="Select month" />
                   </SelectTrigger>
                   <SelectContent>
                     {getMonthOptions().map(option => (
@@ -488,10 +516,18 @@ export default function FinancePayroll() {
                   <Button
                     variant="outline"
                     onClick={() => generatePayrollMutation.mutate(selectedMonth)}
-                    disabled={generatePayrollMutation.isPending}
+                    disabled={generatePayrollMutation.isPending || !selectedMonth}
                   >
                     <RefreshCw className="w-4 h-4 mr-2" />
                     Generate Payroll
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    onClick={() => clearAllPayrollMutation.mutate()}
+                    disabled={clearAllPayrollMutation.isPending}
+                  >
+                    <Trash2 className="w-4 h-4 mr-2" />
+                    Clear All Records
                   </Button>
                   {allPayrollRecords?.some(r => r.status === 'pending') && (
                     <Button 
@@ -511,10 +547,19 @@ export default function FinancePayroll() {
           {/* Payroll Records Table */}
           <Card>
             <CardHeader>
-              <CardTitle>Payroll Records - {format(new Date(selectedMonth + '-01'), 'MMMM yyyy')}</CardTitle>
+              <CardTitle>
+                {selectedMonth 
+                  ? `Payroll Records - ${format(new Date(selectedMonth + '-01'), 'MMMM yyyy')}`
+                  : 'Payroll Records - Select a month'
+                }
+              </CardTitle>
             </CardHeader>
             <CardContent>
-              {payrollRecords?.length === 0 ? (
+              {!selectedMonth ? (
+                <div className="text-center py-8 text-gray-500">
+                  <p>Please select a month to view payroll records.</p>
+                </div>
+              ) : payrollRecords?.length === 0 ? (
                 <div className="text-center py-8 text-gray-500">
                   <p>No payroll records found for this month.</p>
                   <p className="text-sm mt-2">Click "Generate Payroll" to create records from templates.</p>
