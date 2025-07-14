@@ -2,14 +2,43 @@ import AppLayout from "@/layouts/AppLayout";
 import { usePatients } from "@/hooks/useDatabase";
 import { usePatientNames, getPatientName } from "@/hooks/useDisplayHelpers";
 import { PatientDialog } from "@/components/dialogs/PatientDialog";
+import { PatientDetailDialog } from "@/components/dialogs/PatientDetailDialog";
 import { Users, Eye, Edit } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { format } from "date-fns";
+import { useState } from "react";
 
 export default function StaffPatients() {
   const { data: patients, isLoading } = usePatients();
   const { data: patientNames } = usePatientNames();
+  const [selectedPatient, setSelectedPatient] = useState<any>(null);
+  const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false);
+
+  const handleViewPatient = (patient: any) => {
+    // Combine patient data with profile data for the dialog
+    const patientProfile = patientNames?.find(profile => profile.id === patient.id);
+    const combinedPatient = {
+      ...patient,
+      profiles: patientProfile
+    };
+    setSelectedPatient(combinedPatient);
+    setIsDetailDialogOpen(true);
+  };
+
+  const handleEditPatient = (patient: any) => {
+    // Same as view for now - the PatientDetailDialog has edit capabilities
+    handleViewPatient(patient);
+  };
+
+  const getRegistrationDate = (patient: any) => {
+    // Get profile data to find registration date
+    const profile = patientNames?.find(p => p.id === patient.id);
+    if (profile?.created_at) {
+      return format(new Date(profile.created_at), 'MMM d, yyyy');
+    }
+    return 'N/A';
+  };
 
   return (
     <AppLayout>
@@ -74,15 +103,15 @@ export default function StaffPatients() {
                         </span>
                       </TableCell>
                       <TableCell>
-                        {patient.cnic || 'N/A'}
+                        {getRegistrationDate(patient)}
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
-                          <Button size="sm" variant="outline">
+                          <Button size="sm" variant="outline" onClick={() => handleViewPatient(patient)}>
                             <Eye className="w-3 h-3 mr-1" />
                             View
                           </Button>
-                          <Button size="sm" variant="outline">
+                          <Button size="sm" variant="outline" onClick={() => handleEditPatient(patient)}>
                             <Edit className="w-3 h-3 mr-1" />
                             Edit
                           </Button>
@@ -101,6 +130,13 @@ export default function StaffPatients() {
             </Table>
           </div>
         </div>
+
+        {/* Patient Detail Dialog for viewing and editing */}
+        <PatientDetailDialog
+          isOpen={isDetailDialogOpen}
+          onClose={() => setIsDetailDialogOpen(false)}
+          patient={selectedPatient}
+        />
       </div>
     </AppLayout>
   );

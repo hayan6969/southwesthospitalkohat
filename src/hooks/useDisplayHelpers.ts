@@ -8,7 +8,7 @@ export const usePatientNames = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('profiles')
-        .select('id, first_name, last_name, phone, email')
+        .select('id, first_name, last_name, phone, email, created_at')
         .eq('role', 'patient');
 
       if (error) throw error;
