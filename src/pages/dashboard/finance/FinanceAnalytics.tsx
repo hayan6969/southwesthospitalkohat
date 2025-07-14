@@ -82,11 +82,72 @@ export default function FinanceAnalytics() {
     }
   });
 
-  // Calculate real metrics
-  const totalRevenue = (invoices?.reduce((sum, inv) => sum + (inv.amount || 0), 0) || 0);
-  const pharmacyRevenue = (pharmacyInvoices?.reduce((sum, inv) => sum + (inv.final_amount || 0), 0) || 0);
-  const labRevenue = (labReports?.reduce((sum, lab) => sum + (lab.price || 0), 0) || 0);
-  const totalExpenses = (expenses?.reduce((sum, exp) => sum + (exp.amount || 0), 0) || 0);
+  // Filter data based on selected date
+  const filteredInvoices = useMemo(() => {
+    if (!selectedDate || !invoices) return invoices;
+    return invoices.filter(inv => {
+      if (!inv.created_at) return false;
+      try {
+        const invDate = new Date(inv.created_at);
+        const selectedDateOnly = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate());
+        const invDateOnly = new Date(invDate.getFullYear(), invDate.getMonth(), invDate.getDate());
+        return invDateOnly.getTime() === selectedDateOnly.getTime();
+      } catch {
+        return false;
+      }
+    });
+  }, [invoices, selectedDate]);
+
+  const filteredPharmacyInvoices = useMemo(() => {
+    if (!selectedDate || !pharmacyInvoices) return pharmacyInvoices;
+    return pharmacyInvoices.filter(inv => {
+      if (!inv.created_at) return false;
+      try {
+        const invDate = new Date(inv.created_at);
+        const selectedDateOnly = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate());
+        const invDateOnly = new Date(invDate.getFullYear(), invDate.getMonth(), invDate.getDate());
+        return invDateOnly.getTime() === selectedDateOnly.getTime();
+      } catch {
+        return false;
+      }
+    });
+  }, [pharmacyInvoices, selectedDate]);
+
+  const filteredLabReports = useMemo(() => {
+    if (!selectedDate || !labReports) return labReports;
+    return labReports.filter(lab => {
+      if (!lab.created_at) return false;
+      try {
+        const labDate = new Date(lab.created_at);
+        const selectedDateOnly = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate());
+        const labDateOnly = new Date(labDate.getFullYear(), labDate.getMonth(), labDate.getDate());
+        return labDateOnly.getTime() === selectedDateOnly.getTime();
+      } catch {
+        return false;
+      }
+    });
+  }, [labReports, selectedDate]);
+
+  const filteredExpenses = useMemo(() => {
+    if (!selectedDate || !expenses) return expenses;
+    return expenses.filter(exp => {
+      if (!exp.created_at) return false;
+      try {
+        const expDate = new Date(exp.created_at);
+        const selectedDateOnly = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate());
+        const expDateOnly = new Date(expDate.getFullYear(), expDate.getMonth(), expDate.getDate());
+        return expDateOnly.getTime() === selectedDateOnly.getTime();
+      } catch {
+        return false;
+      }
+    });
+  }, [expenses, selectedDate]);
+
+  // Calculate real metrics using filtered data
+  const totalRevenue = (filteredInvoices?.reduce((sum, inv) => sum + (inv.amount || 0), 0) || 0);
+  const pharmacyRevenue = (filteredPharmacyInvoices?.reduce((sum, inv) => sum + (inv.final_amount || 0), 0) || 0);
+  const labRevenue = (filteredLabReports?.reduce((sum, lab) => sum + (lab.price || 0), 0) || 0);
+  const totalExpenses = (filteredExpenses?.reduce((sum, exp) => sum + (exp.amount || 0), 0) || 0);
   const combinedRevenue = totalRevenue + pharmacyRevenue + labRevenue;
   const netProfit = combinedRevenue - totalExpenses;
   const profitMargin = combinedRevenue > 0 ? ((netProfit / combinedRevenue) * 100) : 0;
@@ -102,6 +163,74 @@ export default function FinanceAnalytics() {
       const months = [];
       const now = new Date();
       
+      // If a specific date is selected, show only that day's data
+      if (selectedDate) {
+        const selectedDateOnly = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate());
+        
+        const dayInvoices = (invoices || []).filter(inv => {
+          if (!inv.created_at) return false;
+          try {
+            const invDate = new Date(inv.created_at);
+            const invDateOnly = new Date(invDate.getFullYear(), invDate.getMonth(), invDate.getDate());
+            return invDateOnly.getTime() === selectedDateOnly.getTime();
+          } catch {
+            return false;
+          }
+        });
+        
+        const dayPharmacyInvoices = (pharmacyInvoices || []).filter(inv => {
+          if (!inv.created_at) return false;
+          try {
+            const invDate = new Date(inv.created_at);
+            const invDateOnly = new Date(invDate.getFullYear(), invDate.getMonth(), invDate.getDate());
+            return invDateOnly.getTime() === selectedDateOnly.getTime();
+          } catch {
+            return false;
+          }
+        });
+        
+        const dayLabReports = (labReports || []).filter(lab => {
+          if (!lab.created_at) return false;
+          try {
+            const labDate = new Date(lab.created_at);
+            const labDateOnly = new Date(labDate.getFullYear(), labDate.getMonth(), labDate.getDate());
+            return labDateOnly.getTime() === selectedDateOnly.getTime();
+          } catch {
+            return false;
+          }
+        });
+        
+        const dayExpenses = (expenses || []).filter(exp => {
+          if (!exp.created_at) return false;
+          try {
+            const expDate = new Date(exp.created_at);
+            const expDateOnly = new Date(expDate.getFullYear(), expDate.getMonth(), expDate.getDate());
+            return expDateOnly.getTime() === selectedDateOnly.getTime();
+          } catch {
+            return false;
+          }
+        });
+        
+        const hospitalRevenue = dayInvoices.reduce((sum, inv) => sum + (Number(inv.amount) || 0), 0);
+        const pharmacy = dayPharmacyInvoices.reduce((sum, inv) => sum + (Number(inv.final_amount) || 0), 0);
+        const lab = dayLabReports.reduce((sum, lab) => sum + (Number(lab.price) || 0), 0);
+        const dailyExpenses = dayExpenses.reduce((sum, exp) => sum + (Number(exp.amount) || 0), 0);
+        const totalRev = hospitalRevenue + pharmacy + lab;
+        
+        months.push({
+          month: format(selectedDate, 'MMM dd'),
+          hospital: hospitalRevenue,
+          pharmacy,
+          lab,
+          total: totalRev,
+          expenses: dailyExpenses,
+          profit: totalRev - dailyExpenses
+        });
+        
+        return months;
+      }
+      
+      // Otherwise, show time range data
       // Determine the number of months to show based on timeRange
       let monthsToShow = 6; // default
       switch (timeRange) {
@@ -124,17 +253,6 @@ export default function FinanceAnalytics() {
         const monthDate = subMonths(now, i);
         const monthStart = startOfMonth(monthDate);
         const monthEnd = endOfMonth(monthDate);
-        
-        // If a specific date is selected, only show data for that month
-        if (selectedDate) {
-          const selectedMonth = startOfMonth(selectedDate);
-          const selectedMonthEnd = endOfMonth(selectedDate);
-          
-          // Only include the month that contains the selected date
-          if (monthStart.getTime() !== selectedMonth.getTime()) {
-            continue;
-          }
-        }
         
         // Safe filtering with null checks
         const monthInvoices = (invoices || []).filter(inv => {
@@ -191,20 +309,6 @@ export default function FinanceAnalytics() {
           total: totalRev,
           expenses: monthlyExpenses,
           profit: totalRev - monthlyExpenses
-        });
-      }
-      
-      // If a specific date is selected and no data found, show empty month
-      if (selectedDate && months.length === 0) {
-        const selectedMonthStart = startOfMonth(selectedDate);
-        months.push({
-          month: format(selectedDate, 'MMM'),
-          hospital: 0,
-          pharmacy: 0,
-          lab: 0,
-          total: 0,
-          expenses: 0,
-          profit: 0
         });
       }
       
