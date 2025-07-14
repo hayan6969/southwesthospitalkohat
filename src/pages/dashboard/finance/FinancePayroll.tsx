@@ -158,11 +158,29 @@ export default function FinancePayroll() {
           if (error) throw error;
           return data;
         } else {
-          // Use insert for manual entries (new employees)
+          // For manual entries, we need to create a profile first since employee_id references profiles
+          const manualEmployeeId = crypto.randomUUID();
+          
+          // Create profile for the manual employee entry
+          const { error: profileError } = await supabase
+            .from('profiles')
+            .insert({
+              id: manualEmployeeId,
+              email: `${manualEmployeeId}@employee.local`,
+              first_name: templateData.employee_name.split(' ')[0] || templateData.employee_name,
+              last_name: templateData.employee_name.split(' ').slice(1).join(' ') || '',
+              role: templateData.role,
+              is_active: true
+            });
+          
+          if (profileError) throw profileError;
+          
+          // Now create the payroll template with the new employee_id
           const { data, error } = await supabase
             .from('payroll_templates')
             .insert([{
               ...templateData,
+              employee_id: manualEmployeeId,
               created_by: userData.user?.id
             }])
             .select()
