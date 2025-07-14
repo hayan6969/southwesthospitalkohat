@@ -48,7 +48,8 @@ interface PayrollTemplate {
 
 export default function FinancePayroll() {
   const [isTemplateDialogOpen, setIsTemplateDialogOpen] = useState(false);
-  const [selectedMonth, setSelectedMonth] = useState<string>("");
+  const [selectedYear, setSelectedYear] = useState<string>("");
+  const [selectedMonthName, setSelectedMonthName] = useState<string>("");
   const [filterDate, setFilterDate] = useState<Date | undefined>();
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>("");
   const [employeeName, setEmployeeName] = useState<string>("");
@@ -90,6 +91,11 @@ export default function FinancePayroll() {
       return data as PayrollTemplate[];
     }
   });
+
+  // Combine selected month and year into the format expected by backend
+  const selectedMonth = selectedYear && selectedMonthName 
+    ? `${selectedYear}-${selectedMonthName.padStart(2, '0')}` 
+    : "";
 
   // Fetch payroll records
   const { data: allPayrollRecords, isLoading: payrollLoading } = useQuery({
@@ -205,14 +211,14 @@ export default function FinancePayroll() {
       queryClient.invalidateQueries({ queryKey: ['payroll-records'] });
       toast({
         title: "Success",
-        description: `Generated ${count} payroll records for ${format(new Date(selectedMonth + '-01'), 'MMMM yyyy')}`,
+        description: `Generated ${count} payroll records for ${getMonthOptions().find(m => m.value === selectedMonthName)?.label} ${selectedYear}`,
       });
     },
     onError: (error: any) => {
       toast({
         title: "Error",
         description: error.message?.includes('already exists') 
-          ? `Payroll for ${format(new Date(selectedMonth + '-01'), 'MMMM yyyy')} already exists for all employees` 
+          ? `Payroll for ${getMonthOptions().find(m => m.value === selectedMonthName)?.label} ${selectedYear} already exists for all employees`
           : "Failed to generate payroll",
         variant: "destructive",
       });
@@ -417,16 +423,30 @@ export default function FinancePayroll() {
   };
 
   const getMonthOptions = () => {
-    const options = [];
-    const currentDate = new Date();
-    // Show months starting from 24 months ago to 12 months in the future
-    for (let i = 24; i >= -12; i--) {
-      const date = new Date(currentDate.getFullYear(), currentDate.getMonth() - i, 1);
-      const value = date.toISOString().slice(0, 7);
-      const label = date.toLocaleDateString('en-US', { year: 'numeric', month: 'long' });
-      options.push({ value, label });
+    return [
+      { value: "01", label: "January" },
+      { value: "02", label: "February" },
+      { value: "03", label: "March" },
+      { value: "04", label: "April" },
+      { value: "05", label: "May" },
+      { value: "06", label: "June" },
+      { value: "07", label: "July" },
+      { value: "08", label: "August" },
+      { value: "09", label: "September" },
+      { value: "10", label: "October" },
+      { value: "11", label: "November" },
+      { value: "12", label: "December" },
+    ];
+  };
+
+  const getYearOptions = () => {
+    const currentYear = new Date().getFullYear();
+    const years = [];
+    // Show years from 5 years ago to 2 years in the future
+    for (let year = currentYear - 5; year <= currentYear + 2; year++) {
+      years.push({ value: year.toString(), label: year.toString() });
     }
-    return options;
+    return years;
   };
 
   const totalPayroll = payrollRecords?.reduce((sum, record) => sum + record.net_salary, 0) || 0;
@@ -523,12 +543,24 @@ export default function FinancePayroll() {
                     />
                   </PopoverContent>
                 </Popover>
-                <Select value={selectedMonth} onValueChange={setSelectedMonth}>
-                  <SelectTrigger className="w-48">
+                <Select value={selectedMonthName} onValueChange={setSelectedMonthName}>
+                  <SelectTrigger className="w-40">
                     <SelectValue placeholder="Select month" />
                   </SelectTrigger>
                   <SelectContent>
                     {getMonthOptions().map(option => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Select value={selectedYear} onValueChange={setSelectedYear}>
+                  <SelectTrigger className="w-32">
+                    <SelectValue placeholder="Year" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {getYearOptions().map(option => (
                       <SelectItem key={option.value} value={option.value}>
                         {option.label}
                       </SelectItem>
@@ -562,18 +594,18 @@ export default function FinancePayroll() {
           {/* Payroll Records Table */}
           <Card>
             <CardHeader>
-              <CardTitle>
-                {selectedMonth 
-                  ? `Payroll Records - ${format(new Date(selectedMonth + '-01'), 'MMMM yyyy')}`
-                  : 'Payroll Records - Select a month'
-                }
-              </CardTitle>
+               <CardTitle>
+                 {selectedMonth 
+                   ? `Payroll Records - ${getMonthOptions().find(m => m.value === selectedMonthName)?.label} ${selectedYear}`
+                   : 'Payroll Records - Select month and year'
+                 }
+               </CardTitle>
             </CardHeader>
             <CardContent>
-              {!selectedMonth ? (
-                <div className="text-center py-8 text-gray-500">
-                  <p>Please select a month to view payroll records.</p>
-                </div>
+               {!selectedMonth ? (
+                 <div className="text-center py-8 text-gray-500">
+                   <p>Please select a month and year to view payroll records.</p>
+                 </div>
               ) : payrollRecords?.length === 0 ? (
                 <div className="text-center py-8 text-gray-500">
                   <p>No payroll records found for this month.</p>
