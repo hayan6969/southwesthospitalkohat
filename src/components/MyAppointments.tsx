@@ -3,9 +3,14 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Clock, User, Calendar, FileText, DollarSign } from "lucide-react";
-import { format } from "date-fns";
+import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { Clock, User, Calendar as CalendarIcon, FileText, DollarSign, Filter, CalendarDays } from "lucide-react";
+import { format, isToday, isFuture, isAfter, isBefore, startOfDay, endOfDay } from "date-fns";
 import { toast } from "@/hooks/use-toast";
+import { cn } from "@/lib/utils";
 
 interface AppointmentWithQueue {
   id: string;
@@ -31,6 +36,12 @@ export const MyAppointments = () => {
   const { profile } = useAuth();
   const [appointments, setAppointments] = useState<AppointmentWithQueue[]>([]);
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState("today");
+  
+  // Date filtering states for different tabs
+  const [upcomingDateRange, setUpcomingDateRange] = useState<{from?: Date; to?: Date}>({});
+  const [completedDateRange, setCompletedDateRange] = useState<{from?: Date; to?: Date}>({});
+  const [cancelledDateRange, setCancelledDateRange] = useState<{from?: Date; to?: Date}>({});
 
   useEffect(() => {
     fetchMyAppointments();
@@ -58,6 +69,11 @@ export const MyAppointments = () => {
 
       if (appointmentsError) throw appointmentsError;
 
+      if (!appointmentsData || appointmentsData.length === 0) {
+        setAppointments([]);
+        return;
+      }
+
       // Get doctors data separately
       const doctorIds = appointmentsData.map(a => a.doctor_id);
       const [doctorsData, profilesData] = await Promise.all([
@@ -75,69 +91,57 @@ export const MyAppointments = () => {
           
           // Get doctor and profile info
           const doctor = doctorsData.data?.find(d => d.id === appointment.doctor_id);
-          const profile = profilesData.data?.find(p => p.id === appointment.doctor_id);
+          const doctorProfile = profilesData.data?.find(p => p.id === appointment.doctor_id);
           
           // Get this appointment's queue position
           const { data: queueData, error: queueError } = await supabase
             .from('queue_positions')
             .select('queue_position, status')
             .eq('appointment_id', appointment.id)
-            .single();
+            .maybeSingle();
 
           if (queueError) {
             console.error('Error fetching queue position:', queueError);
-            return {
-              ...appointment,
-              doctor: {
-                first_name: profile?.first_name || '',
-                last_name: profile?.last_name || '',
-                specialization: doctor?.specialization || '',
-                consultation_fee: doctor?.consultation_fee || 0
-              },
-              queue_position: {
-                queue_position: 0,
-                queue_status: 'unknown',
-                ahead_count: 0,
-                estimated_wait: 'Unknown'
-              }
-            };
           }
 
-          // Count how many scheduled appointments are ahead in the queue
-          const { data: aheadAppointments, error: countError } = await supabase
-            .from('queue_positions')
-            .select(`
-              appointment_id,
-              appointments!inner(status)
-            `)
-            .eq('doctor_id', appointment.doctor_id)
-            .eq('appointment_date', appointmentDate)
-            .lt('queue_position', queueData.queue_position)
-            .eq('appointments.status', 'scheduled');
+          let aheadCount = 0;
+          if (queueData && appointment.status === 'scheduled') {
+            // Count how many scheduled appointments are ahead in the queue
+            const { data: aheadAppointments, error: countError } = await supabase
+              .from('queue_positions')
+              .select(`
+                appointment_id,
+                appointments!inner(status)
+              `)
+              .eq('doctor_id', appointment.doctor_id)
+              .eq('appointment_date', appointmentDate)
+              .lt('queue_position', queueData.queue_position)
+              .eq('appointments.status', 'scheduled');
 
-          if (countError) {
-            console.error('Error counting ahead positions:', countError);
+            if (countError) {
+              console.error('Error counting ahead positions:', countError);
+            } else {
+              aheadCount = aheadAppointments?.length || 0;
+            }
           }
-
-          const aheadCount = aheadAppointments?.length || 0;
           
           // Estimate wait time (assuming 15 minutes per patient)
           const estimatedMinutes = aheadCount * 15;
           const estimatedWait = estimatedMinutes > 0 
             ? `${Math.floor(estimatedMinutes / 60)}h ${estimatedMinutes % 60}m`
-            : 'Your turn now!';
+            : (appointment.status === 'scheduled' ? 'Your turn soon!' : 'N/A');
 
           return {
             ...appointment,
             doctor: {
-              first_name: profile?.first_name || '',
-              last_name: profile?.last_name || '',
+              first_name: doctorProfile?.first_name || '',
+              last_name: doctorProfile?.last_name || '',
               specialization: doctor?.specialization || '',
               consultation_fee: doctor?.consultation_fee || 0
             },
             queue_position: {
-              queue_position: queueData.queue_position,
-              queue_status: queueData.status,
+              queue_position: queueData?.queue_position || 0,
+              queue_status: queueData?.status || 'unknown',
               ahead_count: aheadCount,
               estimated_wait: estimatedWait
             }
@@ -155,6 +159,68 @@ export const MyAppointments = () => {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const filterAppointmentsByTab = (tab: string) => {
+    const now = new Date();
+    const today = startOfDay(now);
+    const endToday = endOfDay(now);
+
+    switch (tab) {
+      case 'today':
+        return appointments.filter(apt => {
+          const aptDate = new Date(apt.appointment_date);
+          return aptDate >= today && aptDate <= endToday;
+        });
+      
+      case 'upcoming':
+        let upcoming = appointments.filter(apt => {
+          const aptDate = new Date(apt.appointment_date);
+          return aptDate > endToday && apt.status === 'scheduled';
+        });
+        
+        // Apply date filtering
+        if (upcomingDateRange.from || upcomingDateRange.to) {
+          upcoming = upcoming.filter(apt => {
+            const aptDate = new Date(apt.appointment_date);
+            if (upcomingDateRange.from && aptDate < startOfDay(upcomingDateRange.from)) return false;
+            if (upcomingDateRange.to && aptDate > endOfDay(upcomingDateRange.to)) return false;
+            return true;
+          });
+        }
+        return upcoming;
+      
+      case 'completed':
+        let completed = appointments.filter(apt => apt.status === 'completed');
+        
+        // Apply date filtering
+        if (completedDateRange.from || completedDateRange.to) {
+          completed = completed.filter(apt => {
+            const aptDate = new Date(apt.appointment_date);
+            if (completedDateRange.from && aptDate < startOfDay(completedDateRange.from)) return false;
+            if (completedDateRange.to && aptDate > endOfDay(completedDateRange.to)) return false;
+            return true;
+          });
+        }
+        return completed;
+      
+      case 'cancelled':
+        let cancelled = appointments.filter(apt => apt.status === 'cancelled');
+        
+        // Apply date filtering
+        if (cancelledDateRange.from || cancelledDateRange.to) {
+          cancelled = cancelled.filter(apt => {
+            const aptDate = new Date(apt.appointment_date);
+            if (cancelledDateRange.from && aptDate < startOfDay(cancelledDateRange.from)) return false;
+            if (cancelledDateRange.to && aptDate > endOfDay(cancelledDateRange.to)) return false;
+            return true;
+          });
+        }
+        return cancelled;
+      
+      default:
+        return appointments;
     }
   };
 
@@ -178,114 +244,258 @@ export const MyAppointments = () => {
     }
   };
 
-  if (loading) {
-    return (
-      <div className="space-y-4">
-        {[1, 2, 3].map((i) => (
-          <Card key={i} className="animate-pulse">
-            <CardHeader>
-              <div className="h-4 bg-gray-200 rounded w-1/3"></div>
-              <div className="h-3 bg-gray-200 rounded w-1/2"></div>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                <div className="h-3 bg-gray-200 rounded"></div>
-                <div className="h-3 bg-gray-200 rounded w-2/3"></div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-    );
-  }
-
-  if (appointments.length === 0) {
-    return (
-      <Card>
-        <CardContent className="pt-6">
-          <div className="text-center py-8">
-            <Calendar className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">No appointments found</h3>
-            <p className="text-gray-600">Book your first appointment to see it here.</p>
+  const DateRangeFilter = ({ 
+    dateRange, 
+    setDateRange, 
+    label 
+  }: { 
+    dateRange: {from?: Date; to?: Date}; 
+    setDateRange: (range: {from?: Date; to?: Date}) => void;
+    label: string;
+  }) => (
+    <Popover>
+      <PopoverTrigger asChild>
+        <Button variant="outline" className="ml-auto">
+          <Filter className="w-4 h-4 mr-2" />
+          {label}
+          {(dateRange.from || dateRange.to) && (
+            <span className="ml-1 text-xs bg-blue-100 text-blue-700 px-1 rounded">•</span>
+          )}
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-auto p-0" align="end">
+        <div className="p-4 space-y-4">
+          <div className="space-y-2">
+            <label className="text-sm font-medium">From Date</label>
+            <Calendar
+              mode="single"
+              selected={dateRange.from}
+              onSelect={(date) => setDateRange({...dateRange, from: date})}
+              className="pointer-events-auto"
+            />
           </div>
-        </CardContent>
-      </Card>
-    );
-  }
+          <div className="space-y-2">
+            <label className="text-sm font-medium">To Date</label>
+            <Calendar
+              mode="single"
+              selected={dateRange.to}
+              onSelect={(date) => setDateRange({...dateRange, to: date})}
+              disabled={(date) => dateRange.from ? date < dateRange.from : false}
+              className="pointer-events-auto"
+            />
+          </div>
+          <div className="flex gap-2">
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={() => setDateRange({})}
+              className="flex-1"
+            >
+              Clear
+            </Button>
+          </div>
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
 
-  return (
-    <div className="space-y-4">
-      {appointments.map((appointment) => (
-        <Card key={appointment.id} className="hover:shadow-md transition-shadow">
-          <CardHeader>
-            <div className="flex items-start justify-between">
-              <div>
-                <CardTitle className="flex items-center gap-2">
-                  <User className="w-5 h-5 text-blue-600" />
-                  Dr. {appointment.doctor.first_name} {appointment.doctor.last_name}
-                </CardTitle>
-                <CardDescription>
-                  {appointment.doctor.specialization}
-                </CardDescription>
-              </div>
-              <div className="flex gap-2">
-                <Badge className={getStatusColor(appointment.status)}>
-                  {appointment.status}
-                </Badge>
-                <Badge className={getQueueStatusColor(appointment.queue_position.queue_status)}>
-                  Queue: {appointment.queue_position.queue_status}
-                </Badge>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-3">
-                <div className="flex items-center gap-2 text-sm">
-                  <Calendar className="w-4 h-4 text-gray-500" />
-                  <span>{format(new Date(appointment.appointment_date), 'PPP')}</span>
-                </div>
-                <div className="flex items-center gap-2 text-sm">
-                  <FileText className="w-4 h-4 text-gray-500" />
-                  <span>{appointment.type}</span>
-                </div>
-                <div className="flex items-center gap-2 text-sm">
-                  <DollarSign className="w-4 h-4 text-gray-500" />
-                  <span>PKR {appointment.doctor.consultation_fee}</span>
-                </div>
-              </div>
-
-              <div className="space-y-3">
-                <div className="bg-blue-50 p-4 rounded-lg">
-                  <h4 className="font-semibold text-blue-900 mb-2 flex items-center gap-2">
-                    <Clock className="w-4 h-4" />
-                    Queue Status
-                  </h4>
-                  <div className="space-y-1 text-sm">
-                    <p className="text-blue-700">
-                      Position: <span className="font-bold">#{appointment.queue_position.queue_position}</span>
-                    </p>
-                    <p className="text-blue-700">
-                      People ahead: <span className="font-bold">{appointment.queue_position.ahead_count}</span>
-                    </p>
-                    <p className="text-blue-700">
-                      Estimated wait: <span className="font-bold">{appointment.queue_position.estimated_wait}</span>
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {appointment.notes && (
-              <div className="pt-3 border-t">
-                <p className="text-sm text-gray-600">
-                  <span className="font-medium">Notes:</span> {appointment.notes}
-                </p>
-              </div>
+  const renderAppointmentCard = (appointment: AppointmentWithQueue) => (
+    <Card key={appointment.id} className="hover:shadow-md transition-shadow">
+      <CardHeader>
+        <div className="flex items-start justify-between">
+          <div>
+            <CardTitle className="flex items-center gap-2">
+              <User className="w-5 h-5 text-blue-600" />
+              Dr. {appointment.doctor.first_name} {appointment.doctor.last_name}
+            </CardTitle>
+            <CardDescription>
+              {appointment.doctor.specialization}
+            </CardDescription>
+          </div>
+          <div className="flex gap-2">
+            <Badge className={getStatusColor(appointment.status)}>
+              {appointment.status}
+            </Badge>
+            {appointment.status === 'scheduled' && (
+              <Badge className={getQueueStatusColor(appointment.queue_position.queue_status)}>
+                Queue: {appointment.queue_position.queue_status}
+              </Badge>
             )}
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="space-y-3">
+            <div className="flex items-center gap-2 text-sm">
+              <CalendarIcon className="w-4 h-4 text-gray-500" />
+              <span>{format(new Date(appointment.appointment_date), 'PPP')}</span>
+            </div>
+            <div className="flex items-center gap-2 text-sm">
+              <FileText className="w-4 h-4 text-gray-500" />
+              <span>{appointment.type}</span>
+            </div>
+            <div className="flex items-center gap-2 text-sm">
+              <DollarSign className="w-4 h-4 text-gray-500" />
+              <span>PKR {appointment.doctor.consultation_fee}</span>
+            </div>
+          </div>
+
+          {appointment.status === 'scheduled' && (
+            <div className="space-y-3">
+              <div className="bg-blue-50 p-4 rounded-lg">
+                <h4 className="font-semibold text-blue-900 mb-2 flex items-center gap-2">
+                  <Clock className="w-4 h-4" />
+                  Queue Status
+                </h4>
+                <div className="space-y-1 text-sm">
+                  <p className="text-blue-700">
+                    Position: <span className="font-bold">#{appointment.queue_position.queue_position}</span>
+                  </p>
+                  <p className="text-blue-700">
+                    People ahead: <span className="font-bold">{appointment.queue_position.ahead_count}</span>
+                  </p>
+                  <p className="text-blue-700">
+                    Estimated wait: <span className="font-bold">{appointment.queue_position.estimated_wait}</span>
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {appointment.notes && (
+          <div className="pt-3 border-t">
+            <p className="text-sm text-gray-600">
+              <span className="font-medium">Notes:</span> {appointment.notes}
+            </p>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+
+  const renderTabContent = (tab: string) => {
+    const filteredAppointments = filterAppointmentsByTab(tab);
+
+    if (loading) {
+      return (
+        <div className="space-y-4">
+          {[1, 2, 3].map((i) => (
+            <Card key={i} className="animate-pulse">
+              <CardHeader>
+                <div className="h-4 bg-gray-200 rounded w-1/3"></div>
+                <div className="h-3 bg-gray-200 rounded w-1/2"></div>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  <div className="h-3 bg-gray-200 rounded"></div>
+                  <div className="h-3 bg-gray-200 rounded w-2/3"></div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      );
+    }
+
+    if (filteredAppointments.length === 0) {
+      const emptyMessages = {
+        today: "No appointments for today",
+        upcoming: "No upcoming appointments",
+        completed: "No completed appointments",
+        cancelled: "No cancelled appointments"
+      };
+
+      return (
+        <Card>
+          <CardContent className="pt-6">
+            <div className="text-center py-8">
+              <CalendarIcon className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                {emptyMessages[tab as keyof typeof emptyMessages]}
+              </h3>
+              <p className="text-gray-600">
+                {tab === 'today' ? 'Enjoy your free day!' : 
+                 tab === 'upcoming' ? 'Book an appointment to see it here.' :
+                 'No appointments found for the selected criteria.'}
+              </p>
+            </div>
           </CardContent>
         </Card>
-      ))}
+      );
+    }
+
+    return (
+      <div className="space-y-4">
+        {filteredAppointments.map(renderAppointmentCard)}
+      </div>
+    );
+  };
+
+  return (
+    <div className="space-y-6">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <div className="flex items-center justify-between mb-6">
+          <TabsList className="grid w-auto grid-cols-4">
+            <TabsTrigger value="today" className="flex items-center gap-2">
+              <CalendarDays className="w-4 h-4" />
+              Today
+            </TabsTrigger>
+            <TabsTrigger value="upcoming" className="flex items-center gap-2">
+              <CalendarIcon className="w-4 h-4" />
+              Upcoming
+            </TabsTrigger>
+            <TabsTrigger value="completed" className="flex items-center gap-2">
+              <Clock className="w-4 h-4" />
+              Completed
+            </TabsTrigger>
+            <TabsTrigger value="cancelled" className="flex items-center gap-2">
+              <User className="w-4 h-4" />
+              Cancelled
+            </TabsTrigger>
+          </TabsList>
+
+          {/* Date filters for other tabs */}
+          {activeTab === 'upcoming' && (
+            <DateRangeFilter 
+              dateRange={upcomingDateRange}
+              setDateRange={setUpcomingDateRange}
+              label="Filter Dates"
+            />
+          )}
+          {activeTab === 'completed' && (
+            <DateRangeFilter 
+              dateRange={completedDateRange}
+              setDateRange={setCompletedDateRange}
+              label="Filter Dates"
+            />
+          )}
+          {activeTab === 'cancelled' && (
+            <DateRangeFilter 
+              dateRange={cancelledDateRange}
+              setDateRange={setCancelledDateRange}
+              label="Filter Dates"
+            />
+          )}
+        </div>
+
+        <TabsContent value="today">
+          {renderTabContent('today')}
+        </TabsContent>
+
+        <TabsContent value="upcoming">
+          {renderTabContent('upcoming')}
+        </TabsContent>
+
+        <TabsContent value="completed">
+          {renderTabContent('completed')}
+        </TabsContent>
+
+        <TabsContent value="cancelled">
+          {renderTabContent('cancelled')}
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };
