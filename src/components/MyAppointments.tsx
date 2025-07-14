@@ -7,7 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import { Clock, User, Calendar as CalendarIcon, FileText, DollarSign, Filter, CalendarDays } from "lucide-react";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { Clock, User, Calendar as CalendarIcon, FileText, DollarSign, Filter, CalendarDays, X } from "lucide-react";
 import { format, isToday, isFuture, isAfter, isBefore, startOfDay, endOfDay } from "date-fns";
 import { toast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
@@ -159,6 +160,73 @@ export const MyAppointments = () => {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleCancelAppointment = async (appointmentId: string) => {
+    try {
+      // First update the appointment status to cancelled
+      const { error: appointmentError } = await supabase
+        .from('appointments')
+        .update({ 
+          status: 'cancelled',
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', appointmentId);
+
+      if (appointmentError) throw appointmentError;
+
+      // Update the queue position status
+      const { error: queueError } = await supabase
+        .from('queue_positions')
+        .update({ 
+          status: 'cancelled',
+          updated_at: new Date().toISOString()
+        })
+        .eq('appointment_id', appointmentId);
+
+      if (queueError) throw queueError;
+
+      // Get the cancelled appointment details for queue management
+      const { data: cancelledQueueData, error: cancelledQueueError } = await supabase
+        .from('queue_positions')
+        .select('doctor_id, appointment_date, queue_position')
+        .eq('appointment_id', appointmentId)
+        .single();
+
+      if (cancelledQueueError) throw cancelledQueueError;
+
+      // Move up all appointments that were behind this one in the queue
+      if (cancelledQueueData) {
+        const { error: reorderError } = await supabase
+          .from('queue_positions')
+          .rpc('reorder_queue_after_cancellation', {
+            p_doctor_id: cancelledQueueData.doctor_id,
+            p_appointment_date: cancelledQueueData.appointment_date,
+            p_cancelled_position: cancelledQueueData.queue_position
+          });
+
+        if (reorderError) {
+          console.error('Error reordering queue:', reorderError);
+          // Still show success even if reordering fails
+        }
+      }
+
+      toast({
+        title: "Appointment Cancelled",
+        description: "Your appointment has been successfully cancelled. The queue has been automatically updated.",
+      });
+
+      // Refresh appointments to reflect changes
+      fetchMyAppointments();
+
+    } catch (error) {
+      console.error('Error cancelling appointment:', error);
+      toast({
+        title: "Error",
+        description: "Failed to cancel appointment. Please try again.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -369,6 +437,39 @@ export const MyAppointments = () => {
             <p className="text-sm text-gray-600">
               <span className="font-medium">Notes:</span> {appointment.notes}
             </p>
+          </div>
+        )}
+
+        {/* Cancel button for scheduled appointments */}
+        {appointment.status === 'scheduled' && (
+          <div className="pt-3 border-t">
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="destructive" size="sm" className="w-full sm:w-auto">
+                  <X className="w-4 h-4 mr-2" />
+                  Cancel Appointment
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Cancel Appointment</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Are you sure you want to cancel your appointment with Dr. {appointment.doctor.first_name} {appointment.doctor.last_name} on {format(new Date(appointment.appointment_date), 'PPP')}?
+                    <br /><br />
+                    This action cannot be undone. Your spot will be automatically freed and patients behind you in the queue will be moved up.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Keep Appointment</AlertDialogCancel>
+                  <AlertDialogAction 
+                    onClick={() => handleCancelAppointment(appointment.id)}
+                    className="bg-red-600 hover:bg-red-700"
+                  >
+                    Yes, Cancel Appointment
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           </div>
         )}
       </CardContent>
