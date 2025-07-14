@@ -198,13 +198,17 @@ export function StaffLab() {
       <div className="flex flex-wrap gap-3">
         <EnhancedLabDialog />
         
-        <Dialog open={uploadDialogOpen} onOpenChange={resetUploadDialog}>
+        <Dialog open={uploadDialogOpen} onOpenChange={(open) => {
+          console.log("Dialog onOpenChange called with:", open);
+          if (!open) resetUploadDialog();
+        }}>
           <DialogTrigger asChild>
             <Button 
               variant="outline"
               onClick={() => {
-                console.log("Upload Results button clicked!");
+                console.log("Upload Results button clicked! Current state:", uploadDialogOpen);
                 setUploadDialogOpen(true);
+                console.log("Setting uploadDialogOpen to true");
               }}
             >
               <Upload className="w-4 h-4 mr-2" />
