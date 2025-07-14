@@ -4,8 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { useLabReports } from "@/hooks/useDatabase";
-import { usePatientNames, useDoctorNames, getPatientName, getDoctorName } from "@/hooks/useDisplayHelpers";
-import { TestTube, Upload, Clock, CheckCircle, FileText, Search } from "lucide-react";
+import { usePatientNames, useDoctorNames, getPatientName, getDoctorName, useSearchPatientsWithNames } from "@/hooks/useDisplayHelpers";
+import { TestTube, Upload, Clock, CheckCircle, FileText, Search, User, ArrowLeft } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -22,11 +22,54 @@ export function StaffLab() {
   const [selectedReportId, setSelectedReportId] = useState("");
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
   const [resultFile, setResultFile] = useState<File | null>(null);
+  
+  // Upload dialog state management
+  const [uploadStep, setUploadStep] = useState<'search' | 'reports' | 'upload'>('search');
+  const [patientSearchTerm, setPatientSearchTerm] = useState("");
+  const [selectedPatientForUpload, setSelectedPatientForUpload] = useState<any>(null);
 
   const { data: labReports, isLoading } = useLabReports();
   const { data: patientNames } = usePatientNames();
   const { data: doctorNames } = useDoctorNames();
   const queryClient = useQueryClient();
+
+  // Patient search for upload dialog
+  const { data: searchedPatients, isLoading: searchLoading } = useSearchPatientsWithNames(patientSearchTerm);
+
+  // Get pending reports for selected patient in upload dialog
+  const selectedPatientPendingReports = selectedPatientForUpload 
+    ? labReports?.filter(r => r.patient_id === selectedPatientForUpload.id && r.status === 'pending') || []
+    : [];
+
+  // Reset upload dialog state when closing
+  const resetUploadDialog = () => {
+    setUploadDialogOpen(false);
+    setUploadStep('search');
+    setPatientSearchTerm("");
+    setSelectedPatientForUpload(null);
+    setSelectedReportId("");
+    setResultFile(null);
+  };
+
+  // Handle patient selection for upload
+  const handlePatientSelect = (patient: any) => {
+    setSelectedPatientForUpload(patient);
+    setUploadStep('reports');
+  };
+
+  // Handle back navigation in upload dialog
+  const handleBackToSearch = () => {
+    setUploadStep('search');
+    setSelectedPatientForUpload(null);
+    setSelectedReportId("");
+    setResultFile(null);
+  };
+
+  // Handle report selection for upload
+  const handleReportSelect = (reportId: string) => {
+    setSelectedReportId(reportId);
+    setUploadStep('upload');
+  };
 
   const pendingReports = labReports?.filter(report => report.status === 'pending') || [];
   const completedReports = labReports?.filter(report => report.status === 'completed') || [];
@@ -92,10 +135,7 @@ export function StaffLab() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['lab-reports'] });
       toast.success("Lab results uploaded and marked as completed");
-      setUploadDialogOpen(false);
-      setResultFile(null);
-      setSelectedReportId("");
-      setSelectedPatientId("");
+      resetUploadDialog();
     },
     onError: (error) => {
       toast.error("Failed to upload results");
@@ -158,74 +198,175 @@ export function StaffLab() {
       <div className="flex flex-wrap gap-3">
         <EnhancedLabDialog />
         
-        <Dialog open={uploadDialogOpen} onOpenChange={setUploadDialogOpen}>
+        <Dialog open={uploadDialogOpen} onOpenChange={resetUploadDialog}>
           <DialogTrigger asChild>
             <Button variant="outline">
               <Upload className="w-4 h-4 mr-2" />
               Upload Results
             </Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-[500px]">
+          <DialogContent className="sm:max-w-[600px]">
             <DialogHeader>
-              <DialogTitle>Upload Lab Results</DialogTitle>
+              <DialogTitle className="flex items-center gap-2">
+                {uploadStep === 'reports' && (
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={handleBackToSearch}
+                    className="p-1 h-auto"
+                  >
+                    <ArrowLeft className="w-4 h-4" />
+                  </Button>
+                )}
+                {uploadStep === 'upload' && (
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={() => setUploadStep('reports')}
+                    className="p-1 h-auto"
+                  >
+                    <ArrowLeft className="w-4 h-4" />
+                  </Button>
+                )}
+                Upload Lab Results
+                {uploadStep === 'search' && " - Search Patient"}
+                {uploadStep === 'reports' && " - Select Report"}
+                {uploadStep === 'upload' && " - Upload File"}
+              </DialogTitle>
             </DialogHeader>
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="search-patient">Search Patient</Label>
-                <div className="relative">
-                  <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    id="search-patient"
-                    placeholder="Search by patient name or ID..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-8"
-                  />
-                </div>
-              </div>
 
-              <div>
-                <Label htmlFor="patient-select">Select Patient</Label>
-                <Select value={selectedPatientId} onValueChange={setSelectedPatientId}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Choose patient with pending reports" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {uniquePatients
-                      .filter(patient => 
-                        searchQuery === '' || 
-                        patient.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                        patient.id.toLowerCase().includes(searchQuery.toLowerCase())
-                      )
-                      .map((patient) => (
-                        <SelectItem key={patient.id} value={patient.id}>
-                          {patient.name}
-                        </SelectItem>
-                      ))
-                    }
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {patientReports.length > 0 && (
+            {/* Step 1: Search Patient */}
+            {uploadStep === 'search' && (
+              <div className="space-y-4">
                 <div>
-                  <Label htmlFor="report-select">Select Lab Report</Label>
-                  <Select value={selectedReportId} onValueChange={setSelectedReportId}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Choose pending lab report" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {patientReports.map((report) => (
-                        <SelectItem key={report.id} value={report.id}>
-                          {report.test_name} - {format(new Date(report.test_date), 'MMM d, yyyy')}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <Label htmlFor="patient-search">Search Patient by ID (e.g., P-0003)</Label>
+                  <div className="relative">
+                    <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      id="patient-search"
+                      placeholder="Enter patient ID like P-0003..."
+                      value={patientSearchTerm}
+                      onChange={(e) => setPatientSearchTerm(e.target.value)}
+                      className="pl-8"
+                    />
+                  </div>
+                  {searchLoading && (
+                    <p className="text-sm text-muted-foreground mt-1">Searching...</p>
+                  )}
                 </div>
-              )}
 
-              {selectedReportId && (
+                {searchedPatients && searchedPatients.length > 0 && (
+                  <div className="space-y-2">
+                    <Label>Search Results</Label>
+                    <div className="border rounded-lg max-h-64 overflow-y-auto">
+                      {searchedPatients.map((patient) => (
+                        <div
+                          key={patient.id}
+                          className="p-3 border-b last:border-b-0 hover:bg-muted/50 cursor-pointer"
+                          onClick={() => handlePatientSelect(patient)}
+                        >
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                              <User className="w-4 h-4 text-muted-foreground" />
+                              <div>
+                                <p className="font-medium">
+                                  {patient.profile ? `${patient.profile.first_name} ${patient.profile.last_name}` : 'No name available'}
+                                </p>
+                                <div className="text-sm text-muted-foreground">
+                                  <div><strong>Patient ID:</strong> {patient.patient_number || 'Not assigned'}</div>
+                                  <div><strong>Phone:</strong> {patient.profile?.phone || 'Not provided'}</div>
+                                  <div><strong>CNIC:</strong> {patient.cnic || 'Not provided'}</div>
+                                </div>
+                              </div>
+                            </div>
+                            <Button variant="outline" size="sm">
+                              Select
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {patientSearchTerm && searchedPatients && searchedPatients.length === 0 && !searchLoading && (
+                  <div className="text-center py-4 text-muted-foreground">
+                    No patients found with ID "{patientSearchTerm}"
+                  </div>
+                )}
+
+                <div className="flex justify-end">
+                  <Button variant="outline" onClick={resetUploadDialog}>
+                    Cancel
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {/* Step 2: Show Patient's Pending Reports */}
+            {uploadStep === 'reports' && selectedPatientForUpload && (
+              <div className="space-y-4">
+                <div className="p-4 bg-muted rounded-lg">
+                  <h3 className="font-medium mb-2">Selected Patient</h3>
+                  <div className="text-sm space-y-1">
+                    <div><strong>Name:</strong> {selectedPatientForUpload.profile ? `${selectedPatientForUpload.profile.first_name} ${selectedPatientForUpload.profile.last_name}` : 'No name available'}</div>
+                    <div><strong>Patient ID:</strong> {selectedPatientForUpload.patient_number || 'Not assigned'}</div>
+                  </div>
+                </div>
+
+                <div>
+                  <Label>Pending Lab Reports ({selectedPatientPendingReports.length} reports)</Label>
+                  {selectedPatientPendingReports.length > 0 ? (
+                    <div className="border rounded-lg mt-2 max-h-64 overflow-y-auto">
+                      {selectedPatientPendingReports.map((report) => (
+                        <div
+                          key={report.id}
+                          className="p-3 border-b last:border-b-0 hover:bg-muted/50 cursor-pointer"
+                          onClick={() => handleReportSelect(report.id)}
+                        >
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <p className="font-medium">{report.test_name}</p>
+                              <div className="text-sm text-muted-foreground">
+                                <div><strong>Test Date:</strong> {format(new Date(report.test_date), 'MMM d, yyyy')}</div>
+                                <div><strong>Doctor:</strong> {report.doctor_id ? getDoctorName(report.doctor_id, doctorNames || []) : report.external_doctor_name || 'Unknown'}</div>
+                                {report.notes && <div><strong>Notes:</strong> {report.notes}</div>}
+                              </div>
+                            </div>
+                            <Button variant="outline" size="sm">
+                              Upload
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-8 text-muted-foreground">
+                      No pending lab reports found for this patient
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex justify-end">
+                  <Button variant="outline" onClick={resetUploadDialog}>
+                    Cancel
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {/* Step 3: Upload File */}
+            {uploadStep === 'upload' && selectedReportId && (
+              <div className="space-y-4">
+                <div className="p-4 bg-muted rounded-lg">
+                  <h3 className="font-medium mb-2">Upload Results For</h3>
+                  <div className="text-sm space-y-1">
+                    <div><strong>Patient:</strong> {selectedPatientForUpload?.profile ? `${selectedPatientForUpload.profile.first_name} ${selectedPatientForUpload.profile.last_name}` : 'No name available'}</div>
+                    <div><strong>Patient ID:</strong> {selectedPatientForUpload?.patient_number || 'Not assigned'}</div>
+                    <div><strong>Test:</strong> {selectedPatientPendingReports.find(r => r.id === selectedReportId)?.test_name}</div>
+                  </div>
+                </div>
+
                 <div>
                   <Label htmlFor="result-file">Upload Result File</Label>
                   <Input
@@ -233,25 +374,26 @@ export function StaffLab() {
                     type="file"
                     accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
                     onChange={(e) => setResultFile(e.target.files?.[0] || null)}
+                    className="mt-2"
                   />
-                  <p className="text-sm text-gray-500 mt-1">
+                  <p className="text-sm text-muted-foreground mt-1">
                     Accepted formats: PDF, Images, Word documents
                   </p>
                 </div>
-              )}
 
-              <div className="flex justify-end space-x-2">
-                <Button variant="outline" onClick={() => setUploadDialogOpen(false)}>
-                  Cancel
-                </Button>
-                <Button
-                  onClick={() => uploadResultsMutation.mutate()}
-                  disabled={!selectedReportId || !resultFile || uploadResultsMutation.isPending}
-                >
-                  {uploadResultsMutation.isPending ? "Uploading..." : "Upload Results"}
-                </Button>
+                <div className="flex justify-end space-x-2">
+                  <Button variant="outline" onClick={resetUploadDialog}>
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={() => uploadResultsMutation.mutate()}
+                    disabled={!resultFile || uploadResultsMutation.isPending}
+                  >
+                    {uploadResultsMutation.isPending ? "Uploading..." : "Upload Results"}
+                  </Button>
+                </div>
               </div>
-            </div>
+            )}
           </DialogContent>
         </Dialog>
       </div>
