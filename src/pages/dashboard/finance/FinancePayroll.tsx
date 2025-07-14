@@ -108,11 +108,12 @@ export default function FinancePayroll() {
     }
   });
 
-  // Filter payroll records by date if selected
+  // Filter payroll records by date if selected (filter by paid_at date)
   const payrollRecords = filterDate
     ? allPayrollRecords?.filter(record => {
-        const recordDate = new Date(record.created_at);
-        return recordDate.toDateString() === filterDate.toDateString();
+        if (!record.paid_at) return false;
+        const paidDate = new Date(record.paid_at);
+        return paidDate.toDateString() === filterDate.toDateString();
       })
     : allPayrollRecords;
 
@@ -418,8 +419,8 @@ export default function FinancePayroll() {
   const getMonthOptions = () => {
     const options = [];
     const currentDate = new Date();
-    // Show months in chronological order (oldest first, but starting from 12 months ago)
-    for (let i = 11; i >= 0; i--) {
+    // Show months starting from 24 months ago to 12 months in the future
+    for (let i = 24; i >= -12; i--) {
       const date = new Date(currentDate.getFullYear(), currentDate.getMonth() - i, 1);
       const value = date.toISOString().slice(0, 7);
       const label = date.toLocaleDateString('en-US', { year: 'numeric', month: 'long' });
@@ -509,7 +510,7 @@ export default function FinancePayroll() {
                       )}
                     >
                       <CalendarIcon className="mr-2 h-4 w-4" />
-                      {filterDate ? format(filterDate, "PPP") : <span>Filter by date</span>}
+                      {filterDate ? format(filterDate, "PPP") : <span>Filter by paid date</span>}
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0" align="start">
@@ -542,14 +543,6 @@ export default function FinancePayroll() {
                   >
                     <RefreshCw className="w-4 h-4 mr-2" />
                     Generate Payroll
-                  </Button>
-                  <Button
-                    variant="destructive"
-                    onClick={() => clearAllPayrollMutation.mutate()}
-                    disabled={clearAllPayrollMutation.isPending}
-                  >
-                    <Trash2 className="w-4 h-4 mr-2" />
-                    Clear All Records
                   </Button>
                   {allPayrollRecords?.some(r => r.status === 'pending') && (
                     <Button 
