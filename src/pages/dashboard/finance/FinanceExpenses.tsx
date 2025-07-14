@@ -158,7 +158,7 @@ export default function FinanceExpenses() {
     return expenseDate.getMonth() === currentMonth && expenseDate.getFullYear() === currentYear;
   }).reduce((sum, expense) => sum + expense.amount, 0) || 0;
 
-  const expensesByCategory = expenses?.reduce((acc, expense) => {
+  const expensesByCategory = allExpenses?.reduce((acc, expense) => {
     acc[expense.category] = (acc[expense.category] || 0) + expense.amount;
     return acc;
   }, {} as Record<string, number>) || {};
