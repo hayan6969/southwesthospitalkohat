@@ -119,7 +119,18 @@ export default function FinancePayroll() {
     ? allPayrollRecords?.filter(record => {
         if (!record.paid_at) return false;
         const paidDate = new Date(record.paid_at);
-        return paidDate.toDateString() === filterDate.toDateString();
+        const filterDateStart = new Date(filterDate);
+        
+        // Compare just the date parts (YYYY-MM-DD) to avoid timezone issues
+        const paidDateStr = paidDate.getFullYear() + '-' + 
+          String(paidDate.getMonth() + 1).padStart(2, '0') + '-' + 
+          String(paidDate.getDate()).padStart(2, '0');
+        
+        const filterDateStr = filterDateStart.getFullYear() + '-' + 
+          String(filterDateStart.getMonth() + 1).padStart(2, '0') + '-' + 
+          String(filterDateStart.getDate()).padStart(2, '0');
+        
+        return paidDateStr === filterDateStr;
       })
     : allPayrollRecords;
 
