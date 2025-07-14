@@ -146,7 +146,9 @@ export default function FinancePayroll() {
           .upsert([{
             ...templateData,
             created_by: userData.user?.id
-          }])
+          }], {
+            onConflict: 'employee_id'
+          })
           .select()
           .single();
         if (error) throw error;
