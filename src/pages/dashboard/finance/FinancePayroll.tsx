@@ -207,10 +207,12 @@ export default function FinancePayroll() {
         description: `Generated ${count} payroll records for ${format(new Date(selectedMonth + '-01'), 'MMMM yyyy')}`,
       });
     },
-    onError: () => {
+    onError: (error: any) => {
       toast({
         title: "Error",
-        description: "Failed to generate payroll",
+        description: error.message?.includes('already exists') 
+          ? `Payroll for ${format(new Date(selectedMonth + '-01'), 'MMMM yyyy')} already exists for all employees` 
+          : "Failed to generate payroll",
         variant: "destructive",
       });
     }
