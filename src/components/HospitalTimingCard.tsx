@@ -114,24 +114,6 @@ export const HospitalTimingCard = () => {
             ))}
           </div>
         </div>
-
-        {/* Additional Info */}
-        <div className="pt-3 border-t space-y-2">
-          <div className="text-sm text-gray-600">
-            <div className="flex justify-between">
-              <span>Booking Lead Time:</span>
-              <span>{hospitalSettings.booking_lead_time_hours}h</span>
-            </div>
-            <div className="flex justify-between">
-              <span>Max Appointments/Doctor:</span>
-              <span>{hospitalSettings.max_appointments_per_doctor}</span>
-            </div>
-            <div className="flex justify-between">
-              <span>Emergency Slots:</span>
-              <span>{hospitalSettings.emergency_slots_percentage}%</span>
-            </div>
-          </div>
-        </div>
       </CardContent>
     </Card>
   );

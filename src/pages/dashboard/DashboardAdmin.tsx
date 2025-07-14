@@ -56,11 +56,6 @@ export default function DashboardAdmin() {
     working_days: [] as string[],
     payroll_payment_date: 1
   });
-  const [appointmentForm, setAppointmentForm] = useState({
-    max_appointments_per_doctor: 50,
-    booking_lead_time_hours: 2,
-    emergency_slots_percentage: 20
-  });
   const [hospitalForm, setHospitalForm] = useState({
     hospital_name: '',
     contact_number: '',
@@ -102,12 +97,17 @@ export default function DashboardAdmin() {
     refetchUsers();
   };
 
-  // Initialize branding form when hospital settings load
+  // Initialize forms when hospital settings load
   useEffect(() => {
     if (hospitalSettings) {
       setBrandingForm({
         hospital_name: hospitalSettings.hospital_name || '',
         logo_url: hospitalSettings.logo_url || ''
+      });
+      setHospitalForm({
+        hospital_name: hospitalSettings.hospital_name || '',
+        contact_number: hospitalSettings.contact_number || '',
+        hospital_address: hospitalSettings.hospital_address || ''
       });
     }
   }, [hospitalSettings]);
@@ -697,111 +697,117 @@ export default function DashboardAdmin() {
                         </div>
                       </div>
                       <Button className="w-full">Save Hospital Timings</Button>
-                    </div>
-                  </div>
+                     </div>
+                   </div>
+                 </div>
 
-                  <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
-                    <h4 className="text-lg font-semibold mb-4">Appointment Settings</h4>
-                    <div className="space-y-4">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Maximum Appointments per Doctor per Day
-                        </label>
-                        <Input type="number" defaultValue="50" min="1" max="100" />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Appointment Booking Lead Time (hours)
-                        </label>
-                        <Input type="number" defaultValue="2" min="0" max="72" />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Emergency Slots Reserved (%)
-                        </label>
-                        <Input type="number" defaultValue="20" min="0" max="50" />
-                      </div>
-                      <Button className="w-full">Save Appointment Settings</Button>
-                    </div>
-                  </div>
+                 {/* Payroll Settings */}
+                 <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+                   <h4 className="text-lg font-semibold mb-4">Payroll Settings</h4>
+                   <div className="space-y-4">
+                     <div>
+                       <label className="block text-sm font-medium text-gray-700 mb-2">
+                         Monthly Payment Date (Day of Month)
+                       </label>
+                       <Input 
+                         type="number" 
+                         value={hospitalSettings?.payroll_payment_date || 1}
+                         onChange={(e) => setTimingsForm(prev => ({ ...prev, payroll_payment_date: parseInt(e.target.value) }))}
+                         min="1" 
+                         max="31" 
+                         placeholder="Enter day of month (1-31)"
+                       />
+                       <p className="text-sm text-gray-500 mt-1">
+                         Day of month when salaries should be paid (e.g., 1 for 1st of every month)
+                       </p>
+                     </div>
+                     <Button 
+                       className="w-full"
+                       onClick={async () => {
+                         const success = await updateSettings({
+                           payroll_payment_date: timingsForm.payroll_payment_date || hospitalSettings?.payroll_payment_date || 1
+                         });
+                         if (success) {
+                           toast({
+                             title: "Success",
+                             description: "Payroll settings updated successfully",
+                           });
+                         }
+                       }}
+                     >
+                       Save Payroll Settings
+                     </Button>
+                   </div>
+                 </div>
 
-                  <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
-                    <h4 className="text-lg font-semibold mb-4">Payroll Settings</h4>
-                    <div className="space-y-4">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Monthly Payment Date (Day of Month)
-                        </label>
-                        <Input 
-                          type="number" 
-                          value={hospitalSettings?.payroll_payment_date || 1}
-                          onChange={(e) => setTimingsForm(prev => ({ ...prev, payroll_payment_date: parseInt(e.target.value) }))}
-                          min="1" 
-                          max="31" 
-                          placeholder="Enter day of month (1-31)"
-                        />
-                        <p className="text-sm text-gray-500 mt-1">
-                          Day of month when salaries should be paid (e.g., 1 for 1st of every month)
-                        </p>
-                      </div>
-                      <Button 
-                        className="w-full"
-                        onClick={async () => {
-                          const success = await updateSettings({
-                            payroll_payment_date: timingsForm.payroll_payment_date || hospitalSettings?.payroll_payment_date || 1
-                          });
-                          if (success) {
-                            toast({
-                              title: "Success",
-                              description: "Payroll settings updated successfully",
-                            });
-                          }
-                        }}
-                      >
-                        Save Payroll Settings
-                      </Button>
-                    </div>
-                  </div>
-                </div>
+                 {/* Hospital Information */}
+                 <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+                   <h4 className="text-lg font-semibold mb-4">Hospital Information</h4>
+                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                     <div>
+                       <label className="block text-sm font-medium text-gray-700 mb-2">
+                         Hospital Name
+                       </label>
+                       <Input 
+                         value={hospitalForm.hospital_name}
+                         onChange={(e) => setHospitalForm(prev => ({ ...prev, hospital_name: e.target.value }))}
+                         placeholder="Enter hospital name"
+                       />
+                     </div>
+                     <div>
+                       <label className="block text-sm font-medium text-gray-700 mb-2">
+                         Contact Number
+                       </label>
+                       <Input 
+                         value={hospitalForm.contact_number}
+                         onChange={(e) => setHospitalForm(prev => ({ ...prev, contact_number: e.target.value }))}
+                         placeholder="Enter contact number"
+                       />
+                     </div>
+                     <div className="md:col-span-2">
+                       <label className="block text-sm font-medium text-gray-700 mb-2">
+                         Hospital Address
+                       </label>
+                       <Input 
+                         value={hospitalForm.hospital_address}
+                         onChange={(e) => setHospitalForm(prev => ({ ...prev, hospital_address: e.target.value }))}
+                         placeholder="Enter hospital address"
+                       />
+                     </div>
+                   </div>
+                   <div className="mt-6">
+                     <Button 
+                       className="w-full"
+                       onClick={async () => {
+                         const success = await updateSettings({
+                           hospital_name: hospitalForm.hospital_name,
+                           contact_number: hospitalForm.contact_number,
+                           hospital_address: hospitalForm.hospital_address
+                         });
+                         if (success) {
+                           toast({
+                             title: "Success",
+                             description: "Hospital information updated successfully",
+                           });
+                         }
+                       }}
+                     >
+                       Save Hospital Information
+                     </Button>
+                   </div>
+                 </div>
+               </div>
+             </TabsContent>
+           </Tabs>
 
-                <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
-                  <h4 className="text-lg font-semibold mb-4">Additional Settings</h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Hospital Name
-                      </label>
-                      <Input defaultValue="City General Hospital" />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Contact Number
-                      </label>
-                      <Input defaultValue="+92-XXX-XXXXXXX" />
-                    </div>
-                    <div className="md:col-span-2">
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Hospital Address
-                      </label>
-                      <Input defaultValue="123 Main Street, City Center" />
-                    </div>
-                  </div>
-                  <div className="mt-6">
-                    <Button>Save Hospital Information</Button>
-                  </div>
-                </div>
-              </div>
-            </TabsContent>
-          </Tabs>
-
-          <EditUserDialog 
-            user={editingUser}
-            open={editDialogOpen}
-            onOpenChange={setEditDialogOpen}
-            onUserUpdated={handleUserUpdated}
-          />
-        </div>
-      </div>
-    </div>
-  );
-}
+           <EditUserDialog 
+             user={editingUser}
+             open={editDialogOpen}
+             onOpenChange={setEditDialogOpen}
+             onUserUpdated={handleUserUpdated}
+           />
+         </div>
+       </div>
+     </div>
+   );
+ }
