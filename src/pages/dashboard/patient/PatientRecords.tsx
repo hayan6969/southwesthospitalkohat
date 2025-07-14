@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { useMedicalRecords, usePatientDocuments, useUploadPatientDocument, useDeletePatientDocument } from "@/hooks/useDatabase";
 import { useAuth } from "@/hooks/useAuth";
-import { FileText, User, Calendar, Upload, Download, Trash2, File, Plus } from "lucide-react";
+import { FileText, User, Calendar, Upload, Eye, Trash2, File, Plus, X } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -10,6 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { toast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 
@@ -23,12 +24,24 @@ export default function PatientRecords() {
   const [isUploading, setIsUploading] = useState(false);
   const [documentLabel, setDocumentLabel] = useState("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [viewingDocument, setViewingDocument] = useState<any>(null);
 
   const patientRecords = medicalRecords?.filter(record => record.patient_id === profile?.id) || [];
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
+      // Validate file type
+      const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'application/pdf'];
+      if (!allowedTypes.includes(file.type)) {
+        toast({
+          title: "Invalid file type",
+          description: "Please select an image (JPG, PNG) or PDF file",
+          variant: "destructive"
+        });
+        return;
+      }
+      
       // Validate file size (max 10MB)
       if (file.size > 10 * 1024 * 1024) {
         toast({
@@ -102,6 +115,35 @@ export default function PatientRecords() {
     if (bytes < 1024) return bytes + ' B';
     if (bytes < 1024 * 1024) return Math.round(bytes / 1024) + ' KB';
     return Math.round(bytes / (1024 * 1024)) + ' MB';
+  };
+
+  const isImageFile = (fileType: string) => {
+    return fileType.startsWith('image/');
+  };
+
+  const DocumentViewer = ({ document }: { document: any }) => {
+    if (isImageFile(document.file_type)) {
+      return (
+        <div className="max-w-full max-h-[70vh] overflow-auto">
+          <img 
+            src={document.file_url} 
+            alt={document.document_label}
+            className="max-w-full h-auto"
+          />
+        </div>
+      );
+    } else if (document.file_type === 'application/pdf') {
+      return (
+        <div className="w-full h-[70vh]">
+          <iframe
+            src={document.file_url}
+            className="w-full h-full border-0"
+            title={document.document_label}
+          />
+        </div>
+      );
+    }
+    return <p>Preview not available for this file type</p>;
   };
 
   return (
@@ -230,11 +272,11 @@ export default function PatientRecords() {
                   <Input
                     id="document-upload"
                     type="file"
-                    accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
+                    accept=".pdf,.jpg,.jpeg,.png"
                     onChange={handleFileSelect}
                   />
                   <p className="text-sm text-muted-foreground">
-                    Supported formats: PDF, JPG, PNG, DOC, DOCX (Max 10MB)
+                    Supported formats: PDF, JPG, PNG (Max 10MB)
                   </p>
                 </div>
                 {selectedFile && (
@@ -299,13 +341,23 @@ export default function PatientRecords() {
                           </div>
                         </div>
                         <div className="flex items-center gap-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => window.open(document.file_url, '_blank')}
-                          >
-                            <Download className="w-4 h-4" />
-                          </Button>
+                          <Dialog>
+                            <DialogTrigger asChild>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setViewingDocument(document)}
+                              >
+                                <Eye className="w-4 h-4" />
+                              </Button>
+                            </DialogTrigger>
+                            <DialogContent className="max-w-4xl">
+                              <DialogHeader>
+                                <DialogTitle>{document.document_label}</DialogTitle>
+                              </DialogHeader>
+                              <DocumentViewer document={document} />
+                            </DialogContent>
+                          </Dialog>
                           <Button
                             variant="outline"
                             size="sm"
