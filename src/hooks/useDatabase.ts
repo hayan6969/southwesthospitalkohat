@@ -889,3 +889,122 @@ export const useDeleteMedicine = () => {
     },
   });
 };
+
+// Patient Documents
+export const usePatientDocuments = (patientId?: string) => {
+  return useQuery({
+    queryKey: ['patient-documents', patientId],
+    queryFn: async () => {
+      const query = supabase
+        .from('patient_documents')
+        .select(`
+          *,
+          uploaded_by_profile:profiles!patient_documents_uploaded_by_fkey(first_name, last_name)
+        `)
+        .order('created_at', { ascending: false });
+
+      if (patientId) {
+        query.eq('patient_id', patientId);
+      }
+
+      const { data, error } = await query;
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!patientId
+  });
+};
+
+export const useUploadPatientDocument = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async ({ 
+      file, 
+      patientId, 
+      documentLabel 
+    }: { 
+      file: File; 
+      patientId: string; 
+      documentLabel: string; 
+    }) => {
+      const user = await supabase.auth.getUser();
+      if (!user.data.user) throw new Error('User not authenticated');
+
+      // Upload file to storage
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
+      const filePath = `${user.data.user.id}/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('patient-documents')
+        .upload(filePath, file);
+
+      if (uploadError) throw uploadError;
+
+      // Get the public URL
+      const { data: urlData } = supabase.storage
+        .from('patient-documents')
+        .getPublicUrl(filePath);
+
+      // Insert document record
+      const { data, error } = await supabase
+        .from('patient_documents')
+        .insert({
+          patient_id: patientId,
+          document_name: file.name,
+          document_label: documentLabel,
+          file_url: urlData.publicUrl,
+          file_size: file.size,
+          file_type: file.type,
+          uploaded_by: user.data.user.id
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['patient-documents'] });
+    }
+  });
+};
+
+export const useDeletePatientDocument = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async (documentId: string) => {
+      // First get the document to find the file path
+      const { data: document, error: fetchError } = await supabase
+        .from('patient_documents')
+        .select('file_url')
+        .eq('id', documentId)
+        .single();
+
+      if (fetchError) throw fetchError;
+
+      // Extract file path from URL
+      const filePath = document.file_url.split('/').slice(-2).join('/');
+
+      // Delete from storage
+      const { error: storageError } = await supabase.storage
+        .from('patient-documents')
+        .remove([filePath]);
+
+      if (storageError) throw storageError;
+
+      // Delete from database
+      const { error } = await supabase
+        .from('patient_documents')
+        .delete()
+        .eq('id', documentId);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['patient-documents'] });
+    }
+  });
+};
