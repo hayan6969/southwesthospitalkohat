@@ -88,7 +88,7 @@ export const MyAppointments = () => {
       // For each appointment, get queue position and calculate ahead count
       const appointmentsWithQueue = await Promise.all(
         appointmentsData.map(async (appointment) => {
-          const appointmentDate = new Date(appointment.appointment_date).toISOString().split('T')[0];
+          const appointmentDateStr = new Date(appointment.appointment_date).toISOString().split('T')[0];
           
           // Get doctor and profile info
           const doctor = doctorsData.data?.find(d => d.id === appointment.doctor_id);
@@ -115,7 +115,7 @@ export const MyAppointments = () => {
                 appointments!inner(status)
               `)
               .eq('doctor_id', appointment.doctor_id)
-              .eq('appointment_date', appointmentDate)
+              .eq('appointment_date', appointmentDateStr)
               .lt('queue_position', queueData.queue_position)
               .eq('appointments.status', 'scheduled');
 
@@ -128,9 +128,29 @@ export const MyAppointments = () => {
           
           // Estimate wait time (assuming 15 minutes per patient)
           const estimatedMinutes = aheadCount * 15;
-          const estimatedWait = estimatedMinutes > 0 
-            ? `${Math.floor(estimatedMinutes / 60)}h ${estimatedMinutes % 60}m`
-            : (appointment.status === 'scheduled' ? 'Your turn soon!' : 'N/A');
+          const appointmentDate = new Date(appointment.appointment_date);
+          const today = new Date();
+          const isTodayAppointment = appointmentDate.toDateString() === today.toDateString();
+          const isFutureAppointment = appointmentDate > today;
+          
+          let estimatedWait: string;
+          if (appointment.status !== 'scheduled') {
+            estimatedWait = 'N/A';
+          } else if (isFutureAppointment) {
+            // For future appointments, show queue position info
+            estimatedWait = queueData?.queue_position === 1 
+              ? `First appointment on ${format(appointmentDate, 'MMM dd')}`
+              : `Position #${queueData?.queue_position || 0} on ${format(appointmentDate, 'MMM dd')}`;
+          } else if (isTodayAppointment && estimatedMinutes > 0) {
+            // For today with people ahead
+            estimatedWait = `${Math.floor(estimatedMinutes / 60)}h ${estimatedMinutes % 60}m`;
+          } else if (isTodayAppointment) {
+            // For today with no one ahead
+            estimatedWait = 'Your turn soon!';
+          } else {
+            // Fallback
+            estimatedWait = 'N/A';
+          }
 
           return {
             ...appointment,
