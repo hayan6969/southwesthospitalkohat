@@ -6,14 +6,19 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Plus, Search, UserPlus } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Plus, Search, UserPlus, Check, ChevronsUpDown, X } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { usePatientNames, useDoctorNames, getPatientName, getDoctorName } from "@/hooks/useDisplayHelpers";
+import { useSearchPatientsWithNames } from "@/hooks/useDisplayHelpers";
 import { useAuditLogger } from "@/hooks/useAuditLogger";
 import { formatPkrAmount } from "@/utils/currency";
 import { generateLabInvoicePDF } from "@/utils/pdfGenerator";
+import { cn } from "@/lib/utils";
 
 interface Patient {
   id: string;
@@ -41,57 +46,34 @@ interface LabTest {
 
 export function EnhancedLabDialog() {
   const [open, setOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
+  const [activeTab, setActiveTab] = useState("search");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedPatient, setSelectedPatient] = useState<any>(null);
   const [selectedDoctor, setSelectedDoctor] = useState("");
+  const [doctorOpen, setDoctorOpen] = useState(false);
   const [selectedTests, setSelectedTests] = useState<string[]>([]);
+  const [testSearchQuery, setTestSearchQuery] = useState("");
   const [notes, setNotes] = useState("");
-  const [showNewPatientForm, setShowNewPatientForm] = useState(false);
+  const [isExternalDoctor, setIsExternalDoctor] = useState(false);
+  const [externalDoctorName, setExternalDoctorName] = useState("");
   
   // New patient form
-  const [newPatientForm, setNewPatientForm] = useState({
+  const [newPatient, setNewPatient] = useState({
     first_name: "",
     last_name: "",
-    email: "",
     phone: "",
+    cnic: "",
     date_of_birth: "",
-    address: ""
+    address: "",
+    blood_type: "",
+    allergies: ""
   });
 
   const queryClient = useQueryClient();
   const { data: patientNames } = usePatientNames();
   const { data: doctorNames } = useDoctorNames();
+  const { data: searchResults } = useSearchPatientsWithNames(searchTerm);
   const { logCreate } = useAuditLogger();
-
-  // Fetch patients
-  const { data: patients } = useQuery({
-    queryKey: ['patients-for-lab'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select(`
-          id,
-          first_name,
-          last_name,
-          email,
-          phone,
-          patients (
-            patient_number
-          )
-        `)
-        .eq('role', 'patient');
-      
-      if (error) throw error;
-      return data.map(profile => ({
-        id: profile.id,
-        first_name: profile.first_name,
-        last_name: profile.last_name,
-        email: profile.email,
-        phone: profile.phone,
-        patient_number: profile.patients?.[0]?.patient_number
-      })) as Patient[];
-    }
-  });
 
   // Fetch doctors
   const { data: doctors } = useQuery({
@@ -121,12 +103,21 @@ export function EnhancedLabDialog() {
     }
   });
 
+  // Filter lab tests based on search
+  const filteredLabTests = labTests?.filter(test =>
+    test.name.toLowerCase().includes(testSearchQuery.toLowerCase()) ||
+    test.description?.toLowerCase().includes(testSearchQuery.toLowerCase()) ||
+    test.category?.toLowerCase().includes(testSearchQuery.toLowerCase())
+  ) || [];
+
   // Create patient mutation
   const createPatientMutation = useMutation({
     mutationFn: async (patientData: any) => {
-      // First create auth user
+      // First create auth user with a temporary email if phone is provided
+      const email = patientData.email || `${patientData.phone}@temp.local`;
+      
       const { data: authData, error: authError } = await supabase.auth.admin.createUser({
-        email: patientData.email,
+        email: email,
         password: 'temp123456', // Temporary password
         email_confirm: true,
         user_metadata: {
@@ -143,8 +134,11 @@ export function EnhancedLabDialog() {
         .from('patients')
         .insert([{
           id: authData.user.id,
+          cnic: patientData.cnic,
           date_of_birth: patientData.date_of_birth || null,
-          address: patientData.address || null
+          address: patientData.address || null,
+          blood_type: patientData.blood_type || null,
+          allergies: patientData.allergies || null
         }])
         .select()
         .single();
@@ -153,40 +147,48 @@ export function EnhancedLabDialog() {
 
       return {
         id: authData.user.id,
-        first_name: patientData.first_name,
-        last_name: patientData.last_name,
-        email: patientData.email,
-        phone: patientData.phone,
+        profile: {
+          first_name: patientData.first_name,
+          last_name: patientData.last_name,
+          email: email,
+          phone: patientData.phone
+        },
         patient_number: patientRecord.patient_number
-      } as Patient;
+      };
     },
     onSuccess: (newPatient) => {
       queryClient.invalidateQueries({ queryKey: ['patients-for-lab'] });
-      setSelectedPatient(newPatient as Patient);
-      setShowNewPatientForm(false);
-      setNewPatientForm({
+      setSelectedPatient(newPatient);
+      setActiveTab("search");
+      setNewPatient({
         first_name: "",
         last_name: "",
-        email: "",
         phone: "",
+        cnic: "",
         date_of_birth: "",
-        address: ""
+        address: "",
+        blood_type: "",
+        allergies: ""
       });
-      toast.success("New patient registered successfully");
+      toast.success("Patient registered successfully");
     },
     onError: () => {
-      toast.error("Failed to register new patient");
+      toast.error("Failed to register patient");
     }
   });
 
   // Create lab order mutation
   const createLabOrderMutation = useMutation({
     mutationFn: async () => {
-      if (!selectedPatient || !selectedDoctor || selectedTests.length === 0) {
+      if (!selectedPatient || (!selectedDoctor && !isExternalDoctor) || selectedTests.length === 0) {
         throw new Error("Missing required fields");
       }
 
-      const selectedLabTests = labTests?.filter(test => selectedTests.includes(test.id)) || [];
+      if (isExternalDoctor && !externalDoctorName.trim()) {
+        throw new Error("External doctor name is required");
+      }
+
+      const selectedLabTests = filteredLabTests.filter(test => selectedTests.includes(test.id));
       const totalAmount = selectedLabTests.reduce((sum, test) => sum + test.price, 0);
 
       // Create invoice first
@@ -209,12 +211,12 @@ export function EnhancedLabDialog() {
       // Create lab reports for each test
       const labReports = await Promise.all(
         selectedTests.map(async (testId) => {
-          const test = labTests?.find(t => t.id === testId);
+          const test = filteredLabTests.find(t => t.id === testId);
           const { data, error } = await supabase
             .from('lab_reports')
             .insert([{
               patient_id: selectedPatient.id,
-              doctor_id: selectedDoctor,
+              doctor_id: isExternalDoctor ? null : selectedDoctor,
               test_id: testId,
               test_name: test?.name || '',
               price: test?.price || 0,
@@ -238,15 +240,15 @@ export function EnhancedLabDialog() {
       // Log audit event
       await logCreate(
         "Lab Order Created",
-        `${selectedTests.length} lab tests ordered for ${selectedPatient?.first_name} ${selectedPatient?.last_name}`
+        `${selectedTests.length} lab tests ordered for ${selectedPatient?.profile?.first_name} ${selectedPatient?.profile?.last_name}`
       );
 
       // Generate and open PDF invoice
       try {
         const pdfBlob = await generateLabInvoicePDF({
           invoiceNumber: invoice.invoice_number,
-          patientName: `${selectedPatient?.first_name} ${selectedPatient?.last_name}`,
-          patientEmail: selectedPatient?.email || '',
+          patientName: `${selectedPatient?.profile?.first_name} ${selectedPatient?.profile?.last_name}`,
+          patientEmail: selectedPatient?.profile?.email || '',
           tests: selectedLabTests.map(test => ({
             name: test.name,
             price: test.price,
@@ -272,33 +274,40 @@ export function EnhancedLabDialog() {
     }
   });
 
-  const filteredPatients = patients?.filter(patient =>
-    `${patient.first_name} ${patient.last_name}`.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    patient.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    patient.patient_number?.toLowerCase().includes(searchQuery.toLowerCase())
-  ) || [];
-
   const handleReset = () => {
     setSelectedPatient(null);
     setSelectedDoctor("");
     setSelectedTests([]);
     setNotes("");
-    setSearchQuery("");
-    setShowNewPatientForm(false);
+    setSearchTerm("");
+    setTestSearchQuery("");
+    setIsExternalDoctor(false);
+    setExternalDoctorName("");
+    setActiveTab("search");
+    setNewPatient({
+      first_name: "",
+      last_name: "",
+      phone: "",
+      cnic: "",
+      date_of_birth: "",
+      address: "",
+      blood_type: "",
+      allergies: ""
+    });
     setOpen(false);
   };
 
   const handleCreatePatient = () => {
-    if (!newPatientForm.first_name.trim() || !newPatientForm.last_name.trim() || !newPatientForm.email.trim()) {
+    if (!newPatient.first_name.trim() || !newPatient.last_name.trim() || !newPatient.phone.trim() || !newPatient.cnic.trim()) {
       toast.error("Please fill in all required fields");
       return;
     }
 
-    createPatientMutation.mutate(newPatientForm);
+    createPatientMutation.mutate(newPatient);
   };
 
   const getTotalAmount = () => {
-    const selectedLabTests = labTests?.filter(test => selectedTests.includes(test.id)) || [];
+    const selectedLabTests = filteredLabTests.filter(test => selectedTests.includes(test.id));
     return selectedLabTests.reduce((sum, test) => sum + test.price, 0);
   };
 
@@ -324,209 +333,331 @@ export function EnhancedLabDialog() {
         </DialogHeader>
 
         <div className="space-y-6">
-          {/* Patient Selection */}
+          {/* Patient Selection - Matching EnhancedAppointmentDialog pattern */}
           <Card>
             <CardHeader>
               <CardTitle className="text-lg">Patient Information</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
-              {!selectedPatient ? (
-                <>
-                  <div className="flex gap-2">
-                    <div className="flex-1">
-                      <Label htmlFor="search">Search Patient</Label>
-                      <div className="relative">
-                        <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                        <Input
-                          id="search"
-                          placeholder="Search by name, email, or patient ID..."
-                          value={searchQuery}
-                          onChange={(e) => setSearchQuery(e.target.value)}
-                          className="pl-8"
-                        />
-                      </div>
-                    </div>
-                    <Button 
-                      variant="outline" 
-                      onClick={() => setShowNewPatientForm(!showNewPatientForm)}
-                      className="mt-6"
-                    >
-                      <UserPlus className="w-4 h-4 mr-2" />
-                      Register New
-                    </Button>
+            <CardContent>
+              <Tabs value={activeTab} onValueChange={setActiveTab}>
+                <TabsList className="grid w-full grid-cols-2">
+                  <TabsTrigger value="search" className="flex items-center gap-2">
+                    <Search className="w-4 h-4" />
+                    Search Patient
+                  </TabsTrigger>
+                  <TabsTrigger value="register" className="flex items-center gap-2">
+                    <UserPlus className="w-4 h-4" />
+                    Register New
+                  </TabsTrigger>
+                </TabsList>
+                
+                <TabsContent value="search" className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="search">Search by Patient ID</Label>
+                    <Input
+                      id="search"
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      placeholder="Enter Patient ID (e.g. P-0001)..."
+                    />
                   </div>
-
-                  {showNewPatientForm && (
-                    <Card className="p-4 bg-gray-50">
-                      <h4 className="font-medium mb-3">Register New Patient</h4>
-                      <div className="grid grid-cols-2 gap-3">
-                        <Input
-                          placeholder="First Name *"
-                          value={newPatientForm.first_name}
-                          onChange={(e) => setNewPatientForm(prev => ({ ...prev, first_name: e.target.value }))}
-                        />
-                        <Input
-                          placeholder="Last Name *"
-                          value={newPatientForm.last_name}
-                          onChange={(e) => setNewPatientForm(prev => ({ ...prev, last_name: e.target.value }))}
-                        />
-                        <Input
-                          placeholder="Email *"
-                          type="email"
-                          value={newPatientForm.email}
-                          onChange={(e) => setNewPatientForm(prev => ({ ...prev, email: e.target.value }))}
-                        />
-                        <Input
-                          placeholder="Phone"
-                          value={newPatientForm.phone}
-                          onChange={(e) => setNewPatientForm(prev => ({ ...prev, phone: e.target.value }))}
-                        />
-                        <Input
-                          placeholder="Date of Birth"
-                          type="date"
-                          value={newPatientForm.date_of_birth}
-                          onChange={(e) => setNewPatientForm(prev => ({ ...prev, date_of_birth: e.target.value }))}
-                        />
-                        <Input
-                          placeholder="Address"
-                          value={newPatientForm.address}
-                          onChange={(e) => setNewPatientForm(prev => ({ ...prev, address: e.target.value }))}
-                        />
-                      </div>
-                      <div className="flex gap-2 mt-3">
-                        <Button 
-                          onClick={handleCreatePatient}
-                          disabled={createPatientMutation.isPending}
-                          size="sm"
-                        >
-                          {createPatientMutation.isPending ? "Creating..." : "Create Patient"}
-                        </Button>
-                        <Button 
-                          variant="outline" 
-                          onClick={() => setShowNewPatientForm(false)}
-                          size="sm"
-                        >
-                          Cancel
-                        </Button>
-                      </div>
-                    </Card>
-                  )}
-
-                  {searchQuery && (
-                    <div className="max-h-48 overflow-y-auto border rounded-lg">
-                      {filteredPatients.length > 0 ? (
-                        filteredPatients.map((patient) => (
-                          <div
-                            key={patient.id}
-                            className="p-3 hover:bg-gray-50 cursor-pointer border-b last:border-b-0"
-                            onClick={() => setSelectedPatient(patient)}
-                          >
-                            <div className="font-medium">
-                              {patient.first_name} {patient.last_name}
+                  
+                  {searchResults && searchResults.length > 0 && (
+                    <div className="space-y-2">
+                      <Label>Select Patient</Label>
+                      <div className="space-y-2 max-h-40 overflow-y-auto">
+                        {searchResults.map((patient) => {
+                          const fullName = patient.profile?.first_name && patient.profile?.last_name
+                            ? `${patient.profile.first_name} ${patient.profile.last_name}`.trim()
+                            : 'Name not available';
+                          
+                          return (
+                            <div
+                              key={patient.id}
+                              className={`p-4 border-2 rounded-lg cursor-pointer transition-all duration-200 ${
+                                selectedPatient?.id === patient.id 
+                                  ? 'border-blue-500 bg-blue-50 shadow-md ring-1 ring-blue-200' 
+                                  : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                              }`}
+                              onClick={() => setSelectedPatient(patient)}
+                            >
+                              <div className="flex items-center justify-between mb-2">
+                                <div className="font-semibold text-lg text-gray-900">
+                                  {fullName}
+                                </div>
+                                {selectedPatient?.id === patient.id && (
+                                  <div className="text-blue-600 text-sm font-medium flex items-center gap-1">
+                                    <span className="text-blue-500">✓</span> Selected
+                                  </div>
+                                )}
+                              </div>
+                              <div className="space-y-1 text-sm text-gray-600">
+                                <div><strong>Patient ID:</strong> {patient.patient_number || 'Not assigned'}</div>
+                                {patient.profile?.phone && (
+                                  <div><strong>Phone:</strong> {patient.profile.phone}</div>
+                                )}
+                                {patient.profile?.email && (
+                                  <div><strong>Email:</strong> {patient.profile.email}</div>
+                                )}
+                              </div>
                             </div>
-                            <div className="text-sm text-gray-600">
-                              {patient.email} • {patient.patient_number || 'No ID'}
-                            </div>
-                          </div>
-                        ))
-                      ) : (
-                        <div className="p-3 text-gray-500 text-center">
-                          No patients found. Try a different search or register a new patient.
-                        </div>
-                      )}
+                          );
+                        })}
+                      </div>
                     </div>
                   )}
-                </>
-              ) : (
-                <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <div className="font-medium text-green-800">
-                        {selectedPatient.first_name} {selectedPatient.last_name}
-                      </div>
-                      <div className="text-sm text-green-600">
-                        {selectedPatient.email} • {selectedPatient.patient_number || 'No ID'}
-                      </div>
+                </TabsContent>
+                
+                <TabsContent value="register" className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="firstName">First Name *</Label>
+                      <Input
+                        id="firstName"
+                        value={newPatient.first_name}
+                        onChange={(e) => setNewPatient(prev => ({ ...prev, first_name: e.target.value }))}
+                        required
+                      />
                     </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setSelectedPatient(null)}
-                    >
-                      Change
-                    </Button>
+                    <div className="space-y-2">
+                      <Label htmlFor="lastName">Last Name *</Label>
+                      <Input
+                        id="lastName"
+                        value={newPatient.last_name}
+                        onChange={(e) => setNewPatient(prev => ({ ...prev, last_name: e.target.value }))}
+                        required
+                      />
+                    </div>
                   </div>
-                </div>
-              )}
+                  
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="phone">Phone Number *</Label>
+                      <Input
+                        id="phone"
+                        value={newPatient.phone}
+                        onChange={(e) => setNewPatient(prev => ({ ...prev, phone: e.target.value }))}
+                        placeholder="03001234567"
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="cnic">CNIC *</Label>
+                      <Input
+                        id="cnic"
+                        value={newPatient.cnic}
+                        onChange={(e) => setNewPatient(prev => ({ ...prev, cnic: e.target.value }))}
+                        placeholder="12345-6789012-3"
+                        required
+                      />
+                    </div>
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="dob">Date of Birth</Label>
+                      <Input
+                        id="dob"
+                        type="date"
+                        value={newPatient.date_of_birth}
+                        onChange={(e) => setNewPatient(prev => ({ ...prev, date_of_birth: e.target.value }))}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="bloodType">Blood Type</Label>
+                      <Select value={newPatient.blood_type} onValueChange={(value) => setNewPatient(prev => ({ ...prev, blood_type: value }))}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select blood type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="A+">A+</SelectItem>
+                          <SelectItem value="A-">A-</SelectItem>
+                          <SelectItem value="B+">B+</SelectItem>
+                          <SelectItem value="B-">B-</SelectItem>
+                          <SelectItem value="AB+">AB+</SelectItem>
+                          <SelectItem value="AB-">AB-</SelectItem>
+                          <SelectItem value="O+">O+</SelectItem>
+                          <SelectItem value="O-">O-</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="address">Address</Label>
+                    <Input
+                      id="address"
+                      value={newPatient.address}
+                      onChange={(e) => setNewPatient(prev => ({ ...prev, address: e.target.value }))}
+                      placeholder="Complete address"
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="allergies">Known Allergies</Label>
+                    <Textarea
+                      id="allergies"
+                      value={newPatient.allergies}
+                      onChange={(e) => setNewPatient(prev => ({ ...prev, allergies: e.target.value }))}
+                      placeholder="List any known allergies..."
+                      rows={2}
+                    />
+                  </div>
+                  
+                  <Button 
+                    onClick={handleCreatePatient}
+                    disabled={createPatientMutation.isPending}
+                    className="w-full"
+                  >
+                    {createPatientMutation.isPending ? "Registering..." : "Register Patient"}
+                  </Button>
+                </TabsContent>
+              </Tabs>
             </CardContent>
           </Card>
 
-          {/* Doctor Selection */}
+          {/* Doctor Selection - Searchable with External Option */}
           <Card>
             <CardHeader>
               <CardTitle className="text-lg">Ordering Doctor</CardTitle>
             </CardHeader>
-            <CardContent>
-              <Select value={selectedDoctor} onValueChange={setSelectedDoctor}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select ordering doctor" />
-                </SelectTrigger>
-                <SelectContent>
-                  {doctors?.map((doctor) => (
-                    <SelectItem key={doctor.id} value={doctor.id}>
-                      {getDoctorName(doctor.id, doctorNames || [])}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            <CardContent className="space-y-4">
+              <div className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  id="external-doctor"
+                  checked={isExternalDoctor}
+                  onChange={(e) => {
+                    setIsExternalDoctor(e.target.checked);
+                    if (e.target.checked) {
+                      setSelectedDoctor("");
+                    } else {
+                      setExternalDoctorName("");
+                    }
+                  }}
+                />
+                <Label htmlFor="external-doctor">External Doctor</Label>
+              </div>
+              
+              {isExternalDoctor ? (
+                <div className="space-y-2">
+                  <Label htmlFor="external-name">External Doctor Name *</Label>
+                  <Input
+                    id="external-name"
+                    value={externalDoctorName}
+                    onChange={(e) => setExternalDoctorName(e.target.value)}
+                    placeholder="Enter external doctor's name"
+                  />
+                </div>
+              ) : (
+                <Popover open={doctorOpen} onOpenChange={setDoctorOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      role="combobox"
+                      aria-expanded={doctorOpen}
+                      className="w-full justify-between"
+                    >
+                      {selectedDoctor
+                        ? getDoctorName(selectedDoctor, doctorNames || [])
+                        : "Select ordering doctor..."}
+                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-full p-0">
+                    <Command>
+                      <CommandInput placeholder="Search doctors..." />
+                      <CommandEmpty>No doctor found.</CommandEmpty>
+                      <CommandGroup>
+                        <CommandList>
+                          {doctors?.map((doctor) => (
+                            <CommandItem
+                              key={doctor.id}
+                              value={doctor.id}
+                              onSelect={(currentValue) => {
+                                setSelectedDoctor(currentValue === selectedDoctor ? "" : currentValue);
+                                setDoctorOpen(false);
+                              }}
+                            >
+                              <Check
+                                className={cn(
+                                  "mr-2 h-4 w-4",
+                                  selectedDoctor === doctor.id ? "opacity-100" : "opacity-0"
+                                )}
+                              />
+                              {getDoctorName(doctor.id, doctorNames || [])}
+                            </CommandItem>
+                          ))}
+                        </CommandList>
+                      </CommandGroup>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
+              )}
             </CardContent>
           </Card>
 
-          {/* Lab Tests Selection */}
+          {/* Lab Tests Selection - Searchable */}
           <Card>
             <CardHeader>
               <CardTitle className="text-lg">Lab Tests</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
+              <div className="space-y-2">
+                <Label htmlFor="test-search">Search Tests</Label>
+                <div className="relative">
+                  <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="test-search"
+                    placeholder="Search lab tests..."
+                    value={testSearchQuery}
+                    onChange={(e) => setTestSearchQuery(e.target.value)}
+                    className="pl-8"
+                  />
+                </div>
+              </div>
+              
               <div className="max-h-64 overflow-y-auto border rounded-lg">
-                {labTests?.map((test) => (
-                  <div
-                    key={test.id}
-                    className={`p-3 border-b last:border-b-0 cursor-pointer transition-colors ${
-                      selectedTests.includes(test.id) 
-                        ? 'bg-blue-50 border-blue-200' 
-                        : 'hover:bg-gray-50'
-                    }`}
-                    onClick={() => toggleTestSelection(test.id)}
-                  >
-                    <div className="flex justify-between items-start">
-                      <div className="flex-1">
-                        <div className="font-medium">{test.name}</div>
-                        {test.description && (
-                          <div className="text-sm text-gray-600">{test.description}</div>
-                        )}
-                        {test.category && (
-                          <div className="text-xs text-blue-600 bg-blue-100 px-2 py-1 rounded mt-1 inline-block">
-                            {test.category}
-                          </div>
-                        )}
-                      </div>
-                      <div className="text-right">
-                        <div className="font-semibold text-green-600">
-                          {formatPkrAmount(test.price)}
+                {filteredLabTests.length > 0 ? (
+                  filteredLabTests.map((test) => (
+                    <div
+                      key={test.id}
+                      className={`p-3 border-b last:border-b-0 cursor-pointer transition-colors ${
+                        selectedTests.includes(test.id) 
+                          ? 'bg-blue-50 border-blue-200' 
+                          : 'hover:bg-gray-50'
+                      }`}
+                      onClick={() => toggleTestSelection(test.id)}
+                    >
+                      <div className="flex justify-between items-start">
+                        <div className="flex-1">
+                          <div className="font-medium">{test.name}</div>
+                          {test.description && (
+                            <div className="text-sm text-gray-600">{test.description}</div>
+                          )}
+                          {test.category && (
+                            <div className="text-xs text-blue-600 bg-blue-100 px-2 py-1 rounded mt-1 inline-block">
+                              {test.category}
+                            </div>
+                          )}
                         </div>
-                        <input
-                          type="checkbox"
-                          checked={selectedTests.includes(test.id)}
-                          onChange={() => toggleTestSelection(test.id)}
-                          className="mt-1"
-                        />
+                        <div className="text-right">
+                          <div className="font-semibold text-green-600">
+                            {formatPkrAmount(test.price)}
+                          </div>
+                          <input
+                            type="checkbox"
+                            checked={selectedTests.includes(test.id)}
+                            onChange={() => toggleTestSelection(test.id)}
+                            className="mt-1"
+                          />
+                        </div>
                       </div>
                     </div>
-                  </div>
-                )) || (
+                  ))
+                ) : (
                   <div className="p-8 text-center text-gray-500">
-                    No lab tests available. Please add tests in the admin panel.
+                    {testSearchQuery ? "No tests found matching your search." : "No lab tests available. Please add tests in the admin panel."}
                   </div>
                 )}
               </div>
@@ -565,7 +696,7 @@ export function EnhancedLabDialog() {
             </Button>
             <Button
               onClick={() => createLabOrderMutation.mutate()}
-              disabled={!selectedPatient || !selectedDoctor || selectedTests.length === 0 || createLabOrderMutation.isPending}
+              disabled={!selectedPatient || (!selectedDoctor && !isExternalDoctor) || selectedTests.length === 0 || createLabOrderMutation.isPending}
             >
               {createLabOrderMutation.isPending ? "Creating Order..." : "Create Lab Order & Generate Invoice"}
             </Button>
