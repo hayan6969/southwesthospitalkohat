@@ -363,24 +363,17 @@ export default function FinancePayroll() {
 
   const handleSaveTemplate = () => {
     if (!employeeName || !employeeRole || !baseSalary) return;
-    
-    // Ensure we have a valid employee_id when creating new templates
-    if (!editingTemplate && !selectedEmployeeId) {
-      toast({
-        title: "Error",
-        description: "Please select an employee from the dropdown",
-        variant: "destructive"
-      });
-      return;
-    }
 
     const baseSalaryNum = parseFloat(baseSalary);
     const allowancesNum = parseFloat(allowances) || 0;
     const deductionsNum = parseFloat(deductions) || 0;
     const netSalary = baseSalaryNum + allowancesNum - deductionsNum;
 
+    // For new templates, generate a UUID if no employee was selected from existing staff
+    const employeeId = editingTemplate ? editingTemplate.employee_id : (selectedEmployeeId || crypto.randomUUID());
+
     saveTemplateMutation.mutate({
-      employee_id: editingTemplate ? editingTemplate.employee_id : selectedEmployeeId!,
+      employee_id: employeeId,
       employee_name: employeeName,
       role: employeeRole,
       base_salary: baseSalaryNum,
@@ -663,7 +656,7 @@ export default function FinancePayroll() {
                   </DialogHeader>
                   <div className="space-y-4">
                     <div>
-                      <Label htmlFor="employeeSearch">Search Employee</Label>
+                      <Label htmlFor="employeeSearch">Search Existing Employee (Optional)</Label>
                       <Input
                         id="employeeSearch"
                         value={searchQuery}
@@ -679,10 +672,13 @@ export default function FinancePayroll() {
                             setEmployeeRole(exactMatch.role);
                           }
                         }}
-                        placeholder="Type employee name..."
+                        placeholder="Search existing employees or leave blank for manual entry..."
                       />
+                      <p className="text-xs text-gray-500 mt-1">
+                        Search to auto-fill from existing employees, or fill fields manually below
+                      </p>
                       {searchQuery && staff && !editingTemplate && (
-                        <div className="mt-2 border rounded-md bg-white max-h-32 overflow-y-auto">
+                        <div className="mt-2 border rounded-md bg-white max-h-32 overflow-y-auto z-50 shadow-lg">
                           {staff
                             .filter(emp => 
                               `${emp.first_name} ${emp.last_name}`.toLowerCase().includes(searchQuery.toLowerCase())
