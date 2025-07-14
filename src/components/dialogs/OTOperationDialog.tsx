@@ -62,6 +62,17 @@ export function OTOperationDialog({ onOperationAdded, editingOperation, onEditCo
     setExpenses(updated);
   };
 
+  const handleClose = () => {
+    setOpen(false);
+    // Reset form when closing
+    setOperationName("");
+    setExpenses([{ expense_name: "", cost: "" }]);
+    // Call onEditComplete if we were editing
+    if (editingOperation) {
+      onEditComplete?.();
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -181,7 +192,7 @@ export function OTOperationDialog({ onOperationAdded, editingOperation, onEditCo
     .reduce((sum, exp) => sum + Number(exp.cost), 0);
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={handleClose}>
       {!editingOperation && (
         <DialogTrigger asChild>
           <Button>
@@ -266,7 +277,7 @@ export function OTOperationDialog({ onOperationAdded, editingOperation, onEditCo
           </div>
 
           <div className="flex justify-end gap-2 pt-4 border-t">
-            <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+            <Button type="button" variant="outline" onClick={handleClose}>
               Cancel
             </Button>
             <Button type="submit" disabled={isSubmitting}>
