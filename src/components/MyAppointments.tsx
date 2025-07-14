@@ -165,7 +165,19 @@ export const MyAppointments = () => {
 
   const handleCancelAppointment = async (appointmentId: string) => {
     try {
-      // First update the appointment status to cancelled
+      // Get the queue position data BEFORE making any changes
+      const { data: queueData, error: queueFetchError } = await supabase
+        .from('queue_positions')
+        .select('doctor_id, appointment_date, queue_position')
+        .eq('appointment_id', appointmentId)
+        .single();
+
+      if (queueFetchError) {
+        console.error('Error fetching queue data:', queueFetchError);
+        throw new Error('Could not retrieve appointment queue information');
+      }
+
+      // Update appointment status to cancelled
       const { error: appointmentError } = await supabase
         .from('appointments')
         .update({ 
@@ -176,7 +188,7 @@ export const MyAppointments = () => {
 
       if (appointmentError) throw appointmentError;
 
-      // Update the queue position status to 'skipped' (cancelled appointments are skipped in queue)
+      // Update the queue position status to 'skipped'
       const { error: queueError } = await supabase
         .from('queue_positions')
         .update({ 
@@ -187,28 +199,17 @@ export const MyAppointments = () => {
 
       if (queueError) throw queueError;
 
-      // Get the cancelled appointment details for queue management
-      const { data: cancelledQueueData, error: cancelledQueueError } = await supabase
-        .from('queue_positions')
-        .select('doctor_id, appointment_date, queue_position')
-        .eq('appointment_id', appointmentId)
-        .single();
+      // Reorder the queue for appointments after this one
+      const { error: reorderError } = await supabase
+        .rpc('reorder_queue_after_cancellation', {
+          p_doctor_id: queueData.doctor_id,
+          p_appointment_date: queueData.appointment_date,
+          p_cancelled_position: queueData.queue_position
+        });
 
-      if (cancelledQueueError) throw cancelledQueueError;
-
-      // Move up all appointments that were behind this one in the queue
-      if (cancelledQueueData) {
-        const { error: reorderError } = await supabase
-          .rpc('reorder_queue_after_cancellation', {
-            p_doctor_id: cancelledQueueData.doctor_id,
-            p_appointment_date: cancelledQueueData.appointment_date,
-            p_cancelled_position: cancelledQueueData.queue_position
-          });
-
-        if (reorderError) {
-          console.error('Error reordering queue:', reorderError);
-          // Still show success even if reordering fails
-        }
+      if (reorderError) {
+        console.error('Error reordering queue:', reorderError);
+        throw new Error('Failed to update queue positions');
       }
 
       toast({
@@ -219,11 +220,11 @@ export const MyAppointments = () => {
       // Refresh appointments to reflect changes
       fetchMyAppointments();
 
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error cancelling appointment:', error);
       toast({
         title: "Error",
-        description: "Failed to cancel appointment. Please try again.",
+        description: error.message || "Failed to cancel appointment. Please try again.",
         variant: "destructive",
       });
     }
