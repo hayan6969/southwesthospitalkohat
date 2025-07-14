@@ -18,15 +18,13 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 export function StaffLab() {
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedPatientId, setSelectedPatientId] = useState("");
-  const [selectedReportId, setSelectedReportId] = useState("");
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
   const [resultFile, setResultFile] = useState<File | null>(null);
   
   // Upload dialog state management
-  const [uploadStep, setUploadStep] = useState<'search' | 'reports' | 'upload'>('search');
   const [patientSearchTerm, setPatientSearchTerm] = useState("");
   const [selectedPatientForUpload, setSelectedPatientForUpload] = useState<any>(null);
+  const [selectedReportId, setSelectedReportId] = useState("");
 
   const { data: labReports, isLoading } = useLabReports();
   const { data: patientNames } = usePatientNames();
@@ -44,7 +42,6 @@ export function StaffLab() {
   // Reset upload dialog state when closing
   const resetUploadDialog = () => {
     setUploadDialogOpen(false);
-    setUploadStep('search');
     setPatientSearchTerm("");
     setSelectedPatientForUpload(null);
     setSelectedReportId("");
@@ -54,21 +51,6 @@ export function StaffLab() {
   // Handle patient selection for upload
   const handlePatientSelect = (patient: any) => {
     setSelectedPatientForUpload(patient);
-    setUploadStep('reports');
-  };
-
-  // Handle back navigation in upload dialog
-  const handleBackToSearch = () => {
-    setUploadStep('search');
-    setSelectedPatientForUpload(null);
-    setSelectedReportId("");
-    setResultFile(null);
-  };
-
-  // Handle report selection for upload
-  const handleReportSelect = (reportId: string) => {
-    setSelectedReportId(reportId);
-    setUploadStep('upload');
   };
 
   const pendingReports = labReports?.filter(report => report.status === 'pending') || [];
@@ -93,10 +75,6 @@ export function StaffLab() {
       name: getPatientName(patientId, patientNames || [])
     }));
 
-  // Get pending reports for selected patient
-  const patientReports = selectedPatientId 
-    ? pendingReports.filter(r => r.patient_id === selectedPatientId)
-    : [];
 
   // Upload results mutation
   const uploadResultsMutation = useMutation({
