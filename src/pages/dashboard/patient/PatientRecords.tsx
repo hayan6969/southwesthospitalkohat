@@ -124,11 +124,15 @@ export default function PatientRecords() {
   const DocumentViewer = ({ document }: { document: any }) => {
     if (isImageFile(document.file_type)) {
       return (
-        <div className="max-w-full max-h-[70vh] overflow-auto">
+        <div className="max-w-full max-h-[70vh] overflow-auto flex justify-center">
           <img 
             src={document.file_url} 
             alt={document.document_label}
-            className="max-w-full h-auto"
+            className="max-w-full h-auto object-contain"
+            onError={(e) => {
+              console.error('Image failed to load:', document.file_url);
+              e.currentTarget.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgZmlsbD0iI2Y5ZmFmYiIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBkb21pbmFudC1iYXNlbGluZT0ibWlkZGxlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmb250LWZhbWlseT0iQXJpYWwiIGZpbGw9IiM2YjdyODAiPkltYWdlIG5vdCBhdmFpbGFibGU8L3RleHQ+PC9zdmc+';
+            }}
           />
         </div>
       );
@@ -136,14 +140,17 @@ export default function PatientRecords() {
       return (
         <div className="w-full h-[70vh]">
           <iframe
-            src={document.file_url}
-            className="w-full h-full border-0"
+            src={`${document.file_url}#toolbar=0`}
+            className="w-full h-full border-0 rounded"
             title={document.document_label}
+            onError={() => {
+              console.error('PDF failed to load:', document.file_url);
+            }}
           />
         </div>
       );
     }
-    return <p>Preview not available for this file type</p>;
+    return <p className="text-center text-muted-foreground py-8">Preview not available for this file type</p>;
   };
 
   return (
