@@ -12,6 +12,7 @@ import { Calendar, FileText, DollarSign, Activity, Clock, Users, TestTube, Uploa
 import { useAuth } from "@/hooks/useAuth";
 import { AppointmentBooking } from "@/components/AppointmentBooking";
 import { MyAppointments } from "@/components/MyAppointments";
+import { HospitalTimingCard } from "@/components/HospitalTimingCard";
 import PatientRecords from "./patient/PatientRecords";
 import PatientLabs from "./patient/PatientLabs";
 import PatientInvoices from "./patient/PatientInvoices";
@@ -141,7 +142,7 @@ export default function DashboardPatient() {
         />
       </div>
 
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-8 mb-8">
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-8 mb-8">
         <div className="bg-white rounded-lg border shadow-sm p-6">
           <h3 className="font-semibold mb-4">Upcoming Appointments</h3>
           {patientAppointments.length > 0 ? (
@@ -159,6 +160,7 @@ export default function DashboardPatient() {
             <p className="text-gray-500">No upcoming appointments</p>
           )}
         </div>
+        
         <div className="bg-white rounded-lg border shadow-sm p-6">
           <h3 className="font-semibold mb-4">Recent Invoices</h3>
           {patientInvoices.length > 0 ? (
@@ -175,6 +177,9 @@ export default function DashboardPatient() {
             <p className="text-gray-500">No invoices found</p>
           )}
         </div>
+
+        {/* Hospital Timing Card */}
+        <HospitalTimingCard />
       </div>
 
       <div className="mt-8">
