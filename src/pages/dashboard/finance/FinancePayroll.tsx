@@ -140,19 +140,36 @@ export default function FinancePayroll() {
         if (error) throw error;
         return data;
       } else {
-        // Create new template using upsert to handle duplicates
-        const { data, error } = await supabase
-          .from('payroll_templates')
-          .upsert([{
-            ...templateData,
-            created_by: userData.user?.id
-          }], {
-            onConflict: 'employee_id'
-          })
-          .select()
-          .single();
-        if (error) throw error;
-        return data;
+        // Determine if this is an existing employee or manual entry
+        const isExistingEmployee = selectedEmployeeId && staff?.find(emp => emp.id === selectedEmployeeId);
+        
+        if (isExistingEmployee) {
+          // Use upsert for existing employees to handle duplicates
+          const { data, error } = await supabase
+            .from('payroll_templates')
+            .upsert([{
+              ...templateData,
+              created_by: userData.user?.id
+            }], {
+              onConflict: 'employee_id'
+            })
+            .select()
+            .single();
+          if (error) throw error;
+          return data;
+        } else {
+          // Use insert for manual entries (new employees)
+          const { data, error } = await supabase
+            .from('payroll_templates')
+            .insert([{
+              ...templateData,
+              created_by: userData.user?.id
+            }])
+            .select()
+            .single();
+          if (error) throw error;
+          return data;
+        }
       }
     },
     onSuccess: () => {
