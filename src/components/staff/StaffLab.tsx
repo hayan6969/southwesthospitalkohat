@@ -203,8 +203,8 @@ export function StaffLab() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* Left Column - Patient Search & Selection */}
               <div className="space-y-4">
-                <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-4 rounded-lg border">
-                  <h3 className="font-semibold text-lg mb-3 flex items-center gap-2">
+                <div className="bg-blue-50 border border-blue-200 p-4 rounded-lg">
+                  <h3 className="font-semibold text-lg mb-3 flex items-center gap-2 text-blue-900">
                     <Search className="w-4 h-4" />
                     Search Patient
                   </h3>
@@ -276,9 +276,9 @@ export function StaffLab() {
                 {selectedPatientForUpload ? (
                   <>
                     {/* Selected Patient Info */}
-                    <div className="bg-gradient-to-r from-green-50 to-emerald-50 p-4 rounded-lg border">
-                      <h3 className="font-semibold text-lg mb-3 flex items-center gap-2">
-                        <CheckCircle className="w-4 h-4 text-green-600" />
+                    <div className="bg-white border border-blue-200 p-4 rounded-lg">
+                      <h3 className="font-semibold text-lg mb-3 flex items-center gap-2 text-blue-900">
+                        <CheckCircle className="w-4 h-4 text-blue-600" />
                         Selected Patient
                       </h3>
                       <div className="space-y-1 text-sm">
@@ -297,8 +297,8 @@ export function StaffLab() {
                           {selectedPatientPendingReports.map((report) => (
                             <div
                               key={report.id}
-                              className={`p-3 border-b last:border-b-0 hover:bg-orange-50 cursor-pointer transition-colors ${
-                                selectedReportId === report.id ? 'bg-orange-100 border-orange-200' : ''
+                              className={`p-3 border-b last:border-b-0 hover:bg-blue-50 cursor-pointer transition-colors ${
+                                selectedReportId === report.id ? 'bg-blue-100 border-blue-300' : ''
                               }`}
                               onClick={() => setSelectedReportId(report.id)}
                             >
@@ -311,7 +311,7 @@ export function StaffLab() {
                                   </div>
                                 </div>
                                 {selectedReportId === report.id && (
-                                  <div className="w-5 h-5 bg-orange-600 rounded-full flex items-center justify-center">
+                                  <div className="w-5 h-5 bg-blue-600 rounded-full flex items-center justify-center">
                                     <span className="text-white text-xs">✓</span>
                                   </div>
                                 )}
@@ -329,9 +329,9 @@ export function StaffLab() {
 
                     {/* Upload Section */}
                     {selectedReportId && (
-                      <div className="bg-gradient-to-r from-purple-50 to-violet-50 p-4 rounded-lg border">
-                        <h3 className="font-semibold text-lg mb-3 flex items-center gap-2">
-                          <Upload className="w-4 h-4 text-purple-600" />
+                      <div className="bg-blue-50 border border-blue-200 p-4 rounded-lg">
+                        <h3 className="font-semibold text-lg mb-3 flex items-center gap-2 text-blue-900">
+                          <Upload className="w-4 h-4 text-blue-600" />
                           Upload Result File
                         </h3>
                         <div className="space-y-3">
@@ -371,7 +371,7 @@ export function StaffLab() {
               <Button
                 onClick={() => uploadResultsMutation.mutate()}
                 disabled={!selectedReportId || !resultFile || uploadResultsMutation.isPending}
-                className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+                className="bg-blue-600 hover:bg-blue-700 text-white"
               >
                 {uploadResultsMutation.isPending ? (
                   <>
