@@ -1,12 +1,15 @@
 import { useState, useEffect } from "react";
 import { StatsCard } from "@/components/StatsCard";
-import { AppointmentChart } from "@/components/AppointmentChart";
+import { RealAppointmentChart } from "@/components/RealAppointmentChart";
+import { PopularDoctorsWidget } from "@/components/PopularDoctorsWidget";
 import { MiniChart } from "@/components/MiniChart";
 import { DemoTable } from "@/components/DemoTable";
 import { AuditLog } from "@/components/AuditLog";
 import { PharmacyOverview } from "@/components/PharmacyOverview";
 import { AppointmentDialog } from "@/components/dialogs/AppointmentDialog";
-import { useStats, useUsers, useDepartments, useAuditLogs } from "@/hooks/useDatabase";
+import { useUsers, useDepartments, useAuditLogs } from "@/hooks/useDatabase";
+import { useRealStatsData } from "@/hooks/useRealStatsData";
+import { useRecentActivity } from "@/hooks/useRecentActivity";
 import { useAuth } from "@/hooks/useAuth";
 import { Users, UserCheck, Calendar, DollarSign, Shield, Activity, Filter, User, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -26,19 +29,13 @@ import AdminLabs from "./admin/AdminLabs";
 import { AdminOT } from "./admin/AdminOT";
 
 
-const chartData = {
-  doctors: [{ value: 180 }, { value: 200 }, { value: 247 }, { value: 230 }, { value: 247 }],
-  patients: [{ value: 3800 }, { value: 4000 }, { value: 4178 }, { value: 4100 }, { value: 4178 }],
-  appointments: [{ value: 11000 }, { value: 11500 }, { value: 12178 }, { value: 12000 }, { value: 12178 }],
-  revenue: [{ value: 48000 }, { value: 52000 }, { value: 55240 }, { value: 54000 }, { value: 55240 }],
-};
-
 export default function DashboardAdmin() {
   const { profile, signOut } = useAuth();
-  const { data: stats, isLoading } = useStats();
+  const { data: realStats, isLoading } = useRealStatsData();
   const { data: users, refetch: refetchUsers } = useUsers();
   const { data: departments } = useDepartments();
   const { data: auditLogs } = useAuditLogs();
+  const { data: recentActivity } = useRecentActivity();
   const { settings: hospitalSettings, updateSettings } = useHospitalSettings();
   const { toast } = useToast();
   const [editingUser, setEditingUser] = useState<any>(null);
@@ -232,96 +229,68 @@ export default function DashboardAdmin() {
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
                 <StatsCard
                   title="Doctors"
-                  value={stats?.totalDoctors?.toString() || "0"}
-                  change="+5%"
-                  changeType="positive"
+                  value={realStats?.totalDoctors?.toString() || "0"}
+                  change={realStats?.doctorsChange}
+                  changeType={realStats?.doctorsChangeType}
                   icon={<UserCheck className="w-5 h-5 text-blue-600" />}
-                  chart={<MiniChart data={chartData.doctors} type="bar" color="#3b82f6" />}
+                  chart={<MiniChart data={realStats?.chartData?.doctors || []} type="bar" color="#3b82f6" />}
                   loading={isLoading}
                 />
                 <StatsCard
                   title="Patients"
-                  value={stats?.totalPatients?.toString() || "0"}
-                  change="+25%"
-                  changeType="positive"
+                  value={realStats?.totalPatients?.toString() || "0"}
+                  change={realStats?.patientsChange}
+                  changeType={realStats?.patientsChangeType}
                   icon={<Users className="w-5 h-5 text-orange-600" />}
-                  chart={<MiniChart data={chartData.patients} type="area" color="#f97316" />}
+                  chart={<MiniChart data={realStats?.chartData?.patients || []} type="area" color="#f97316" />}
                   loading={isLoading}
                 />
                 <StatsCard
                   title="Appointments"
-                  value={stats?.totalAppointments?.toString() || "0"}
-                  change="-5%"
-                  changeType="negative"
+                  value={realStats?.totalAppointments?.toString() || "0"}
+                  change={realStats?.appointmentsChange}
+                  changeType={realStats?.appointmentsChangeType}
                   icon={<Calendar className="w-5 h-5 text-red-600" />}
-                  chart={<MiniChart data={chartData.appointments} type="bar" color="#ef4444" />}
+                  chart={<MiniChart data={realStats?.chartData?.appointments || []} type="bar" color="#ef4444" />}
                   loading={isLoading}
                 />
                 <StatsCard
                   title="Revenue"
-                  value={formatPkrAmount(stats?.totalRevenue || 0)}
-                  change="+23%"
-                  changeType="positive"
+                  value={formatPkrAmount(realStats?.totalRevenue || 0)}
+                  change={realStats?.revenueChange}
+                  changeType={realStats?.revenueChangeType}
                   icon={<DollarSign className="w-5 h-5 text-green-600" />}
-                  chart={<MiniChart data={chartData.revenue} type="line" color="#10b981" />}
+                  chart={<MiniChart data={realStats?.chartData?.revenue || []} type="line" color="#10b981" />}
                   loading={isLoading}
                 />
               </div>
 
               <div className="grid grid-cols-1 xl:grid-cols-3 gap-8 mb-8">
                 <div className="xl:col-span-2">
-                  <AppointmentChart />
+                  <RealAppointmentChart />
                 </div>
                 <div>
-                  <div className="bg-white rounded-lg border shadow-sm p-6">
-                    <h3 className="font-semibold mb-4">Popular Doctors</h3>
-                    <div className="space-y-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
-                          <UserCheck className="w-5 h-5 text-blue-600" />
-                        </div>
-                        <div className="flex-1">
-                          <p className="font-medium">Dr. Alex Morgan</p>
-                          <p className="text-sm text-muted-foreground">Cardiologist</p>
-                        </div>
-                        <span className="text-sm font-medium">98%</span>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center">
-                          <UserCheck className="w-5 h-5 text-green-600" />
-                        </div>
-                        <div className="flex-1">
-                          <p className="font-medium">Dr. Emily Carter</p>
-                          <p className="text-sm text-muted-foreground">Pediatrician</p>
-                        </div>
-                        <span className="text-sm font-medium">95%</span>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center">
-                          <UserCheck className="w-5 h-5 text-purple-600" />
-                        </div>
-                        <div className="flex-1">
-                          <p className="font-medium">Dr. David Lee</p>
-                          <p className="text-sm text-muted-foreground">Neurologist</p>
-                        </div>
-                        <span className="text-sm font-medium">92%</span>
-                      </div>
-                    </div>
-                  </div>
+                  <PopularDoctorsWidget />
                 </div>
               </div>
 
               <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
                 <div>
                   <h3 className="font-semibold mb-4">Recent Staff Activity</h3>
-                  <DemoTable
-                    columns={["Staff Member", "Department", "Last Activity"]}
-                    data={[
-                      ["Amy Taylor", "Reception", "2 hours ago"],
-                      ["Tom Chan", "Laboratory", "4 hours ago"],
-                      ["Alice Smith", "General Medicine", "1 hour ago"],
-                    ]}
-                  />
+                  {recentActivity && recentActivity.length > 0 ? (
+                    <DemoTable
+                      columns={["Staff Member", "Department", "Last Activity"]}
+                      data={recentActivity.slice(0, 5).map(activity => [
+                        activity.staffMember,
+                        activity.department,
+                        activity.lastActivity
+                      ])}
+                    />
+                  ) : (
+                    <div className="bg-white rounded-lg border shadow-sm p-6">
+                      <p className="text-gray-500 text-center">No recent activity available</p>
+                    </div>
+                  )}
                 </div>
                 <div>
                   <AuditLog events={filteredLogs.slice(0, 5).map(log => ({
@@ -339,38 +308,40 @@ export default function DashboardAdmin() {
                 <StatsCard
                   title="Total Users"
                   value={users?.length?.toString() || "0"}
-                  change="+12%"
-                  changeType="positive"
+                  change={realStats?.patientsChange}
+                  changeType={realStats?.patientsChangeType}
                   icon={<Users className="w-5 h-5 text-blue-600" />}
-                  chart={<MiniChart data={chartData.doctors} type="bar" color="#3b82f6" />}
+                  chart={<MiniChart data={realStats?.chartData?.patients || []} type="bar" color="#3b82f6" />}
                 />
                 <StatsCard
                   title="Active Sessions"
-                  value="45"
-                  change="+8%"
-                  changeType="positive"
+                  value={auditLogs?.filter(log => 
+                    new Date(log.created_at || '').getTime() > Date.now() - 24 * 60 * 60 * 1000
+                  ).length?.toString() || "0"}
+                  change={realStats?.appointmentsChange}
+                  changeType={realStats?.appointmentsChangeType}
                   icon={<Activity className="w-5 h-5 text-green-600" />}
-                  chart={<MiniChart data={chartData.patients} type="area" color="#10b981" />}
+                  chart={<MiniChart data={realStats?.chartData?.appointments || []} type="area" color="#10b981" />}
                 />
                 <StatsCard
-                  title="System Uptime"
+                  title="System Health"
                   value="99.9%"
                   change="0%"
                   changeType="positive"
                   icon={<Shield className="w-5 h-5 text-purple-600" />}
-                  chart={<MiniChart data={chartData.appointments} type="line" color="#8b5cf6" />}
+                  chart={<MiniChart data={[{value: 99.9}, {value: 99.8}, {value: 99.9}, {value: 100}, {value: 99.9}]} type="line" color="#8b5cf6" />}
                 />
                 <StatsCard
-                  title="Daily Transactions"
-                  value="1,234"
-                  change="+18%"
-                  changeType="positive"
+                  title="Revenue Growth"
+                  value={formatPkrAmount(realStats?.totalRevenue || 0)}
+                  change={realStats?.revenueChange}
+                  changeType={realStats?.revenueChangeType}
                   icon={<DollarSign className="w-5 h-5 text-orange-600" />}
-                  chart={<MiniChart data={chartData.revenue} type="bar" color="#f97316" />}
+                  chart={<MiniChart data={realStats?.chartData?.revenue || []} type="bar" color="#f97316" />}
                 />
               </div>
               <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
-                <AppointmentChart />
+                <RealAppointmentChart />
                 <div className="bg-white rounded-lg border shadow-sm p-6">
                   <h3 className="font-semibold mb-4">User Role Distribution</h3>
                   <div className="space-y-3">

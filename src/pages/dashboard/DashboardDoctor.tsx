@@ -2,7 +2,8 @@
 import { useState, useEffect } from "react";
 import { StatsCard } from "@/components/StatsCard";
 import { MiniChart } from "@/components/MiniChart";
-import { useAppointments, useStats, useMedicalRecords } from "@/hooks/useDatabase";
+import { useAppointments, useMedicalRecords } from "@/hooks/useDatabase";
+import { useRealStatsData } from "@/hooks/useRealStatsData";
 import { usePatientNames, useDoctorNames, getPatientName, getDoctorName } from "@/hooks/useDisplayHelpers";
 import { useDoctorTodayAppointments } from "@/hooks/useDoctorData";
 import { useAuth } from "@/hooks/useAuth";
@@ -26,16 +27,11 @@ import { DoctorAvailabilityManager } from "@/components/DoctorAvailabilityManage
 import { StopAppointmentsButton } from "@/components/StopAppointmentsButton";
 import { useHospitalSettings } from "@/hooks/useHospitalSettings";
 
-const chartData = {
-  appointments: [{ value: 8 }, { value: 12 }, { value: 15 }, { value: 10 }, { value: 18 }],
-  patients: [{ value: 45 }, { value: 52 }, { value: 58 }, { value: 55 }, { value: 62 }],
-};
-
 export default function DashboardDoctor() {
   const { profile, signOut } = useAuth();
   const { settings: hospitalSettings } = useHospitalSettings();
   const { data: appointments, isLoading: appointmentsLoading } = useAppointments();
-  const { data: stats, isLoading: statsLoading } = useStats();
+  const { data: realStats, isLoading: statsLoading } = useRealStatsData();
   const { data: medicalRecords, isLoading: recordsLoading } = useMedicalRecords();
   const { data: patientNames } = usePatientNames();
   const { data: doctorNames } = useDoctorNames();
@@ -172,16 +168,16 @@ export default function DashboardDoctor() {
                   title="Today's Appointments"
                   value={todayAppointments.length}
                   icon={<Calendar className="w-5 h-5 text-blue-600" />}
-                  chart={<MiniChart data={chartData.appointments} type="bar" color="#3b82f6" />}
+                  chart={<MiniChart data={realStats?.chartData?.appointments || []} type="bar" color="#3b82f6" />}
                   loading={appointmentsLoading}
                 />
                 <StatsCard
                   title="Total Patients"
-                  value={stats?.totalPatients || 0}
-                  change="+12%"
-                  changeType="positive"
+                  value={realStats?.totalPatients || 0}
+                  change={realStats?.patientsChange}
+                  changeType={realStats?.patientsChangeType}
                   icon={<Users className="w-5 h-5 text-green-600" />}
-                  chart={<MiniChart data={chartData.patients} type="line" color="#10b981" />}
+                  chart={<MiniChart data={realStats?.chartData?.patients || []} type="line" color="#10b981" />}
                   loading={statsLoading}
                 />
                 <StatsCard

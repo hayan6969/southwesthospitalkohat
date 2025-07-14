@@ -1,9 +1,8 @@
-
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Legend, Tooltip } from 'recharts';
 import { useAppointmentStats } from '@/hooks/useAppointmentStats';
 import { Loader2 } from 'lucide-react';
 
-export function AppointmentChart() {
+export function RealAppointmentChart() {
   const { data: appointmentStats, isLoading } = useAppointmentStats();
 
   if (isLoading) {
