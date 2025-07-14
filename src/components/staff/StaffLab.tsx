@@ -200,7 +200,13 @@ export function StaffLab() {
         
         <Dialog open={uploadDialogOpen} onOpenChange={resetUploadDialog}>
           <DialogTrigger asChild>
-            <Button variant="outline">
+            <Button 
+              variant="outline"
+              onClick={() => {
+                console.log("Upload Results button clicked!");
+                setUploadDialogOpen(true);
+              }}
+            >
               <Upload className="w-4 h-4 mr-2" />
               Upload Results
             </Button>
