@@ -179,8 +179,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
       if (data.user) {
         const profileData = await fetchUserProfile(data.user.id);
-        // Audit logging can be added later via a separate hook
         console.log('User signed in:', data.user.email);
+        
+        // Redirect based on user role
+        if (profileData?.role) {
+          console.log('Redirecting to dashboard for role:', profileData.role);
+          setTimeout(() => {
+            window.location.href = `/dashboard/${profileData.role}`;
+          }, 100); // Small delay to ensure state is updated
+        }
       }
 
       return { error: null };
