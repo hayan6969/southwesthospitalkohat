@@ -176,11 +176,11 @@ export const MyAppointments = () => {
 
       if (appointmentError) throw appointmentError;
 
-      // Update the queue position status
+      // Update the queue position status to 'skipped' (cancelled appointments are skipped in queue)
       const { error: queueError } = await supabase
         .from('queue_positions')
         .update({ 
-          status: 'cancelled',
+          status: 'skipped',
           updated_at: new Date().toISOString()
         })
         .eq('appointment_id', appointmentId);
