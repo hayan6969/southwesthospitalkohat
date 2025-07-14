@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Building2, Edit, Trash2, DollarSign, Activity, Home, Plus } from "lucide-react";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { formatPkrAmount } from "@/utils/currency";
@@ -36,6 +37,7 @@ export function AdminOT() {
   const [isLoading, setIsLoading] = useState(true);
   const [roomDialogOpen, setRoomDialogOpen] = useState(false);
   const [newRoomName, setNewRoomName] = useState("");
+  const [editingOperation, setEditingOperation] = useState<OTOperation | null>(null);
   const { toast } = useToast();
 
   const fetchOperations = async () => {
@@ -154,12 +156,27 @@ export function AdminOT() {
     }
   };
 
-  const deleteOperation = async (operationId: string, operationName: string) => {
-    if (!confirm(`Are you sure you want to delete "${operationName}"? This will also delete all associated expenses.`)) {
-      return;
-    }
-
+  const deleteOperation = async (operationId: string) => {
     try {
+      // First check if this operation is referenced in any schedules
+      const { data: schedules, error: scheduleError } = await supabase
+        .from("ot_schedules")
+        .select("id")
+        .eq("operation_id", operationId)
+        .limit(1);
+
+      if (scheduleError) throw scheduleError;
+
+      if (schedules && schedules.length > 0) {
+        toast({
+          title: "Cannot Delete Operation",
+          description: "This operation is currently assigned to OT schedules and cannot be deleted.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // If no schedules reference this operation, proceed with deletion
       const { error } = await supabase
         .from("ot_operations")
         .delete()
@@ -169,7 +186,7 @@ export function AdminOT() {
 
       toast({
         title: "Success",
-        description: `Operation "${operationName}" deleted successfully`,
+        description: "Operation deleted successfully",
       });
 
       fetchOperations();
@@ -263,7 +280,14 @@ export function AdminOT() {
               </div>
             </DialogContent>
           </Dialog>
-          <OTOperationDialog onOperationAdded={fetchOperations} />
+          <OTOperationDialog 
+            onOperationAdded={fetchOperations} 
+            editingOperation={editingOperation}
+            onEditComplete={() => {
+              setEditingOperation(null);
+              fetchOperations();
+            }}
+          />
         </div>
       </div>
 
@@ -327,7 +351,14 @@ export function AdminOT() {
                 <Building2 className="w-12 h-12 text-gray-400 mx-auto mb-4" />
                 <h3 className="text-lg font-medium text-gray-900 mb-2">No OT operations configured</h3>
                 <p className="text-gray-500 mb-4">Get started by adding your first OT operation and its associated expenses.</p>
-                <OTOperationDialog onOperationAdded={fetchOperations} />
+                <OTOperationDialog 
+                  onOperationAdded={fetchOperations} 
+                  editingOperation={editingOperation}
+                  onEditComplete={() => {
+                    setEditingOperation(null);
+                    fetchOperations();
+                  }}
+                />
               </div>
             ) : (
               <div className="overflow-x-auto">
@@ -371,19 +402,44 @@ export function AdminOT() {
                           </TableCell>
                           <TableCell>
                             <div className="flex gap-2">
-                              <Button size="sm" variant="outline">
-                                <Edit className="w-3 h-3 mr-1" />
-                                Edit
-                              </Button>
                               <Button 
                                 size="sm" 
                                 variant="outline"
-                                onClick={() => deleteOperation(operation.id, operation.operation_name)}
-                                className="text-red-600 hover:text-red-700"
+                                onClick={() => setEditingOperation(operation)}
                               >
-                                <Trash2 className="w-3 h-3 mr-1" />
-                                Delete
+                                <Edit className="w-3 h-3 mr-1" />
+                                Edit
                               </Button>
+                              <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                  <Button 
+                                    size="sm" 
+                                    variant="outline"
+                                    className="text-red-600 hover:text-red-700"
+                                  >
+                                    <Trash2 className="w-3 h-3 mr-1" />
+                                    Delete
+                                  </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>Delete Operation</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                      Are you sure you want to delete "{operation.operation_name}"? 
+                                      This will also delete all associated expenses. This action cannot be undone.
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                    <AlertDialogAction
+                                      onClick={() => deleteOperation(operation.id)}
+                                      className="bg-red-600 hover:bg-red-700"
+                                    >
+                                      Delete
+                                    </AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
                             </div>
                           </TableCell>
                         </TableRow>

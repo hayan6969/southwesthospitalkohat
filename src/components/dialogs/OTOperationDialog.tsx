@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -15,14 +15,35 @@ interface Expense {
 
 interface OTOperationDialogProps {
   onOperationAdded?: () => void;
+  editingOperation?: {
+    id: string;
+    operation_name: string;
+    expenses: { id: string; expense_name: string; cost: number; }[];
+  } | null;
+  onEditComplete?: () => void;
 }
 
-export function OTOperationDialog({ onOperationAdded }: OTOperationDialogProps) {
+export function OTOperationDialog({ onOperationAdded, editingOperation, onEditComplete }: OTOperationDialogProps) {
   const [open, setOpen] = useState(false);
   const [operationName, setOperationName] = useState("");
   const [expenses, setExpenses] = useState<Expense[]>([{ expense_name: "", cost: "" }]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
+
+  // Handle editing mode
+  useEffect(() => {
+    if (editingOperation) {
+      setOperationName(editingOperation.operation_name);
+      setExpenses(editingOperation.expenses.length > 0 
+        ? editingOperation.expenses.map(exp => ({
+            expense_name: exp.expense_name,
+            cost: exp.cost.toString()
+          }))
+        : [{ expense_name: "", cost: "" }]
+      );
+      setOpen(true);
+    }
+  }, [editingOperation]);
 
   const addExpense = () => {
     setExpenses([...expenses, { expense_name: "", cost: "" }]);
@@ -69,44 +90,85 @@ export function OTOperationDialog({ onOperationAdded }: OTOperationDialogProps) 
     setIsSubmitting(true);
 
     try {
-      // Create the operation
-      const { data: operation, error: operationError } = await supabase
-        .from("ot_operations")
-        .insert([{ operation_name: operationName.trim() }])
-        .select()
-        .single();
+      if (editingOperation) {
+        // Update existing operation
+        const { error: operationError } = await supabase
+          .from("ot_operations")
+          .update({ operation_name: operationName.trim() })
+          .eq("id", editingOperation.id);
 
-      if (operationError) throw operationError;
+        if (operationError) throw operationError;
 
-      // Create the expenses
-      const expenseRecords = validExpenses.map(exp => ({
-        operation_id: operation.id,
-        expense_name: exp.expense_name.trim(),
-        cost: Number(exp.cost),
-      }));
+        // Delete existing expenses
+        const { error: deleteError } = await supabase
+          .from("ot_expenses")
+          .delete()
+          .eq("operation_id", editingOperation.id);
 
-      const { error: expenseError } = await supabase
-        .from("ot_expenses")
-        .insert(expenseRecords);
+        if (deleteError) throw deleteError;
 
-      if (expenseError) throw expenseError;
+        // Insert new expenses
+        if (validExpenses.length > 0) {
+          const expenseRecords = validExpenses.map(exp => ({
+            operation_id: editingOperation.id,
+            expense_name: exp.expense_name.trim(),
+            cost: Number(exp.cost),
+          }));
 
-      toast({
-        title: "Success",
-        description: `OT operation "${operationName}" added successfully`,
-      });
+          const { error: expenseError } = await supabase
+            .from("ot_expenses")
+            .insert(expenseRecords);
+
+          if (expenseError) throw expenseError;
+        }
+
+        toast({
+          title: "Success",
+          description: `OT operation "${operationName}" updated successfully`,
+        });
+
+        onEditComplete?.();
+      } else {
+        // Create new operation
+        const { data: operation, error: operationError } = await supabase
+          .from("ot_operations")
+          .insert([{ operation_name: operationName.trim() }])
+          .select()
+          .single();
+
+        if (operationError) throw operationError;
+
+        // Create the expenses
+        const expenseRecords = validExpenses.map(exp => ({
+          operation_id: operation.id,
+          expense_name: exp.expense_name.trim(),
+          cost: Number(exp.cost),
+        }));
+
+        const { error: expenseError } = await supabase
+          .from("ot_expenses")
+          .insert(expenseRecords);
+
+        if (expenseError) throw expenseError;
+
+        toast({
+          title: "Success",
+          description: `OT operation "${operationName}" added successfully`,
+        });
+
+        onOperationAdded?.();
+      }
 
       // Reset form
       setOperationName("");
       setExpenses([{ expense_name: "", cost: "" }]);
       setOpen(false);
-      onOperationAdded?.();
 
     } catch (error) {
-      console.error("Error creating OT operation:", error);
+      console.error("Error with OT operation:", error);
       toast({
         title: "Error",
-        description: "Failed to create OT operation",
+        description: `Failed to ${editingOperation ? 'update' : 'create'} OT operation`,
         variant: "destructive",
       });
     } finally {
@@ -120,15 +182,17 @@ export function OTOperationDialog({ onOperationAdded }: OTOperationDialogProps) 
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button>
-          <Plus className="w-4 h-4 mr-2" />
-          Add OT Operation
-        </Button>
-      </DialogTrigger>
+      {!editingOperation && (
+        <DialogTrigger asChild>
+          <Button>
+            <Plus className="w-4 h-4 mr-2" />
+            Add OT Operation
+          </Button>
+        </DialogTrigger>
+      )}
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Add New OT Operation</DialogTitle>
+          <DialogTitle>{editingOperation ? 'Edit OT Operation' : 'Add New OT Operation'}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="space-y-2">
@@ -206,7 +270,10 @@ export function OTOperationDialog({ onOperationAdded }: OTOperationDialogProps) 
               Cancel
             </Button>
             <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? "Creating..." : "Create Operation"}
+              {isSubmitting 
+                ? (editingOperation ? "Updating..." : "Creating...") 
+                : (editingOperation ? "Update Operation" : "Create Operation")
+              }
             </Button>
           </div>
         </form>
