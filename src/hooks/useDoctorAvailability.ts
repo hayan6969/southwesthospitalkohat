@@ -16,7 +16,7 @@ export function useDoctorAvailability(doctorId: string | undefined, date: string
         .select('is_available')
         .eq('doctor_id', doctorId)
         .eq('availability_date', date)
-        .single();
+        .maybeSingle();
 
       console.log('Availability query result:', { availability, availabilityError });
 
@@ -26,7 +26,7 @@ export function useDoctorAvailability(doctorId: string | undefined, date: string
         .select('accepting_appointments')
         .eq('doctor_id', doctorId)
         .eq('status_date', date)
-        .single();
+        .maybeSingle();
 
       console.log('Daily status query result:', { dailyStatus, dailyError });
 
@@ -58,7 +58,7 @@ export function useCheckDoctorAvailability() {
       .select('is_available')
       .eq('doctor_id', doctorId)
       .eq('availability_date', date)
-      .single();
+      .maybeSingle();
 
     console.log('Manual availability query result:', { availability, availabilityError });
 
@@ -68,7 +68,7 @@ export function useCheckDoctorAvailability() {
       .select('accepting_appointments')
       .eq('doctor_id', doctorId)
       .eq('status_date', date)
-      .single();
+      .maybeSingle();
 
     console.log('Manual daily status query result:', { dailyStatus, dailyError });
 

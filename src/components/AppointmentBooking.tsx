@@ -215,6 +215,7 @@ export const AppointmentBooking = () => {
           .from('patients')
           .insert({
             id: profile?.id,
+            cnic: '', // Set empty CNIC to avoid uniqueness conflicts for online patient accounts
           });
         
         if (patientError) {
