@@ -1,5 +1,8 @@
 
 import { useState } from "react";
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { format } from 'date-fns';
 import PatientLayout from "@/layouts/PatientLayout";
 import { StatsCard } from "@/components/StatsCard";
 import { DemoTable } from "@/components/DemoTable";
@@ -18,6 +21,99 @@ export default function DashboardPatient() {
   const { profile } = useAuth();
   const [activeTab, setActiveTab] = useState("overview");
 
+  // Fetch patient-specific data
+  const { data: patientAppointments = [] } = useQuery({
+    queryKey: ['patient-appointments', profile?.id],
+    queryFn: async () => {
+      if (!profile?.id) return [];
+      const { data, error } = await supabase
+        .from('appointments')
+        .select(`
+          *,
+          doctor:doctors(*, profiles(first_name, last_name))
+        `)
+        .eq('patient_id', profile.id)
+        .eq('status', 'scheduled')
+        .gte('appointment_date', new Date().toISOString())
+        .order('appointment_date', { ascending: true });
+      
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!profile?.id
+  });
+
+  const { data: patientMedicalRecords = [] } = useQuery({
+    queryKey: ['patient-medical-records', profile?.id],
+    queryFn: async () => {
+      if (!profile?.id) return [];
+      const { data, error } = await supabase
+        .from('medical_records')
+        .select('*')
+        .eq('patient_id', profile.id);
+      
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!profile?.id
+  });
+
+  const { data: patientInvoices = [] } = useQuery({
+    queryKey: ['patient-invoices', profile?.id],
+    queryFn: async () => {
+      if (!profile?.id) return [];
+      const { data, error } = await supabase
+        .from('invoices')
+        .select('*')
+        .eq('patient_id', profile.id)
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!profile?.id
+  });
+
+  const { data: patientLabReports = [] } = useQuery({
+    queryKey: ['patient-lab-reports', profile?.id],
+    queryFn: async () => {
+      if (!profile?.id) return [];
+      const { data, error } = await supabase
+        .from('lab_reports')
+        .select('*')
+        .eq('patient_id', profile.id);
+      
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!profile?.id
+  });
+
+  const { data: recentActivity = [] } = useQuery({
+    queryKey: ['patient-recent-activity', profile?.id],
+    queryFn: async () => {
+      if (!profile?.id) return [];
+      const { data, error } = await supabase
+        .from('audit_logs')
+        .select('*')
+        .eq('user_id', profile.id)
+        .order('created_at', { ascending: false })
+        .limit(5);
+      
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!profile?.id
+  });
+
+  // Calculate stats
+  const upcomingAppointments = patientAppointments.length;
+  const totalMedicalRecords = patientMedicalRecords.length;
+  const outstandingBills = patientInvoices
+    .filter(invoice => invoice.status === 'pending')
+    .reduce((total, invoice) => total + (invoice.amount || 0), 0);
+  const totalLabReports = patientLabReports.length;
+
   const renderOverviewTab = () => (
     <div>
       <h2 className="text-2xl font-bold mb-8">Welcome back, {profile?.first_name}!</h2>
@@ -25,22 +121,22 @@ export default function DashboardPatient() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         <StatsCard
           title="Upcoming Appointments"
-          value="2"
+          value={upcomingAppointments.toString()}
           icon={<Calendar className="w-5 h-5 text-blue-600" />}
         />
         <StatsCard
           title="Medical Records"
-          value="8"
+          value={totalMedicalRecords.toString()}
           icon={<FileText className="w-5 h-5 text-green-600" />}
         />
         <StatsCard
           title="Outstanding Bills"
-          value="$90"
+          value={`$${outstandingBills.toFixed(2)}`}
           icon={<DollarSign className="w-5 h-5 text-red-600" />}
         />
         <StatsCard
           title="Lab Reports"
-          value="3"
+          value={totalLabReports.toString()}
           icon={<Activity className="w-5 h-5 text-purple-600" />}
         />
       </div>
@@ -48,34 +144,48 @@ export default function DashboardPatient() {
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-8 mb-8">
         <div className="bg-white rounded-lg border shadow-sm p-6">
           <h3 className="font-semibold mb-4">Upcoming Appointments</h3>
-          <DemoTable
-            columns={["Date", "Doctor", "Type"]}
-            data={[
-              ["June 15, 2024", "Dr. Alice Smith", "Annual Checkup"],
-              ["June 18, 2024", "Dr. Bob Lee", "Follow-up"],
-            ]}
-          />
+          {patientAppointments.length > 0 ? (
+            <DemoTable
+              columns={["Date", "Doctor", "Type"]}
+              data={patientAppointments.slice(0, 5).map(appointment => [
+                format(new Date(appointment.appointment_date), 'MMM d, yyyy'),
+                appointment.doctor?.profiles ? 
+                  `Dr. ${appointment.doctor.profiles.first_name} ${appointment.doctor.profiles.last_name}` : 
+                  'Unknown Doctor',
+                appointment.type || 'Consultation'
+              ])}
+            />
+          ) : (
+            <p className="text-gray-500">No upcoming appointments</p>
+          )}
         </div>
         <div className="bg-white rounded-lg border shadow-sm p-6">
           <h3 className="font-semibold mb-4">Recent Invoices</h3>
-          <DemoTable
-            columns={["Invoice #", "Date", "Amount", "Status"]}
-            data={[
-              ["INV-055", "May 31, 2024", "$45", "Paid"],
-              ["INV-057", "June 10, 2024", "$90", "Pending"],
-            ]}
-          />
+          {patientInvoices.length > 0 ? (
+            <DemoTable
+              columns={["Invoice #", "Date", "Amount", "Status"]}
+              data={patientInvoices.slice(0, 5).map(invoice => [
+                invoice.invoice_number,
+                format(new Date(invoice.created_at), 'MMM d, yyyy'),
+                `$${invoice.amount.toFixed(2)}`,
+                invoice.status === 'paid' ? 'Paid' : 'Pending'
+              ])}
+            />
+          ) : (
+            <p className="text-gray-500">No invoices found</p>
+          )}
         </div>
       </div>
 
       <div className="mt-8">
         <AuditLog 
           title="Recent Activity"
-          events={[
-            { who: "Dr. Smith", when: "2024-06-12 15:30", what: "Appointment completed", details: "Annual physical examination" },
-            { who: "Lab Team", when: "2024-06-10 09:22", what: "Lab report ready", details: "Complete blood count (CBC)" },
-            { who: "Reception", when: "2024-06-08 14:15", what: "Appointment scheduled", details: "Follow-up with Dr. Lee" },
-          ]} 
+          events={recentActivity.map(activity => ({
+            who: activity.action.includes('appointment') ? 'System' : 'System',
+            when: format(new Date(activity.created_at), 'yyyy-MM-dd HH:mm'),
+            what: activity.action,
+            details: activity.details || 'No additional details'
+          }))}
         />
       </div>
     </div>
