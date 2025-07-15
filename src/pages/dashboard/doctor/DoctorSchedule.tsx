@@ -15,7 +15,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import { toast } from "sonner";
-import { PatientDetailsView } from "@/components/PatientDetailsView";
+import { PatientDetailDialog } from "@/components/dialogs/PatientDetailDialog";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { getCurrentPakistanTime } from "@/utils/timezone";
@@ -25,7 +25,8 @@ export default function DoctorSchedule() { // Fixed ordering syntax
   const updateAppointment = useUpdateAppointment();
   const markAppointmentFree = useMarkAppointmentFree();
   const { data: patientNames } = usePatientNames();
-  const [selectedPatient, setSelectedPatient] = useState<{ id: string; name: string } | null>(null);
+  const [selectedPatient, setSelectedPatient] = useState<any>(null);
+  const [isPatientDialogOpen, setIsPatientDialogOpen] = useState(false);
   const [appointmentsWithQueue, setAppointmentsWithQueue] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   
@@ -347,8 +348,39 @@ export default function DoctorSchedule() { // Fixed ordering syntax
     }
   };
 
-  const handlePatientClick = (patientId: string, patientName: string) => {
-    setSelectedPatient({ id: patientId, name: patientName });
+  const handlePatientClick = async (patientId: string, patientName: string) => {
+    try {
+      // Fetch complete patient data for the dialog
+      const { data: patientData, error: patientError } = await supabase
+        .from('patients')
+        .select('*')
+        .eq('id', patientId)
+        .single();
+      
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', patientId)
+        .single();
+
+      if (patientError || profileError) {
+        console.error('Error fetching patient data:', patientError || profileError);
+        toast.error('Failed to load patient details');
+        return;
+      }
+
+      // Combine patient and profile data
+      const combinedPatient = {
+        ...patientData,
+        profiles: profileData
+      };
+
+      setSelectedPatient(combinedPatient);
+      setIsPatientDialogOpen(true);
+    } catch (error) {
+      console.error('Error loading patient details:', error);
+      toast.error('Failed to load patient details');
+    }
   };
 
   // Removed handleGenerateInvoice - only staff can generate invoices
@@ -393,15 +425,8 @@ export default function DoctorSchedule() { // Fixed ordering syntax
     return true;
   }).sort((a, b) => new Date(b.appointment_date).getTime() - new Date(a.appointment_date).getTime()) || [];
 
-  if (selectedPatient) {
-    return (
-      <PatientDetailsView
-        patientId={selectedPatient.id}
-        patientName={selectedPatient.name}
-        onBack={() => setSelectedPatient(null)}
-      />
-    );
-  }
+  // Remove the separate PatientDetailsView rendering
+  // Now we'll use the PatientDetailDialog instead
 
   const renderAppointmentTable = (appointmentsList: any[], title: string) => (
     <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
@@ -731,6 +756,16 @@ export default function DoctorSchedule() { // Fixed ordering syntax
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Patient Detail Dialog */}
+      <PatientDetailDialog
+        isOpen={isPatientDialogOpen}
+        onClose={() => {
+          setIsPatientDialogOpen(false);
+          setSelectedPatient(null);
+        }}
+        patient={selectedPatient}
+      />
     </div>
   );
 }
