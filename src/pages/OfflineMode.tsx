@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Calendar, FileText, UserPlus, Stethoscope, WifiOff, RefreshCw } from "lucide-react";
+import { Calendar, FileText, UserPlus, Stethoscope, WifiOff, RefreshCw, Upload, CheckCircle, Wifi } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useOfflineSync } from "@/hooks/useOfflineSync";
 
@@ -38,6 +38,7 @@ type OfflineInvoice = {
   patient_cnic: string;
   doctor_id?: string;
   doctor_name?: string;
+  doctor_fee?: number;
   test_id?: string;
   test_name?: string;
   operation_id?: string;
@@ -46,6 +47,7 @@ type OfflineInvoice = {
   date: string;
   notes?: string;
   created_at: string;
+  invoice_number: string;
 };
 
 const OfflineMode = () => {
@@ -109,10 +111,42 @@ const OfflineMode = () => {
     }
   };
 
+  const generateInvoiceNumber = (type: string) => {
+    const timestamp = Date.now();
+    const prefix = type === 'consultation' ? 'CONS' : type === 'lab' ? 'LAB' : 'OT';
+    return `${prefix}-${timestamp}`;
+  };
+
   const saveOfflineInvoice = (invoice: OfflineInvoice) => {
     const updatedInvoices = [...offlineInvoices, invoice];
     setOfflineInvoices(updatedInvoices);
     localStorage.setItem('offline_invoices', JSON.stringify(updatedInvoices));
+  };
+
+  const handleUploadData = async () => {
+    if (!isOnline) {
+      toast({
+        title: "No Internet Connection",
+        description: "Please connect to the internet to upload data.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      await manualSync();
+      toast({
+        title: "Data Upload Started",
+        description: `${pendingCount} items are being uploaded to the server.`,
+        variant: "default"
+      });
+    } catch (error) {
+      toast({
+        title: "Upload Error",
+        description: "Failed to upload data. Please try again.",
+        variant: "destructive"
+      });
+    }
   };
 
   const createConsultationInvoice = async () => {
@@ -128,6 +162,7 @@ const OfflineMode = () => {
     const doctor = doctors.find(d => d.id === selectedDoctor);
     if (!doctor) return;
 
+    const invoiceNumber = generateInvoiceNumber('consultation');
     const invoice: OfflineInvoice = {
       id: `offline_consultation_${Date.now()}`,
       type: 'consultation',
@@ -135,10 +170,12 @@ const OfflineMode = () => {
       patient_cnic: patientCnic,
       doctor_id: doctor.id,
       doctor_name: `${doctor.first_name} ${doctor.last_name}`,
+      doctor_fee: doctor.consultation_fee,
       amount: doctor.consultation_fee,
       date: appointmentDate,
       notes,
-      created_at: new Date().toISOString()
+      created_at: new Date().toISOString(),
+      invoice_number: invoiceNumber
     };
 
     saveOfflineInvoice(invoice);
@@ -188,6 +225,7 @@ const OfflineMode = () => {
     const labTest = labTests.find(t => t.id === selectedLabTest);
     if (!labTest) return;
 
+    const invoiceNumber = generateInvoiceNumber('lab');
     const invoice: OfflineInvoice = {
       id: `offline_lab_${Date.now()}`,
       type: 'lab',
@@ -198,7 +236,8 @@ const OfflineMode = () => {
       amount: labTest.price,
       date: appointmentDate,
       notes,
-      created_at: new Date().toISOString()
+      created_at: new Date().toISOString(),
+      invoice_number: invoiceNumber
     };
 
     saveOfflineInvoice(invoice);
@@ -247,6 +286,7 @@ const OfflineMode = () => {
     if (!operation) return;
 
     const baseAmount = 50000; // Default OT cost
+    const invoiceNumber = generateInvoiceNumber('ot');
 
     const invoice: OfflineInvoice = {
       id: `offline_ot_${Date.now()}`,
@@ -258,7 +298,8 @@ const OfflineMode = () => {
       amount: baseAmount,
       date: appointmentDate,
       notes,
-      created_at: new Date().toISOString()
+      created_at: new Date().toISOString(),
+      invoice_number: invoiceNumber
     };
 
     saveOfflineInvoice(invoice);
@@ -333,13 +374,22 @@ const OfflineMode = () => {
                 <Badge variant="outline" className="text-orange-600 border-orange-300">
                   {pendingCount} items pending sync
                 </Badge>
+                {isOnline && pendingCount > 0 && (
+                  <Button 
+                    onClick={handleUploadData}
+                    className="bg-green-600 hover:bg-green-700 text-white"
+                  >
+                    <Upload className="w-4 h-4 mr-2" />
+                    Upload Data to Server
+                  </Button>
+                )}
                 <Button 
                   onClick={checkOnlineStatus}
                   variant="outline" 
                   className="text-orange-600 border-orange-300 hover:bg-orange-100"
                 >
-                  <RefreshCw className="w-4 h-4 mr-2" />
-                  Check Connection
+                  {isOnline ? <Wifi className="w-4 h-4 mr-2" /> : <WifiOff className="w-4 h-4 mr-2" />}
+                  {isOnline ? 'Go Online' : 'Check Connection'}
                 </Button>
               </div>
             </div>
