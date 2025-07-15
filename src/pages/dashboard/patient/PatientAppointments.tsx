@@ -128,22 +128,22 @@ export default function PatientAppointments() {
                         </span>
                       </TableCell>
                       <TableCell>
-                        <div className="flex items-center gap-2">
-                          <span className={`px-2 py-1 rounded-full text-sm font-medium ${
-                            appointment.status === 'completed' ? 'bg-green-100 text-green-700' :
-                            appointment.status === 'scheduled' ? 'bg-blue-100 text-blue-700' :
-                            appointment.status === 'cancelled' ? 'bg-red-100 text-red-700' :
-                            'bg-gray-100 text-gray-700'
-                          }`}>
-                            {appointment.status}
-                          </span>
-                          {appointment.invoice?.amount === 0 || appointment.invoice?.description?.includes('Free') ? (
-                            <Badge className="bg-yellow-100 text-yellow-700 text-xs">
-                              <Gift className="w-3 h-3 mr-1" />
-                              Marked as Free
-                            </Badge>
-                          ) : null}
-                        </div>
+                         <div className="flex flex-col gap-2">
+                           <span className={`px-2 py-1 rounded-full text-sm font-medium w-fit ${
+                             appointment.status === 'completed' ? 'bg-green-100 text-green-700' :
+                             appointment.status === 'scheduled' ? 'bg-blue-100 text-blue-700' :
+                             appointment.status === 'cancelled' ? 'bg-red-100 text-red-700' :
+                             'bg-gray-100 text-gray-700'
+                           }`}>
+                             {appointment.status}
+                           </span>
+                           {appointment.invoice?.amount === 0 || appointment.invoice?.description?.includes('Free') ? (
+                             <Badge className="bg-green-100 text-green-700 border-green-200 text-sm px-3 py-1 w-fit">
+                               <Gift className="w-4 h-4 mr-2" />
+                               Marked as Free
+                             </Badge>
+                           ) : null}
+                         </div>
                       </TableCell>
                       <TableCell>
                         <span className="text-sm text-gray-600">

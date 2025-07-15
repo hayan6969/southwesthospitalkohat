@@ -51,7 +51,27 @@ export default function DoctorSchedule() { // Fixed ordering syntax
           .from('patients')
           .select('id, cnic, patient_number');
 
-        const enrichedAppointments = appointments.map(apt => {
+        // Fetch invoice data to check for free status
+        const appointmentsWithInvoices = await Promise.all(
+          appointments.map(async (appointment) => {
+            let invoice = null;
+            if (appointment.payment_status === 'paid') {
+              // Try to find the invoice for this appointment
+              const { data: invoiceData } = await supabase
+                .from('invoices')
+                .select('amount, description')
+                .eq('patient_id', appointment.patient_id)
+                .order('created_at', { ascending: false })
+                .limit(1)
+                .maybeSingle();
+              
+              invoice = invoiceData;
+            }
+            return { ...appointment, invoice };
+          })
+        );
+
+        const enrichedAppointments = appointmentsWithInvoices.map(apt => {
           const queueInfo = queueData?.find(q => q.appointment_id === apt.id);
           const patientInfo = patientsData?.find(p => p.id === apt.patient_id);
           
