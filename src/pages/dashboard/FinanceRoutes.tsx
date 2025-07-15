@@ -6,6 +6,7 @@ import FinanceExpenses from "./finance/FinanceExpenses";
 import FinanceAnalytics from "./finance/FinanceAnalytics";
 import FinancePayroll from "./finance/FinancePayroll";
 import FinanceDoctorPayments from "./finance/FinanceDoctorPayments";
+import FinancePharmacy from "./finance/FinancePharmacy";
 
 export default function FinanceRoutes() {
   return (
@@ -17,6 +18,7 @@ export default function FinanceRoutes() {
         <Route path="analytics" element={<FinanceAnalytics />} />
         <Route path="payroll" element={<FinancePayroll />} />
         <Route path="doctor-payments" element={<FinanceDoctorPayments />} />
+        <Route path="pharmacy" element={<FinancePharmacy />} />
       </Routes>
     </FinanceLayout>
   );
