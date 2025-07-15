@@ -1,7 +1,7 @@
 // Offline storage utilities for IndexedDB operations
 export interface PendingOperation {
   id: string;
-  type: 'invoice' | 'appointment' | 'patient' | 'medical_record';
+  type: 'invoice' | 'appointment' | 'patient' | 'medical_record' | 'create_patient_with_profile';
   table: string;
   method: 'POST' | 'PUT' | 'PATCH';
   data: any;
@@ -184,6 +184,52 @@ class OfflineStorage {
     const operations = await this.getPendingOperations();
     return operations.length;
   }
+
+  async removePendingOperation(operationId: string): Promise<void> {
+    if (!this.db) await this.init();
+    
+    return new Promise((resolve, reject) => {
+      const transaction = this.db!.transaction(['pendingOperations'], 'readwrite');
+      const store = transaction.objectStore('pendingOperations');
+      
+      const request = store.delete(operationId);
+      
+      request.onerror = () => reject(request.error);
+      request.onsuccess = () => {
+        console.log('Removed pending operation:', operationId);
+        resolve();
+      };
+    });
+  }
+
+  async clearPendingOperations(): Promise<void> {
+    if (!this.db) await this.init();
+    
+    return new Promise((resolve, reject) => {
+      const transaction = this.db!.transaction(['pendingOperations'], 'readwrite');
+      const store = transaction.objectStore('pendingOperations');
+      
+      const request = store.clear();
+      
+      request.onerror = () => reject(request.error);
+      request.onsuccess = () => {
+        console.log('Cleared all pending operations');
+        resolve();
+      };
+    });
+  }
 }
 
 export const offlineStorage = new OfflineStorage();
+
+// Export for use in other modules
+export const addOfflineOperation = async (operation: Omit<PendingOperation, 'id' | 'timestamp' | 'synced'>) => {
+  const pendingOperation: PendingOperation = {
+    ...operation,
+    id: `offline_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+    timestamp: new Date().toISOString(),
+    synced: false
+  };
+
+  return await offlineStorage.addPendingOperation(pendingOperation);
+};

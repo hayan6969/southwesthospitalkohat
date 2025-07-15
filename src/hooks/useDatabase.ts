@@ -324,6 +324,56 @@ export const useCreateAppointmentWithInvoice = () => {
   
   return useMutation({
     mutationFn: async (appointmentData: any) => {
+      // If offline, store in offline storage
+      if (!navigator.onLine) {
+        const { addOfflineOperation } = await import('@/utils/offlineStorage');
+        
+        const tempAppointmentId = `offline_appointment_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        const tempInvoiceId = `offline_invoice_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        
+        // Store appointment operation
+        const appointmentOperation = {
+          type: 'appointment' as const,
+          table: 'appointments',
+          method: 'POST' as const,
+          data: {
+            ...appointmentData.appointment,
+            id: tempAppointmentId,
+            payment_status: 'paid',
+            booking_type: 'counter',
+            invoice_generated_at: new Date().toISOString(),
+            created_offline: true
+          }
+        };
+        
+        // Store invoice operation
+        const invoiceOperation = {
+          type: 'invoice' as const,
+          table: 'invoices',
+          method: 'POST' as const,
+          data: {
+            id: tempInvoiceId,
+            patient_id: appointmentData.appointment.patient_id,
+            amount: appointmentData.consultationFee,
+            description: `Consultation with Dr. ${appointmentData.doctorName}`,
+            invoice_number: `INV-TEMP-${Date.now()}`,
+            status: 'paid',
+            paid_at: new Date().toISOString(),
+            created_at: new Date().toISOString(),
+            due_date: new Date().toISOString(),
+            created_offline: true
+          }
+        };
+        
+        await addOfflineOperation(appointmentOperation);
+        await addOfflineOperation(invoiceOperation);
+        
+        return {
+          appointment: appointmentOperation.data,
+          invoice: invoiceOperation.data
+        };
+      }
+
       // Create appointment with paid status for staff bookings
       const appointmentWithPayment = {
         ...appointmentData.appointment,
@@ -375,6 +425,57 @@ export const useCreatePatientWithProfile = () => {
       phone: string;
       cnic: string;
     }) => {
+      // If offline, store in offline storage
+      if (!navigator.onLine) {
+        const tempPatientId = `offline_patient_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        
+        // Add to offline storage for syncing later
+        const { addOfflineOperation } = await import('@/utils/offlineStorage');
+        
+        const patientOperation = {
+          type: 'create_patient_with_profile' as const,
+          table: 'patients',
+          method: 'POST' as const,
+          data: {
+            ...patientData,
+            id: tempPatientId,
+            patient_number: `P-TEMP-${Date.now()}`, // Temporary number
+            created_offline: true
+          }
+        };
+        
+        await addOfflineOperation(patientOperation);
+        
+        // Cache patient data locally for immediate use
+        const cachedPatients = localStorage.getItem('cached_patients');
+        let patients = cachedPatients ? JSON.parse(cachedPatients) : [];
+        
+        const newPatient = {
+          id: tempPatientId,
+          patient_number: `P-TEMP-${Date.now()}`,
+          cnic: patientData.cnic,
+          profile: {
+            id: tempPatientId,
+            first_name: patientData.first_name,
+            last_name: patientData.last_name,
+            phone: patientData.phone,
+            email: `${patientData.phone}@patient.local`
+          },
+          created_offline: true
+        };
+        
+        patients.push(newPatient);
+        localStorage.setItem('cached_patients', JSON.stringify(patients));
+        
+        // Show offline notification
+        console.log('Patient registered offline - will sync when online');
+        
+        return {
+          patient: newPatient,
+          user: { id: tempPatientId }
+        };
+      }
+
       // Check for existing patient with same CNIC
       const { data: existingPatientByCnic } = await supabase
         .from('patients')
