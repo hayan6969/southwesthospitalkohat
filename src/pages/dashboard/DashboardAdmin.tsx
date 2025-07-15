@@ -258,10 +258,6 @@ export default function DashboardAdmin() {
         <div className="max-w-7xl mx-auto">
           <div className="flex items-center justify-between mb-8">
             <h2 className="text-2xl font-bold">System Overview</h2>
-            <div className="flex gap-3">
-              <AppointmentDialog />
-              <Button variant="outline">Schedule Availability</Button>
-            </div>
           </div>
 
           <Tabs defaultValue="overview" className="space-y-6">
