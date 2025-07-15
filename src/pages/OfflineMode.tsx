@@ -687,7 +687,7 @@ const OfflineMode = () => {
           // Create OT schedule record with proper pricing
           const totalCost = parseFloat(operation.data.total_cost) || 0;
           const doctorExpense = parseFloat(operation.data.doctor_expense) || 0;
-          const hospitalAmount = parseFloat(operation.data.hospital_amount) || (totalCost - doctorExpense);
+          const hospitalAmount = parseFloat(operation.data.hospital_amount) || 0;
           
           console.log('💊 Processing OT operation with pricing:', {
             total_cost: totalCost,
@@ -721,16 +721,17 @@ const OfflineMode = () => {
           } else {
             console.log('✅ OT schedule created successfully:', otSchedule);
             
-            // Create invoice for the OT operation
-            const invoiceAmount = totalCost;
+            // Create invoice for the OT operation (hospital portion only)
+            const invoiceAmount = hospitalAmount;
             const invoiceNumber = `INV-OFFLINE-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-            console.log('💰 Creating OT invoice:', {
+            console.log('💰 Creating OT invoice (hospital portion):', {
               patient_id: dummyPatient.id,
               amount: invoiceAmount,
               status: 'paid',
               invoice_number: invoiceNumber,
-              total_cost: totalCost,
-              doctor_expense: doctorExpense
+              hospital_amount: hospitalAmount,
+              doctor_expense: doctorExpense,
+              total_cost: totalCost
             });
             
             const { data: createdInvoice, error: invoiceError } = await supabase
