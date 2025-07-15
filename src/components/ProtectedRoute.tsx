@@ -8,6 +8,29 @@ type ProtectedRouteProps = {
 };
 
 export default function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) {
+  // Check for offline staff mode first, before using auth context
+  useEffect(() => {
+    if (!navigator.onLine) {
+      const cachedSession = localStorage.getItem('cached_session');
+      if (cachedSession) {
+        try {
+          const parsedSession = JSON.parse(cachedSession);
+          const cachedProfile = localStorage.getItem(`profile_${parsedSession.user.id}`);
+          if (cachedProfile) {
+            const parsedProfile = JSON.parse(cachedProfile);
+            if (parsedProfile.role === 'staff') {
+              console.log('📱 Redirecting offline staff to offline mode');
+              window.location.href = '/offline-mode';
+              return;
+            }
+          }
+        } catch (error) {
+          console.error('Error checking offline mode:', error);
+        }
+      }
+    }
+  }, []);
+
   const { user, profile, loading } = useAuth();
 
   useEffect(() => {

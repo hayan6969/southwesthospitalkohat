@@ -10,26 +10,7 @@ const Index = () => {
   const { user, profile, signOut } = useAuth();
 
   useEffect(() => {
-    // Check for offline mode first
-    if (!navigator.onLine) {
-      const cachedSession = localStorage.getItem('cached_session');
-      const cachedProfile = cachedSession ? 
-        localStorage.getItem(`profile_${JSON.parse(cachedSession).user.id}`) : null;
-      
-      if (cachedProfile) {
-        const parsedProfile = JSON.parse(cachedProfile);
-        console.log('🔍 Offline mode detected with cached profile:', parsedProfile.role);
-        
-        // Only redirect to offline mode for staff
-        if (parsedProfile.role === 'staff') {
-          console.log('📱 Redirecting to offline mode for staff');
-          window.location.href = '/offline-mode';
-          return;
-        }
-      }
-    }
-
-    // Normal online redirect logic
+    // Normal redirect logic - offline detection is now handled in ProtectedRoute
     console.log('Index.tsx - Current profile:', profile);
     console.log('Index.tsx - Profile role:', profile?.role);
     if (profile?.role) {
