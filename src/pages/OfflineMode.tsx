@@ -996,13 +996,13 @@ const OfflineMode = () => {
     const operation = otOperations.find(o => o.id === selectedOperation);
     if (!operation) return;
 
-    // Calculate total cost from operation expenses
-    const totalCost = operation.expenses?.reduce((sum, exp) => sum + exp.cost, 0) || 0;
+    // Calculate costs correctly
+    const hospitalCost = operation.expenses?.reduce((sum, exp) => sum + exp.cost, 0) || 0;
     const doctorAmount = parseFloat(doctorFee) || 0;
-    const hospitalAmount = totalCost - doctorAmount;
+    const totalCost = hospitalCost + doctorAmount;
 
     // Validation
-    if (totalCost <= 0) {
+    if (hospitalCost <= 0) {
       toast({
         title: "Invalid Operation",
         description: "Selected operation has no expenses configured.",
@@ -1011,10 +1011,10 @@ const OfflineMode = () => {
       return;
     }
 
-    if (doctorAmount < 0 || doctorAmount > totalCost) {
+    if (doctorAmount < 0) {
       toast({
         title: "Invalid Doctor Fee",
-        description: "Doctor fee must be between 0 and total operation cost.",
+        description: "Doctor fee must be greater than or equal to 0.",
         variant: "destructive"
       });
       return;
@@ -1035,7 +1035,7 @@ const OfflineMode = () => {
       operation_name: operation.operation_name,
       amount: totalCost,
       total_operation_cost: totalCost,
-      hospital_amount: hospitalAmount,
+      hospital_amount: hospitalCost,
       date: appointmentDate,
       notes,
       created_at: new Date().toISOString(),
@@ -1058,7 +1058,7 @@ const OfflineMode = () => {
         operation_date: appointmentDate,
         total_cost: totalCost,
         doctor_expense: doctorAmount,
-        hospital_amount: hospitalAmount,
+        hospital_amount: hospitalCost,
         status: 'scheduled',
         queue_position: 1,
         notes
@@ -1070,7 +1070,7 @@ const OfflineMode = () => {
 
     toast({
       title: "OT Scheduled",
-      description: `Operation "${operation.operation_name}" scheduled for ${patientName}. Total: Rs. ${totalCost}, Doctor: Rs. ${doctorAmount}, Hospital: Rs. ${hospitalAmount}`,
+      description: `Operation "${operation.operation_name}" scheduled for ${patientName}. Total: Rs. ${totalCost}, Doctor: Rs. ${doctorAmount}, Hospital: Rs. ${hospitalCost}`,
       variant: "default"
     });
 
@@ -1366,9 +1366,9 @@ const OfflineMode = () => {
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <Label htmlFor="total-cost">Total Operation Cost (Rs.)</Label>
+                    <Label htmlFor="hospital-cost">Hospital Operation Cost (Rs.)</Label>
                     <Input
-                      id="total-cost"
+                      id="hospital-cost"
                       type="number"
                       value={selectedOperation ? 
                         otOperations.find(op => op.id === selectedOperation)?.expenses?.reduce((sum, exp) => sum + exp.cost, 0) || 0
@@ -1409,15 +1409,17 @@ const OfflineMode = () => {
                     </Select>
                   </div>
                   <div>
-                    <Label htmlFor="hospital-amount">Hospital Amount (Rs.)</Label>
+                    <Label htmlFor="total-cost">Total Cost (Rs.)</Label>
                     <Input
-                      id="hospital-amount"
+                      id="total-cost"
                       type="number"
                       value={selectedOperation && doctorFee ? 
-                        ((otOperations.find(op => op.id === selectedOperation)?.expenses?.reduce((sum, exp) => sum + exp.cost, 0) || 0) - parseFloat(doctorFee)).toString() 
+                        ((otOperations.find(op => op.id === selectedOperation)?.expenses?.reduce((sum, exp) => sum + exp.cost, 0) || 0) + parseFloat(doctorFee)).toString() 
+                        : selectedOperation ? 
+                        (otOperations.find(op => op.id === selectedOperation)?.expenses?.reduce((sum, exp) => sum + exp.cost, 0) || 0).toString()
                         : ''}
                       disabled
-                      placeholder="Auto-calculated"
+                      placeholder="Hospital cost + Doctor fee"
                       className="bg-gray-100"
                     />
                   </div>
