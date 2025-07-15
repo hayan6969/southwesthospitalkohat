@@ -434,24 +434,27 @@ const OfflineMode = () => {
             console.error('Error uploading appointment:', appointmentError);
           } else {
             // Create invoice for the appointment
-            const invoiceNumber = `INV-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+            const invoiceAmount = parseFloat(operation.data.consultation_fee) || 0;
+            const invoiceNumber = `INV-OFFLINE-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
             console.log('💰 Creating appointment invoice:', {
               patient_id: dummyPatient.id,
-              amount: operation.data.consultation_fee || 0,
+              amount: invoiceAmount,
               status: 'paid',
-              invoice_number: invoiceNumber
+              invoice_number: invoiceNumber,
+              raw_consultation_fee: operation.data.consultation_fee,
+              parsed_amount: invoiceAmount
             });
             
             const { data: createdInvoice, error: invoiceError } = await supabase
               .from('invoices')
               .insert({
                 patient_id: dummyPatient.id,
-                amount: operation.data.consultation_fee || 0,
+                amount: invoiceAmount,
                 status: 'paid',
                 invoice_number: invoiceNumber,
                 description: `Offline Consultation - ${operation.data.patient_name}`,
                 paid_at: new Date().toISOString(),
-                created_at: new Date().toISOString()
+                due_date: null
               })
               .select()
               .single();
@@ -483,24 +486,27 @@ const OfflineMode = () => {
             console.error('Error uploading lab report:', labError);
           } else {
             // Create invoice for the lab report
-            const invoiceNumber = `INV-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+            const invoiceAmount = parseFloat(operation.data.price) || 0;
+            const invoiceNumber = `INV-OFFLINE-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
             console.log('💰 Creating lab invoice:', {
               patient_id: dummyPatient.id,
-              amount: operation.data.price || 0,
+              amount: invoiceAmount,
               status: 'paid',
-              invoice_number: invoiceNumber
+              invoice_number: invoiceNumber,
+              raw_price: operation.data.price,
+              parsed_amount: invoiceAmount
             });
             
             const { data: createdInvoice, error: invoiceError } = await supabase
               .from('invoices')
               .insert({
                 patient_id: dummyPatient.id,
-                amount: operation.data.price || 0,
+                amount: invoiceAmount,
                 status: 'paid',
                 invoice_number: invoiceNumber,
                 description: `Offline Lab Test - ${operation.data.test_name} - ${operation.data.patient_name}`,
                 paid_at: new Date().toISOString(),
-                created_at: new Date().toISOString()
+                due_date: null
               })
               .select()
               .single();
@@ -532,24 +538,27 @@ const OfflineMode = () => {
             console.error('Error uploading OT schedule:', otError);
           } else {
             // Create invoice for the OT operation
-            const invoiceNumber = `INV-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+            const invoiceAmount = parseFloat(operation.data.total_cost) || 0;
+            const invoiceNumber = `INV-OFFLINE-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
             console.log('💰 Creating OT invoice:', {
               patient_id: dummyPatient.id,
-              amount: operation.data.total_cost || 0,
+              amount: invoiceAmount,
               status: 'paid',
-              invoice_number: invoiceNumber
+              invoice_number: invoiceNumber,
+              raw_total_cost: operation.data.total_cost,
+              parsed_amount: invoiceAmount
             });
             
             const { data: createdInvoice, error: invoiceError } = await supabase
               .from('invoices')
               .insert({
                 patient_id: dummyPatient.id,
-                amount: operation.data.total_cost || 0,
+                amount: invoiceAmount,
                 status: 'paid',
                 invoice_number: invoiceNumber,
                 description: `Offline OT Operation - ${operation.data.patient_name}`,
                 paid_at: new Date().toISOString(),
-                created_at: new Date().toISOString()
+                due_date: null
               })
               .select()
               .single();
