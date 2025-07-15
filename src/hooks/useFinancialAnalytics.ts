@@ -58,9 +58,10 @@ export function useFinancialAnalytics() {
         .filter(report => report.price)
         .reduce((sum, report) => sum + Number(report.price), 0);
 
+      // Calculate OT revenue (hospital portion only, excluding doctor expenses)
       const otRevenue = (otSchedules || [])
-        .filter(schedule => schedule.total_cost)
-        .reduce((sum, schedule) => sum + Number(schedule.total_cost), 0);
+        .filter(schedule => schedule.total_cost && schedule.doctor_expense)
+        .reduce((sum, schedule) => sum + (Number(schedule.total_cost) - Number(schedule.doctor_expense)), 0);
 
       const totalRevenue = hospitalRevenue + pharmacyRevenue + labRevenue + otRevenue;
       const totalExpenses = (expenses || [])
@@ -80,7 +81,7 @@ export function useFinancialAnalytics() {
         expenseData.set(month, 0);
       }
 
-      // Aggregate revenue by month
+      // Aggregate revenue by month (excluding doctor expenses from OT)
       [...(invoices || []), ...(pharmacyInvoices || []), ...(labReports || []), ...(otSchedules || [])]
         .forEach(item => {
           if (!item.created_at) return;
@@ -90,7 +91,10 @@ export function useFinancialAnalytics() {
             if ('amount' in item && item.status === 'paid') amount = Number(item.amount);
             else if ('final_amount' in item) amount = Number(item.final_amount);
             else if ('price' in item && item.price) amount = Number(item.price);
-            else if ('total_cost' in item && item.total_cost) amount = Number(item.total_cost);
+            else if ('total_cost' in item && item.total_cost && item.doctor_expense) {
+              // OT revenue: total cost minus doctor's portion
+              amount = Number(item.total_cost) - Number(item.doctor_expense);
+            }
             
             monthlyData.set(month, monthlyData.get(month) + amount);
           }

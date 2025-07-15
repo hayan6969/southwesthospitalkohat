@@ -44,6 +44,7 @@ export const useRealStatsData = () => {
       const yesterdayAppointmentsCount = yesterdayAppointmentsResult.data?.length || 0;
       const yesterdayRevenue = yesterdayInvoicesResult.data?.reduce((sum, invoice) => sum + (invoice.amount || 0), 0) || 0;
 
+      // Only include hospital invoices (not OT doctor expenses) in total revenue
       const totalRevenue = totalInvoices.data?.reduce((sum, invoice) => sum + (invoice.amount || 0), 0) || 0;
 
       // Calculate percentage changes

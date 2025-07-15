@@ -69,6 +69,19 @@ export default function FinanceAnalytics() {
     }
   });
 
+  // Get OT schedules for revenue calculation
+  const { data: otSchedules, isLoading: otLoading } = useQuery({
+    queryKey: ['ot-schedules-revenue'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('ot_schedules')
+        .select('*')
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return data;
+    }
+  });
+
   // Get real expenses data
   const { data: expenses, isLoading: expensesLoading } = useQuery({
     queryKey: ['expenses'],
@@ -128,6 +141,21 @@ export default function FinanceAnalytics() {
     });
   }, [labReports, selectedDate]);
 
+  const filteredOtSchedules = useMemo(() => {
+    if (!selectedDate || !otSchedules) return otSchedules;
+    return otSchedules.filter(schedule => {
+      if (!schedule.created_at) return false;
+      try {
+        const scheduleDate = new Date(schedule.created_at);
+        const selectedDateOnly = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate());
+        const scheduleDateOnly = new Date(scheduleDate.getFullYear(), scheduleDate.getMonth(), scheduleDate.getDate());
+        return scheduleDateOnly.getTime() === selectedDateOnly.getTime();
+      } catch {
+        return false;
+      }
+    });
+  }, [otSchedules, selectedDate]);
+
   const filteredExpenses = useMemo(() => {
     if (!selectedDate || !expenses) return expenses;
     return expenses.filter(exp => {
@@ -143,19 +171,24 @@ export default function FinanceAnalytics() {
     });
   }, [expenses, selectedDate]);
 
-  // Calculate real metrics using filtered data
+  // Calculate real metrics using filtered data (excluding doctor charges)
   const totalRevenue = (filteredInvoices?.reduce((sum, inv) => sum + (inv.amount || 0), 0) || 0);
   const pharmacyRevenue = (filteredPharmacyInvoices?.reduce((sum, inv) => sum + (inv.final_amount || 0), 0) || 0);
   const labRevenue = (filteredLabReports?.reduce((sum, lab) => sum + (lab.price || 0), 0) || 0);
+  // Calculate OT revenue excluding doctor expenses
+  const otRevenue = (filteredOtSchedules?.reduce((sum, schedule) => {
+    if (!schedule.total_cost || !schedule.doctor_expense) return sum;
+    return sum + (Number(schedule.total_cost) - Number(schedule.doctor_expense));
+  }, 0) || 0);
   const totalExpenses = (filteredExpenses?.reduce((sum, exp) => sum + (exp.amount || 0), 0) || 0);
-  const combinedRevenue = totalRevenue + pharmacyRevenue + labRevenue;
+  const combinedRevenue = totalRevenue + pharmacyRevenue + labRevenue + otRevenue;
   const netProfit = combinedRevenue - totalExpenses;
   const profitMargin = combinedRevenue > 0 ? ((netProfit / combinedRevenue) * 100) : 0;
 
   // Calculate monthly data from real database records with filtering
   const monthlyData = useMemo(() => {
     // Return empty array if data is still loading or null
-    if (!invoices || !pharmacyInvoices || !labReports || !expenses) {
+    if (!invoices || !pharmacyInvoices || !labReports || !otSchedules || !expenses) {
       return [];
     }
     
@@ -200,6 +233,17 @@ export default function FinanceAnalytics() {
           }
         });
         
+        const dayOtSchedules = (otSchedules || []).filter(schedule => {
+          if (!schedule.created_at) return false;
+          try {
+            const scheduleDate = new Date(schedule.created_at);
+            const scheduleDateOnly = new Date(scheduleDate.getFullYear(), scheduleDate.getMonth(), scheduleDate.getDate());
+            return scheduleDateOnly.getTime() === selectedDateOnly.getTime();
+          } catch {
+            return false;
+          }
+        });
+        
         const dayExpenses = (expenses || []).filter(exp => {
           if (!exp.created_at) return false;
           try {
@@ -214,14 +258,20 @@ export default function FinanceAnalytics() {
         const hospitalRevenue = dayInvoices.reduce((sum, inv) => sum + (Number(inv.amount) || 0), 0);
         const pharmacy = dayPharmacyInvoices.reduce((sum, inv) => sum + (Number(inv.final_amount) || 0), 0);
         const lab = dayLabReports.reduce((sum, lab) => sum + (Number(lab.price) || 0), 0);
+        // Calculate OT revenue excluding doctor expenses
+        const ot = dayOtSchedules.reduce((sum, schedule) => {
+          if (!schedule.total_cost || !schedule.doctor_expense) return sum;
+          return sum + (Number(schedule.total_cost) - Number(schedule.doctor_expense));
+        }, 0);
         const dailyExpenses = dayExpenses.reduce((sum, exp) => sum + (Number(exp.amount) || 0), 0);
-        const totalRev = hospitalRevenue + pharmacy + lab;
+        const totalRev = hospitalRevenue + pharmacy + lab + ot;
         
         months.push({
           month: format(selectedDate, 'MMM dd'),
           hospital: hospitalRevenue,
           pharmacy,
           lab,
+          ot,
           total: totalRev,
           expenses: dailyExpenses,
           profit: totalRev - dailyExpenses
@@ -285,6 +335,16 @@ export default function FinanceAnalytics() {
           }
         });
         
+        const monthOtSchedules = (otSchedules || []).filter(schedule => {
+          if (!schedule.created_at) return false;
+          try {
+            const scheduleDate = new Date(schedule.created_at);
+            return scheduleDate >= monthStart && scheduleDate <= monthEnd;
+          } catch {
+            return false;
+          }
+        });
+        
         const monthExpenses = (expenses || []).filter(exp => {
           if (!exp.created_at) return false;
           try {
@@ -298,14 +358,20 @@ export default function FinanceAnalytics() {
         const hospitalRevenue = monthInvoices.reduce((sum, inv) => sum + (Number(inv.amount) || 0), 0);
         const pharmacy = monthPharmacyInvoices.reduce((sum, inv) => sum + (Number(inv.final_amount) || 0), 0);
         const lab = monthLabReports.reduce((sum, lab) => sum + (Number(lab.price) || 0), 0);
+        // Calculate OT revenue excluding doctor expenses
+        const ot = monthOtSchedules.reduce((sum, schedule) => {
+          if (!schedule.total_cost || !schedule.doctor_expense) return sum;
+          return sum + (Number(schedule.total_cost) - Number(schedule.doctor_expense));
+        }, 0);
         const monthlyExpenses = monthExpenses.reduce((sum, exp) => sum + (Number(exp.amount) || 0), 0);
-        const totalRev = hospitalRevenue + pharmacy + lab;
+        const totalRev = hospitalRevenue + pharmacy + lab + ot;
         
         months.push({
           month: format(monthDate, 'MMM'),
           hospital: hospitalRevenue,
           pharmacy,
           lab,
+          ot,
           total: totalRev,
           expenses: monthlyExpenses,
           profit: totalRev - monthlyExpenses
@@ -317,13 +383,14 @@ export default function FinanceAnalytics() {
       console.error('Error calculating monthly data:', error);
       return [];
     }
-  }, [invoices, pharmacyInvoices, labReports, expenses, timeRange, selectedDate]);
+  }, [invoices, pharmacyInvoices, labReports, otSchedules, expenses, timeRange, selectedDate]);
 
   // Revenue breakdown
   const revenueBreakdown = [
     { name: 'Hospital Services', value: totalRevenue, color: '#3b82f6' },
-    { name: 'Pharmacy', value: pharmacyRevenue, color: '#8b5cf6' },
-    { name: 'Lab Tests', value: labRevenue, color: '#10b981' },
+    { name: 'Pharmacy Sales', value: pharmacyRevenue, color: '#10b981' },
+    { name: 'Lab Services', value: labRevenue, color: '#f59e0b' },
+    { name: 'OT Services (Hospital)', value: otRevenue, color: '#8b5cf6' },
   ].filter(item => item.value > 0);
 
   // Calculate percentage changes (using current vs previous month)
@@ -343,7 +410,7 @@ export default function FinanceAnalytics() {
     : 0;
 
   // Show loading state after all hooks are processed
-  if (invoicesLoading || pharmacyLoading || labLoading || expensesLoading) {
+  if (invoicesLoading || pharmacyLoading || labLoading || otLoading || expensesLoading) {
     return <div className="p-8">Loading analytics...</div>;
   }
 

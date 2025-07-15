@@ -42,6 +42,19 @@ export default function DashboardFinance() {
     }
   });
 
+  // Get OT schedules for revenue calculation
+  const { data: otSchedules, isLoading: otLoading } = useQuery({
+    queryKey: ['ot-schedules-revenue'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('ot_schedules')
+        .select('*')
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return data;
+    }
+  });
+
   // Get expenses
   const { data: expenses, isLoading: expensesLoading } = useQuery({
     queryKey: ['expenses'],
@@ -55,11 +68,16 @@ export default function DashboardFinance() {
     }
   });
 
-  // Calculate revenues and profit
+  // Calculate revenues and profit (excluding doctor charges)
   const hospitalRevenue = invoices?.reduce((sum, invoice) => sum + (invoice.amount || 0), 0) || 0;
   const pharmacyRevenue = pharmacyInvoices?.reduce((sum, invoice) => sum + (invoice.final_amount || 0), 0) || 0;
   const labRevenue = labReports?.reduce((sum, lab) => sum + (lab.price || 0), 0) || 0;
-  const totalRevenue = hospitalRevenue + pharmacyRevenue + labRevenue;
+  // Only include hospital's portion of OT revenue (excluding doctor expenses)
+  const otRevenue = otSchedules?.reduce((sum, schedule) => {
+    if (!schedule.total_cost || !schedule.doctor_expense) return sum;
+    return sum + (Number(schedule.total_cost) - Number(schedule.doctor_expense));
+  }, 0) || 0;
+  const totalRevenue = hospitalRevenue + pharmacyRevenue + labRevenue + otRevenue;
   const totalExpenses = expenses?.reduce((sum, exp) => sum + (exp.amount || 0), 0) || 0;
   const totalProfit = totalRevenue - totalExpenses;
   
@@ -80,12 +98,20 @@ export default function DashboardFinance() {
     return invoiceDate.getMonth() === currentMonth && invoiceDate.getFullYear() === currentYear;
   }).reduce((sum, invoice) => sum + (invoice.final_amount || 0), 0) || 0;
   
-  const currentMonthLabRevenue = labReports?.filter(report => {
-    const reportDate = new Date(report.created_at);
-    return reportDate.getMonth() === currentMonth && reportDate.getFullYear() === currentYear;
-  }).reduce((sum, report) => sum + (report.price || 0), 0) || 0;
+  const currentMonthLabRevenue = labReports?.filter(lab => {
+    const labDate = new Date(lab.created_at);
+    return labDate.getMonth() === currentMonth && labDate.getFullYear() === currentYear;
+  }).reduce((sum, lab) => sum + (lab.price || 0), 0) || 0;
   
-  const monthlyRevenue = currentMonthHospitalRevenue + currentMonthPharmacyRevenue + currentMonthLabRevenue;
+  const currentMonthOTRevenue = otSchedules?.filter(schedule => {
+    const scheduleDate = new Date(schedule.created_at);
+    return scheduleDate.getMonth() === currentMonth && scheduleDate.getFullYear() === currentYear;
+  }).reduce((sum, schedule) => {
+    if (!schedule.total_cost || !schedule.doctor_expense) return sum;
+    return sum + (Number(schedule.total_cost) - Number(schedule.doctor_expense));
+  }, 0) || 0;
+  
+  const monthlyRevenue = currentMonthHospitalRevenue + currentMonthPharmacyRevenue + currentMonthLabRevenue + currentMonthOTRevenue;
 
   return (
     <div className="space-y-8">
@@ -97,7 +123,7 @@ export default function DashboardFinance() {
               title="Total Revenue"
               value={formatPkrAmount(totalRevenue)}
               icon={<Banknote className="w-5 h-5 text-green-600" />}
-              loading={invoicesLoading || pharmacyLoading || labLoading}
+              loading={invoicesLoading || pharmacyLoading || labLoading || otLoading}
             />
             <StatsCard
               title="Total Expenses"
@@ -109,7 +135,7 @@ export default function DashboardFinance() {
               title="Total Profit"
               value={formatPkrAmount(totalProfit)}
               icon={totalProfit >= 0 ? <TrendingUp className="w-5 h-5 text-green-600" /> : <TrendingDown className="w-5 h-5 text-red-600" />}
-              loading={invoicesLoading || pharmacyLoading || labLoading || expensesLoading}
+              loading={invoicesLoading || pharmacyLoading || labLoading || expensesLoading || otLoading}
             />
           </div>
           
@@ -131,7 +157,7 @@ export default function DashboardFinance() {
               title="Monthly Revenue"
               value={formatPkrAmount(monthlyRevenue)}
               icon={<TrendingUp className="w-5 h-5 text-orange-600" />}
-              loading={invoicesLoading || pharmacyLoading || labLoading}
+              loading={invoicesLoading || pharmacyLoading || labLoading || otLoading}
             />
           </div>
         </div>
@@ -186,18 +212,22 @@ export default function DashboardFinance() {
               <CardTitle>Financial Summary</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
-                <div className="flex justify-between items-center">
+              <div className="space-y-3">
+                <div className="flex justify-between">
                   <span>Hospital Services</span>
                   <span className="font-medium">{formatPkrAmount(hospitalRevenue)}</span>
                 </div>
-                <div className="flex justify-between items-center">
+                <div className="flex justify-between">
                   <span>Pharmacy Sales</span>
                   <span className="font-medium">{formatPkrAmount(pharmacyRevenue)}</span>
                 </div>
-                <div className="flex justify-between items-center">
-                  <span>Lab Tests</span>
+                <div className="flex justify-between">
+                  <span>Lab Services</span>
                   <span className="font-medium">{formatPkrAmount(labRevenue)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>OT Services (Hospital Portion)</span>
+                  <span className="font-medium">{formatPkrAmount(otRevenue)}</span>
                 </div>
                 <hr />
                 <div className="flex justify-between items-center font-bold text-lg">
