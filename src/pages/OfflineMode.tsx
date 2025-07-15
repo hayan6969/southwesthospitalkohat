@@ -374,21 +374,12 @@ const OfflineMode = () => {
         variant: "default"
       });
 
-      // Use an existing patient from the database instead of creating one
-      console.log('🔍 Finding existing patient to use for offline transactions...');
-      const { data: existingPatients, error: patientQueryError } = await supabase
-        .from('patients')
-        .select('id, patient_number, cnic')
-        .limit(1)
-        .single();
-
-      if (patientQueryError || !existingPatients) {
-        console.error('❌ Could not find any existing patients:', patientQueryError);
-        throw new Error('No patients found in database. Please create a patient first.');
-      }
-
-      const dummyPatient = existingPatients;
-      console.log('✅ Using existing patient for offline transactions:', dummyPatient);
+      // Use the special offline patient we created
+      const offlinePatientId = '00000000-0000-0000-0000-000000000001';
+      console.log('🔍 Using special offline patient for transactions...');
+      
+      const dummyPatient = { id: offlinePatientId };
+      console.log('✅ Using offline patient:', dummyPatient);
 
       // Upload operations to Supabase and create corresponding invoices
       for (const operation of operations) {
