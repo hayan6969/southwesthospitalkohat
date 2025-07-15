@@ -2,6 +2,7 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
+import { useDataCaching } from './useDataCaching';
 
 type UserProfile = {
   id: string;
@@ -34,6 +35,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  
+  // Initialize data caching for offline functionality
+  const { initializeDataCaching } = useDataCaching();
 
   const fetchUserProfile = async (userId: string) => {
     try {
@@ -85,6 +89,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         // Cache the profile for offline use
         localStorage.setItem(`profile_${userId}`, JSON.stringify(profile));
         console.log('✅ Profile cached for offline use');
+        
+        // If this is a staff user, cache additional data for offline mode
+        if (profile.role === 'staff') {
+          setTimeout(() => {
+            initializeDataCaching();
+          }, 500);
+        }
         
         return profile;
       }

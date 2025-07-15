@@ -6,10 +6,12 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "./hooks/useAuth";
 import { useRealTimeUpdates } from "./hooks/useRealTimeUpdates";
+import { useOfflineDataSync } from "./hooks/useOfflineDataSync";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
+import OfflineMode from "./pages/OfflineMode";
 
 // Dashboard main pages
 import DashboardPatient from "./pages/dashboard/DashboardPatient";
@@ -63,9 +65,10 @@ const queryClient = new QueryClient({
   },
 });
 
-// Component to initialize real-time updates
+// Component to initialize real-time updates and offline sync
 const RealTimeProvider = ({ children }: { children: React.ReactNode }) => {
   useRealTimeUpdates();
+  useOfflineDataSync();
   return <>{children}</>;
 };
 
@@ -79,6 +82,7 @@ const App = () => (
           <BrowserRouter>
           <Routes>
             <Route path="/auth" element={<Auth />} />
+            <Route path="/offline-mode" element={<OfflineMode />} />
             <Route path="/" element={
               <ProtectedRoute>
                 <Index />

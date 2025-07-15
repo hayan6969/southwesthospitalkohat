@@ -3,7 +3,7 @@ export interface PendingOperation {
   id: string;
   type: 'invoice' | 'appointment' | 'patient' | 'medical_record' | 'create_patient_with_profile';
   table: string;
-  method: 'POST' | 'PUT' | 'PATCH';
+  action: 'insert' | 'update' | 'delete';
   data: any;
   timestamp: string;
   synced: boolean;

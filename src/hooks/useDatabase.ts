@@ -365,8 +365,14 @@ export const useCreateAppointmentWithInvoice = () => {
           }
         };
         
-        await addOfflineOperation(appointmentOperation);
-        await addOfflineOperation(invoiceOperation);
+        await addOfflineOperation({
+          ...appointmentOperation,
+          action: 'insert'
+        });
+        await addOfflineOperation({
+          ...invoiceOperation,
+          action: 'insert'
+        });
         
         return {
           appointment: appointmentOperation.data,
@@ -444,7 +450,10 @@ export const useCreatePatientWithProfile = () => {
           }
         };
         
-        await addOfflineOperation(patientOperation);
+        await addOfflineOperation({
+          ...patientOperation,
+          action: 'insert'
+        });
         
         // Cache patient data locally for immediate use
         const cachedPatients = localStorage.getItem('cached_patients');
