@@ -8,7 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { Clock, User, Calendar as CalendarIcon, FileText, Banknote, Filter, CalendarDays, X } from "lucide-react";
+import { Clock, User, Calendar as CalendarIcon, FileText, Banknote, Filter, CalendarDays, X, Gift } from "lucide-react";
 import { format, isToday, isFuture, isAfter, isBefore, startOfDay, endOfDay } from "date-fns";
 import { toast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
@@ -19,6 +19,8 @@ interface AppointmentWithQueue {
   type: string;
   notes: string;
   status: 'scheduled' | 'completed' | 'cancelled' | 'rescheduled';
+  payment_status?: string;
+  booking_type?: string;
   doctor: {
     first_name: string;
     last_name: string;
@@ -30,6 +32,10 @@ interface AppointmentWithQueue {
     queue_status: string;
     ahead_count: number;
     estimated_wait: string;
+  };
+  invoice?: {
+    amount: number;
+    description?: string;
   };
 }
 
@@ -48,6 +54,57 @@ export const MyAppointments = () => {
     fetchMyAppointments();
   }, [profile?.id]);
 
+  // Set up real-time updates
+  useEffect(() => {
+    if (!profile?.id) return;
+
+    const channel = supabase
+      .channel('patient-appointments-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'appointments',
+          filter: `patient_id=eq.${profile.id}`
+        },
+        () => {
+          console.log('Patient appointments updated, refetching...');
+          fetchMyAppointments();
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'queue_positions'
+        },
+        () => {
+          console.log('Queue positions updated, refetching patient appointments...');
+          fetchMyAppointments();
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'invoices',
+          filter: `patient_id=eq.${profile.id}`
+        },
+        () => {
+          console.log('Patient invoices updated, refetching appointments...');
+          fetchMyAppointments();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [profile?.id]);
+
   const fetchMyAppointments = async () => {
     if (!profile?.id) return;
 
@@ -63,6 +120,8 @@ export const MyAppointments = () => {
           type,
           notes,
           status,
+          payment_status,
+          booking_type,
           doctor_id
         `)
         .eq('patient_id', profile.id)
@@ -75,24 +134,29 @@ export const MyAppointments = () => {
         return;
       }
 
-      // Get doctors data separately
+      // Get doctors data and invoices separately
       const doctorIds = appointmentsData.map(a => a.doctor_id);
-      const [doctorsData, profilesData] = await Promise.all([
+      const [doctorsData, profilesData, invoicesData] = await Promise.all([
         supabase.from('doctors').select('id, specialization, consultation_fee').in('id', doctorIds),
-        supabase.from('profiles').select('id, first_name, last_name').in('id', doctorIds)
+        supabase.from('profiles').select('id, first_name, last_name').in('id', doctorIds),
+        supabase.from('invoices').select('id, patient_id, amount, description').eq('patient_id', profile.id)
       ]);
 
       if (doctorsData.error) throw doctorsData.error;
       if (profilesData.error) throw profilesData.error;
+      if (invoicesData.error) throw invoicesData.error;
 
       // For each appointment, get queue position and calculate ahead count
       const appointmentsWithQueue = await Promise.all(
         appointmentsData.map(async (appointment) => {
           const appointmentDateStr = new Date(appointment.appointment_date).toISOString().split('T')[0];
           
-          // Get doctor and profile info
+          // Get doctor, profile info, and latest invoice
           const doctor = doctorsData.data?.find(d => d.id === appointment.doctor_id);
           const doctorProfile = profilesData.data?.find(p => p.id === appointment.doctor_id);
+          const latestInvoice = invoicesData.data?.sort((a: any, b: any) => 
+            new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+          )[0];
           
           // Get this appointment's queue position
           const { data: queueData, error: queueError } = await supabase
@@ -165,7 +229,11 @@ export const MyAppointments = () => {
               queue_status: queueData?.status || 'unknown',
               ahead_count: aheadCount,
               estimated_wait: estimatedWait
-            }
+            },
+            invoice: latestInvoice ? {
+              amount: latestInvoice.amount,
+              description: latestInvoice.description
+            } : undefined
           };
         })
       );
@@ -410,6 +478,11 @@ export const MyAppointments = () => {
                 Queue: {appointment.queue_position.queue_status}
               </Badge>
             )}
+            {appointment.invoice?.amount === 0 && (
+              <Badge className="bg-yellow-100 text-yellow-700 text-xs">
+                Free
+              </Badge>
+            )}
           </div>
         </div>
       </CardHeader>
@@ -425,8 +498,17 @@ export const MyAppointments = () => {
               <span>{appointment.type}</span>
             </div>
             <div className="flex items-center gap-2 text-sm">
-              <Banknote className="w-4 h-4 text-gray-500 flex-shrink-0" />
-              <span>PKR {appointment.doctor.consultation_fee}</span>
+              {appointment.invoice?.amount === 0 || appointment.invoice?.description?.includes('Free') ? (
+                <>
+                  <Gift className="w-4 h-4 text-yellow-500 flex-shrink-0" />
+                  <span className="text-yellow-700 font-medium">PKR 0 (Free)</span>
+                </>
+              ) : (
+                <>
+                  <Banknote className="w-4 h-4 text-gray-500 flex-shrink-0" />
+                  <span>PKR {appointment.invoice?.amount || appointment.doctor.consultation_fee}</span>
+                </>
+              )}
             </div>
           </div>
 
