@@ -7,7 +7,7 @@ import { DemoTable } from "@/components/DemoTable";
 import { AuditLog } from "@/components/AuditLog";
 import { PharmacyOverview } from "@/components/PharmacyOverview";
 import { AppointmentDialog } from "@/components/dialogs/AppointmentDialog";
-import { useUsers, useDepartments, useAuditLogs, useUpdateUserStatus } from "@/hooks/useDatabase";
+import { useUsers, useDepartments, useAuditLogs, useUpdateUserStatus, useDeleteUser } from "@/hooks/useDatabase";
 import { useRealStatsData } from "@/hooks/useRealStatsData";
 import { useRecentActivity } from "@/hooks/useRecentActivity";
 import { useFinancialAnalytics } from "@/hooks/useFinancialAnalytics";
@@ -42,6 +42,7 @@ export default function DashboardAdmin() {
   const { settings: hospitalSettings, updateSettings } = useHospitalSettings();
   const { toast: toastHook } = useToast();
   const updateUserStatus = useUpdateUserStatus();
+  const deleteUser = useDeleteUser();
   const [editingUser, setEditingUser] = useState<any>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   
@@ -110,7 +111,30 @@ export default function DashboardAdmin() {
       toast.success(`User ${action} successfully`);
       refetchUsers();
     } catch (error) {
-      toast.error(`Failed to ${newStatus ? "unblock" : "block"} user`);
+      console.error(`Failed to ${action.toLowerCase()} user:`, error);
+      toast.error(`Failed to ${action.toLowerCase()} user`);
+    }
+  };
+
+  const handleDeleteUser = async (user: any) => {
+    if (user.role === 'admin') {
+      toast.error("Cannot delete admin users");
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `Are you sure you want to permanently delete ${user.first_name} ${user.last_name}? This action cannot be undone.`
+    );
+    
+    if (!confirmed) return;
+    
+    try {
+      await deleteUser.mutateAsync(user.id);
+      toast.success("User deleted successfully");
+      refetchUsers();
+    } catch (error) {
+      console.error("Failed to delete user:", error);
+      toast.error("Failed to delete user");
     }
   };
 
@@ -529,6 +553,16 @@ export default function DashboardAdmin() {
                                 >
                                   {user.is_active ? 'Block' : 'Unblock'}
                                 </Button>
+                                {user.role !== 'admin' && (
+                                  <Button 
+                                    size="sm" 
+                                    variant="destructive"
+                                    onClick={() => handleDeleteUser(user)}
+                                    disabled={deleteUser.isPending}
+                                  >
+                                    Delete
+                                  </Button>
+                                )}
                               </div>
                             </TableCell>
                           </TableRow>
