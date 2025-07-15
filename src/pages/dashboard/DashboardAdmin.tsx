@@ -268,27 +268,135 @@ export default function DashboardAdmin() {
                 />
               </div>
 
-              {/* Charts Section - Fixed Grid */}
-              <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 lg:gap-6">
-                <div className="xl:col-span-2 min-h-[400px]">
-                  <RealAppointmentChart />
+              {/* Main Dashboard Content */}
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6">
+                
+                {/* Left Column - Charts and Analytics */}
+                <div className="lg:col-span-2 space-y-4 lg:space-y-6">
+                  {/* Appointment Chart */}
+                  <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+                    <div className="p-4 lg:p-6 border-b border-gray-100">
+                      <h3 className="font-semibold text-lg text-gray-900">Appointment Analytics</h3>
+                      <p className="text-sm text-gray-600">Monthly appointment trends and patterns</p>
+                    </div>
+                    <div className="p-4 lg:p-6 pt-0">
+                      <RealAppointmentChart />
+                    </div>
+                  </div>
+
+                  {/* Quick Stats Row */}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 lg:p-6">
+                      <div className="flex items-center gap-3">
+                        <div className="p-3 rounded-xl bg-blue-50 border border-blue-100">
+                          <Activity className="w-5 h-5 text-blue-600" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-gray-600">Today's Activity</p>
+                          <p className="text-xl font-bold text-gray-900">{recentActivity?.length || 0}</p>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 lg:p-6">
+                      <div className="flex items-center gap-3">
+                        <div className="p-3 rounded-xl bg-green-50 border border-green-100">
+                          <Shield className="w-5 h-5 text-green-600" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-gray-600">System Health</p>
+                          <p className="text-xl font-bold text-green-700">Healthy</p>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 lg:p-6">
+                      <div className="flex items-center gap-3">
+                        <div className="p-3 rounded-xl bg-purple-50 border border-purple-100">
+                          <Users className="w-5 h-5 text-purple-600" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-gray-600">Active Users</p>
+                          <p className="text-xl font-bold text-gray-900">{users?.filter(u => u.is_active)?.length || 0}</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
-                <div className="min-h-[400px]">
-                  <PopularDoctorsWidget />
+
+                {/* Right Column - Information Panels */}
+                <div className="space-y-4 lg:space-y-6">
+                  {/* Popular Doctors */}
+                  <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+                    <div className="p-4 lg:p-6 border-b border-gray-100">
+                      <h3 className="font-semibold text-lg text-gray-900">Popular Doctors</h3>
+                      <p className="text-sm text-gray-600">Most booked this month</p>
+                    </div>
+                    <div className="p-4 lg:p-6 pt-0">
+                      <PopularDoctorsWidget />
+                    </div>
+                  </div>
+
+                  {/* Department Overview */}
+                  <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+                    <div className="p-4 lg:p-6 border-b border-gray-100">
+                      <h3 className="font-semibold text-lg text-gray-900">Departments</h3>
+                      <p className="text-sm text-gray-600">Active departments</p>
+                    </div>
+                    <div className="p-4 lg:p-6 pt-0">
+                      <div className="space-y-3">
+                        {departments?.slice(0, 4).map((dept) => (
+                          <div key={dept.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                            <div>
+                              <p className="font-medium text-gray-900">{dept.name}</p>
+                              <p className="text-sm text-gray-600">{dept.description}</p>
+                            </div>
+                            <div className="text-right">
+                              <p className="text-sm font-semibold text-gray-900">
+                                {users?.filter(u => u.department_id === dept.id).length || 0}
+                              </p>
+                              <p className="text-xs text-gray-500">Staff</p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Quick Actions */}
+                  <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+                    <div className="p-4 lg:p-6 border-b border-gray-100">
+                      <h3 className="font-semibold text-lg text-gray-900">Quick Actions</h3>
+                    </div>
+                    <div className="p-4 lg:p-6 pt-0">
+                      <div className="grid grid-cols-1 gap-3">
+                        <AppointmentDialog />
+                        <Button variant="outline" className="w-full justify-start">
+                          <User className="w-4 h-4 mr-2" />
+                          Add New User
+                        </Button>
+                        <Button variant="outline" className="w-full justify-start">
+                          <Calendar className="w-4 h-4 mr-2" />
+                          View Schedule
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
 
-              {/* Bottom Section - Fixed Grid */}
+              {/* Bottom Section - Activity Tables */}
               <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 lg:gap-6">
                 <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
                   <div className="p-4 lg:p-6 border-b border-gray-100">
                     <h3 className="font-semibold text-lg text-gray-900">Recent Staff Activity</h3>
+                    <p className="text-sm text-gray-600">Latest user actions and updates</p>
                   </div>
                   <div className="p-4 lg:p-6 pt-0">
                     {recentActivity && recentActivity.length > 0 ? (
                       <DemoTable
                         columns={["Staff Member", "Department", "Last Activity"]}
-                        data={recentActivity.slice(0, 5).map(activity => [
+                        data={recentActivity.slice(0, 6).map(activity => [
                           activity.staffMember,
                           activity.department,
                           activity.lastActivity
@@ -296,6 +404,7 @@ export default function DashboardAdmin() {
                       />
                     ) : (
                       <div className="py-8 text-center">
+                        <Activity className="w-12 h-12 text-gray-300 mx-auto mb-4" />
                         <p className="text-gray-500">No recent activity available</p>
                       </div>
                     )}
@@ -305,9 +414,10 @@ export default function DashboardAdmin() {
                 <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
                   <div className="p-4 lg:p-6 border-b border-gray-100">
                     <h3 className="font-semibold text-lg text-gray-900">System Activity Log</h3>
+                    <p className="text-sm text-gray-600">Security and system events</p>
                   </div>
                   <div className="p-4 lg:p-6 pt-0">
-                    <AuditLog events={filteredLogs.slice(0, 5).map(log => ({
+                    <AuditLog events={filteredLogs.slice(0, 6).map(log => ({
                       who: log.user_id || 'System',
                       when: format(new Date(log.created_at || ''), 'yyyy-MM-dd HH:mm'),
                       what: log.action,
