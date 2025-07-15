@@ -18,6 +18,7 @@ export type Database = {
         Row: {
           appointment_date: string
           booking_type: string | null
+          consultation_fee_at_time: number | null
           created_at: string | null
           doctor_id: string
           id: string
@@ -33,6 +34,7 @@ export type Database = {
         Insert: {
           appointment_date: string
           booking_type?: string | null
+          consultation_fee_at_time?: number | null
           created_at?: string | null
           doctor_id: string
           id?: string
@@ -48,6 +50,7 @@ export type Database = {
         Update: {
           appointment_date?: string
           booking_type?: string | null
+          consultation_fee_at_time?: number | null
           created_at?: string | null
           doctor_id?: string
           id?: string

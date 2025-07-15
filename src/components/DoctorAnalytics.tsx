@@ -30,7 +30,7 @@ export function DoctorAnalytics() {
       const fromDate = dateRange.from.toISOString();
       const toDate = dateRange.to.toISOString();
 
-      // Fetch appointments for this doctor
+      // Fetch appointments for this doctor with historical consultation fees
       const { data: appointments } = await supabase
         .from('appointments')
         .select(`
@@ -40,7 +40,8 @@ export function DoctorAnalytics() {
           payment_status,
           type,
           patient_id,
-          created_at
+          created_at,
+          consultation_fee_at_time
         `)
         .eq('doctor_id', profile.id)
         .gte('appointment_date', fromDate)
@@ -69,6 +70,14 @@ export function DoctorAnalytics() {
         .gte('visit_date', fromDate)
         .lte('visit_date', toDate);
 
+      // Fetch OT operations for this doctor
+      const { data: otOperations } = await supabase
+        .from('ot_schedules')
+        .select('id, operation_date, status, doctor_expense')
+        .eq('doctor_id', profile.id)
+        .gte('operation_date', fromDate.split('T')[0])
+        .lte('operation_date', toDate.split('T')[0]);
+
       // Fetch doctor's consultation fee
       const { data: doctorData } = await supabase
         .from('doctors')
@@ -80,6 +89,7 @@ export function DoctorAnalytics() {
         appointments: appointments || [],
         invoices: invoices || [],
         medicalRecords: medicalRecords || [],
+        otOperations: otOperations || [],
         consultationFee: doctorData?.consultation_fee || 0
       };
     },
@@ -90,36 +100,103 @@ export function DoctorAnalytics() {
   const analytics = useMemo(() => {
     if (!analyticsData) return null;
 
-    const { appointments, invoices, medicalRecords, consultationFee } = analyticsData;
+    const { appointments, invoices, medicalRecords, otOperations, consultationFee } = analyticsData;
 
-    // Calculate earnings
+    // Calculate earnings using historical consultation fees
     const completedAppointments = appointments.filter(apt => apt.status === 'completed');
     const paidAppointments = appointments.filter(apt => apt.payment_status === 'paid');
     
-    const totalEarnings = completedAppointments.length * consultationFee;
-    const receivedEarnings = paidAppointments.length * consultationFee;
+    // Calculate OT earnings
+    const completedOtOperations = otOperations.filter(op => op.status === 'completed');
+    const totalOtEarnings = completedOtOperations.reduce((sum, op) => sum + (op.doctor_expense || 0), 0);
+    
+    // Use historical consultation fees for accurate calculations
+    const consultationEarnings = completedAppointments.reduce((sum, apt) => sum + (apt.consultation_fee_at_time || 0), 0);
+    const totalEarnings = consultationEarnings + totalOtEarnings;
+    
+    const receivedConsultationEarnings = paidAppointments.reduce((sum, apt) => sum + (apt.consultation_fee_at_time || 0), 0);
+    const receivedEarnings = receivedConsultationEarnings; // OT payments handled separately in payment status
     const pendingEarnings = totalEarnings - receivedEarnings;
 
-    // This month's earnings
+    // This month's earnings using historical consultation fees
     const thisMonth = new Date();
     const thisMonthStart = startOfMonth(thisMonth);
     const thisMonthAppointments = completedAppointments.filter(apt => 
       new Date(apt.appointment_date) >= thisMonthStart
     );
-    const thisMonthEarnings = thisMonthAppointments.length * consultationFee;
+    const thisMonthOtOperations = completedOtOperations.filter(op => 
+      new Date(op.operation_date) >= thisMonthStart
+    );
+    const thisMonthConsultationEarnings = thisMonthAppointments.reduce((sum, apt) => sum + (apt.consultation_fee_at_time || 0), 0);
+    const thisMonthOtEarnings = thisMonthOtOperations.reduce((sum, op) => sum + (op.doctor_expense || 0), 0);
+    const thisMonthEarnings = thisMonthConsultationEarnings + thisMonthOtEarnings;
 
-    // Monthly breakdown
-    const monthlyData: Record<string, { completed: number; scheduled: number; cancelled: number; rescheduled: number; total: number }> = {};
+    // Monthly breakdown with historical consultation fees
+    const monthlyData: Record<string, { 
+      completed: number; 
+      scheduled: number; 
+      cancelled: number; 
+      rescheduled: number; 
+      total: number; 
+      earnings: number;
+      appointments: any[];
+    }> = {};
+    
     appointments.forEach(apt => {
       const month = format(new Date(apt.appointment_date), 'MMM yyyy');
       if (!monthlyData[month]) {
-        monthlyData[month] = { completed: 0, scheduled: 0, cancelled: 0, rescheduled: 0, total: 0 };
+        monthlyData[month] = { 
+          completed: 0, 
+          scheduled: 0, 
+          cancelled: 0, 
+          rescheduled: 0, 
+          total: 0,
+          earnings: 0,
+          appointments: []
+        };
       }
-      const status = apt.status as keyof typeof monthlyData[string];
-      if (status in monthlyData[month]) {
-        monthlyData[month][status] = (monthlyData[month][status] || 0) + 1;
+      
+      monthlyData[month].appointments.push(apt);
+      const status = apt.status;
+      
+      // Safely increment status counters
+      if (status === 'completed') {
+        monthlyData[month].completed += 1;
+      } else if (status === 'scheduled') {
+        monthlyData[month].scheduled += 1;
+      } else if (status === 'cancelled') {
+        monthlyData[month].cancelled += 1;
+      } else if (status === 'rescheduled') {
+        monthlyData[month].rescheduled += 1;
       }
+      
       monthlyData[month].total += 1;
+      
+      // Add earnings using historical consultation fee for completed appointments
+      if (apt.status === 'completed') {
+        monthlyData[month].earnings += (apt.consultation_fee_at_time || 0);
+      }
+    });
+
+    // Add OT operations to monthly breakdown
+    otOperations.forEach(op => {
+      const month = format(new Date(op.operation_date), 'MMM yyyy');
+      if (!monthlyData[month]) {
+        monthlyData[month] = { 
+          completed: 0, 
+          scheduled: 0, 
+          cancelled: 0, 
+          rescheduled: 0, 
+          total: 0,
+          earnings: 0,
+          appointments: []
+        };
+      }
+      
+      // Add OT earnings for completed operations
+      if (op.status === 'completed') {
+        monthlyData[month].earnings += (op.doctor_expense || 0);
+      }
     });
 
     const chartData = Object.entries(monthlyData).map(([month, data]) => ({
@@ -129,7 +206,7 @@ export function DoctorAnalytics() {
       cancelled: data.cancelled,
       rescheduled: data.rescheduled,
       total: data.total,
-      earnings: data.completed * consultationFee
+      earnings: data.earnings // Now using historical consultation fees
     }));
 
     // Status distribution
@@ -148,6 +225,9 @@ export function DoctorAnalytics() {
     return {
       totalAppointments: appointments.length,
       completedAppointments: completedAppointments.length,
+      completedOtOperations: completedOtOperations.length,
+      totalOtEarnings,
+      consultationEarnings,
       totalEarnings,
       receivedEarnings,
       pendingEarnings,
@@ -273,9 +353,9 @@ export function DoctorAnalytics() {
                 </div>
                 <Banknote className="h-8 w-8 text-green-600" />
               </div>
-              <p className="text-xs text-muted-foreground mt-2">
-                From {analytics?.completedAppointments || 0} completed appointments
-              </p>
+               <p className="text-xs text-muted-foreground mt-2">
+                 {analytics?.completedAppointments || 0} appointments + {analytics?.completedOtOperations || 0} OT operations
+               </p>
             </CardContent>
           </Card>
 
