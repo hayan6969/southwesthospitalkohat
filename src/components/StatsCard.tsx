@@ -15,7 +15,7 @@ type StatsCardProps = {
 export function StatsCard({ title, value, change, changeType, icon, chart, loading }: StatsCardProps) {
   if (loading) {
     return (
-      <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6 animate-pulse">
+      <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6 animate-pulse h-[180px] flex flex-col">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-3">
             <div className="p-3 rounded-xl bg-gray-100 w-12 h-12"></div>
@@ -25,25 +25,27 @@ export function StatsCard({ title, value, change, changeType, icon, chart, loadi
             </div>
           </div>
         </div>
-        {chart && <div className="h-12 bg-gray-100 rounded"></div>}
+        <div className="flex-1 flex items-end">
+          {chart && <div className="h-12 bg-gray-100 rounded w-full"></div>}
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6 hover:shadow-md transition-shadow duration-200">
+    <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6 hover:shadow-md transition-shadow duration-200 h-[180px] flex flex-col">
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-3">
-          <div className="p-3 rounded-xl bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-100">
+          <div className="p-3 rounded-xl bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-100 flex-shrink-0">
             {icon}
           </div>
-          <div>
-            <p className="text-sm font-medium text-gray-600 mb-1">{title}</p>
-            <p className="text-2xl font-bold text-gray-900">{value}</p>
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-medium text-gray-600 mb-1 truncate">{title}</p>
+            <p className="text-2xl font-bold text-gray-900 truncate">{value}</p>
           </div>
         </div>
         {change && (
-          <div className={`flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap ${
+          <div className={`flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap flex-shrink-0 ${
             changeType === "positive" 
               ? "bg-green-50 text-green-700 border border-green-200" 
               : "bg-red-50 text-red-700 border border-red-200"
@@ -57,11 +59,13 @@ export function StatsCard({ title, value, change, changeType, icon, chart, loadi
           </div>
         )}
       </div>
-      {chart && (
-        <div className="h-12 mt-4">
-          {chart}
-        </div>
-      )}
+      <div className="flex-1 flex items-end">
+        {chart && (
+          <div className="h-12 w-full">
+            {chart}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

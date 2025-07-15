@@ -227,8 +227,9 @@ export default function DashboardAdmin() {
               <TabsTrigger value="settings" className="whitespace-nowrap">Settings</TabsTrigger>
             </TabsList>
 
-            <TabsContent value="overview" className="space-y-8">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <TabsContent value="overview" className="space-y-6">
+              {/* Statistics Cards - Fixed Grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
                 <StatsCard
                   title="Doctors"
                   value={realStats?.totalDoctors?.toString() || "0"}
@@ -267,40 +268,52 @@ export default function DashboardAdmin() {
                 />
               </div>
 
-              <div className="grid grid-cols-1 xl:grid-cols-3 gap-8 mb-8">
-                <div className="xl:col-span-2">
+              {/* Charts Section - Fixed Grid */}
+              <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 lg:gap-6">
+                <div className="xl:col-span-2 min-h-[400px]">
                   <RealAppointmentChart />
                 </div>
-                <div>
+                <div className="min-h-[400px]">
                   <PopularDoctorsWidget />
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
-                <div>
-                  <h3 className="font-semibold mb-4">Recent Staff Activity</h3>
-                  {recentActivity && recentActivity.length > 0 ? (
-                    <DemoTable
-                      columns={["Staff Member", "Department", "Last Activity"]}
-                      data={recentActivity.slice(0, 5).map(activity => [
-                        activity.staffMember,
-                        activity.department,
-                        activity.lastActivity
-                      ])}
-                    />
-                  ) : (
-                    <div className="bg-white rounded-lg border shadow-sm p-6">
-                      <p className="text-gray-500 text-center">No recent activity available</p>
-                    </div>
-                  )}
+              {/* Bottom Section - Fixed Grid */}
+              <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 lg:gap-6">
+                <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+                  <div className="p-4 lg:p-6 border-b border-gray-100">
+                    <h3 className="font-semibold text-lg text-gray-900">Recent Staff Activity</h3>
+                  </div>
+                  <div className="p-4 lg:p-6 pt-0">
+                    {recentActivity && recentActivity.length > 0 ? (
+                      <DemoTable
+                        columns={["Staff Member", "Department", "Last Activity"]}
+                        data={recentActivity.slice(0, 5).map(activity => [
+                          activity.staffMember,
+                          activity.department,
+                          activity.lastActivity
+                        ])}
+                      />
+                    ) : (
+                      <div className="py-8 text-center">
+                        <p className="text-gray-500">No recent activity available</p>
+                      </div>
+                    )}
+                  </div>
                 </div>
-                <div>
-                  <AuditLog events={filteredLogs.slice(0, 5).map(log => ({
-                    who: log.user_id || 'System',
-                    when: format(new Date(log.created_at || ''), 'yyyy-MM-dd HH:mm'),
-                    what: log.action,
-                    details: log.details || ''
-                  }))} />
+                
+                <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+                  <div className="p-4 lg:p-6 border-b border-gray-100">
+                    <h3 className="font-semibold text-lg text-gray-900">System Activity Log</h3>
+                  </div>
+                  <div className="p-4 lg:p-6 pt-0">
+                    <AuditLog events={filteredLogs.slice(0, 5).map(log => ({
+                      who: log.user_id || 'System',
+                      when: format(new Date(log.created_at || ''), 'yyyy-MM-dd HH:mm'),
+                      what: log.action,
+                      details: log.details || ''
+                    }))} />
+                  </div>
                 </div>
               </div>
             </TabsContent>
