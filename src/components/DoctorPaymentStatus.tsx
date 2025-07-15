@@ -59,7 +59,7 @@ export function DoctorPaymentStatus() {
 
   // Get unpaid earnings from completed appointments
   const { data: unpaidEarnings, isLoading: earningsLoading } = useQuery({
-    queryKey: ['doctor-unpaid-earnings', profile?.id, dateRange],
+    queryKey: ['doctor-unpaid-earnings', profile?.id, dateRange, payments],
     queryFn: async () => {
       if (!profile?.id) return { appointmentCount: 0, otCount: 0, consultationEarnings: 0, otEarnings: 0, totalEarnings: 0 };
 
@@ -75,7 +75,22 @@ export function DoctorPaymentStatus() {
 
       const consultationFee = doctorData?.consultation_fee || 0;
 
-      // Get completed appointments that haven't been paid
+      // Get all payment records to exclude already processed periods
+      const { data: allPayments } = await supabase
+        .from('doctor_payments')
+        .select('period_start, period_end, payment_status')
+        .eq('doctor_id', profile.id);
+
+      const processedPeriods = allPayments || [];
+
+      // Function to check if a date falls within any processed payment period
+      const isInProcessedPeriod = (date: string) => {
+        return processedPeriods.some(payment => 
+          date >= payment.period_start && date <= payment.period_end
+        );
+      };
+
+      // Get completed appointments that haven't been included in any payment record
       const { data: appointments } = await supabase
         .from('appointments')
         .select('id, appointment_date')
@@ -84,19 +99,29 @@ export function DoctorPaymentStatus() {
         .gte('appointment_date', startDate)
         .lte('appointment_date', endDate);
 
-      // Get completed OT operations that haven't been paid
+      // Filter out appointments that are already in processed payment periods
+      const unprocessedAppointments = appointments?.filter(apt => 
+        !isInProcessedPeriod(apt.appointment_date.split('T')[0])
+      ) || [];
+
+      // Get completed OT operations that haven't been included in any payment record
       const { data: otOperations } = await supabase
         .from('ot_schedules')
-        .select('doctor_expense')
+        .select('doctor_expense, operation_date')
         .eq('doctor_id', profile.id)
         .eq('status', 'completed')
         .gte('operation_date', startDate)
         .lte('operation_date', endDate);
 
-      const appointmentCount = appointments?.length || 0;
-      const otCount = otOperations?.length || 0;
+      // Filter out OT operations that are already in processed payment periods
+      const unprocessedOtOperations = otOperations?.filter(op => 
+        !isInProcessedPeriod(op.operation_date)
+      ) || [];
+
+      const appointmentCount = unprocessedAppointments.length;
+      const otCount = unprocessedOtOperations.length;
       const consultationEarnings = appointmentCount * consultationFee;
-      const otEarnings = otOperations?.reduce((sum, op) => sum + (op.doctor_expense || 0), 0) || 0;
+      const otEarnings = unprocessedOtOperations.reduce((sum, op) => sum + (op.doctor_expense || 0), 0);
       const totalEarnings = consultationEarnings + otEarnings;
 
       return {
