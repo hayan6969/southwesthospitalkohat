@@ -54,7 +54,7 @@ export function DoctorPaymentStatus() {
       return data as DoctorPayment[];
     },
     enabled: !!profile?.id,
-    refetchInterval: 30000
+    refetchInterval: 5000
   });
 
   // Get unpaid earnings from completed appointments
@@ -108,7 +108,7 @@ export function DoctorPaymentStatus() {
       };
     },
     enabled: !!profile?.id,
-    refetchInterval: 30000
+    refetchInterval: 5000
   });
 
   const isLoading = paymentsLoading || earningsLoading;

@@ -84,7 +84,7 @@ export function DoctorAnalytics() {
       };
     },
     enabled: !!profile?.id,
-    refetchInterval: 30000
+    refetchInterval: 5000
   });
 
   const analytics = useMemo(() => {
