@@ -144,30 +144,30 @@ export default function DashboardDoctor() {
         </div>
       </header>
 
-      <div className="p-6">
-        <div className="max-w-7xl mx-auto">
-          <div className="flex items-center justify-between mb-8">
-            <h2 className="text-2xl font-bold">Medical Dashboard</h2>
-            <div className="flex gap-3">
+      <div className="p-4 sm:p-6">
+        <div className="max-w-7xl mx-auto space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+            <h2 className="text-2xl font-bold text-gray-900">Medical Dashboard</h2>
+            <div className="flex gap-2 sm:gap-3">
               <StopAppointmentsButton />
               <DoctorAvailabilityManager />
             </div>
           </div>
 
-          <Tabs defaultValue="overview" className="space-y-6">
-            <TabsList className="grid w-full grid-cols-7">
-              <TabsTrigger value="overview">Overview</TabsTrigger>
-              <TabsTrigger value="appointments">Appointments</TabsTrigger>
-              <TabsTrigger value="patients">Patient History</TabsTrigger>
-              <TabsTrigger value="diagnoses">Diagnoses & Rx</TabsTrigger>
-              <TabsTrigger value="notes">Patient Notes</TabsTrigger>
-              <TabsTrigger value="settings">Settings</TabsTrigger>
-              <TabsTrigger value="analytics">Analytics</TabsTrigger>
+          <Tabs defaultValue="overview" className="w-full">
+            <TabsList className="grid w-full grid-cols-7 h-auto p-1">
+              <TabsTrigger value="overview" className="text-xs sm:text-sm">Overview</TabsTrigger>
+              <TabsTrigger value="appointments" className="text-xs sm:text-sm">Appointments</TabsTrigger>
+              <TabsTrigger value="patients" className="text-xs sm:text-sm">Patient History</TabsTrigger>
+              <TabsTrigger value="diagnoses" className="text-xs sm:text-sm">Diagnoses & Rx</TabsTrigger>
+              <TabsTrigger value="notes" className="text-xs sm:text-sm">Patient Notes</TabsTrigger>
+              <TabsTrigger value="settings" className="text-xs sm:text-sm">Settings</TabsTrigger>
+              <TabsTrigger value="analytics" className="text-xs sm:text-sm">Analytics</TabsTrigger>
             </TabsList>
 
-            <TabsContent value="overview" className="space-y-8">
+            <TabsContent value="overview" className="mt-6 space-y-6">
               {/* Statistics Cards */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 sm:gap-6">
                 <StatsCard
                   title="Today's Appointments"
                   value={todayAppointments.length}
@@ -199,30 +199,32 @@ export default function DashboardDoctor() {
               </div>
 
               {/* Content Tables */}
-              <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-                <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
-                  <div className="flex items-center justify-between mb-6">
-                    <h3 className="font-semibold text-lg text-gray-900">Today's Schedule</h3>
-                    <Button variant="outline" size="sm">View All</Button>
+              <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 sm:gap-6">
+                <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+                  <div className="p-4 sm:p-6 border-b border-gray-100">
+                    <div className="flex items-center justify-between">
+                      <h3 className="font-semibold text-lg text-gray-900">Today's Schedule</h3>
+                      <Button variant="outline" size="sm">View All</Button>
+                    </div>
                   </div>
-                  <div className="overflow-hidden">
+                  <div className="overflow-x-auto">
                     <Table>
                       <TableHeader>
                         <TableRow>
-                          <TableHead>Time</TableHead>
-                          <TableHead>Patient</TableHead>
-                          <TableHead>Type</TableHead>
-                          <TableHead>Status</TableHead>
+                          <TableHead className="whitespace-nowrap">Time</TableHead>
+                          <TableHead className="whitespace-nowrap">Patient</TableHead>
+                          <TableHead className="whitespace-nowrap">Type</TableHead>
+                          <TableHead className="whitespace-nowrap">Status</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
                         {appointmentsLoading ? (
                           Array.from({ length: 3 }).map((_, i) => (
                             <TableRow key={i}>
-                              <TableCell><div className="h-4 bg-gray-200 rounded animate-pulse"></div></TableCell>
-                              <TableCell><div className="h-4 bg-gray-200 rounded animate-pulse"></div></TableCell>
-                              <TableCell><div className="h-4 bg-gray-200 rounded animate-pulse"></div></TableCell>
-                              <TableCell><div className="h-4 bg-gray-200 rounded animate-pulse"></div></TableCell>
+                              <TableCell><div className="h-4 bg-gray-200 rounded animate-pulse w-16"></div></TableCell>
+                              <TableCell><div className="h-4 bg-gray-200 rounded animate-pulse w-24"></div></TableCell>
+                              <TableCell><div className="h-4 bg-gray-200 rounded animate-pulse w-20"></div></TableCell>
+                              <TableCell><div className="h-4 bg-gray-200 rounded animate-pulse w-16"></div></TableCell>
                             </TableRow>
                           ))
                         ) : todayAppointments.length > 0 ? (
@@ -232,15 +234,15 @@ export default function DashboardDoctor() {
                                className="cursor-pointer hover:bg-gray-50"
                                onClick={() => handleAppointmentClick(appointment)}
                              >
-                               <TableCell className="font-medium">
+                               <TableCell className="font-medium whitespace-nowrap">
                                  {format(new Date(appointment.appointment_date), 'h:mm a')}
                                </TableCell>
-                               <TableCell>
+                               <TableCell className="max-w-[120px] truncate">
                                  {getPatientName(appointment.patient_id, patientNames || [])}
                                </TableCell>
-                               <TableCell>{appointment.type}</TableCell>
+                               <TableCell className="max-w-[100px] truncate">{appointment.type}</TableCell>
                                <TableCell>
-                                 <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                 <span className={`px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap ${
                                    appointment.status === 'completed' ? 'bg-green-100 text-green-700' :
                                    appointment.status === 'scheduled' ? 'bg-blue-100 text-blue-700' :
                                    'bg-gray-100 text-gray-700'
@@ -262,39 +264,41 @@ export default function DashboardDoctor() {
                   </div>
                 </div>
 
-                <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
-                  <div className="flex items-center justify-between mb-6">
-                    <h3 className="font-semibold text-lg text-gray-900">Recent Medical Records</h3>
-                    <Button variant="outline" size="sm">View All</Button>
+                <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+                  <div className="p-4 sm:p-6 border-b border-gray-100">
+                    <div className="flex items-center justify-between">
+                      <h3 className="font-semibold text-lg text-gray-900">Recent Medical Records</h3>
+                      <Button variant="outline" size="sm">View All</Button>
+                    </div>
                   </div>
-                  <div className="overflow-hidden">
+                  <div className="overflow-x-auto">
                     <Table>
                       <TableHeader>
                         <TableRow>
-                          <TableHead>Patient</TableHead>
-                          <TableHead>Date</TableHead>
-                          <TableHead>Diagnosis</TableHead>
+                          <TableHead className="whitespace-nowrap">Patient</TableHead>
+                          <TableHead className="whitespace-nowrap">Date</TableHead>
+                          <TableHead className="whitespace-nowrap">Diagnosis</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
                         {recordsLoading ? (
                           Array.from({ length: 3 }).map((_, i) => (
                             <TableRow key={i}>
-                              <TableCell><div className="h-4 bg-gray-200 rounded animate-pulse"></div></TableCell>
-                              <TableCell><div className="h-4 bg-gray-200 rounded animate-pulse"></div></TableCell>
-                              <TableCell><div className="h-4 bg-gray-200 rounded animate-pulse"></div></TableCell>
+                              <TableCell><div className="h-4 bg-gray-200 rounded animate-pulse w-24"></div></TableCell>
+                              <TableCell><div className="h-4 bg-gray-200 rounded animate-pulse w-20"></div></TableCell>
+                              <TableCell><div className="h-4 bg-gray-200 rounded animate-pulse w-32"></div></TableCell>
                             </TableRow>
                           ))
                         ) : recentRecords.length > 0 ? (
                           recentRecords.map((record) => (
                             <TableRow key={record.id}>
-                              <TableCell className="font-medium">
+                              <TableCell className="font-medium max-w-[120px] truncate">
                                 {getPatientName(record.patient_id, patientNames || [])}
                               </TableCell>
-                              <TableCell>
+                              <TableCell className="whitespace-nowrap">
                                 {format(new Date(record.visit_date), 'MMM d, yyyy')}
                               </TableCell>
-                              <TableCell>{record.diagnosis || 'No diagnosis'}</TableCell>
+                              <TableCell className="max-w-[150px] truncate">{record.diagnosis || 'No diagnosis'}</TableCell>
                             </TableRow>
                           ))
                         ) : (
