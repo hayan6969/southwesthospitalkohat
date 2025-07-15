@@ -350,18 +350,29 @@ const OfflineMode = () => {
     }
 
     try {
-      toast({
-        title: "Upload Started",
-        description: `Uploading ${pendingCount} items to the server...`,
-        variant: "default"
-      });
-
       // Get offline operations and invoices
       const operations = JSON.parse(localStorage.getItem('offline_operations') || '[]');
       const invoices = JSON.parse(localStorage.getItem('offline_invoices') || '[]');
 
-      console.log('📦 Uploading operations:', operations);
-      console.log('📦 Uploading invoices:', invoices);
+      console.log('📦 Starting upload process...');
+      console.log('📦 Operations to upload:', operations.length);
+      console.log('📦 Invoices to upload:', invoices.length);
+      console.log('📦 Operations data:', operations);
+
+      if (operations.length === 0) {
+        toast({
+          title: "No Data to Upload",
+          description: "No offline data found to upload.",
+          variant: "default"
+        });
+        return;
+      }
+
+      toast({
+        title: "Upload Started",
+        description: `Uploading ${operations.length} items to the server...`,
+        variant: "default"
+      });
 
       // First create a dummy patient for offline transactions
       const { data: dummyPatient, error: patientError } = await supabase
@@ -404,7 +415,14 @@ const OfflineMode = () => {
           } else {
             // Create invoice for the appointment
             const invoiceNumber = `INV-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-            const { error: invoiceError } = await supabase
+            console.log('💰 Creating appointment invoice:', {
+              patient_id: dummyPatient.id,
+              amount: operation.data.consultation_fee || 0,
+              status: 'paid',
+              invoice_number: invoiceNumber
+            });
+            
+            const { data: createdInvoice, error: invoiceError } = await supabase
               .from('invoices')
               .insert({
                 patient_id: dummyPatient.id,
@@ -414,10 +432,14 @@ const OfflineMode = () => {
                 description: `Offline Consultation - ${operation.data.patient_name}`,
                 paid_at: new Date().toISOString(),
                 created_at: new Date().toISOString()
-              });
+              })
+              .select()
+              .single();
 
             if (invoiceError) {
-              console.error('Error creating appointment invoice:', invoiceError);
+              console.error('❌ Error creating appointment invoice:', invoiceError);
+            } else {
+              console.log('✅ Appointment invoice created successfully:', createdInvoice);
             }
           }
         } else if (operation.table === 'lab_reports' && operation.action === 'insert') {
@@ -442,7 +464,14 @@ const OfflineMode = () => {
           } else {
             // Create invoice for the lab report
             const invoiceNumber = `INV-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-            const { error: invoiceError } = await supabase
+            console.log('💰 Creating lab invoice:', {
+              patient_id: dummyPatient.id,
+              amount: operation.data.price || 0,
+              status: 'paid',
+              invoice_number: invoiceNumber
+            });
+            
+            const { data: createdInvoice, error: invoiceError } = await supabase
               .from('invoices')
               .insert({
                 patient_id: dummyPatient.id,
@@ -452,10 +481,14 @@ const OfflineMode = () => {
                 description: `Offline Lab Test - ${operation.data.test_name} - ${operation.data.patient_name}`,
                 paid_at: new Date().toISOString(),
                 created_at: new Date().toISOString()
-              });
+              })
+              .select()
+              .single();
 
             if (invoiceError) {
-              console.error('Error creating lab invoice:', invoiceError);
+              console.error('❌ Error creating lab invoice:', invoiceError);
+            } else {
+              console.log('✅ Lab invoice created successfully:', createdInvoice);
             }
           }
         } else if (operation.table === 'ot_schedules' && operation.action === 'insert') {
@@ -480,7 +513,14 @@ const OfflineMode = () => {
           } else {
             // Create invoice for the OT operation
             const invoiceNumber = `INV-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-            const { error: invoiceError } = await supabase
+            console.log('💰 Creating OT invoice:', {
+              patient_id: dummyPatient.id,
+              amount: operation.data.total_cost || 0,
+              status: 'paid',
+              invoice_number: invoiceNumber
+            });
+            
+            const { data: createdInvoice, error: invoiceError } = await supabase
               .from('invoices')
               .insert({
                 patient_id: dummyPatient.id,
@@ -490,10 +530,14 @@ const OfflineMode = () => {
                 description: `Offline OT Operation - ${operation.data.patient_name}`,
                 paid_at: new Date().toISOString(),
                 created_at: new Date().toISOString()
-              });
+              })
+              .select()
+              .single();
 
             if (invoiceError) {
-              console.error('Error creating OT invoice:', invoiceError);
+              console.error('❌ Error creating OT invoice:', invoiceError);
+            } else {
+              console.log('✅ OT invoice created successfully:', createdInvoice);
             }
           }
         }
