@@ -5,13 +5,14 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { EnhancedAppointmentDialog } from "@/components/dialogs/EnhancedAppointmentDialog";
 import { PatientDialog } from "@/components/dialogs/PatientDialog";
 import { InvoiceDialog } from "@/components/dialogs/InvoiceDialog";
 import { useAppointments, usePatients, useDoctors } from "@/hooks/useDatabase";
 import { usePatientNames, useDoctorNames, getPatientName, getDoctorName } from "@/hooks/useDisplayHelpers";
 import { supabase } from "@/integrations/supabase/client";
-import { Calendar, UserPlus, Receipt, Users, Clock, Edit, CreditCard, Printer, Search, FileText, Download, CalendarIcon } from "lucide-react";
+import { Calendar, UserPlus, Receipt, Users, Clock, CreditCard, Printer, Search, FileText, Download, CalendarIcon, X, RotateCcw } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { format, isSameDay } from "date-fns";
@@ -27,6 +28,7 @@ export function StaffCounter() {
   const { data: doctorNames } = useDoctorNames();
   const [searchTerm, setSearchTerm] = useState("");
   const [processingInvoice, setProcessingInvoice] = useState<string | null>(null);
+  const [cancellingAppointment, setCancellingAppointment] = useState<string | null>(null);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [patientNumbers, setPatientNumbers] = useState<{[key: string]: string}>({});
 
@@ -242,6 +244,59 @@ export function StaffCounter() {
     }
   };
 
+  const handleCancelAppointment = async (appointment: any) => {
+    setCancellingAppointment(appointment.id);
+    try {
+      // Update appointment status to cancelled
+      await supabase
+        .from('appointments')
+        .update({ 
+          status: 'cancelled',
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', appointment.id);
+
+      // If the appointment was paid, we need to handle revenue removal
+      if (appointment.payment_status === 'paid') {
+        // Update any existing invoice to refund/cancelled status
+        await supabase
+          .from('invoices')
+          .update({ 
+            status: 'pending', // Or create a 'refunded' status
+            paid_at: null
+          })
+          .eq('patient_id', appointment.patient_id)
+          .eq('description', `Consultation with ${getDoctorName(appointment.doctor_id, doctorNames || [])}`);
+      }
+
+      // Update queue position status
+      await supabase
+        .from('queue_positions')
+        .update({ 
+          status: 'cancelled',
+          updated_at: new Date().toISOString()
+        })
+        .eq('appointment_id', appointment.id);
+
+      toast({
+        title: "Appointment Cancelled",
+        description: "The appointment has been successfully cancelled and revenue has been adjusted",
+      });
+      
+      // Refresh appointments
+      refetchAppointments();
+    } catch (error) {
+      console.error('Error cancelling appointment:', error);
+      toast({
+        title: "Error",
+        description: "Failed to cancel appointment",
+        variant: "destructive",
+      });
+    } finally {
+      setCancellingAppointment(null);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -414,40 +469,94 @@ export function StaffCounter() {
                           {appointment.payment_status || 'pending'}
                         </Badge>
                       </TableCell>
-                      <TableCell>
-                        <div className="flex gap-2">
-                          <Button size="sm" variant="outline">
-                            <Edit className="w-3 h-3 mr-1" />
-                            Edit
-                          </Button>
-                          {appointment.payment_status !== 'paid' && (
-                            <Button 
-                              size="sm" 
-                              variant="default"
-                              onClick={() => handleGenerateInvoice(appointment)}
-                              disabled={processingInvoice === appointment.id}
-                            >
-                              {processingInvoice === appointment.id ? (
-                                <>
-                                  <Clock className="w-3 h-3 mr-1 animate-spin" />
-                                  Processing...
-                                </>
-                              ) : (
-                                <>
-                                  <FileText className="w-3 h-3 mr-1" />
-                                  Generate Invoice
-                                </>
-                              )}
-                            </Button>
-                          )}
-                          {appointment.payment_status === 'paid' && (
-                            <Badge variant="default" className="text-xs">
-                              <CreditCard className="w-3 h-3 mr-1" />
-                              Paid
-                            </Badge>
-                          )}
-                        </div>
-                      </TableCell>
+                       <TableCell>
+                         <div className="flex gap-2">
+                           {/* Cancel appointment with confirmation dialog */}
+                           <AlertDialog>
+                             <AlertDialogTrigger asChild>
+                               <Button 
+                                 size="sm" 
+                                 variant="destructive"
+                                 disabled={cancellingAppointment === appointment.id}
+                               >
+                                 {cancellingAppointment === appointment.id ? (
+                                   <>
+                                     <Clock className="w-3 h-3 mr-1 animate-spin" />
+                                     Cancelling...
+                                   </>
+                                 ) : (
+                                   <>
+                                     <X className="w-3 h-3 mr-1" />
+                                     Cancel
+                                   </>
+                                 )}
+                               </Button>
+                             </AlertDialogTrigger>
+                             <AlertDialogContent>
+                               <AlertDialogHeader>
+                                 <AlertDialogTitle>Cancel Appointment</AlertDialogTitle>
+                                 <AlertDialogDescription>
+                                   Are you sure you want to cancel this appointment for {getPatientName(appointment.patient_id, patientNames || [])}? 
+                                   {appointment.payment_status === 'paid' && ' This will also adjust the revenue and mark any related invoices as refunded.'}
+                                 </AlertDialogDescription>
+                               </AlertDialogHeader>
+                               <AlertDialogFooter>
+                                 <AlertDialogCancel>Keep Appointment</AlertDialogCancel>
+                                 <AlertDialogAction 
+                                   onClick={() => handleCancelAppointment(appointment)}
+                                   className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                 >
+                                   Yes, Cancel Appointment
+                                 </AlertDialogAction>
+                               </AlertDialogFooter>
+                             </AlertDialogContent>
+                           </AlertDialog>
+
+                           {/* Generate/Regenerate Invoice */}
+                           {appointment.payment_status !== 'paid' && (
+                             <Button 
+                               size="sm" 
+                               variant="default"
+                               onClick={() => handleGenerateInvoice(appointment)}
+                               disabled={processingInvoice === appointment.id}
+                             >
+                               {processingInvoice === appointment.id ? (
+                                 <>
+                                   <Clock className="w-3 h-3 mr-1 animate-spin" />
+                                   Processing...
+                                 </>
+                               ) : (
+                                 <>
+                                   <FileText className="w-3 h-3 mr-1" />
+                                   Generate Invoice
+                                 </>
+                               )}
+                             </Button>
+                           )}
+
+                           {/* Regenerate Invoice for paid appointments */}
+                           {appointment.payment_status === 'paid' && (
+                             <Button 
+                               size="sm" 
+                               variant="outline"
+                               onClick={() => handleGenerateInvoice(appointment)}
+                               disabled={processingInvoice === appointment.id}
+                             >
+                               {processingInvoice === appointment.id ? (
+                                 <>
+                                   <Clock className="w-3 h-3 mr-1 animate-spin" />
+                                   Processing...
+                                 </>
+                               ) : (
+                                 <>
+                                   <RotateCcw className="w-3 h-3 mr-1" />
+                                   Regenerate Invoice
+                                 </>
+                               )}
+                             </Button>
+                           )}
+                         </div>
+                       </TableCell>
                     </TableRow>
                   ))
                 ) : (
