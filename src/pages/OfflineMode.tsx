@@ -158,18 +158,17 @@ const OfflineMode = () => {
     setPendingCount(operations.length);
   };
 
-  const generatePDF = (invoice: OfflineInvoice) => {
+  const generatePDF = async (invoice: OfflineInvoice) => {
     try {
-      console.log('Starting PDF generation for invoice:', invoice.invoice_number);
-      console.log('Invoice data:', invoice);
+      console.log('🚀 Starting PDF generation for invoice:', invoice.invoice_number);
+      console.log('📄 Invoice data:', invoice);
       
-      if (!jsPDF) {
-        console.error('jsPDF not available');
-        throw new Error('PDF library not loaded');
-      }
+      // Add a small delay to ensure DOM is ready
+      await new Promise(resolve => setTimeout(resolve, 100));
       
       const doc = new jsPDF();
-      console.log('jsPDF instance created');
+      console.log('✅ jsPDF instance created successfully');
+      
       const pageWidth = doc.internal.pageSize.width;
       let yPosition = 20;
 
@@ -283,24 +282,57 @@ const OfflineMode = () => {
       doc.setTextColor(100, 100, 100);
       doc.text('Thank you for choosing our medical services!', pageWidth / 2, yPosition, { align: 'center' });
 
-      console.log('PDF generated successfully, opening in new tab...');
+      console.log('📝 PDF content generated successfully');
       
-      // Open PDF in new tab
+      // Try to generate PDF blob
       const pdfBlob = doc.output('blob');
-      const pdfUrl = URL.createObjectURL(pdfBlob);
-      window.open(pdfUrl, '_blank');
+      console.log('💾 PDF blob created, size:', pdfBlob.size, 'bytes');
       
-      toast({
-        title: "PDF Generated",
-        description: "Invoice PDF opened in new tab",
-        variant: "default"
-      });
+      // Create URL and try to open in new tab
+      const pdfUrl = URL.createObjectURL(pdfBlob);
+      console.log('🔗 PDF URL created:', pdfUrl);
+      
+      // Try opening in new tab with focus
+      const newWindow = window.open(pdfUrl, '_blank');
+      
+      if (newWindow) {
+        console.log('✅ PDF opened in new tab successfully');
+        newWindow.focus();
+        
+        // Clean up URL after some time
+        setTimeout(() => {
+          URL.revokeObjectURL(pdfUrl);
+          console.log('🧹 PDF URL cleaned up');
+        }, 5000);
+        
+        toast({
+          title: "PDF Generated",
+          description: "Invoice PDF opened in new tab",
+          variant: "default"
+        });
+      } else {
+        console.log('⚠️ Popup blocked, trying alternative method');
+        // Alternative method: download the file
+        const link = document.createElement('a');
+        link.href = pdfUrl;
+        link.download = `invoice-${invoice.invoice_number}.pdf`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(pdfUrl);
+        
+        toast({
+          title: "PDF Downloaded",
+          description: "Invoice PDF has been downloaded to your device",
+          variant: "default"
+        });
+      }
       
     } catch (error) {
-      console.error('Error generating PDF:', error);
+      console.error('❌ Error generating PDF:', error);
       toast({
-        title: "PDF Generation Failed",
-        description: "Could not generate PDF. Please try again.",
+        title: "PDF Generation Failed", 
+        description: `Error: ${error instanceof Error ? error.message : 'Unknown error'}`,
         variant: "destructive"
       });
     }
