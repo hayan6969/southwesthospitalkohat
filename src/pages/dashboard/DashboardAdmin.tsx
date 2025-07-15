@@ -1,4 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState, useRef, useEffect } from "react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { StatsCard } from "@/components/StatsCard";
 import { RealAppointmentChart } from "@/components/RealAppointmentChart";
 import { PopularDoctorsWidget } from "@/components/PopularDoctorsWidget";
@@ -14,7 +17,6 @@ import { useFinancialAnalytics } from "@/hooks/useFinancialAnalytics";
 import { useAuth } from "@/hooks/useAuth";
 import { Users, UserCheck, Calendar, Banknote, Shield, Activity, Filter, User, LogOut, TrendingUp, CreditCard } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -43,6 +45,8 @@ export default function DashboardAdmin() {
   const { toast: toastHook } = useToast();
   const updateUserStatus = useUpdateUserStatus();
   const deleteUser = useDeleteUser();
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [userToDelete, setUserToDelete] = useState<any>(null);
   const [editingUser, setEditingUser] = useState<any>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   
@@ -109,7 +113,8 @@ export default function DashboardAdmin() {
         isActive: newStatus 
       });
       toast.success(`User ${action} successfully`);
-      refetchUsers();
+      // Force refetch to update UI
+      await refetchUsers();
     } catch (error) {
       console.error(`Failed to ${action.toLowerCase()} user:`, error);
       toast.error(`Failed to ${action.toLowerCase()} user`);
@@ -121,17 +126,19 @@ export default function DashboardAdmin() {
       toast.error("Cannot delete admin users");
       return;
     }
+    setUserToDelete(user);
+    setDeleteConfirmOpen(true);
+  };
 
-    const confirmed = window.confirm(
-      `Are you sure you want to permanently delete ${user.first_name} ${user.last_name}? This action cannot be undone.`
-    );
-    
-    if (!confirmed) return;
+  const confirmDeleteUser = async () => {
+    if (!userToDelete) return;
     
     try {
-      await deleteUser.mutateAsync(user.id);
+      await deleteUser.mutateAsync(userToDelete.id);
       toast.success("User deleted successfully");
-      refetchUsers();
+      setDeleteConfirmOpen(false);
+      setUserToDelete(null);
+      await refetchUsers();
     } catch (error) {
       console.error("Failed to delete user:", error);
       toast.error("Failed to delete user");
@@ -848,43 +855,63 @@ export default function DashboardAdmin() {
                        <Input 
                          value={hospitalForm.hospital_address}
                          onChange={(e) => setHospitalForm(prev => ({ ...prev, hospital_address: e.target.value }))}
-                         placeholder="Enter hospital address"
-                       />
-                     </div>
-                   </div>
-                   <div className="mt-6">
-                     <Button 
-                       className="w-full"
-                       onClick={async () => {
-                         const success = await updateSettings({
-                           hospital_name: hospitalForm.hospital_name,
-                           contact_number: hospitalForm.contact_number,
-                           hospital_address: hospitalForm.hospital_address
-                         });
-                          if (success) {
-                            toastHook({
-                              title: "Success",
-                              description: "Hospital information updated successfully",
+                        />
+                      </div>
+                      <div className="mt-6">
+                        <Button 
+                          className="w-full"
+                          onClick={async () => {
+                            const success = await updateSettings({
+                              hospital_name: hospitalForm.hospital_name,
+                              contact_number: hospitalForm.contact_number,
+                              hospital_address: hospitalForm.hospital_address
                             });
-                          }
-                       }}
-                     >
-                       Save Hospital Information
-                     </Button>
-                   </div>
-                 </div>
-               </div>
-             </TabsContent>
-           </Tabs>
+                             if (success) {
+                               toastHook({
+                                 title: "Success",
+                                 description: "Hospital information updated successfully",
+                               });
+                             }
+                          }}
+                        >
+                          Save Hospital Information
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </TabsContent>
+            </Tabs>
 
-           <EditUserDialog 
-             user={editingUser}
-             open={editDialogOpen}
-             onOpenChange={setEditDialogOpen}
-             onUserUpdated={handleUserUpdated}
-           />
-         </div>
-       </div>
-     </div>
-   );
- }
+            <EditUserDialog 
+              user={editingUser}
+              open={editDialogOpen}
+              onOpenChange={setEditDialogOpen}
+              onUserUpdated={handleUserUpdated}
+            />
+
+            <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Confirm Delete</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Are you sure you want to permanently delete {userToDelete?.first_name} {userToDelete?.last_name}? 
+                    This action cannot be undone and will remove all associated data.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction 
+                    onClick={confirmDeleteUser}
+                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  >
+                    Delete User
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </div>
+        </div>
+      </div>
+    );
+  }
