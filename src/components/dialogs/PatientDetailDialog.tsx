@@ -7,7 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { usePatientAppointmentHistory, usePatientMedicalRecords, useCreateUpdateMedicalRecord, usePatientNotes, useCreatePatientNote, usePatientDocuments } from "@/hooks/useDoctorData";
+import { usePatientAppointmentHistory, usePatientMedicalRecords, useCreateUpdateMedicalRecord, usePatientNotes, useCreatePatientNote, usePatientDocuments, usePatientLabReports } from "@/hooks/useDoctorData";
 import { User, Calendar, FileText, Clock, Plus, Save, File, Eye } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
@@ -35,6 +35,7 @@ export function PatientDetailDialog({ isOpen, onClose, patient }: PatientDetailD
   const { data: medicalRecords, isLoading: recordsLoading } = usePatientMedicalRecords(patient?.id);
   const { data: patientNotes, isLoading: notesLoading } = usePatientNotes(patient?.id);
   const { data: patientDocuments, isLoading: documentsLoading } = usePatientDocuments(patient?.id);
+  const { data: patientLabReports, isLoading: labReportsLoading } = usePatientLabReports(patient?.id);
   const createUpdateRecord = useCreateUpdateMedicalRecord();
   const createPatientNote = useCreatePatientNote();
 
@@ -112,9 +113,10 @@ export function PatientDetailDialog({ isOpen, onClose, patient }: PatientDetailD
         </DialogHeader>
 
         <Tabs defaultValue="overview" className="space-y-4">
-          <TabsList className="grid w-full grid-cols-5">
+          <TabsList className="grid w-full grid-cols-6">
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="appointments">Appointments</TabsTrigger>
+            <TabsTrigger value="labreports">Lab Reports</TabsTrigger>
             <TabsTrigger value="diagnoses">Diagnoses & Rx</TabsTrigger>
             <TabsTrigger value="notes">Patient Notes</TabsTrigger>
             <TabsTrigger value="documents">Documents</TabsTrigger>
@@ -222,6 +224,92 @@ export function PatientDetailDialog({ isOpen, onClose, patient }: PatientDetailD
                       <TableRow>
                         <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
                           No appointment history found
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="labreports">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <FileText className="w-5 h-5" />
+                  Lab Reports
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Test Date</TableHead>
+                      <TableHead>Test Name</TableHead>
+                      <TableHead>Doctor</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Results</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {labReportsLoading ? (
+                      Array.from({ length: 3 }).map((_, i) => (
+                        <TableRow key={i}>
+                          <TableCell><div className="h-4 bg-gray-200 rounded animate-pulse"></div></TableCell>
+                          <TableCell><div className="h-4 bg-gray-200 rounded animate-pulse"></div></TableCell>
+                          <TableCell><div className="h-4 bg-gray-200 rounded animate-pulse"></div></TableCell>
+                          <TableCell><div className="h-4 bg-gray-200 rounded animate-pulse"></div></TableCell>
+                          <TableCell><div className="h-4 bg-gray-200 rounded animate-pulse"></div></TableCell>
+                        </TableRow>
+                      ))
+                    ) : patientLabReports && patientLabReports.length > 0 ? (
+                      patientLabReports.map((report) => (
+                        <TableRow key={report.id}>
+                          <TableCell>
+                            {report.test_date ? format(new Date(report.test_date), 'MMM d, yyyy') : 'N/A'}
+                          </TableCell>
+                          <TableCell>{report.test_name}</TableCell>
+                          <TableCell>
+                            {report.doctor?.profiles?.first_name && report.doctor?.profiles?.last_name 
+                              ? `Dr. ${report.doctor.profiles.first_name} ${report.doctor.profiles.last_name}`
+                              : report.external_doctor_name || 'External Doctor'
+                            }
+                          </TableCell>
+                          <TableCell>
+                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                              report.status === 'completed' ? 'bg-green-100 text-green-700' :
+                              report.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
+                              report.status === 'reviewed' ? 'bg-blue-100 text-blue-700' :
+                              'bg-gray-100 text-gray-700'
+                            }`}>
+                              {report.status}
+                            </span>
+                          </TableCell>
+                          <TableCell>
+                            {report.results ? (
+                              <div className="max-w-xs truncate" title={report.results}>
+                                {report.results}
+                              </div>
+                            ) : report.result_file_url ? (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => window.open(report.result_file_url, '_blank')}
+                              >
+                                <Eye className="w-4 h-4 mr-2" />
+                                View File
+                              </Button>
+                            ) : (
+                              <span className="text-muted-foreground">Results pending</span>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    ) : (
+                      <TableRow>
+                        <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
+                          No lab reports found for this patient
                         </TableCell>
                       </TableRow>
                     )}

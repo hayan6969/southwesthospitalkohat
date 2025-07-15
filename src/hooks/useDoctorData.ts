@@ -315,6 +315,29 @@ export const useCreatePatientNote = () => {
   });
 };
 
+// Hook to get patient lab reports
+export const usePatientLabReports = (patientId?: string) => {
+  return useQuery({
+    queryKey: ['patient-lab-reports', patientId],
+    queryFn: async () => {
+      if (!patientId) return [];
+      
+      const { data, error } = await supabase
+        .from('lab_reports')
+        .select(`
+          *,
+          doctor:doctors(*, profiles(first_name, last_name))
+        `)
+        .eq('patient_id', patientId)
+        .order('test_date', { ascending: false });
+
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!patientId
+  });
+};
+
 // Hook to get patient documents
 export const usePatientDocuments = (patientId?: string) => {
   return useQuery({
