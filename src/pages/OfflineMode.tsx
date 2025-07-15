@@ -375,12 +375,13 @@ const OfflineMode = () => {
       });
 
       // First create a dummy patient for offline transactions
+      const uniqueId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
       const { data: dummyPatient, error: patientError } = await supabase
         .from('patients')
         .insert({
           id: crypto.randomUUID(),
-          patient_number: `OFFLINE-${Date.now()}`,
-          cnic: 'OFFLINE-PATIENT'
+          patient_number: `OFFLINE-${uniqueId}`,
+          cnic: `OFFLINE-${uniqueId}`
         })
         .select()
         .single();
