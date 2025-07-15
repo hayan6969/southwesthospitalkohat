@@ -50,6 +50,9 @@ type OfflineInvoice = {
   notes?: string;
   created_at: string;
   invoice_number: string;
+  // OT specific pricing breakdown
+  total_operation_cost?: number;
+  hospital_amount?: number;
 };
 
 const OfflineMode = () => {
@@ -69,6 +72,11 @@ const OfflineMode = () => {
   const [selectedOperation, setSelectedOperation] = useState('');
   const [appointmentDate, setAppointmentDate] = useState(new Date().toISOString().split('T')[0]);
   const [notes, setNotes] = useState('');
+  
+  // OT specific pricing states
+  const [totalOperationCost, setTotalOperationCost] = useState('');
+  const [doctorFee, setDoctorFee] = useState('');
+  const [selectedOTDoctor, setSelectedOTDoctor] = useState('');
   
   const { toast } = useToast();
 
@@ -338,12 +346,34 @@ const OfflineMode = () => {
       
       yPosition += 15;
       
-      // Service item
+      // Service items
       doc.setFont('helvetica', 'normal');
-      doc.text(serviceText, 20, yPosition);
-      doc.text(formatPkrAmount(invoice.amount), pageWidth - 60, yPosition);
       
-      yPosition += 8;
+      if (invoice.type === 'ot' && invoice.total_operation_cost && invoice.doctor_fee !== undefined) {
+        // OT operation with detailed breakdown
+        doc.text(`Operation - ${invoice.operation_name}`, 20, yPosition);
+        doc.text(formatPkrAmount(invoice.total_operation_cost), pageWidth - 60, yPosition);
+        yPosition += 8;
+        
+        // Doctor fee breakdown
+        if (invoice.doctor_fee > 0) {
+          doc.text(`  - Doctor Fee: ${invoice.doctor_name || 'Assigned Doctor'}`, 25, yPosition);
+          doc.text(formatPkrAmount(invoice.doctor_fee), pageWidth - 60, yPosition);
+          yPosition += 8;
+        }
+        
+        // Hospital amount breakdown
+        if (invoice.hospital_amount && invoice.hospital_amount > 0) {
+          doc.text('  - Hospital Charges', 25, yPosition);
+          doc.text(formatPkrAmount(invoice.hospital_amount), pageWidth - 60, yPosition);
+          yPosition += 8;
+        }
+      } else {
+        // Regular service item
+        doc.text(serviceText, 20, yPosition);
+        doc.text(formatPkrAmount(invoice.amount), pageWidth - 60, yPosition);
+        yPosition += 8;
+      }
       
       // Draw table border
       doc.rect(15, tableStartY, pageWidth - 30, yPosition - tableStartY);
@@ -636,9 +666,18 @@ const OfflineMode = () => {
             }
           }
         } else if (operation.table === 'ot_schedules' && operation.action === 'insert') {
-          // Create OT schedule record with doctor expense
+          // Create OT schedule record with proper pricing
           const totalCost = parseFloat(operation.data.total_cost) || 0;
-          const doctorExpense = totalCost * 0.3; // 30% goes to doctor
+          const doctorExpense = parseFloat(operation.data.doctor_expense) || 0;
+          const hospitalAmount = parseFloat(operation.data.hospital_amount) || (totalCost - doctorExpense);
+          
+          console.log('💊 Processing OT operation with pricing:', {
+            total_cost: totalCost,
+            doctor_expense: doctorExpense,
+            hospital_amount: hospitalAmount,
+            doctor_id: operation.data.doctor_id,
+            operation_id: operation.data.operation_id
+          });
           
           const { data: otSchedule, error: otError } = await supabase
             .from('ot_schedules')
@@ -927,10 +966,10 @@ const OfflineMode = () => {
   };
 
   const createOTScheduleInvoice = async () => {
-    if (!patientName || !patientCnic || !selectedOperation) {
+    if (!patientName || !patientCnic || !selectedOperation || !totalOperationCost || !doctorFee) {
       toast({
         title: "Missing Information",
-        description: "Please fill in patient name, CNIC, and select an operation.",
+        description: "Please fill in all required fields including operation cost and doctor fee.",
         variant: "destructive"
       });
       return;
@@ -939,7 +978,31 @@ const OfflineMode = () => {
     const operation = otOperations.find(o => o.id === selectedOperation);
     if (!operation) return;
 
-    const baseAmount = 50000; // Default OT cost
+    // Parse pricing values
+    const totalCost = parseFloat(totalOperationCost) || 0;
+    const doctorAmount = parseFloat(doctorFee) || 0;
+    const hospitalAmount = totalCost - doctorAmount;
+
+    // Validation
+    if (totalCost <= 0) {
+      toast({
+        title: "Invalid Cost",
+        description: "Total operation cost must be greater than 0.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (doctorAmount < 0 || doctorAmount > totalCost) {
+      toast({
+        title: "Invalid Doctor Fee",
+        description: "Doctor fee must be between 0 and total operation cost.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const selectedOTDoctorData = selectedOTDoctor ? doctors.find(d => d.id === selectedOTDoctor) : null;
     const invoiceNumber = generateInvoiceNumber('ot');
 
     const invoice: OfflineInvoice = {
@@ -947,9 +1010,14 @@ const OfflineMode = () => {
       type: 'ot',
       patient_name: patientName,
       patient_cnic: patientCnic,
+      doctor_id: selectedOTDoctor || undefined,
+      doctor_name: selectedOTDoctorData ? `${selectedOTDoctorData.first_name} ${selectedOTDoctorData.last_name}` : undefined,
+      doctor_fee: doctorAmount,
       operation_id: operation.id,
       operation_name: operation.operation_name,
-      amount: baseAmount,
+      amount: totalCost,
+      total_operation_cost: totalCost,
+      hospital_amount: hospitalAmount,
       date: appointmentDate,
       notes,
       created_at: new Date().toISOString(),
@@ -967,8 +1035,12 @@ const OfflineMode = () => {
         patient_name: patientName,
         patient_cnic: patientCnic,
         operation_id: operation.id,
+        doctor_id: selectedOTDoctor || null,
+        doctor_name: selectedOTDoctorData ? `${selectedOTDoctorData.first_name} ${selectedOTDoctorData.last_name}` : null,
         operation_date: appointmentDate,
-        total_cost: baseAmount,
+        total_cost: totalCost,
+        doctor_expense: doctorAmount,
+        hospital_amount: hospitalAmount,
         status: 'scheduled',
         queue_position: 1,
         notes
@@ -980,7 +1052,7 @@ const OfflineMode = () => {
 
     toast({
       title: "OT Scheduled",
-      description: `Operation "${operation.operation_name}" scheduled for ${patientName}`,
+      description: `Operation "${operation.operation_name}" scheduled for ${patientName}. Total: Rs. ${totalCost}, Doctor: Rs. ${doctorAmount}, Hospital: Rs. ${hospitalAmount}`,
       variant: "default"
     });
 
@@ -988,6 +1060,9 @@ const OfflineMode = () => {
     setPatientName('');
     setPatientCnic('');
     setSelectedOperation('');
+    setSelectedOTDoctor('');
+    setTotalOperationCost('');
+    setDoctorFee('');
     setNotes('');
   };
 
@@ -1272,6 +1347,62 @@ const OfflineMode = () => {
                   </div>
                 </div>
 
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="total-cost">Total Operation Cost (Rs.)</Label>
+                    <Input
+                      id="total-cost"
+                      type="number"
+                      value={totalOperationCost}
+                      onChange={(e) => setTotalOperationCost(e.target.value)}
+                      placeholder="Enter total operation cost"
+                      min="0"
+                      step="100"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="doctor-fee">Doctor Fee (Rs.)</Label>
+                    <Input
+                      id="doctor-fee"
+                      type="number"
+                      value={doctorFee}
+                      onChange={(e) => setDoctorFee(e.target.value)}
+                      placeholder="Enter doctor fee"
+                      min="0"
+                      step="100"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="ot-doctor">Select Doctor (Optional)</Label>
+                    <Select value={selectedOTDoctor} onValueChange={setSelectedOTDoctor}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Choose a doctor" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {doctors.map((doctor) => (
+                          <SelectItem key={doctor.id} value={doctor.id}>
+                            Dr. {doctor.first_name} {doctor.last_name} - {doctor.specialization}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label htmlFor="hospital-amount">Hospital Amount (Rs.)</Label>
+                    <Input
+                      id="hospital-amount"
+                      type="number"
+                      value={totalOperationCost && doctorFee ? (parseFloat(totalOperationCost) - parseFloat(doctorFee)).toString() : ''}
+                      disabled
+                      placeholder="Auto-calculated"
+                      className="bg-gray-100"
+                    />
+                  </div>
+                </div>
+
                 <div>
                   <Label htmlFor="ot-notes">Notes (Optional)</Label>
                   <Textarea
@@ -1308,13 +1439,27 @@ const OfflineMode = () => {
                         <div className="text-sm text-gray-600">
                           {invoice.type === 'consultation' && `Dr. ${invoice.doctor_name}`}
                           {invoice.type === 'lab' && invoice.test_name}
-                          {invoice.type === 'ot' && invoice.operation_name}
+                          {invoice.type === 'ot' && (
+                            <div>
+                              <div>{invoice.operation_name}</div>
+                              {invoice.doctor_name && (
+                                <div className="text-xs">Dr. {invoice.doctor_name}</div>
+                              )}
+                            </div>
+                          )}
                         </div>
                       </div>
                     </div>
                     <div className="flex items-center gap-3">
                       <div className="text-right">
-                        <div className="font-medium">Rs. {invoice.amount}</div>
+                        <div className="font-medium">
+                          Rs. {invoice.amount}
+                          {invoice.type === 'ot' && invoice.doctor_fee !== undefined && invoice.hospital_amount && (
+                            <div className="text-xs text-gray-500 font-normal">
+                              Doctor: Rs. {invoice.doctor_fee} | Hospital: Rs. {invoice.hospital_amount}
+                            </div>
+                          )}
+                        </div>
                         <div className="text-sm text-gray-600">{invoice.date}</div>
                       </div>
                       <Button
