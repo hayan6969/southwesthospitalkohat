@@ -75,8 +75,8 @@ const RealTimeProvider = ({ children }: { children: React.ReactNode }) => {
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
-      <RealTimeProvider>
-        <TooltipProvider>
+      <TooltipProvider>
+        <RealTimeProvider>
           <Toaster />
           <Sonner />
           <BrowserRouter>
@@ -242,11 +242,11 @@ const App = () => (
             {/* Catch-all route */}
             <Route path="*" element={<NotFound />} />
           </Routes>
-        </BrowserRouter>
+          </BrowserRouter>
+        </RealTimeProvider>
       </TooltipProvider>
-    </RealTimeProvider>
-  </AuthProvider>
-</QueryClientProvider>
+    </AuthProvider>
+  </QueryClientProvider>
 );
 
 export default App;
