@@ -159,119 +159,144 @@ const OfflineMode = () => {
   };
 
   const generatePDF = (invoice: OfflineInvoice) => {
-    const doc = new jsPDF();
-    const pageWidth = doc.internal.pageSize.width;
-    let yPosition = 20;
+    try {
+      console.log('Generating PDF for invoice:', invoice.invoice_number);
+      
+      const doc = new jsPDF();
+      const pageWidth = doc.internal.pageSize.width;
+      let yPosition = 20;
 
-    // Hospital header
-    doc.setFontSize(18);
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(40, 40, 40);
-    doc.text('Medical Center', pageWidth / 2, yPosition, { align: 'center' });
-    
-    yPosition += 10;
-    doc.setFontSize(10);
-    doc.setFont('helvetica', 'normal');
-    doc.text('Healthcare District', pageWidth / 2, yPosition, { align: 'center' });
-    
-    yPosition += 6;
-    doc.text('Phone: +92-XXX-XXXXXXX', pageWidth / 2, yPosition, { align: 'center' });
-    
-    yPosition += 15;
-    
-    // Invoice title
-    doc.setFontSize(16);
-    doc.setFont('helvetica', 'bold');
-    const title = invoice.type === 'consultation' ? 'CONSULTATION INVOICE' :
-                  invoice.type === 'lab' ? 'LAB TEST INVOICE' : 'OT OPERATION INVOICE';
-    doc.text(title, pageWidth / 2, yPosition, { align: 'center' });
-    
-    yPosition += 20;
+      // Hospital header
+      doc.setFontSize(18);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(40, 40, 40);
+      doc.text('Medical Center', pageWidth / 2, yPosition, { align: 'center' });
+      
+      yPosition += 10;
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'normal');
+      doc.text('Healthcare District', pageWidth / 2, yPosition, { align: 'center' });
+      
+      yPosition += 6;
+      doc.text('Phone: +92-XXX-XXXXXXX', pageWidth / 2, yPosition, { align: 'center' });
+      
+      yPosition += 15;
+      
+      // Invoice title
+      doc.setFontSize(16);
+      doc.setFont('helvetica', 'bold');
+      const title = invoice.type === 'consultation' ? 'CONSULTATION INVOICE' :
+                    invoice.type === 'lab' ? 'LAB TEST INVOICE' : 'OT OPERATION INVOICE';
+      doc.text(title, pageWidth / 2, yPosition, { align: 'center' });
+      
+      yPosition += 20;
 
-    // Invoice details box
-    doc.setDrawColor(0, 0, 0);
-    doc.rect(15, yPosition - 5, pageWidth - 30, 50);
-    
-    doc.setFontSize(11);
-    doc.setFont('helvetica', 'bold');
-    
-    // First row
-    doc.text('Invoice Number:', 20, yPosition + 5);
-    doc.setFont('helvetica', 'normal');
-    doc.text(invoice.invoice_number, 70, yPosition + 5);
-    
-    doc.setFont('helvetica', 'bold');
-    doc.text('Date:', 120, yPosition + 5);
-    doc.setFont('helvetica', 'normal');
-    doc.text(new Date(invoice.created_at).toLocaleDateString(), 135, yPosition + 5);
-    
-    // Second row
-    yPosition += 10;
-    doc.setFont('helvetica', 'bold');
-    doc.text('Patient Name:', 20, yPosition + 5);
-    doc.setFont('helvetica', 'normal');
-    doc.text(invoice.patient_name, 70, yPosition + 5);
-    
-    doc.setFont('helvetica', 'bold');
-    doc.text('Patient CNIC:', 120, yPosition + 5);
-    doc.setFont('helvetica', 'normal');
-    doc.text(invoice.patient_cnic || 'N/A', 160, yPosition + 5);
-    
-    // Third row - Service details
-    yPosition += 10;
-    doc.setFont('helvetica', 'bold');
-    doc.text('Service:', 20, yPosition + 5);
-    doc.setFont('helvetica', 'normal');
-    const serviceText = invoice.type === 'consultation' ? `Consultation - Dr. ${invoice.doctor_name}` :
-                       invoice.type === 'lab' ? `Lab Test - ${invoice.test_name}` :
-                       `Operation - ${invoice.operation_name}`;
-    doc.text(serviceText, 60, yPosition + 5);
-    
-    yPosition += 50;
+      // Invoice details box
+      doc.setDrawColor(0, 0, 0);
+      doc.rect(15, yPosition - 5, pageWidth - 30, 50);
+      
+      doc.setFontSize(11);
+      doc.setFont('helvetica', 'bold');
+      
+      // First row
+      doc.text('Invoice Number:', 20, yPosition + 5);
+      doc.setFont('helvetica', 'normal');
+      doc.text(invoice.invoice_number, 70, yPosition + 5);
+      
+      doc.setFont('helvetica', 'bold');
+      doc.text('Date:', 120, yPosition + 5);
+      doc.setFont('helvetica', 'normal');
+      doc.text(new Date(invoice.created_at).toLocaleDateString(), 135, yPosition + 5);
+      
+      // Second row
+      yPosition += 10;
+      doc.setFont('helvetica', 'bold');
+      doc.text('Patient Name:', 20, yPosition + 5);
+      doc.setFont('helvetica', 'normal');
+      doc.text(invoice.patient_name, 70, yPosition + 5);
+      
+      doc.setFont('helvetica', 'bold');
+      doc.text('Patient CNIC:', 120, yPosition + 5);
+      doc.setFont('helvetica', 'normal');
+      doc.text(invoice.patient_cnic || 'N/A', 160, yPosition + 5);
+      
+      // Third row - Service details
+      yPosition += 10;
+      doc.setFont('helvetica', 'bold');
+      doc.text('Service:', 20, yPosition + 5);
+      doc.setFont('helvetica', 'normal');
+      let serviceText = '';
+      if (invoice.type === 'consultation') {
+        serviceText = `Consultation - Dr. ${invoice.doctor_name}`;
+      } else if (invoice.type === 'lab') {
+        serviceText = `Lab Test - ${invoice.test_name}`;
+      } else {
+        serviceText = `Operation - ${invoice.operation_name}`;
+      }
+      doc.text(serviceText, 60, yPosition + 5);
+      
+      yPosition += 50;
 
-    // Service table
-    const tableStartY = yPosition;
-    doc.setFillColor(240, 240, 240);
-    doc.rect(15, yPosition, pageWidth - 30, 10, 'F');
-    
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(10);
-    doc.text('Description', 20, yPosition + 7);
-    doc.text('Amount', pageWidth - 60, yPosition + 7);
-    
-    yPosition += 15;
-    
-    // Service item
-    doc.setFont('helvetica', 'normal');
-    doc.text(serviceText, 20, yPosition);
-    doc.text(formatPkrAmount(invoice.amount), pageWidth - 60, yPosition);
-    
-    yPosition += 8;
-    
-    // Draw table border
-    doc.rect(15, tableStartY, pageWidth - 30, yPosition - tableStartY);
-    
-    yPosition += 15;
+      // Service table
+      const tableStartY = yPosition;
+      doc.setFillColor(240, 240, 240);
+      doc.rect(15, yPosition, pageWidth - 30, 10, 'F');
+      
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(10);
+      doc.text('Description', 20, yPosition + 7);
+      doc.text('Amount', pageWidth - 60, yPosition + 7);
+      
+      yPosition += 15;
+      
+      // Service item
+      doc.setFont('helvetica', 'normal');
+      doc.text(serviceText, 20, yPosition);
+      doc.text(formatPkrAmount(invoice.amount), pageWidth - 60, yPosition);
+      
+      yPosition += 8;
+      
+      // Draw table border
+      doc.rect(15, tableStartY, pageWidth - 30, yPosition - tableStartY);
+      
+      yPosition += 15;
 
-    // Total section
-    const totalsX = pageWidth - 85;
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(12);
-    doc.rect(totalsX, yPosition - 5, 80, 18);
-    doc.text('Total Amount:', totalsX + 5, yPosition + 4);
-    doc.text(formatPkrAmount(invoice.amount), totalsX + 5, yPosition + 12);
+      // Total section
+      const totalsX = pageWidth - 85;
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(12);
+      doc.rect(totalsX, yPosition - 5, 80, 18);
+      doc.text('Total Amount:', totalsX + 5, yPosition + 4);
+      doc.text(formatPkrAmount(invoice.amount), totalsX + 5, yPosition + 12);
 
-    // Footer
-    yPosition += 30;
-    doc.setFontSize(9);
-    doc.setFont('helvetica', 'italic');
-    doc.setTextColor(100, 100, 100);
-    doc.text('Thank you for choosing our medical services!', pageWidth / 2, yPosition, { align: 'center' });
+      // Footer
+      yPosition += 30;
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'italic');
+      doc.setTextColor(100, 100, 100);
+      doc.text('Thank you for choosing our medical services!', pageWidth / 2, yPosition, { align: 'center' });
 
-    // Open PDF in new tab
-    const pdfBlob = doc.output('blob');
-    const pdfUrl = URL.createObjectURL(pdfBlob);
-    window.open(pdfUrl, '_blank');
+      console.log('PDF generated successfully, opening in new tab...');
+      
+      // Open PDF in new tab
+      const pdfBlob = doc.output('blob');
+      const pdfUrl = URL.createObjectURL(pdfBlob);
+      window.open(pdfUrl, '_blank');
+      
+      toast({
+        title: "PDF Generated",
+        description: "Invoice PDF opened in new tab",
+        variant: "default"
+      });
+      
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      toast({
+        title: "PDF Generation Failed",
+        description: "Could not generate PDF. Please try again.",
+        variant: "destructive"
+      });
+    }
   };
 
   const handleUploadData = async () => {

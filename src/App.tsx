@@ -65,10 +65,10 @@ const queryClient = new QueryClient({
   },
 });
 
-// Component to initialize real-time updates and offline sync
+// Component to initialize real-time updates only (no auto-sync in offline mode)
 const RealTimeProvider = ({ children }: { children: React.ReactNode }) => {
   useRealTimeUpdates();
-  useOfflineDataSync();
+  // Removed useOfflineDataSync to prevent automatic uploads
   return <>{children}</>;
 };
 
