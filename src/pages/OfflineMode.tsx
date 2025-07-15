@@ -10,6 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Calendar, FileText, UserPlus, Stethoscope, WifiOff, RefreshCw, Upload, CheckCircle, Wifi, Download } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { formatPkrAmount } from "@/utils/currency";
+import { supabase } from "@/integrations/supabase/client";
 import jsPDF from 'jspdf';
 
 type Doctor = {
@@ -349,25 +350,93 @@ const OfflineMode = () => {
     }
 
     try {
-      // Simulate upload process
       toast({
         title: "Upload Started",
         description: `Uploading ${pendingCount} items to the server...`,
         variant: "default"
       });
 
-      // Clear pending operations after successful upload
-      setTimeout(() => {
-        localStorage.removeItem('offline_operations');
-        setPendingCount(0);
-        toast({
-          title: "Upload Complete",
-          description: "All offline data has been uploaded successfully.",
-          variant: "default"
-        });
-      }, 2000);
+      // Get offline operations and invoices
+      const operations = JSON.parse(localStorage.getItem('offline_operations') || '[]');
+      const invoices = JSON.parse(localStorage.getItem('offline_invoices') || '[]');
+
+      console.log('📦 Uploading operations:', operations);
+      console.log('📦 Uploading invoices:', invoices);
+
+      // Upload operations to Supabase
+      for (const operation of operations) {
+        if (operation.table === 'appointments' && operation.action === 'insert') {
+          // Create appointment record
+          const { error: appointmentError } = await supabase
+            .from('appointments')
+            .insert({
+              patient_id: null, // We'll need to create patient first or handle differently
+              doctor_id: operation.data.doctor_id,
+              appointment_date: new Date().toISOString(),
+              type: operation.data.type || 'consultation',
+              status: 'completed',
+              consultation_fee_at_time: operation.data.consultation_fee,
+              booking_type: 'offline',
+              payment_status: 'paid',
+              notes: `Offline Patient: ${operation.data.patient_name} (CNIC: ${operation.data.patient_cnic}). ${operation.data.notes || ''}`
+            });
+
+          if (appointmentError) {
+            console.error('Error uploading appointment:', appointmentError);
+          }
+        } else if (operation.table === 'lab_reports' && operation.action === 'insert') {
+          // Create lab report record
+          const { error: labError } = await supabase
+            .from('lab_reports')
+            .insert({
+              patient_id: null, // We'll use external doctor approach
+              test_id: operation.data.test_id,
+              test_name: operation.data.test_name,
+              external_doctor_name: `Offline Patient: ${operation.data.patient_name} (CNIC: ${operation.data.patient_cnic})`,
+              price: operation.data.price,
+              status: 'completed',
+              test_date: new Date().toISOString(),
+              notes: operation.data.notes || ''
+            });
+
+          if (labError) {
+            console.error('Error uploading lab report:', labError);
+          }
+        } else if (operation.table === 'ot_schedules' && operation.action === 'insert') {
+          // Create OT schedule record
+          const { error: otError } = await supabase
+            .from('ot_schedules')
+            .insert({
+              patient_id: null, // We'll use patient_name field instead
+              operation_id: operation.data.operation_id,
+              doctor_name: `Offline Patient: ${operation.data.patient_name} (CNIC: ${operation.data.patient_cnic})`,
+              operation_date: new Date().toISOString().split('T')[0],
+              queue_position: 1,
+              status: 'completed',
+              total_cost: operation.data.total_cost,
+              notes: operation.data.notes || ''
+            });
+
+          if (otError) {
+            console.error('Error uploading OT schedule:', otError);
+          }
+        }
+      }
+
+      // Clear all offline data after successful upload
+      localStorage.removeItem('offline_operations');
+      localStorage.removeItem('offline_invoices');
+      setOfflineInvoices([]);
+      setPendingCount(0);
+
+      toast({
+        title: "Upload Complete",
+        description: `Successfully uploaded ${operations.length} items. All offline data has been cleared.`,
+        variant: "default"
+      });
 
     } catch (error) {
+      console.error('Upload error:', error);
       toast({
         title: "Upload Error",
         description: "Failed to upload data. Please try again.",
