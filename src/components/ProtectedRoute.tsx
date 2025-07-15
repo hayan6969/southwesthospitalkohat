@@ -1,5 +1,5 @@
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 
 type ProtectedRouteProps = {
@@ -9,6 +9,8 @@ type ProtectedRouteProps = {
 
 export default function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) {
   // Check for offline staff mode first, before using auth context
+  const [shouldRedirectOffline, setShouldRedirectOffline] = useState(false);
+
   useEffect(() => {
     if (!navigator.onLine) {
       const cachedSession = localStorage.getItem('cached_session');
@@ -20,6 +22,7 @@ export default function ProtectedRoute({ children, allowedRoles }: ProtectedRout
             const parsedProfile = JSON.parse(cachedProfile);
             if (parsedProfile.role === 'staff') {
               console.log('📱 Redirecting offline staff to offline mode');
+              setShouldRedirectOffline(true);
               window.location.href = '/offline-mode';
               return;
             }
@@ -30,6 +33,15 @@ export default function ProtectedRoute({ children, allowedRoles }: ProtectedRout
       }
     }
   }, []);
+
+  // Show loading if we're redirecting to offline mode
+  if (shouldRedirectOffline) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
 
   const { user, profile, loading } = useAuth();
 
