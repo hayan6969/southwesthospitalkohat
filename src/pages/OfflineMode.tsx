@@ -665,39 +665,35 @@ const OfflineMode = () => {
         }
       }
 
-      // Test: Create a simple test invoice to verify database connection
-      console.log('🧪 Testing direct invoice creation...');
-      const testInvoice = {
-        patient_id: dummyPatient.id,
-        amount: 1000.00,
-        status: 'paid' as const,
-        invoice_number: `TEST-OFFLINE-${Date.now()}`,
-        description: 'Test Offline Invoice',
-        paid_at: new Date().toISOString()
-      };
-      
-      const { data: testResult, error: testError } = await supabase
-        .from('invoices')
-        .insert(testInvoice)
-        .select()
-        .single();
-        
-      if (testError) {
-        console.error('❌ Test invoice creation failed:', testError);
-        throw new Error(`Database test failed: ${testError.message}`);
-      } else {
-        console.log('✅ Test invoice created successfully:', testResult);
-      }
-
       // Clear all offline data after successful upload
+      console.log('🧹 Clearing all offline data from cache...');
+      
+      // Remove all offline-related items from localStorage
       localStorage.removeItem('offline_operations');
       localStorage.removeItem('offline_invoices');
+      localStorage.removeItem('offline_pending_count');
+      localStorage.removeItem('offline_patient_data');
+      localStorage.removeItem('offline_selected_doctors');
+      localStorage.removeItem('offline_selected_tests');
+      localStorage.removeItem('offline_selected_operations');
+      
+      // Clear state variables
       setOfflineInvoices([]);
       setPendingCount(0);
+      
+      // Also clear any form data
+      setPatientName('');
+      setPatientCnic('');
+      setSelectedDoctor('');
+      setSelectedLabTest('');
+      setSelectedOperation('');
+      setNotes('');
+      
+      console.log('✅ All offline data cleared successfully');
 
       toast({
         title: "Upload Complete",
-        description: `Successfully uploaded ${operations.length} items and created test invoice. All offline data has been cleared.`,
+        description: `Successfully uploaded ${operations.length} items to the database. All offline data has been cleared from cache.`,
         variant: "default"
       });
 
