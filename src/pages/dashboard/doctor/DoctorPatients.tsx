@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { useDoctorPatients } from "@/hooks/useDoctorData";
-import { AppointmentDialog } from "@/components/dialogs/AppointmentDialog";
 import { PatientDetailDialog } from "@/components/dialogs/PatientDetailDialog";
 import { Users, Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -24,12 +23,11 @@ export default function DoctorPatients() {
 
   return (
     <div className="space-y-8">
-      <div className="flex items-center justify-between">
+      <div>
         <div>
           <h1 className="text-3xl font-bold text-gray-900">My Patients</h1>
           <p className="text-gray-600 mt-1">View and manage your assigned patients</p>
         </div>
-        <AppointmentDialog />
       </div>
 
       <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
