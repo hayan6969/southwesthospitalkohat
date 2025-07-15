@@ -21,7 +21,7 @@ import { cn } from "@/lib/utils";
 import { getCurrentPakistanTime } from "@/utils/timezone";
 
 export default function DoctorSchedule() { // Fixed ordering syntax
-  const { data: appointments, isLoading } = useAppointments();
+  const { data: appointments, isLoading, refetch: refetchAppointments } = useAppointments();
   const updateAppointment = useUpdateAppointment();
   const markAppointmentFree = useMarkAppointmentFree();
   const { data: patientNames } = usePatientNames();
@@ -319,6 +319,8 @@ export default function DoctorSchedule() { // Fixed ordering syntax
       await markAppointmentFree.mutateAsync(showMarkFreeDialog.appointmentId);
       toast.success('Appointment marked as free (PKR 0)');
       setShowMarkFreeDialog(null);
+      // Refresh appointments to show updated status immediately
+      await refetchAppointments();
     } catch (error) {
       toast.error('Failed to mark appointment as free');
       setShowMarkFreeDialog(null);

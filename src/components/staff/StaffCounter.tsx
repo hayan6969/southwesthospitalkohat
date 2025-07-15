@@ -141,9 +141,9 @@ export function StaffCounter() {
     fetchQueuePositions();
   }, [filteredAppointments]);
 
-  // Get queue appointments (scheduled only)
+  // Get all appointments (not just scheduled) for search functionality
   const queueAppointments = useMemo(() => {
-    let filtered = filteredAppointments.filter(apt => apt.status === 'scheduled');
+    let filtered = filteredAppointments; // Show all appointments, not just scheduled
     
     // Filter by search term
     if (searchTerm) {
@@ -441,7 +441,7 @@ export function StaffCounter() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Clock className="w-5 h-5" />
-            Patient Queue - {format(selectedDate, "PPP")} ({queueAppointments.length} appointments)
+            All Appointments - {format(selectedDate, "PPP")} ({queueAppointments.length} appointments)
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -453,7 +453,7 @@ export function StaffCounter() {
                   <TableHead>Patient ID</TableHead>
                   <TableHead>Patient Name</TableHead>
                   <TableHead>Doctor</TableHead>
-                  <TableHead>People Ahead</TableHead>
+                  <TableHead>Status</TableHead>
                   <TableHead>Booking Type</TableHead>
                   <TableHead>Payment Status</TableHead>
                   <TableHead>Actions</TableHead>
@@ -468,27 +468,32 @@ export function StaffCounter() {
                   </TableRow>
                 ) : queueAppointments.length > 0 ? (
                   queueAppointments.map((appointment, index) => (
-                    <TableRow key={appointment.id}>
-                      <TableCell className="font-bold">#{queuePositions[appointment.id]?.position || (index + 1)}</TableCell>
-                      <TableCell className="font-mono text-sm font-medium">
-                        {patientNumbers[appointment.patient_id] || 'Loading...'}
-                      </TableCell>
-                      <TableCell className="font-medium">
-                        {getPatientName(appointment.patient_id, patientNames || [])}
-                      </TableCell>
-                      <TableCell>
-                        {getDoctorName(appointment.doctor_id, doctorNames || [])}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <Badge variant="outline" className="font-mono">
-                            {queuePositions[appointment.id]?.aheadCount ?? 0}
-                          </Badge>
-                          <span className="text-sm text-gray-500">
-                            {queuePositions[appointment.id]?.aheadCount === 0 ? "Next" : "waiting"}
-                          </span>
-                        </div>
-                      </TableCell>
+                     <TableRow key={appointment.id}>
+                       <TableCell className="font-bold">
+                         {appointment.status === 'scheduled' 
+                           ? `#${queuePositions[appointment.id]?.position || (index + 1)}`
+                           : '-'
+                         }
+                       </TableCell>
+                       <TableCell className="font-mono text-sm font-medium">
+                         {patientNumbers[appointment.patient_id] || 'Loading...'}
+                       </TableCell>
+                       <TableCell className="font-medium">
+                         {getPatientName(appointment.patient_id, patientNames || [])}
+                       </TableCell>
+                       <TableCell>
+                         {getDoctorName(appointment.doctor_id, doctorNames || [])}
+                       </TableCell>
+                       <TableCell>
+                         <Badge className={
+                           appointment.status === 'completed' ? 'bg-green-100 text-green-700' :
+                           appointment.status === 'scheduled' ? 'bg-blue-100 text-blue-700' :
+                           appointment.status === 'cancelled' ? 'bg-red-100 text-red-700' :
+                           'bg-gray-100 text-gray-700'
+                         }>
+                           {appointment.status}
+                         </Badge>
+                       </TableCell>
                       <TableCell>
                         <Badge variant={appointment.booking_type === 'online' ? 'default' : 'secondary'}>
                           {appointment.booking_type || 'walk-in'}

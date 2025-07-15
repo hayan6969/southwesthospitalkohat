@@ -10,7 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useState, useEffect } from "react";
 
 export default function PatientAppointments() {
-  const { data: appointmentsData, isLoading } = useAppointments();
+  const { data: appointmentsData, isLoading, refetch: refetchAppointments } = useAppointments();
   const [appointments, setAppointments] = useState<any[]>([]);
 
   const currentPatientId = "550e8400-e29b-41d4-a716-446655440008"; // Current patient
@@ -22,8 +22,8 @@ export default function PatientAppointments() {
       
       const appointmentsWithInvoices = await Promise.all(
         appointmentsData.map(async (appointment) => {
+          // Always try to find invoice for paid appointments
           if (appointment.payment_status === 'paid') {
-            // Try to find the invoice for this appointment
             const { data: invoice } = await supabase
               .from('invoices')
               .select('amount, description')
@@ -42,6 +42,11 @@ export default function PatientAppointments() {
     };
     
     fetchAppointmentsWithInvoices();
+    
+    // Set up interval to refresh data every 10 seconds to catch real-time updates
+    const interval = setInterval(fetchAppointmentsWithInvoices, 10000);
+    
+    return () => clearInterval(interval);
   }, [appointmentsData]);
 
   const patientAppointments = appointments?.filter(apt => apt.patient_id === currentPatientId) || [];
