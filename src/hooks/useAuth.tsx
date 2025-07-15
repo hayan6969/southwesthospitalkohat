@@ -181,6 +181,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         const profileData = await fetchUserProfile(data.user.id);
         console.log('User signed in:', data.user.email);
         
+        // Check if user account is active
+        if (profileData && !profileData.is_active) {
+          await supabase.auth.signOut();
+          return { error: { message: "Your account has been temporarily blocked. Please contact the administrator." } };
+        }
+        
         // Redirect based on user role
         if (profileData?.role) {
           console.log('Redirecting to dashboard for role:', profileData.role);

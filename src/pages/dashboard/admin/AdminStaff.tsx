@@ -1,19 +1,21 @@
 
 import { useState } from "react";
 import AppLayout from "@/layouts/AppLayout";
-import { useUsers, useDepartments } from "@/hooks/useDatabase";
+import { useUsers, useDepartments, useUpdateUserStatus } from "@/hooks/useDatabase";
 import { AccountManagementDialog } from "@/components/dialogs/AccountManagementDialog";
 import { EditUserDialog } from "@/components/dialogs/EditUserDialog";
-import { Users, Edit, UserCheck, Trash2, Eye } from "lucide-react";
+import { Users, Edit, UserCheck, Shield, ShieldOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { format } from "date-fns";
+import { toast } from "sonner";
 
 export default function AdminStaff() {
   const { data: users, isLoading, refetch } = useUsers();
   const { data: departments } = useDepartments();
   const [editingUser, setEditingUser] = useState<any>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const updateUserStatus = useUpdateUserStatus();
 
   // Filter for all users except patients
   const nonPatientUsers = users?.filter(user => user.role !== 'patient') || [];
@@ -25,6 +27,21 @@ export default function AdminStaff() {
 
   const handleUserUpdated = () => {
     refetch();
+  };
+
+  const handleToggleUserStatus = async (user: any) => {
+    const newStatus = !user.is_active;
+    const action = newStatus ? "unblocked" : "blocked";
+    
+    try {
+      await updateUserStatus.mutateAsync({ 
+        userId: user.id, 
+        isActive: newStatus 
+      });
+      toast.success(`User ${action} successfully`);
+    } catch (error) {
+      toast.error(`Failed to ${newStatus ? "unblock" : "block"} user`);
+    }
   };
 
   const getRoleBadgeColor = (role: string) => {
@@ -66,6 +83,7 @@ export default function AdminStaff() {
                   <TableHead>Phone</TableHead>
                   <TableHead>Role</TableHead>
                   <TableHead>Department</TableHead>
+                  <TableHead>Status</TableHead>
                   <TableHead>Join Date</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
@@ -74,7 +92,7 @@ export default function AdminStaff() {
                 {isLoading ? (
                   Array.from({ length: 5 }).map((_, i) => (
                     <TableRow key={i}>
-                      {Array.from({ length: 7 }).map((_, j) => (
+                      {Array.from({ length: 8 }).map((_, j) => (
                         <TableCell key={j}>
                           <div className="h-4 bg-gray-200 rounded animate-pulse"></div>
                         </TableCell>
@@ -101,6 +119,15 @@ export default function AdminStaff() {
                         {departments?.find(dept => dept.id === user.department_id)?.name || 'N/A'}
                       </TableCell>
                       <TableCell>
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                          user.is_active 
+                            ? 'bg-green-100 text-green-700' 
+                            : 'bg-red-100 text-red-700'
+                        }`}>
+                          {user.is_active ? 'Active' : 'Blocked'}
+                        </span>
+                      </TableCell>
+                      <TableCell>
                         {format(new Date(user.created_at), 'MMM d, yyyy')}
                       </TableCell>
                       <TableCell>
@@ -113,13 +140,31 @@ export default function AdminStaff() {
                             <Edit className="w-3 h-3 mr-1" />
                             Edit
                           </Button>
+                          <Button 
+                            size="sm" 
+                            variant={user.is_active ? "destructive" : "default"}
+                            onClick={() => handleToggleUserStatus(user)}
+                            disabled={updateUserStatus.isPending}
+                          >
+                            {user.is_active ? (
+                              <>
+                                <ShieldOff className="w-3 h-3 mr-1" />
+                                Block
+                              </>
+                            ) : (
+                              <>
+                                <Shield className="w-3 h-3 mr-1" />
+                                Unblock
+                              </>
+                            )}
+                          </Button>
                         </div>
                       </TableCell>
                     </TableRow>
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center text-gray-500 py-12">
+                    <TableCell colSpan={8} className="text-center text-gray-500 py-12">
                       No staff members found
                     </TableCell>
                   </TableRow>
