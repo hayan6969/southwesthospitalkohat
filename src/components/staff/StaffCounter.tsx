@@ -80,28 +80,27 @@ export function StaffCounter() {
       if (queueData) {
         const positions: {[key: string]: { position: number; aheadCount: number }} = {};
         
-        // Group by doctor and date to calculate ahead count
-        const groupedByDoctorDate: {[key: string]: any[]} = {};
-        
-        queueData.forEach(queue => {
-          const key = `${queue.doctor_id}-${queue.appointment_date}`;
-          if (!groupedByDoctorDate[key]) {
-            groupedByDoctorDate[key] = [];
-          }
-          groupedByDoctorDate[key].push(queue);
-        });
-        
         // Calculate ahead count for each appointment
-        Object.values(groupedByDoctorDate).forEach(doctorQueue => {
-          doctorQueue.sort((a, b) => a.queue_position - b.queue_position);
+        for (const queue of queueData) {
+          // Count how many scheduled appointments are ahead in the queue
+          const { data: aheadAppointments } = await supabase
+            .from('queue_positions')
+            .select(`
+              appointment_id,
+              appointments!inner(status)
+            `)
+            .eq('doctor_id', queue.doctor_id)
+            .eq('appointment_date', queue.appointment_date)
+            .lt('queue_position', queue.queue_position)
+            .eq('appointments.status', 'scheduled');
+
+          const aheadCount = aheadAppointments?.length || 0;
           
-          doctorQueue.forEach((queue, index) => {
-            positions[queue.appointment_id] = {
-              position: queue.queue_position,
-              aheadCount: index // Number of people ahead is the index
-            };
-          });
-        });
+          positions[queue.appointment_id] = {
+            position: queue.queue_position,
+            aheadCount: aheadCount
+          };
+        }
         
         setQueuePositions(positions);
       }
@@ -365,7 +364,7 @@ export function StaffCounter() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Queue #</TableHead>
+                  <TableHead>Position</TableHead>
                   <TableHead>Patient ID</TableHead>
                   <TableHead>Patient Name</TableHead>
                   <TableHead>Doctor</TableHead>
@@ -385,7 +384,7 @@ export function StaffCounter() {
                 ) : queueAppointments.length > 0 ? (
                   queueAppointments.map((appointment, index) => (
                     <TableRow key={appointment.id}>
-                      <TableCell className="font-bold">#{index + 1}</TableCell>
+                      <TableCell className="font-bold">#{queuePositions[appointment.id]?.position || (index + 1)}</TableCell>
                       <TableCell className="font-mono text-sm font-medium">
                         {patientNumbers[appointment.patient_id] || 'Loading...'}
                       </TableCell>
