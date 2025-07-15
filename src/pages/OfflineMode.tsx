@@ -374,41 +374,21 @@ const OfflineMode = () => {
         variant: "default"
       });
 
-      // Try to find existing offline patient or create one
-      let dummyPatient;
-      const offlinePatientId = '00000000-0000-0000-0000-000000000000';
-      
-      // First try to get existing offline patient
-      const { data: existingPatient } = await supabase
+      // Use an existing patient from the database instead of creating one
+      console.log('🔍 Finding existing patient to use for offline transactions...');
+      const { data: existingPatients, error: patientQueryError } = await supabase
         .from('patients')
-        .select('*')
-        .eq('cnic', 'OFFLINE-PATIENT')
+        .select('id, patient_number, cnic')
+        .limit(1)
         .single();
 
-      if (existingPatient) {
-        dummyPatient = existingPatient;
-        console.log('✅ Using existing offline patient:', dummyPatient);
-      } else {
-        // Create new offline patient with fixed ID
-        const { data: newPatient, error: patientError } = await supabase
-          .from('patients')
-          .insert({
-            id: offlinePatientId,
-            patient_number: 'OFFLINE-00000',
-            cnic: 'OFFLINE-PATIENT'
-          })
-          .select()
-          .single();
-
-        if (patientError) {
-          console.error('Error creating dummy patient:', patientError);
-          // If creation fails, use the fixed ID anyway
-          dummyPatient = { id: offlinePatientId };
-        } else {
-          dummyPatient = newPatient;
-          console.log('✅ Created new offline patient:', dummyPatient);
-        }
+      if (patientQueryError || !existingPatients) {
+        console.error('❌ Could not find any existing patients:', patientQueryError);
+        throw new Error('No patients found in database. Please create a patient first.');
       }
+
+      const dummyPatient = existingPatients;
+      console.log('✅ Using existing patient for offline transactions:', dummyPatient);
 
       // Upload operations to Supabase and create corresponding invoices
       for (const operation of operations) {
