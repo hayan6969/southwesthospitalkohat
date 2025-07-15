@@ -156,10 +156,18 @@ export default function DashboardFinance() {
                 <Button 
                   className="h-20 flex flex-col items-center justify-center" 
                   variant="outline"
+                  onClick={() => navigate('/dashboard/finance/doctor-payments')}
+                >
+                  <Users className="w-6 h-6 mb-2" />
+                  Doctor Payments
+                </Button>
+                <Button 
+                  className="h-20 flex flex-col items-center justify-center" 
+                  variant="outline"
                   onClick={() => navigate('/dashboard/finance/payroll')}
                 >
                   <Users className="w-6 h-6 mb-2" />
-                  Payroll
+                  Staff Payroll
                 </Button>
                 <Button 
                   className="h-20 flex flex-col items-center justify-center" 
@@ -168,14 +176,6 @@ export default function DashboardFinance() {
                 >
                   <TrendingUp className="w-6 h-6 mb-2" />
                   Analytics
-                </Button>
-                <Button 
-                  className="h-20 flex flex-col items-center justify-center" 
-                  variant="outline"
-                  onClick={() => navigate('/dashboard/finance/income')}
-                >
-                  <Receipt className="w-6 h-6 mb-2" />
-                  Reports
                 </Button>
               </div>
             </CardContent>

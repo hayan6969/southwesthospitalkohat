@@ -1,7 +1,7 @@
 import { ReactNode } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useLocation, useNavigate } from "react-router-dom";
-import { Calculator, ChartBar, Receipt, Users, Info, User, LogOut } from "lucide-react";
+import { Calculator, ChartBar, Receipt, Users, Info, User, LogOut, Stethoscope } from "lucide-react";
 import { useHospitalSettings } from "@/hooks/useHospitalSettings";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
@@ -23,6 +23,7 @@ export default function FinanceLayout({ children }: FinanceLayoutProps) {
     if (path === "/dashboard/finance/analytics") return "analytics";
     if (path === "/dashboard/finance/expenses") return "expenses";
     if (path === "/dashboard/finance/payroll") return "payroll";
+    if (path === "/dashboard/finance/doctor-payments") return "doctor-payments";
     return "dashboard";
   };
 
@@ -42,6 +43,9 @@ export default function FinanceLayout({ children }: FinanceLayoutProps) {
         break;
       case "payroll":
         navigate("/dashboard/finance/payroll");
+        break;
+      case "doctor-payments":
+        navigate("/dashboard/finance/doctor-payments");
         break;
     }
   };
@@ -90,7 +94,7 @@ export default function FinanceLayout({ children }: FinanceLayoutProps) {
         </div>
 
       <Tabs value={getCurrentTab()} onValueChange={handleTabChange} className="w-full">
-        <TabsList className="grid w-full grid-cols-5 mb-8">
+        <TabsList className="grid w-full grid-cols-6 mb-8">
           <TabsTrigger value="dashboard" className="flex items-center gap-2">
             <Info className="w-4 h-4" />
             Dashboard
@@ -109,7 +113,11 @@ export default function FinanceLayout({ children }: FinanceLayoutProps) {
           </TabsTrigger>
           <TabsTrigger value="payroll" className="flex items-center gap-2">
             <Users className="w-4 h-4" />
-            Payroll
+            Staff Payroll
+          </TabsTrigger>
+          <TabsTrigger value="doctor-payments" className="flex items-center gap-2">
+            <Stethoscope className="w-4 h-4" />
+            Doctor Payments
           </TabsTrigger>
         </TabsList>
 

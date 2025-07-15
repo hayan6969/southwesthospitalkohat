@@ -179,6 +179,75 @@ export type Database = {
         }
         Relationships: []
       }
+      doctor_payments: {
+        Row: {
+          appointment_count: number
+          consultation_earnings: number
+          created_at: string
+          doctor_id: string
+          id: string
+          notes: string | null
+          ot_count: number
+          ot_earnings: number
+          paid_at: string | null
+          paid_by: string | null
+          payment_status: string
+          period_end: string
+          period_start: string
+          total_earnings: number
+          updated_at: string
+        }
+        Insert: {
+          appointment_count?: number
+          consultation_earnings?: number
+          created_at?: string
+          doctor_id: string
+          id?: string
+          notes?: string | null
+          ot_count?: number
+          ot_earnings?: number
+          paid_at?: string | null
+          paid_by?: string | null
+          payment_status?: string
+          period_end: string
+          period_start: string
+          total_earnings?: number
+          updated_at?: string
+        }
+        Update: {
+          appointment_count?: number
+          consultation_earnings?: number
+          created_at?: string
+          doctor_id?: string
+          id?: string
+          notes?: string | null
+          ot_count?: number
+          ot_earnings?: number
+          paid_at?: string | null
+          paid_by?: string | null
+          payment_status?: string
+          period_end?: string
+          period_start?: string
+          total_earnings?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "doctor_payments_doctor_id_fkey"
+            columns: ["doctor_id"]
+            isOneToOne: false
+            referencedRelation: "doctors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "doctor_payments_paid_by_fkey"
+            columns: ["paid_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       doctors: {
         Row: {
           avatar_url: string | null
@@ -1151,6 +1220,20 @@ export type Database = {
       auto_cancel_overdue_appointments: {
         Args: Record<PropertyKey, never>
         Returns: undefined
+      }
+      calculate_doctor_earnings: {
+        Args: { p_doctor_id: string; p_start_date: string; p_end_date: string }
+        Returns: {
+          appointment_count: number
+          ot_count: number
+          consultation_earnings: number
+          ot_earnings: number
+          total_earnings: number
+        }[]
+      }
+      generate_doctor_payments: {
+        Args: { target_month: string }
+        Returns: number
       }
       generate_monthly_payroll: {
         Args: { target_month: string }

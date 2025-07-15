@@ -1,0 +1,256 @@
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { DollarSign, Calendar, CheckCircle, Clock, AlertCircle } from "lucide-react";
+import { format } from "date-fns";
+import { formatPkrAmount } from "@/utils/currency";
+
+interface DoctorPayment {
+  id: string;
+  period_start: string;
+  period_end: string;
+  appointment_count: number;
+  ot_count: number;
+  consultation_earnings: number;
+  ot_earnings: number;
+  total_earnings: number;
+  payment_status: 'pending' | 'paid' | 'processing';
+  paid_at: string | null;
+  notes: string | null;
+  created_at: string;
+}
+
+export function DoctorPaymentStatus() {
+  const { profile } = useAuth();
+
+  const { data: payments, isLoading } = useQuery({
+    queryKey: ['doctor-payments-status', profile?.id],
+    queryFn: async () => {
+      if (!profile?.id) return [];
+
+      const { data, error } = await supabase
+        .from('doctor_payments')
+        .select('*')
+        .eq('doctor_id', profile.id)
+        .order('created_at', { ascending: false })
+        .limit(10);
+
+      if (error) throw error;
+      return data as DoctorPayment[];
+    },
+    enabled: !!profile?.id,
+    refetchInterval: 30000
+  });
+
+  const totalPending = payments?.filter(p => p.payment_status === 'pending')
+    .reduce((sum, p) => sum + p.total_earnings, 0) || 0;
+
+  const totalReceived = payments?.filter(p => p.payment_status === 'paid')
+    .reduce((sum, p) => sum + p.total_earnings, 0) || 0;
+
+  const pendingPayments = payments?.filter(p => p.payment_status === 'pending') || [];
+  const recentPayments = payments?.filter(p => p.payment_status === 'paid').slice(0, 3) || [];
+
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {[...Array(3)].map((_, i) => (
+            <Card key={i}>
+              <CardContent className="p-6">
+                <div className="animate-pulse space-y-2">
+                  <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+                  <div className="h-8 bg-gray-200 rounded w-1/2"></div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Summary Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Pending Payments</p>
+                <p className="text-2xl font-bold text-orange-600">
+                  {formatPkrAmount(totalPending)}
+                </p>
+              </div>
+              <AlertCircle className="h-8 w-8 text-orange-600" />
+            </div>
+            <p className="text-xs text-muted-foreground mt-2">
+              {pendingPayments.length} payment(s) pending
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Total Received</p>
+                <p className="text-2xl font-bold text-green-600">
+                  {formatPkrAmount(totalReceived)}
+                </p>
+              </div>
+              <CheckCircle className="h-8 w-8 text-green-600" />
+            </div>
+            <p className="text-xs text-muted-foreground mt-2">
+              All time earnings received
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Total Earnings</p>
+                <p className="text-2xl font-bold text-blue-600">
+                  {formatPkrAmount(totalPending + totalReceived)}
+                </p>
+              </div>
+              <DollarSign className="h-8 w-8 text-blue-600" />
+            </div>
+            <p className="text-xs text-muted-foreground mt-2">
+              Complete earnings summary
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Pending Payments */}
+      {pendingPayments.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Clock className="w-5 h-5 text-orange-600" />
+              Pending Payments
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Period</TableHead>
+                    <TableHead>Appointments</TableHead>
+                    <TableHead>OT Operations</TableHead>
+                    <TableHead>Consultation</TableHead>
+                    <TableHead>OT Earnings</TableHead>
+                    <TableHead>Total</TableHead>
+                    <TableHead>Status</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {pendingPayments.map((payment) => (
+                    <TableRow key={payment.id}>
+                      <TableCell>
+                        <div className="flex items-center gap-1">
+                          <Calendar className="w-4 h-4 text-muted-foreground" />
+                          {format(new Date(payment.period_start), 'MMM d')} - {format(new Date(payment.period_end), 'MMM d, yyyy')}
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-center">{payment.appointment_count}</TableCell>
+                      <TableCell className="text-center">{payment.ot_count}</TableCell>
+                      <TableCell className="text-green-600 font-medium">
+                        {formatPkrAmount(payment.consultation_earnings)}
+                      </TableCell>
+                      <TableCell className="text-blue-600 font-medium">
+                        {formatPkrAmount(payment.ot_earnings)}
+                      </TableCell>
+                      <TableCell className="text-purple-600 font-bold">
+                        {formatPkrAmount(payment.total_earnings)}
+                      </TableCell>
+                      <TableCell>
+                        <Badge className="bg-orange-100 text-orange-700">
+                          {payment.payment_status}
+                        </Badge>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Recent Payments */}
+      {recentPayments.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <CheckCircle className="w-5 h-5 text-green-600" />
+              Recent Payments
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Period</TableHead>
+                    <TableHead>Amount</TableHead>
+                    <TableHead>Paid Date</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Notes</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {recentPayments.map((payment) => (
+                    <TableRow key={payment.id}>
+                      <TableCell>
+                        <div className="flex items-center gap-1">
+                          <Calendar className="w-4 h-4 text-muted-foreground" />
+                          {format(new Date(payment.period_start), 'MMM d')} - {format(new Date(payment.period_end), 'MMM d, yyyy')}
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-green-600 font-bold">
+                        {formatPkrAmount(payment.total_earnings)}
+                      </TableCell>
+                      <TableCell>
+                        {payment.paid_at ? format(new Date(payment.paid_at), 'MMM d, yyyy') : '-'}
+                      </TableCell>
+                      <TableCell>
+                        <Badge className="bg-green-100 text-green-700">
+                          {payment.payment_status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="max-w-xs truncate">
+                        {payment.notes || '-'}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* No Payments Message */}
+      {(!payments || payments.length === 0) && (
+        <Card>
+          <CardContent className="p-8 text-center">
+            <DollarSign className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-muted-foreground mb-2">No Payment Records</h3>
+            <p className="text-sm text-muted-foreground">
+              Your payment records will appear here once the finance team processes them.
+            </p>
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  );
+}
