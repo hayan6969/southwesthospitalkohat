@@ -374,21 +374,40 @@ const OfflineMode = () => {
         variant: "default"
       });
 
-      // First create a dummy patient for offline transactions
-      const uniqueId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-      const { data: dummyPatient, error: patientError } = await supabase
+      // Try to find existing offline patient or create one
+      let dummyPatient;
+      const offlinePatientId = '00000000-0000-0000-0000-000000000000';
+      
+      // First try to get existing offline patient
+      const { data: existingPatient } = await supabase
         .from('patients')
-        .insert({
-          id: crypto.randomUUID(),
-          patient_number: `OFFLINE-${uniqueId}`,
-          cnic: `OFFLINE-${uniqueId}`
-        })
-        .select()
+        .select('*')
+        .eq('cnic', 'OFFLINE-PATIENT')
         .single();
 
-      if (patientError) {
-        console.error('Error creating dummy patient:', patientError);
-        throw patientError;
+      if (existingPatient) {
+        dummyPatient = existingPatient;
+        console.log('✅ Using existing offline patient:', dummyPatient);
+      } else {
+        // Create new offline patient with fixed ID
+        const { data: newPatient, error: patientError } = await supabase
+          .from('patients')
+          .insert({
+            id: offlinePatientId,
+            patient_number: 'OFFLINE-00000',
+            cnic: 'OFFLINE-PATIENT'
+          })
+          .select()
+          .single();
+
+        if (patientError) {
+          console.error('Error creating dummy patient:', patientError);
+          // If creation fails, use the fixed ID anyway
+          dummyPatient = { id: offlinePatientId };
+        } else {
+          dummyPatient = newPatient;
+          console.log('✅ Created new offline patient:', dummyPatient);
+        }
       }
 
       // Upload operations to Supabase and create corresponding invoices
