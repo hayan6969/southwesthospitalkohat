@@ -1,44 +1,80 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 
-// Helper hook to get patient names from profiles table
+// Helper hook to get patient names from profiles table (with offline support)
 export const usePatientNames = () => {
   return useQuery({
     queryKey: ['patient-names'],
     queryFn: async () => {
+      // If offline, return cached data
+      if (!navigator.onLine) {
+        const cachedData = localStorage.getItem('cached_patient_names');
+        return cachedData ? JSON.parse(cachedData) : [];
+      }
+
       const { data, error } = await supabase
         .from('profiles')
         .select('id, first_name, last_name, phone, email, created_at')
         .eq('role', 'patient');
 
       if (error) throw error;
+      
+      // Cache the data for offline use
+      if (data) {
+        localStorage.setItem('cached_patient_names', JSON.stringify(data));
+      }
+      
       return data;
     }
   });
 };
 
-// Helper hook to get doctor names from profiles table
+// Helper hook to get doctor names from profiles table (with offline support)
 export const useDoctorNames = () => {
   return useQuery({
     queryKey: ['doctor-names'],
     queryFn: async () => {
+      // If offline, return cached data
+      if (!navigator.onLine) {
+        const cachedData = localStorage.getItem('cached_doctor_names');
+        return cachedData ? JSON.parse(cachedData) : [];
+      }
+
       const { data, error } = await supabase
         .from('profiles')
         .select('id, first_name, last_name, phone, email')
         .eq('role', 'doctor');
 
       if (error) throw error;
+      
+      // Cache the data for offline use
+      if (data) {
+        localStorage.setItem('cached_doctor_names', JSON.stringify(data));
+      }
+      
       return data;
     }
   });
 };
 
-// Helper hook to search patients by Patient ID with profile info
+// Helper hook to search patients by Patient ID with profile info (with offline support)
 export const useSearchPatientsWithNames = (searchTerm: string) => {
   return useQuery({
     queryKey: ['search-patients-patient-id', searchTerm],
     queryFn: async () => {
       if (!searchTerm.trim()) return [];
+      
+      // If offline, search in cached data
+      if (!navigator.onLine) {
+        const cachedPatients = localStorage.getItem('cached_patients');
+        if (cachedPatients) {
+          const patients = JSON.parse(cachedPatients);
+          return patients.filter((patient: any) => 
+            patient.patient_number?.toLowerCase().includes(searchTerm.toLowerCase())
+          ).slice(0, 10);
+        }
+        return [];
+      }
       
       // Search patients by patient_number (Patient ID)
       const { data: patients, error: patientsError } = await supabase
@@ -60,16 +96,39 @@ export const useSearchPatientsWithNames = (searchTerm: string) => {
       if (profilesError) throw profilesError;
 
       // Combine the data
-      return patients.map(patient => {
+      const combinedData = patients.map(patient => {
         const profile = profiles?.find(p => p.id === patient.id);
         return {
           ...patient,
           profile: profile || null
         };
       });
+      
+      // Cache the data for offline use (update existing cache)
+      const existingCache = localStorage.getItem('cached_patients');
+      let cachedPatients = existingCache ? JSON.parse(existingCache) : [];
+      
+      // Add new patients to cache (avoid duplicates)
+      combinedData.forEach(newPatient => {
+        const existingIndex = cachedPatients.findIndex((p: any) => p.id === newPatient.id);
+        if (existingIndex >= 0) {
+          cachedPatients[existingIndex] = newPatient;
+        } else {
+          cachedPatients.push(newPatient);
+        }
+      });
+      
+      // Keep cache reasonable size (last 100 patients)
+      if (cachedPatients.length > 100) {
+        cachedPatients = cachedPatients.slice(-100);
+      }
+      
+      localStorage.setItem('cached_patients', JSON.stringify(cachedPatients));
+      
+      return combinedData;
     },
     enabled: !!searchTerm && searchTerm.length >= 1, // Live search with minimum 1 character
-    staleTime: 0, // Always fetch fresh data
+    staleTime: 0, // Always fetch fresh data when online
     gcTime: 0, // Don't cache the data (replaced cacheTime)
   });
 };

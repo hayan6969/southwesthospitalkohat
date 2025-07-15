@@ -85,6 +85,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setSession(session);
         setUser(session?.user ?? null);
         
+        // Cache session for offline use
+        if (session) {
+          localStorage.setItem('cached_session', JSON.stringify({
+            user: session.user,
+            access_token: session.access_token,
+            expires_at: session.expires_at
+          }));
+        } else {
+          localStorage.removeItem('cached_session');
+        }
+        
         if (session?.user) {
           // Defer profile fetching to avoid potential deadlocks
           setTimeout(async () => {
@@ -94,6 +105,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
               const profileData = await fetchUserProfile(session.user.id);
               if (mounted) {
                 setProfile(profileData);
+                // Cache profile for offline use
+                if (profileData) {
+                  localStorage.setItem('cached_profile', JSON.stringify(profileData));
+                }
                 setLoading(false);
               }
             } catch (error) {
@@ -107,6 +122,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         } else {
           if (mounted) {
             setProfile(null);
+            localStorage.removeItem('cached_profile');
             setLoading(false);
           }
         }
@@ -116,14 +132,36 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     // Check for existing session
     const initializeAuth = async () => {
       try {
-        const { data: { session }, error } = await supabase.auth.getSession();
+        // First try to get session from Supabase
+        let session = null;
+        let profileData = null;
         
-        if (error) {
-          console.error('Error getting session:', error);
-          if (mounted) {
-            setLoading(false);
+        if (navigator.onLine) {
+          const { data: { session: onlineSession }, error } = await supabase.auth.getSession();
+          
+          if (error) {
+            console.error('Error getting session:', error);
+          } else {
+            session = onlineSession;
           }
-          return;
+        }
+        
+        // If no online session or offline, try cached session
+        if (!session) {
+          const cachedSession = localStorage.getItem('cached_session');
+          const cachedProfile = localStorage.getItem('cached_profile');
+          
+          if (cachedSession && cachedProfile) {
+            const parsedSession = JSON.parse(cachedSession);
+            const parsedProfile = JSON.parse(cachedProfile);
+            
+            // Check if cached session is still valid (not expired)
+            if (parsedSession.expires_at && new Date(parsedSession.expires_at * 1000) > new Date()) {
+              console.log('Using cached session for offline access');
+              session = parsedSession;
+              profileData = parsedProfile;
+            }
+          }
         }
 
         console.log('Initial session check:', session?.user?.email);
@@ -135,9 +173,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         
         if (session?.user) {
           try {
-            const profileData = await fetchUserProfile(session.user.id);
-            if (mounted) {
+            // Use cached profile if available, otherwise fetch
+            if (profileData) {
               setProfile(profileData);
+            } else if (navigator.onLine) {
+              profileData = await fetchUserProfile(session.user.id);
+              if (mounted) {
+                setProfile(profileData);
+                if (profileData) {
+                  localStorage.setItem('cached_profile', JSON.stringify(profileData));
+                }
+              }
+            }
+            
+            if (mounted) {
               setLoading(false);
             }
           } catch (error) {
