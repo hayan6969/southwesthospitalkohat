@@ -11,7 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { formatPkrAmount } from "@/utils/currency";
-import { Users, DollarSign, Calendar, Plus, Download, Check, CheckCircle, CalendarIcon, Settings, RefreshCw, UserPlus, Edit, Trash2 } from "lucide-react";
+import { Users, Banknote, Calendar, Plus, Download, Check, CheckCircle, CalendarIcon, Settings, RefreshCw, UserPlus, Edit, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
@@ -459,7 +459,7 @@ export default function FinancePayroll() {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-gray-600 flex items-center gap-2">
-              <DollarSign className="w-4 h-4" />
+              <Banknote className="w-4 h-4" />
               Total Payroll
             </CardTitle>
           </CardHeader>

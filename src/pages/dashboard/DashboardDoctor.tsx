@@ -9,7 +9,7 @@ import { usePatientNames, useDoctorNames, getPatientName, getDoctorName } from "
 import { useDoctorTodayAppointments } from "@/hooks/useDoctorData";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
-import { Calendar, Users, Clock, CheckCircle, Plus, User, LogOut, Stethoscope, FileText, CalendarDays, ClipboardList, DollarSign } from "lucide-react";
+import { Calendar, Users, Clock, CheckCircle, Plus, User, LogOut, Stethoscope, FileText, CalendarDays, ClipboardList, Banknote } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -402,7 +402,7 @@ export default function DashboardDoctor() {
                     value={formatPkrAmount(financialAnalytics?.revenueBySource?.hospital || 0)}
                     change={realStats?.revenueChange}
                     changeType={realStats?.revenueChangeType}
-                    icon={<DollarSign className="w-5 h-5 text-green-600" />}
+                    icon={<Banknote className="w-5 h-5 text-green-600" />}
                     chart={<MiniChart data={financialAnalytics?.monthlyRevenue?.map(m => ({value: m.amount})) || []} type="area" color="#10b981" />}
                   />
                   <StatsCard

@@ -3,7 +3,7 @@ import AppLayout from "@/layouts/AppLayout";
 import { useInvoices, useUpdateInvoice } from "@/hooks/useDatabase";
 import { InvoiceDialog } from "@/components/dialogs/InvoiceDialog";
 import { generateInvoicePDF } from "@/utils/pdfGenerator";
-import { DollarSign, FileText, Calendar, CheckCircle, Download } from "lucide-react";
+import { Banknote, FileText, Calendar, CheckCircle, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { format } from "date-fns";
@@ -50,7 +50,7 @@ export default function StaffInvoices() {
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
           <div className="p-6 border-b border-gray-200">
             <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
-              <DollarSign className="w-5 h-5" />
+              <Banknote className="w-5 h-5" />
               All Invoices
             </h2>
           </div>

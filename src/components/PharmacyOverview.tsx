@@ -1,7 +1,7 @@
 
 import { usePharmacyStats, usePharmacyInvoices } from "@/hooks/useDatabase";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Pill, ShoppingCart, DollarSign, TrendingUp, Calendar } from "lucide-react";
+import { Pill, ShoppingCart, Banknote, TrendingUp, Calendar } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { formatPkrAmount } from "@/utils/currency";
 
@@ -55,7 +55,7 @@ export function PharmacyOverview() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Revenue</CardTitle>
-            <DollarSign className="h-4 w-4 text-purple-600" />
+            <Banknote className="h-4 w-4 text-purple-600" />
           </CardHeader>
           <CardContent>
             {statsLoading ? (

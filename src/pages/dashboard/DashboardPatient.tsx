@@ -8,7 +8,7 @@ import { StatsCard } from "@/components/StatsCard";
 import { DemoTable } from "@/components/DemoTable";
 import { AuditLog } from "@/components/AuditLog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Calendar, FileText, DollarSign, Activity, Clock, Users, TestTube, Upload, Building2 } from "lucide-react";
+import { Calendar, FileText, Banknote, Activity, Clock, Users, TestTube, Upload, Building2 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { AppointmentBooking } from "@/components/AppointmentBooking";
 import { MyAppointments } from "@/components/MyAppointments";
@@ -133,7 +133,7 @@ export default function DashboardPatient() {
         <StatsCard
           title="Outstanding Bills"
           value={`$${outstandingBills.toFixed(2)}`}
-          icon={<DollarSign className="w-5 h-5 text-red-600" />}
+          icon={<Banknote className="w-5 h-5 text-red-600" />}
         />
         <StatsCard
           title="Lab Reports"
@@ -259,7 +259,7 @@ export default function DashboardPatient() {
             Lab Reports
           </TabsTrigger>
           <TabsTrigger value="invoices" className="flex items-center gap-2">
-            <DollarSign className="w-4 h-4" />
+            <Banknote className="w-4 h-4" />
             Invoices
           </TabsTrigger>
           <TabsTrigger value="ot" className="flex items-center gap-2">

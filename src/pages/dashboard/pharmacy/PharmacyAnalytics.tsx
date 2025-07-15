@@ -7,7 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell } from "recharts";
-import { TrendingUp, DollarSign, Package, ShoppingCart, AlertTriangle } from "lucide-react";
+import { TrendingUp, Banknote, Package, ShoppingCart, AlertTriangle } from "lucide-react";
 import { format, subDays, startOfDay } from "date-fns";
 import { formatPkrAmount } from "@/utils/currency";
 
@@ -115,7 +115,7 @@ export default function PharmacyAnalytics() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
-              <DollarSign className="h-4 w-4 text-muted-foreground" />
+              <Banknote className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{formatPkrAmount(stats?.totalRevenue || 0)}</div>

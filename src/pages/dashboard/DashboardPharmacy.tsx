@@ -4,7 +4,7 @@ import AppLayout from "@/layouts/AppLayout";
 import { StatsCard } from "@/components/StatsCard";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { usePharmacyStats, useExpiringMedicines, usePharmacyInvoices } from "@/hooks/useDatabase";
-import { Pill, ShoppingCart, DollarSign, AlertTriangle, TrendingUp, FileText } from "lucide-react";
+import { Pill, ShoppingCart, Banknote, AlertTriangle, TrendingUp, FileText } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -72,7 +72,7 @@ export default function DashboardPharmacy() {
           <StatsCard
             title="Total Revenue"
             value={formatPkrAmount(stats?.totalRevenue || 0)}
-            icon={<DollarSign className="w-5 h-5 text-purple-600" />}
+            icon={<Banknote className="w-5 h-5 text-purple-600" />}
             loading={statsLoading}
           />
           <StatsCard

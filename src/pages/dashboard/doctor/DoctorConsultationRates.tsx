@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useUpdateDoctor } from "@/hooks/useDatabase";
 import { useAuth } from "@/hooks/useAuth";
-import { DollarSign, Save } from "lucide-react";
+import { Banknote, Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -40,7 +40,7 @@ export default function DoctorConsultationRates() {
       <Card className="max-w-md">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <DollarSign className="w-5 h-5" />
+            <Banknote className="w-5 h-5" />
             Set Consultation Fee
           </CardTitle>
           <CardDescription>

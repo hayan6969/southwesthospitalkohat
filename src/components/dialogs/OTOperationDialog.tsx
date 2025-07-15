@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Plus, Trash2, DollarSign } from "lucide-react";
+import { Plus, Trash2, Banknote } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { formatPkrAmount } from "@/utils/currency";
@@ -266,7 +266,7 @@ export function OTOperationDialog({ onOperationAdded, editingOperation, onEditCo
             {totalCost > 0 && (
               <div className="flex items-center justify-between p-3 bg-primary/5 rounded-lg border">
                 <div className="flex items-center gap-2">
-                  <DollarSign className="w-4 h-4 text-green-600" />
+                  <Banknote className="w-4 h-4 text-green-600" />
                   <span className="font-medium">Total Cost:</span>
                 </div>
                 <span className="text-lg font-bold text-green-600">

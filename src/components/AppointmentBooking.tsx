@@ -13,7 +13,7 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { format } from "date-fns";
-import { Calendar as CalendarIcon, Clock, DollarSign, User, Check, ChevronsUpDown } from "lucide-react";
+import { Calendar as CalendarIcon, Clock, Banknote, User, Check, ChevronsUpDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
 import { getCurrentPakistanTime } from "@/utils/timezone";
@@ -461,7 +461,7 @@ export const AppointmentBooking = () => {
                     <span>{selectedDoctorDetails.experience_years} years exp.</span>
                   </div>
                   <div className="flex items-center gap-1">
-                    <DollarSign className="w-4 h-4" />
+                    <Banknote className="w-4 h-4" />
                     <span>PKR {selectedDoctorDetails.consultation_fee}</span>
                   </div>
                 </div>

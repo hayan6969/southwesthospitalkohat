@@ -1,6 +1,6 @@
 
 import { StatsCard } from "@/components/StatsCard";
-import { Calculator, TrendingUp, Users, Receipt, DollarSign, Minus, Pill, TrendingDown } from "lucide-react";
+import { Calculator, TrendingUp, Users, Receipt, Banknote, Minus, Pill, TrendingDown } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useInvoices, useStats } from "@/hooks/useDatabase";
@@ -96,7 +96,7 @@ export default function DashboardFinance() {
             <StatsCard
               title="Total Revenue"
               value={formatPkrAmount(totalRevenue)}
-              icon={<DollarSign className="w-5 h-5 text-green-600" />}
+              icon={<Banknote className="w-5 h-5 text-green-600" />}
               loading={invoicesLoading || pharmacyLoading || labLoading}
             />
             <StatsCard

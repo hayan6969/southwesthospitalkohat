@@ -8,7 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { Clock, User, Calendar as CalendarIcon, FileText, DollarSign, Filter, CalendarDays, X } from "lucide-react";
+import { Clock, User, Calendar as CalendarIcon, FileText, Banknote, Filter, CalendarDays, X } from "lucide-react";
 import { format, isToday, isFuture, isAfter, isBefore, startOfDay, endOfDay } from "date-fns";
 import { toast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
@@ -424,7 +424,7 @@ export const MyAppointments = () => {
               <span>{appointment.type}</span>
             </div>
             <div className="flex items-center gap-2 text-sm">
-              <DollarSign className="w-4 h-4 text-gray-500" />
+              <Banknote className="w-4 h-4 text-gray-500" />
               <span>PKR {appointment.doctor.consultation_fee}</span>
             </div>
           </div>

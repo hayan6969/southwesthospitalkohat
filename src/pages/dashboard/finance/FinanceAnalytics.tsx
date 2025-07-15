@@ -5,7 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { formatPkrAmount } from "@/utils/currency";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell } from "recharts";
-import { TrendingUp, TrendingDown, DollarSign, Activity } from "lucide-react";
+import { TrendingUp, TrendingDown, Banknote, Activity } from "lucide-react";
 import { useState, useMemo } from "react";
 import { format, subMonths, startOfMonth, endOfMonth } from "date-fns";
 import { Calendar } from "@/components/ui/calendar";
@@ -406,7 +406,7 @@ export default function FinanceAnalytics() {
           <Card className="min-w-0">
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                <DollarSign className="w-4 h-4" />
+                <Banknote className="w-4 h-4" />
                 Net Profit
               </CardTitle>
             </CardHeader>
@@ -569,11 +569,11 @@ export default function FinanceAnalytics() {
               <h4 className="font-semibold text-green-600">Key Metrics</h4>
                <ul className="space-y-2 text-sm">
                  <li className="flex items-center gap-2">
-                   <DollarSign className="w-4 h-4 text-green-600" />
+                   <Banknote className="w-4 h-4 text-green-600" />
                    <span className="break-all">Total Revenue: {formatLargeNumber(combinedRevenue)}</span>
                  </li>
                  <li className="flex items-center gap-2">
-                   <DollarSign className="w-4 h-4 text-red-600" />
+                   <Banknote className="w-4 h-4 text-red-600" />
                    <span className="break-all">Total Expenses: {formatLargeNumber(totalExpenses)}</span>
                  </li>
                  <li className="flex items-center gap-2">

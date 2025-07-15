@@ -2,7 +2,7 @@
 import AppLayout from "@/layouts/AppLayout";
 import { useInvoices } from "@/hooks/useDatabase";
 import { useAuth } from "@/hooks/useAuth";
-import { DollarSign, FileText, Calendar, Download } from "lucide-react";
+import { Banknote, FileText, Calendar, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { format } from "date-fns";
@@ -59,7 +59,7 @@ export default function PatientInvoices() {
       <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
         <div className="p-6 border-b border-gray-200">
           <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
-            <DollarSign className="w-5 h-5" />
+            <Banknote className="w-5 h-5" />
             Billing History
           </h2>
         </div>

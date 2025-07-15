@@ -12,7 +12,7 @@ import { useRealStatsData } from "@/hooks/useRealStatsData";
 import { useRecentActivity } from "@/hooks/useRecentActivity";
 import { useFinancialAnalytics } from "@/hooks/useFinancialAnalytics";
 import { useAuth } from "@/hooks/useAuth";
-import { Users, UserCheck, Calendar, DollarSign, Shield, Activity, Filter, User, LogOut, TrendingUp, CreditCard } from "lucide-react";
+import { Users, UserCheck, Calendar, Banknote, Shield, Activity, Filter, User, LogOut, TrendingUp, CreditCard } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
@@ -262,7 +262,7 @@ export default function DashboardAdmin() {
                   value={formatPkrAmount(realStats?.totalRevenue || 0)}
                   change={realStats?.revenueChange}
                   changeType={realStats?.revenueChangeType}
-                  icon={<DollarSign className="w-5 h-5 text-green-600" />}
+                  icon={<Banknote className="w-5 h-5 text-green-600" />}
                   chart={<MiniChart data={realStats?.chartData?.revenue || []} type="line" color="#10b981" />}
                   loading={isLoading}
                 />
@@ -318,7 +318,7 @@ export default function DashboardAdmin() {
                   value={formatPkrAmount(financialAnalytics?.totalRevenue || 0)}
                   change={realStats?.revenueChange}
                   changeType={realStats?.revenueChangeType}
-                  icon={<DollarSign className="w-5 h-5 text-green-600" />}
+                  icon={<Banknote className="w-5 h-5 text-green-600" />}
                   chart={<MiniChart data={financialAnalytics?.monthlyRevenue?.map(m => ({value: m.amount})) || []} type="bar" color="#10b981" />}
                 />
                 <StatsCard
