@@ -154,7 +154,7 @@ export const useAppointments = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [queryClient]);
+  }, []); // Remove queryClient dependency to prevent re-subscriptions
 
   return query;
 };
