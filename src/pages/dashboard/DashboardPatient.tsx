@@ -8,7 +8,7 @@ import { StatsCard } from "@/components/StatsCard";
 import { DemoTable } from "@/components/DemoTable";
 import { AuditLog } from "@/components/AuditLog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Calendar, FileText, Banknote, Activity, Clock, Users, TestTube, Upload, Building2 } from "lucide-react";
+import { Calendar, FileText, Banknote, Activity, Clock, Users, TestTube, Upload, Building2, Settings } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { AppointmentBooking } from "@/components/AppointmentBooking";
 import { MyAppointments } from "@/components/MyAppointments";
@@ -17,6 +17,7 @@ import PatientRecords from "./patient/PatientRecords";
 import PatientLabs from "./patient/PatientLabs";
 import PatientInvoices from "./patient/PatientInvoices";
 import PatientOT from "./patient/PatientOT";
+import { PatientSettings } from "@/components/PatientSettings";
 
 export default function DashboardPatient() {
   const { profile } = useAuth();
@@ -275,11 +276,17 @@ export default function DashboardPatient() {
     </div>
   );
 
+  const renderSettingsTab = () => (
+    <div className="space-y-6">
+      <PatientSettings />
+    </div>
+  );
+
   return (
     <PatientLayout>
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <div className="mb-6 overflow-x-auto">
-          <TabsList className="grid w-full min-w-max grid-cols-7 lg:grid-cols-7">
+          <TabsList className="grid w-full min-w-max grid-cols-8 lg:grid-cols-8">
             <TabsTrigger value="overview" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-4">
               <Activity className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
               <span className="hidden sm:inline">Overview</span>
@@ -315,6 +322,11 @@ export default function DashboardPatient() {
               <span className="hidden sm:inline">OT</span>
               <span className="sm:hidden">OT</span>
             </TabsTrigger>
+            <TabsTrigger value="settings" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-4">
+              <Settings className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
+              <span className="hidden sm:inline">Settings</span>
+              <span className="sm:hidden">Settings</span>
+            </TabsTrigger>
           </TabsList>
         </div>
 
@@ -344,6 +356,10 @@ export default function DashboardPatient() {
 
         <TabsContent value="ot" className="space-y-4">
           {renderOTTab()}
+        </TabsContent>
+
+        <TabsContent value="settings" className="space-y-4">
+          {renderSettingsTab()}
         </TabsContent>
       </Tabs>
     </PatientLayout>

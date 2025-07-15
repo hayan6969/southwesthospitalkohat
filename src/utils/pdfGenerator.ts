@@ -2,6 +2,7 @@
 import jsPDF from 'jspdf';
 import { formatPkrAmount } from './currency';
 import { supabase } from '@/integrations/supabase/client';
+import { getPatientContactNumber } from './patientUtils';
 
 // Get hospital settings for PDF branding
 const getHospitalSettings = async () => {
@@ -147,9 +148,9 @@ export const generateLabInvoicePDF = async (data: {
   doc.setFont('helvetica', 'normal');
   doc.text(data.patientId || 'N/A', 160, yPosition + 5);
   
-  // Third row
+  // Third row - Use utility function for better contact extraction
   yPosition += 10;
-  const phoneNumber = data.patientEmail ? data.patientEmail.split('@')[0].replace(/[^0-9]/g, '') : 'N/A';
+  const phoneNumber = data.patientEmail ? getPatientContactNumber(null, { email: data.patientEmail, phone: data.patientPhone }) : (data.patientPhone || 'N/A');
   doc.setFont('helvetica', 'bold');
   doc.text('Contact:', 20, yPosition + 5);
   doc.setFont('helvetica', 'normal');
@@ -268,9 +269,9 @@ export const generateInvoicePDF = async (invoice: any) => {
   doc.setFont('helvetica', 'normal');
   doc.text(invoice.patient?.patient_number || 'N/A', 160, yPosition + 5);
   
-  // Third row
+  // Third row - Use utility function to get best contact number
   yPosition += 10;
-  const phoneNumber = invoice.patient?.users?.email ? invoice.patient.users.email.split('@')[0].replace(/[^0-9]/g, '') : 'N/A';
+  const phoneNumber = getPatientContactNumber(invoice.patient, invoice.patient?.users);
   doc.setFont('helvetica', 'bold');
   doc.text('Contact:', 20, yPosition + 5);
   doc.setFont('helvetica', 'normal');

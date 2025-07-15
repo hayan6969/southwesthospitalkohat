@@ -11,6 +11,7 @@ import { usePatientAppointmentHistory, usePatientMedicalRecords, useCreateUpdate
 import { User, Calendar, FileText, Clock, Plus, Save, File, Eye } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
+import { formatPatientInfo } from "@/utils/patientUtils";
 
 interface PatientDetailDialogProps {
   isOpen: boolean;
@@ -38,6 +39,9 @@ export function PatientDetailDialog({ isOpen, onClose, patient }: PatientDetailD
   const createPatientNote = useCreatePatientNote();
 
   const patientProfile = patient?.profiles;
+  
+  // Format patient information using utility functions
+  const patientInfo = formatPatientInfo(patient, patientProfile);
 
   const handleSaveRecord = async () => {
     try {
@@ -124,37 +128,37 @@ export function PatientDetailDialog({ isOpen, onClose, patient }: PatientDetailD
               <CardContent className="grid grid-cols-2 gap-4">
                 <div>
                   <Label className="text-sm font-medium text-muted-foreground">Full Name</Label>
-                  <p className="text-lg">{patientProfile?.first_name} {patientProfile?.last_name}</p>
+                  <p className="text-lg">{patientInfo.fullName}</p>
                 </div>
                 <div>
                   <Label className="text-sm font-medium text-muted-foreground">Email</Label>
-                  <p>{patientProfile?.email || 'Not provided'}</p>
+                  <p>{patientInfo.email}</p>
                 </div>
                 <div>
                   <Label className="text-sm font-medium text-muted-foreground">Phone</Label>
-                  <p>{patientProfile?.phone || 'Not provided'}</p>
+                  <p>{patientInfo.phone}</p>
                 </div>
                 <div>
                   <Label className="text-sm font-medium text-muted-foreground">Patient Number</Label>
-                  <p className="font-mono">{patient.patient_number || 'Not assigned'}</p>
+                  <p className="font-mono">{patientInfo.patientNumber}</p>
                 </div>
                 <div>
                   <Label className="text-sm font-medium text-muted-foreground">Date of Birth</Label>
-                  <p>{patient.date_of_birth ? format(new Date(patient.date_of_birth), 'MMM d, yyyy') : 'Not provided'}</p>
+                  <p>{patientInfo.dateOfBirth !== 'Not provided' ? format(new Date(patientInfo.dateOfBirth), 'MMM d, yyyy') : patientInfo.dateOfBirth}</p>
                 </div>
                 <div>
                   <Label className="text-sm font-medium text-muted-foreground">Blood Type</Label>
-                  <p>{patient.blood_type || 'Not provided'}</p>
+                  <p>{patientInfo.bloodType}</p>
                 </div>
                 <div>
                   <Label className="text-sm font-medium text-muted-foreground">Allergies</Label>
-                  <p>{patient.allergies || 'None reported'}</p>
+                  <p>{patientInfo.allergies}</p>
                 </div>
                 <div>
                   <Label className="text-sm font-medium text-muted-foreground">Emergency Contact</Label>
-                  <p>{patient.emergency_contact_name || 'Not provided'}</p>
-                  {patient.emergency_contact_phone && (
-                    <p className="text-sm text-muted-foreground">{patient.emergency_contact_phone}</p>
+                  <p>{patientInfo.emergencyContact}</p>
+                  {patientInfo.emergencyPhone !== patientInfo.phone && (
+                    <p className="text-sm text-muted-foreground">{patientInfo.emergencyPhone}</p>
                   )}
                 </div>
               </CardContent>
