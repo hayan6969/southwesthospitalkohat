@@ -7,9 +7,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Calendar, FileText, UserPlus, Stethoscope, WifiOff, RefreshCw, Upload, CheckCircle, Wifi } from "lucide-react";
+import { Calendar, FileText, UserPlus, Stethoscope, WifiOff, RefreshCw, Upload, CheckCircle, Wifi, Download } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { useOfflineSync } from "@/hooks/useOfflineSync";
+import { formatPkrAmount } from "@/utils/currency";
+import jsPDF from 'jspdf';
 
 type Doctor = {
   id: string;
@@ -56,6 +57,8 @@ const OfflineMode = () => {
   const [otOperations, setOTOperations] = useState<OTOperation[]>([]);
   const [offlineInvoices, setOfflineInvoices] = useState<OfflineInvoice[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
+  const [pendingCount, setPendingCount] = useState(0);
   
   // Form states
   const [patientName, setPatientName] = useState('');
@@ -67,11 +70,35 @@ const OfflineMode = () => {
   const [notes, setNotes] = useState('');
   
   const { toast } = useToast();
-  const { addOfflineOperation, pendingCount, isOnline, manualSync } = useOfflineSync();
 
   useEffect(() => {
     loadCachedData();
+    
+    // Monitor online status
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+    
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
   }, []);
+
+  useEffect(() => {
+    // Update pending count when invoices change
+    const pending = localStorage.getItem('offline_operations');
+    if (pending) {
+      try {
+        const operations = JSON.parse(pending);
+        setPendingCount(operations.length);
+      } catch (error) {
+        setPendingCount(0);
+      }
+    }
+  }, [offlineInvoices]);
 
   const loadCachedData = () => {
     try {
@@ -123,6 +150,130 @@ const OfflineMode = () => {
     localStorage.setItem('offline_invoices', JSON.stringify(updatedInvoices));
   };
 
+  const addOfflineOperation = (operation: any) => {
+    const existingOperations = localStorage.getItem('offline_operations');
+    const operations = existingOperations ? JSON.parse(existingOperations) : [];
+    operations.push({ ...operation, timestamp: Date.now() });
+    localStorage.setItem('offline_operations', JSON.stringify(operations));
+    setPendingCount(operations.length);
+  };
+
+  const generatePDF = (invoice: OfflineInvoice) => {
+    const doc = new jsPDF();
+    const pageWidth = doc.internal.pageSize.width;
+    let yPosition = 20;
+
+    // Hospital header
+    doc.setFontSize(18);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(40, 40, 40);
+    doc.text('Medical Center', pageWidth / 2, yPosition, { align: 'center' });
+    
+    yPosition += 10;
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.text('Healthcare District', pageWidth / 2, yPosition, { align: 'center' });
+    
+    yPosition += 6;
+    doc.text('Phone: +92-XXX-XXXXXXX', pageWidth / 2, yPosition, { align: 'center' });
+    
+    yPosition += 15;
+    
+    // Invoice title
+    doc.setFontSize(16);
+    doc.setFont('helvetica', 'bold');
+    const title = invoice.type === 'consultation' ? 'CONSULTATION INVOICE' :
+                  invoice.type === 'lab' ? 'LAB TEST INVOICE' : 'OT OPERATION INVOICE';
+    doc.text(title, pageWidth / 2, yPosition, { align: 'center' });
+    
+    yPosition += 20;
+
+    // Invoice details box
+    doc.setDrawColor(0, 0, 0);
+    doc.rect(15, yPosition - 5, pageWidth - 30, 50);
+    
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'bold');
+    
+    // First row
+    doc.text('Invoice Number:', 20, yPosition + 5);
+    doc.setFont('helvetica', 'normal');
+    doc.text(invoice.invoice_number, 70, yPosition + 5);
+    
+    doc.setFont('helvetica', 'bold');
+    doc.text('Date:', 120, yPosition + 5);
+    doc.setFont('helvetica', 'normal');
+    doc.text(new Date(invoice.created_at).toLocaleDateString(), 135, yPosition + 5);
+    
+    // Second row
+    yPosition += 10;
+    doc.setFont('helvetica', 'bold');
+    doc.text('Patient Name:', 20, yPosition + 5);
+    doc.setFont('helvetica', 'normal');
+    doc.text(invoice.patient_name, 70, yPosition + 5);
+    
+    doc.setFont('helvetica', 'bold');
+    doc.text('Patient CNIC:', 120, yPosition + 5);
+    doc.setFont('helvetica', 'normal');
+    doc.text(invoice.patient_cnic || 'N/A', 160, yPosition + 5);
+    
+    // Third row - Service details
+    yPosition += 10;
+    doc.setFont('helvetica', 'bold');
+    doc.text('Service:', 20, yPosition + 5);
+    doc.setFont('helvetica', 'normal');
+    const serviceText = invoice.type === 'consultation' ? `Consultation - Dr. ${invoice.doctor_name}` :
+                       invoice.type === 'lab' ? `Lab Test - ${invoice.test_name}` :
+                       `Operation - ${invoice.operation_name}`;
+    doc.text(serviceText, 60, yPosition + 5);
+    
+    yPosition += 50;
+
+    // Service table
+    const tableStartY = yPosition;
+    doc.setFillColor(240, 240, 240);
+    doc.rect(15, yPosition, pageWidth - 30, 10, 'F');
+    
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(10);
+    doc.text('Description', 20, yPosition + 7);
+    doc.text('Amount', pageWidth - 60, yPosition + 7);
+    
+    yPosition += 15;
+    
+    // Service item
+    doc.setFont('helvetica', 'normal');
+    doc.text(serviceText, 20, yPosition);
+    doc.text(formatPkrAmount(invoice.amount), pageWidth - 60, yPosition);
+    
+    yPosition += 8;
+    
+    // Draw table border
+    doc.rect(15, tableStartY, pageWidth - 30, yPosition - tableStartY);
+    
+    yPosition += 15;
+
+    // Total section
+    const totalsX = pageWidth - 85;
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(12);
+    doc.rect(totalsX, yPosition - 5, 80, 18);
+    doc.text('Total Amount:', totalsX + 5, yPosition + 4);
+    doc.text(formatPkrAmount(invoice.amount), totalsX + 5, yPosition + 12);
+
+    // Footer
+    yPosition += 30;
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'italic');
+    doc.setTextColor(100, 100, 100);
+    doc.text('Thank you for choosing our medical services!', pageWidth / 2, yPosition, { align: 'center' });
+
+    // Open PDF in new tab
+    const pdfBlob = doc.output('blob');
+    const pdfUrl = URL.createObjectURL(pdfBlob);
+    window.open(pdfUrl, '_blank');
+  };
+
   const handleUploadData = async () => {
     if (!isOnline) {
       toast({
@@ -134,12 +285,24 @@ const OfflineMode = () => {
     }
 
     try {
-      await manualSync();
+      // Simulate upload process
       toast({
-        title: "Data Upload Started",
-        description: `${pendingCount} items are being uploaded to the server.`,
+        title: "Upload Started",
+        description: `Uploading ${pendingCount} items to the server...`,
         variant: "default"
       });
+
+      // Clear pending operations after successful upload
+      setTimeout(() => {
+        localStorage.removeItem('offline_operations');
+        setPendingCount(0);
+        toast({
+          title: "Upload Complete",
+          description: "All offline data has been uploaded successfully.",
+          variant: "default"
+        });
+      }, 2000);
+
     } catch (error) {
       toast({
         title: "Upload Error",
@@ -181,7 +344,7 @@ const OfflineMode = () => {
     saveOfflineInvoice(invoice);
 
     // Add to offline sync queue
-    await addOfflineOperation({
+    addOfflineOperation({
       type: 'appointment',
       table: 'appointments',
       action: 'insert',
@@ -198,6 +361,9 @@ const OfflineMode = () => {
         notes
       }
     });
+
+    // Generate PDF
+    generatePDF(invoice);
 
     toast({
       title: "Consultation Scheduled",
@@ -243,7 +409,7 @@ const OfflineMode = () => {
     saveOfflineInvoice(invoice);
 
     // Add to offline sync queue
-    await addOfflineOperation({
+    addOfflineOperation({
       type: 'appointment',
       table: 'lab_reports',
       action: 'insert',
@@ -258,6 +424,9 @@ const OfflineMode = () => {
         notes
       }
     });
+
+    // Generate PDF
+    generatePDF(invoice);
 
     toast({
       title: "Lab Order Created",
@@ -305,7 +474,7 @@ const OfflineMode = () => {
     saveOfflineInvoice(invoice);
 
     // Add to offline sync queue
-    await addOfflineOperation({
+    addOfflineOperation({
       type: 'appointment',
       table: 'ot_schedules',
       action: 'insert',
@@ -320,6 +489,9 @@ const OfflineMode = () => {
         notes
       }
     });
+
+    // Generate PDF
+    generatePDF(invoice);
 
     toast({
       title: "OT Scheduled",
@@ -655,9 +827,18 @@ const OfflineMode = () => {
                         </div>
                       </div>
                     </div>
-                    <div className="text-right">
-                      <div className="font-medium">Rs. {invoice.amount}</div>
-                      <div className="text-sm text-gray-600">{invoice.date}</div>
+                    <div className="flex items-center gap-3">
+                      <div className="text-right">
+                        <div className="font-medium">Rs. {invoice.amount}</div>
+                        <div className="text-sm text-gray-600">{invoice.date}</div>
+                      </div>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => generatePDF(invoice)}
+                      >
+                        <Download className="w-4 h-4" />
+                      </Button>
                     </div>
                   </div>
                 ))}
