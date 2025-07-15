@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { CalendarIcon, Coins, Users, ClipboardList, CheckCircle, Clock, AlertCircle } from "lucide-react";
+import { CalendarIcon, Banknote, Users, ClipboardList, CheckCircle, Clock, AlertCircle } from "lucide-react";
 import { format, startOfMonth, endOfMonth, subMonths } from "date-fns";
 import { formatPkrAmount } from "@/utils/currency";
 import { cn } from "@/lib/utils";
@@ -279,7 +279,7 @@ export function DoctorPayments() {
                   {formatPkrAmount(totalPendingAmount + totalPaidAmount)}
                 </p>
               </div>
-              <Coins className="h-8 w-8 text-purple-600" />
+              <Banknote className="h-8 w-8 text-purple-600" />
             </div>
             <p className="text-xs text-muted-foreground mt-2">
               Complete month earnings

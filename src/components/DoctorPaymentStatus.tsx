@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Coins, Calendar as CalendarIcon, CheckCircle, Clock, AlertCircle } from "lucide-react";
+import { Banknote, Calendar as CalendarIcon, CheckCircle, Clock, AlertCircle } from "lucide-react";
 import { format, startOfMonth, endOfMonth } from "date-fns";
 import { formatPkrAmount } from "@/utils/currency";
 
@@ -259,7 +259,7 @@ export function DoctorPaymentStatus() {
                   {formatPkrAmount(totalPending + totalReceived)}
                 </p>
               </div>
-              <Coins className="h-8 w-8 text-blue-600" />
+              <Banknote className="h-8 w-8 text-blue-600" />
             </div>
             <p className="text-xs text-muted-foreground mt-2">
               Complete earnings summary
@@ -419,7 +419,7 @@ export function DoctorPaymentStatus() {
       {(!payments || payments.length === 0) && (!unpaidEarnings || unpaidEarnings.totalEarnings === 0) && (
         <Card>
           <CardContent className="p-8 text-center">
-            <Coins className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+            <Banknote className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
             <h3 className="text-lg font-medium text-muted-foreground mb-2">No Payment Records</h3>
             <p className="text-sm text-muted-foreground">
               Complete appointments and OT operations to see your earnings here.

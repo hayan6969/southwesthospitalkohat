@@ -219,7 +219,7 @@ export default function PharmacyMedicines() {
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <Label htmlFor="purchase_price">Purchase Price (USD) *</Label>
+                    <Label htmlFor="purchase_price">Purchase Price (PKR) *</Label>
                     <Input
                       id="purchase_price"
                       type="number"
@@ -230,7 +230,7 @@ export default function PharmacyMedicines() {
                     />
                   </div>
                   <div>
-                    <Label htmlFor="selling_price">Selling Price (USD) *</Label>
+                    <Label htmlFor="selling_price">Selling Price (PKR) *</Label>
                     <Input
                       id="selling_price"
                       type="number"

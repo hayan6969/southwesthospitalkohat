@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { CalendarIcon, Coins, TrendingUp, Users, Clock, FileText } from "lucide-react";
+import { CalendarIcon, Banknote, TrendingUp, Users, Clock, FileText } from "lucide-react";
 import { format, startOfMonth, endOfMonth, subMonths, parseISO } from "date-fns";
 import { formatPkrAmount } from "@/utils/currency";
 import { Calendar } from "@/components/ui/calendar";
@@ -271,7 +271,7 @@ export function DoctorAnalytics() {
                     {formatPkrAmount(analytics?.totalEarnings || 0)}
                   </p>
                 </div>
-                <Coins className="h-8 w-8 text-green-600" />
+                <Banknote className="h-8 w-8 text-green-600" />
               </div>
               <p className="text-xs text-muted-foreground mt-2">
                 From {analytics?.completedAppointments || 0} completed appointments
