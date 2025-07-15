@@ -3,7 +3,7 @@ import AppLayout from "@/layouts/AppLayout";
 import { useAppointments, useUpdateAppointment } from "@/hooks/useDatabase";
 import { usePatientNames, useDoctorNames, getPatientName, getDoctorName } from "@/hooks/useDisplayHelpers";
 import { EnhancedAppointmentDialog } from "@/components/dialogs/EnhancedAppointmentDialog";
-import { Calendar, Clock, User, CheckCircle, X, CreditCard, AlertTriangle } from "lucide-react";
+import { Calendar, Clock, User, CheckCircle, X, CreditCard, AlertTriangle, Gift } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
@@ -11,9 +11,41 @@ import { format } from "date-fns";
 import { toast } from "sonner";
 import { generateInvoicePDF } from "@/utils/pdfGenerator";
 import { supabase } from "@/integrations/supabase/client";
+import { useState, useEffect } from "react";
 
 export default function StaffAppointments() {
-  const { data: appointments, isLoading } = useAppointments();
+  const { data: appointmentsData, isLoading } = useAppointments();
+  
+  // Fetch appointments with invoice data to check for free status
+  const [appointments, setAppointments] = useState<any[]>([]);
+  
+  useEffect(() => {
+    const fetchAppointmentsWithInvoices = async () => {
+      if (!appointmentsData) return;
+      
+      const appointmentsWithInvoices = await Promise.all(
+        appointmentsData.map(async (appointment) => {
+          if (appointment.payment_status === 'paid') {
+            // Try to find the invoice for this appointment
+            const { data: invoice } = await supabase
+              .from('invoices')
+              .select('amount, description')
+              .eq('patient_id', appointment.patient_id)
+              .order('created_at', { ascending: false })
+              .limit(1)
+              .maybeSingle();
+            
+            return { ...appointment, invoice };
+          }
+          return appointment;
+        })
+      );
+      
+      setAppointments(appointmentsWithInvoices);
+    };
+    
+    fetchAppointmentsWithInvoices();
+  }, [appointmentsData]);
   const updateAppointment = useUpdateAppointment();
   const { data: patientNames } = usePatientNames();
   const { data: doctorNames } = useDoctorNames();
@@ -188,6 +220,12 @@ export default function StaffAppointments() {
                               Pending Payment
                             </Badge>
                           )}
+                          {appointment.invoice?.amount === 0 || appointment.invoice?.description?.includes('Free') ? (
+                            <Badge className="bg-yellow-100 text-yellow-700 text-xs ml-1">
+                              <Gift className="w-3 h-3 mr-1" />
+                              Free
+                            </Badge>
+                          ) : null}
                         </div>
                       </TableCell>
                       <TableCell>

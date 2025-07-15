@@ -307,6 +307,10 @@ export default function DoctorSchedule() { // Fixed ordering syntax
       return;
     }
 
+    // Show confirmation dialog
+    const confirmed = window.confirm('Are you sure you want to mark this appointment as free? This will set the consultation fee to PKR 0.');
+    if (!confirmed) return;
+
     try {
       await markAppointmentFree.mutateAsync(appointmentId);
       toast.success('Appointment marked as free (PKR 0)');
@@ -523,18 +527,25 @@ export default function DoctorSchedule() { // Fixed ordering syntax
                             <X className="w-3 h-3 mr-1" />
                             Cancel
                           </Button>
-                          {/* Free button - only show after payment is made */}
+                          {/* Free button - only show after payment is made and not already free */}
                           {(appointment.payment_status === 'paid' || appointment.booking_type === 'counter') && (
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => handleMarkFree(appointment.id, appointment)}
-                              disabled={markAppointmentFree.isPending}
-                              className="bg-yellow-50 border-yellow-200 text-yellow-700 hover:bg-yellow-100"
-                            >
-                              <Gift className="w-3 h-3 mr-1" />
-                              Free
-                            </Button>
+                            appointment.invoice?.amount === 0 || appointment.invoice?.description?.includes('Free') ? (
+                              <Badge className="bg-yellow-100 text-yellow-700 text-xs">
+                                <Gift className="w-3 h-3 mr-1" />
+                                Marked as Free
+                              </Badge>
+                            ) : (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleMarkFree(appointment.id, appointment)}
+                                disabled={markAppointmentFree.isPending}
+                                className="bg-yellow-50 border-yellow-200 text-yellow-700 hover:bg-yellow-100"
+                              >
+                                <Gift className="w-3 h-3 mr-1" />
+                                Mark Free
+                              </Button>
+                            )
                           )}
                         </>
                       )}
