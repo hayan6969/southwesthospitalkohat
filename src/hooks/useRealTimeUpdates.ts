@@ -151,7 +151,7 @@ export const useRealTimeUpdates = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [queryClient]);
+  }, []); // Remove queryClient dependency to prevent re-subscriptions
 
   return null; // This hook doesn't return anything, it just sets up subscriptions
 };

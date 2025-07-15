@@ -59,7 +59,7 @@ export const MyAppointments = () => {
     if (!profile?.id) return;
 
     const channel = supabase
-      .channel('patient-appointments-changes')
+      .channel(`patient-appointments-${profile.id}`) // Use unique channel name per user
       .on(
         'postgres_changes',
         {
@@ -103,7 +103,7 @@ export const MyAppointments = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [profile?.id]);
+  }, [profile?.id]); // Keep profile dependency but use unique channel name
 
   const fetchMyAppointments = async () => {
     if (!profile?.id) return;
