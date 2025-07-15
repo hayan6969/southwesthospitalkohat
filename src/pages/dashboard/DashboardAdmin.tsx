@@ -228,8 +228,8 @@ export default function DashboardAdmin() {
             </TabsList>
 
             <TabsContent value="overview" className="space-y-6">
-              {/* Statistics Cards - Fixed Grid */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
+              {/* Statistics Cards - 2x2 Grid Layout */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <StatsCard
                   title="Doctors"
                   value={realStats?.totalDoctors?.toString() || "0"}
