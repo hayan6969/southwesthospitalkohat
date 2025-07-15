@@ -266,7 +266,7 @@ export function DoctorAnalytics() {
         </TabsContent>
 
         <TabsContent value="payments" className="mt-6">
-          <DoctorPaymentStatus />
+          <DoctorPaymentStatus dateRange={dateRange} />
         </TabsContent>
       </Tabs>
     );
@@ -514,7 +514,7 @@ export function DoctorAnalytics() {
       </TabsContent>
 
       <TabsContent value="payments" className="mt-6">
-        <DoctorPaymentStatus />
+        <DoctorPaymentStatus dateRange={dateRange} />
       </TabsContent>
     </Tabs>
   );
