@@ -58,7 +58,6 @@ export function OTScheduleDialog() {
   
   // OT Schedule details
   const [doctorId, setDoctorId] = useState("");
-  const [doctorName, setDoctorName] = useState("External Doctor");
   const [doctorExpense, setDoctorExpense] = useState<string>("");
   const [operationDate, setOperationDate] = useState(new Date().toISOString().split('T')[0]);
   const [operationId, setOperationId] = useState("");
@@ -140,7 +139,6 @@ export function OTScheduleDialog() {
       allergies: ""
     });
     setDoctorId("");
-    setDoctorName("External Doctor");
     setDoctorExpense("");
     setOperationDate(new Date().toISOString().split('T')[0]);
     setOperationId("");
@@ -150,13 +148,12 @@ export function OTScheduleDialog() {
   };
 
   const handleDoctorChange = (selectedDoctorId: string) => {
-    if (selectedDoctorId === "external") {
-      setDoctorId("");
-      setDoctorName("External Doctor");
-    } else {
-      setDoctorId(selectedDoctorId);
-      const selectedDoctorName = doctorNames?.find(d => d.id === selectedDoctorId);
-      setDoctorName(`Dr. ${selectedDoctorName?.first_name} ${selectedDoctorName?.last_name}`);
+    setDoctorId(selectedDoctorId);
+    const selectedDoctor = doctors?.find(d => d.id === selectedDoctorId);
+    if (selectedDoctor) {
+      const doctorProfile = doctorNames?.find(d => d.id === selectedDoctorId);
+      // Set the doctor's consultation fee as the default expense
+      setDoctorExpense(selectedDoctor.consultation_fee?.toString() || "0");
     }
   };
 
@@ -178,8 +175,8 @@ export function OTScheduleDialog() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!operationId || !roomId) {
-      toast.error("Please select operation type and room");
+    if (!operationId || !roomId || !doctorId) {
+      toast.error("Please select operation type, room, and doctor");
       return;
     }
 
@@ -229,8 +226,11 @@ export function OTScheduleDialog() {
         .from("ot_schedules")
         .insert({
           patient_id: patientId,
-          doctor_id: doctorId || null,
-          doctor_name: doctorName,
+          doctor_id: doctorId,
+          doctor_name: (() => {
+            const doctorProfile = doctorNames?.find(d => d.id === doctorId);
+            return `Dr. ${doctorProfile?.first_name} ${doctorProfile?.last_name}`;
+          })(),
           doctor_expense: parseFloat(doctorExpense) || 0,
           operation_id: operationId,
           room_id: roomId,
@@ -255,7 +255,7 @@ export function OTScheduleDialog() {
           status: 'paid',
           paid_at: new Date().toISOString(),
           invoice_number: invoiceNumber,
-          description: `OT Operation: ${selectedOperation?.operation_name} - ${doctorName}`,
+          description: `OT Operation: ${selectedOperation?.operation_name} - Dr. ${doctorNames?.find(d => d.id === doctorId)?.first_name} ${doctorNames?.find(d => d.id === doctorId)?.last_name}`,
           due_date: new Date().toISOString().split('T')[0]
         })
         .select()
@@ -286,9 +286,10 @@ export function OTScheduleDialog() {
       await generateInvoicePDF(invoiceForPDF);
       
       // Log the audit event
+      const selectedDoctorName = `Dr. ${doctorNames?.find(d => d.id === doctorId)?.first_name} ${doctorNames?.find(d => d.id === doctorId)?.last_name}`;
       await logAction(
         "Scheduled OT operation",
-        `OT scheduled for ${patientName} on ${operationDate} - ${selectedOperation?.operation_name} with ${doctorName} in ${roomName}. Total cost: ${formatPkrAmount(totalCost)}`
+        `OT scheduled for ${patientName} on ${operationDate} - ${selectedOperation?.operation_name} with ${selectedDoctorName} in ${roomName}. Total cost: ${formatPkrAmount(totalCost)}`
       );
       
       toast.success(`OT operation scheduled successfully! Queue position: ${queuePosition}. Invoice generated: ${invoiceNumber}`);
@@ -499,75 +500,61 @@ export function OTScheduleDialog() {
             </CardHeader>
             <CardContent className="space-y-4">
               {/* Doctor Selection */}
-              <div className="space-y-2">
-                <Label htmlFor="doctor">Doctor</Label>
+               <div className="space-y-2">
+                 <Label htmlFor="doctor">Doctor *</Label>
                 <Popover open={doctorOpen} onOpenChange={setDoctorOpen}>
                   <PopoverTrigger asChild>
                     <Button
                       variant="outline"
                       role="combobox"
                       aria-expanded={doctorOpen}
-                      className="w-full justify-between"
-                    >
-                      {doctorName}
-                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                       className="w-full justify-between"
+                     >
+                       {doctorId ? (() => {
+                         const selectedDoctor = doctorNames?.find(d => d.id === doctorId);
+                         return `Dr. ${selectedDoctor?.first_name} ${selectedDoctor?.last_name}`;
+                       })() : "Select internal doctor..."}
+                       <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                     </Button>
                   </PopoverTrigger>
-                  <PopoverContent className="w-full p-0">
-                    <Command>
-                      <CommandInput placeholder="Search doctors..." />
-                      <CommandList>
-                        <CommandEmpty>No doctor found.</CommandEmpty>
-                        <CommandGroup>
-                          <CommandItem
-                            value="external"
-                            onSelect={() => {
-                              handleDoctorChange("external");
-                              setDoctorOpen(false);
-                            }}
-                          >
-                            <Check
-                              className={cn(
-                                "mr-2 h-4 w-4",
-                                doctorId === "" ? "opacity-100" : "opacity-0"
-                              )}
-                            />
-                            External Doctor
-                          </CommandItem>
-                          {doctors?.map((doctor) => {
-                            const doctorName = doctorNames?.find(d => d.id === doctor.id);
-                            return (
-                              <CommandItem
-                                key={doctor.id}
-                                value={`${doctorName?.first_name} ${doctorName?.last_name} ${doctor.specialization}`}
-                                onSelect={() => {
-                                  handleDoctorChange(doctor.id);
-                                  setDoctorOpen(false);
-                                }}
-                              >
-                                <Check
-                                  className={cn(
-                                    "mr-2 h-4 w-4",
-                                    doctorId === doctor.id ? "opacity-100" : "opacity-0"
-                                  )}
-                                />
-                                <div>
-                                  <div className="font-medium">
-                                    Dr. {doctorName?.first_name} {doctorName?.last_name}
-                                  </div>
-                                  <div className="text-sm text-gray-500">
-                                    {doctor.specialization}
-                                  </div>
-                                </div>
-                              </CommandItem>
-                            );
-                          })}
-                        </CommandGroup>
-                      </CommandList>
-                    </Command>
-                  </PopoverContent>
-                </Popover>
-              </div>
+                   <PopoverContent className="w-full p-0">
+                     <Command>
+                       <CommandInput placeholder="Search internal doctors..." />
+                       <CommandList>
+                         <CommandEmpty>No internal doctor found.</CommandEmpty>
+                         <CommandGroup>
+                           {doctors?.map((doctor) => {
+                             const doctorProfile = doctorNames?.find(d => d.id === doctor.id);
+                             return (
+                               <CommandItem
+                                 key={doctor.id}
+                                 value={`${doctorProfile?.first_name} ${doctorProfile?.last_name} ${doctor.specialization}`}
+                                 onSelect={() => {
+                                   handleDoctorChange(doctor.id);
+                                   setDoctorOpen(false);
+                                 }}
+                               >
+                                 <Check
+                                   className={cn(
+                                     "mr-2 h-4 w-4",
+                                     doctorId === doctor.id ? "opacity-100" : "opacity-0"
+                                   )}
+                                 />
+                                 <div className="flex flex-col">
+                                   <span>Dr. {doctorProfile?.first_name} {doctorProfile?.last_name}</span>
+                                   <span className="text-sm text-gray-500">
+                                     {doctor.specialization} • Fee: {formatPkrAmount(doctor.consultation_fee || 0)}
+                                   </span>
+                                 </div>
+                               </CommandItem>
+                             );
+                           })}
+                         </CommandGroup>
+                       </CommandList>
+                     </Command>
+                   </PopoverContent>
+                 </Popover>
+               </div>
 
               {/* Doctor Expense */}
               <div className="space-y-2">
@@ -700,12 +687,15 @@ export function OTScheduleDialog() {
                         ))}
                       </>
                     )}
-                    {(parseFloat(doctorExpense) || 0) > 0 && (
-                      <div className="flex justify-between text-sm">
-                        <span>Doctor Expense: {doctorName}</span>
-                        <span className="font-medium">{formatPkrAmount(parseFloat(doctorExpense) || 0)}</span>
-                      </div>
-                    )}
+                     {(parseFloat(doctorExpense) || 0) > 0 && (
+                       <div className="flex justify-between text-sm">
+                         <span>Doctor Expense: {(() => {
+                           const selectedDoctor = doctorNames?.find(d => d.id === doctorId);
+                           return `Dr. ${selectedDoctor?.first_name} ${selectedDoctor?.last_name}`;
+                         })()}</span>
+                         <span className="font-medium">{formatPkrAmount(parseFloat(doctorExpense) || 0)}</span>
+                       </div>
+                     )}
                     <div className="flex justify-between font-bold text-lg pt-2 border-t">
                       <span>Total Amount:</span>
                       <span className="text-green-600">{formatPkrAmount(totalCost)}</span>
