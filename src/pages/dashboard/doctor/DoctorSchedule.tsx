@@ -4,6 +4,7 @@ import { useAppointments, useUpdateAppointment, useMarkAppointmentFree } from "@
 import { usePatientNames, getPatientName } from "@/hooks/useDisplayHelpers";
 import { Calendar, Clock, User, Edit3, CheckCircle, X, Hash, CreditCard, AlertTriangle, Filter, Search, CalendarIcon, Gift } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
@@ -300,22 +301,27 @@ export default function DoctorSchedule() { // Fixed ordering syntax
     }
   };
 
-  const handleMarkFree = async (appointmentId: string, appointment: any) => {
+  const [showMarkFreeDialog, setShowMarkFreeDialog] = useState<{appointmentId: string, appointment: any} | null>(null);
+
+  const handleMarkFreeClick = (appointmentId: string, appointment: any) => {
     // Only allow marking as free if payment is already paid
     if (appointment.payment_status !== 'paid' && appointment.booking_type !== 'counter') {
       toast.error('Can only mark paid appointments as free');
       return;
     }
+    setShowMarkFreeDialog({appointmentId, appointment});
+  };
 
-    // Show confirmation dialog
-    const confirmed = window.confirm('Are you sure you want to mark this appointment as free? This will set the consultation fee to PKR 0.');
-    if (!confirmed) return;
-
+  const handleMarkFreeConfirm = async () => {
+    if (!showMarkFreeDialog) return;
+    
     try {
-      await markAppointmentFree.mutateAsync(appointmentId);
+      await markAppointmentFree.mutateAsync(showMarkFreeDialog.appointmentId);
       toast.success('Appointment marked as free (PKR 0)');
+      setShowMarkFreeDialog(null);
     } catch (error) {
       toast.error('Failed to mark appointment as free');
+      setShowMarkFreeDialog(null);
     }
   };
 
@@ -538,7 +544,7 @@ export default function DoctorSchedule() { // Fixed ordering syntax
                               <Button
                                 size="sm"
                                 variant="outline"
-                                onClick={() => handleMarkFree(appointment.id, appointment)}
+                                onClick={() => handleMarkFreeClick(appointment.id, appointment)}
                                 disabled={markAppointmentFree.isPending}
                                 className="bg-yellow-50 border-yellow-200 text-yellow-700 hover:bg-yellow-100"
                               >
@@ -681,6 +687,28 @@ export default function DoctorSchedule() { // Fixed ordering syntax
           </div>
         </TabsContent>
       </Tabs>
+
+      {/* Mark as Free Confirmation Dialog */}
+      <AlertDialog open={!!showMarkFreeDialog} onOpenChange={() => setShowMarkFreeDialog(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Mark Appointment as Free</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to mark this appointment as free? This will set the consultation fee to PKR 0 and cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleMarkFreeConfirm}
+              disabled={markAppointmentFree.isPending}
+              className="bg-yellow-600 hover:bg-yellow-700"
+            >
+              {markAppointmentFree.isPending ? 'Processing...' : 'Mark as Free'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

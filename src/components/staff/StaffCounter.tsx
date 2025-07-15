@@ -12,7 +12,7 @@ import { InvoiceDialog } from "@/components/dialogs/InvoiceDialog";
 import { useAppointments, usePatients, useDoctors } from "@/hooks/useDatabase";
 import { usePatientNames, useDoctorNames, getPatientName, getDoctorName } from "@/hooks/useDisplayHelpers";
 import { supabase } from "@/integrations/supabase/client";
-import { Calendar, UserPlus, Receipt, Users, Clock, CreditCard, Printer, Search, FileText, Download, CalendarIcon, X, RotateCcw } from "lucide-react";
+import { Calendar, UserPlus, Receipt, Users, Clock, CreditCard, Printer, Search, FileText, Download, CalendarIcon, X, RotateCcw, Gift } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { format, isSameDay } from "date-fns";
@@ -21,7 +21,7 @@ import { generateInvoicePDF } from "@/utils/pdfGenerator";
 import { cn } from "@/lib/utils";
 
 export function StaffCounter() {
-  const { data: appointments, isLoading: appointmentsLoading, refetch: refetchAppointments } = useAppointments();
+  const { data: appointmentsData, isLoading: appointmentsLoading, refetch: refetchAppointments } = useAppointments();
   const { data: patients, isLoading: patientsLoading } = usePatients();
   const { data: doctors, isLoading: doctorsLoading } = useDoctors();
   const { data: patientNames } = usePatientNames();
@@ -31,6 +31,36 @@ export function StaffCounter() {
   const [cancellingAppointment, setCancellingAppointment] = useState<string | null>(null);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [patientNumbers, setPatientNumbers] = useState<{[key: string]: string}>({});
+  const [appointments, setAppointments] = useState<any[]>([]);
+  
+  // Fetch appointments with invoice data to check for free status
+  useEffect(() => {
+    const fetchAppointmentsWithInvoices = async () => {
+      if (!appointmentsData) return;
+      
+      const appointmentsWithInvoices = await Promise.all(
+        appointmentsData.map(async (appointment) => {
+          if (appointment.payment_status === 'paid') {
+            // Try to find the invoice for this appointment
+            const { data: invoice } = await supabase
+              .from('invoices')
+              .select('amount, description')
+              .eq('patient_id', appointment.patient_id)
+              .order('created_at', { ascending: false })
+              .limit(1)
+              .maybeSingle();
+            
+            return { ...appointment, invoice };
+          }
+          return appointment;
+        })
+      );
+      
+      setAppointments(appointmentsWithInvoices);
+    };
+    
+    fetchAppointmentsWithInvoices();
+  }, [appointmentsData]);
 
   // Get appointments for selected date (including all statuses)
   const filteredAppointments = useMemo(() => {
@@ -464,11 +494,20 @@ export function StaffCounter() {
                           {appointment.booking_type || 'walk-in'}
                         </Badge>
                       </TableCell>
-                      <TableCell>
-                        <Badge variant={appointment.payment_status === 'paid' ? 'default' : 'destructive'}>
-                          {appointment.payment_status || 'pending'}
-                        </Badge>
-                      </TableCell>
+                       <TableCell>
+                         <div className="flex flex-col gap-1">
+                           <Badge variant={appointment.payment_status === 'paid' ? 'default' : 'destructive'}>
+                             {appointment.payment_status || 'pending'}
+                           </Badge>
+                           {/* Check if appointment is marked as free */}
+                           {(appointment.invoice?.amount === 0 || appointment.invoice?.description?.includes('Free')) && (
+                             <Badge className="bg-yellow-100 text-yellow-700 text-xs">
+                               <Gift className="w-3 h-3 mr-1" />
+                               Marked as Free
+                             </Badge>
+                           )}
+                         </div>
+                       </TableCell>
                        <TableCell>
                          <div className="flex gap-2">
                            {/* Cancel appointment with confirmation dialog */}

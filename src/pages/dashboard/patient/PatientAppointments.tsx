@@ -1,15 +1,49 @@
 import AppLayout from "@/layouts/AppLayout";
 import { useAppointments } from "@/hooks/useDatabase";
 import { AppointmentDialog } from "@/components/dialogs/AppointmentDialog";
-import { Calendar, Clock, User, Plus } from "lucide-react";
+import { Calendar, Clock, User, Plus, Gift } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { format } from "date-fns";
+import { supabase } from "@/integrations/supabase/client";
+import { useState, useEffect } from "react";
 
 export default function PatientAppointments() {
-  const { data: appointments, isLoading } = useAppointments();
+  const { data: appointmentsData, isLoading } = useAppointments();
+  const [appointments, setAppointments] = useState<any[]>([]);
 
   const currentPatientId = "550e8400-e29b-41d4-a716-446655440008"; // Current patient
+  
+  // Fetch appointments with invoice data to check for free status
+  useEffect(() => {
+    const fetchAppointmentsWithInvoices = async () => {
+      if (!appointmentsData) return;
+      
+      const appointmentsWithInvoices = await Promise.all(
+        appointmentsData.map(async (appointment) => {
+          if (appointment.payment_status === 'paid') {
+            // Try to find the invoice for this appointment
+            const { data: invoice } = await supabase
+              .from('invoices')
+              .select('amount, description')
+              .eq('patient_id', appointment.patient_id)
+              .order('created_at', { ascending: false })
+              .limit(1)
+              .maybeSingle();
+            
+            return { ...appointment, invoice };
+          }
+          return appointment;
+        })
+      );
+      
+      setAppointments(appointmentsWithInvoices);
+    };
+    
+    fetchAppointmentsWithInvoices();
+  }, [appointmentsData]);
+
   const patientAppointments = appointments?.filter(apt => apt.patient_id === currentPatientId) || [];
 
   return (
@@ -89,14 +123,22 @@ export default function PatientAppointments() {
                         </span>
                       </TableCell>
                       <TableCell>
-                        <span className={`px-2 py-1 rounded-full text-sm font-medium ${
-                          appointment.status === 'completed' ? 'bg-green-100 text-green-700' :
-                          appointment.status === 'scheduled' ? 'bg-blue-100 text-blue-700' :
-                          appointment.status === 'cancelled' ? 'bg-red-100 text-red-700' :
-                          'bg-gray-100 text-gray-700'
-                        }`}>
-                          {appointment.status}
-                        </span>
+                        <div className="flex items-center gap-2">
+                          <span className={`px-2 py-1 rounded-full text-sm font-medium ${
+                            appointment.status === 'completed' ? 'bg-green-100 text-green-700' :
+                            appointment.status === 'scheduled' ? 'bg-blue-100 text-blue-700' :
+                            appointment.status === 'cancelled' ? 'bg-red-100 text-red-700' :
+                            'bg-gray-100 text-gray-700'
+                          }`}>
+                            {appointment.status}
+                          </span>
+                          {appointment.invoice?.amount === 0 || appointment.invoice?.description?.includes('Free') ? (
+                            <Badge className="bg-yellow-100 text-yellow-700 text-xs">
+                              <Gift className="w-3 h-3 mr-1" />
+                              Marked as Free
+                            </Badge>
+                          ) : null}
+                        </div>
                       </TableCell>
                       <TableCell>
                         <span className="text-sm text-gray-600">
