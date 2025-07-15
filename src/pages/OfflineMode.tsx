@@ -31,6 +31,11 @@ type LabTest = {
 type OTOperation = {
   id: string;
   operation_name: string;
+  expenses: {
+    id: string;
+    expense_name: string;
+    cost: number;
+  }[];
 };
 
 type OfflineInvoice = {
@@ -74,7 +79,6 @@ const OfflineMode = () => {
   const [notes, setNotes] = useState('');
   
   // OT specific pricing states
-  const [totalOperationCost, setTotalOperationCost] = useState('');
   const [doctorFee, setDoctorFee] = useState('');
   const [selectedOTDoctor, setSelectedOTDoctor] = useState('');
   
@@ -168,15 +172,29 @@ const OfflineMode = () => {
       // Fetch OT operations
       const { data: otOperationsData, error: otOperationsError } = await supabase
         .from('ot_operations')
-        .select('id, operation_name')
+        .select(`
+          id, 
+          operation_name,
+          ot_expenses (
+            id,
+            expense_name,
+            cost
+          )
+        `)
         .order('operation_name');
 
       if (otOperationsError) {
         console.error('Error fetching OT operations:', otOperationsError);
       } else {
-        setOTOperations(otOperationsData);
-        localStorage.setItem('cached_ot_operations', JSON.stringify(otOperationsData));
-        console.log('✅ OT operations cached:', otOperationsData.length);
+        // Transform the data to match our expected structure
+        const transformedOperations = otOperationsData?.map(op => ({
+          id: op.id,
+          operation_name: op.operation_name,
+          expenses: op.ot_expenses || []
+        })) || [];
+        setOTOperations(transformedOperations);
+        localStorage.setItem('cached_ot_operations', JSON.stringify(transformedOperations));
+        console.log('✅ OT operations cached:', transformedOperations.length);
       }
 
       console.log('🎉 All data fetched and cached successfully');
@@ -966,10 +984,10 @@ const OfflineMode = () => {
   };
 
   const createOTScheduleInvoice = async () => {
-    if (!patientName || !patientCnic || !selectedOperation || !totalOperationCost || !doctorFee) {
+    if (!patientName || !patientCnic || !selectedOperation || !doctorFee) {
       toast({
         title: "Missing Information",
-        description: "Please fill in all required fields including operation cost and doctor fee.",
+        description: "Please fill in all required fields including doctor fee.",
         variant: "destructive"
       });
       return;
@@ -978,16 +996,16 @@ const OfflineMode = () => {
     const operation = otOperations.find(o => o.id === selectedOperation);
     if (!operation) return;
 
-    // Parse pricing values
-    const totalCost = parseFloat(totalOperationCost) || 0;
+    // Calculate total cost from operation expenses
+    const totalCost = operation.expenses?.reduce((sum, exp) => sum + exp.cost, 0) || 0;
     const doctorAmount = parseFloat(doctorFee) || 0;
     const hospitalAmount = totalCost - doctorAmount;
 
     // Validation
     if (totalCost <= 0) {
       toast({
-        title: "Invalid Cost",
-        description: "Total operation cost must be greater than 0.",
+        title: "Invalid Operation",
+        description: "Selected operation has no expenses configured.",
         variant: "destructive"
       });
       return;
@@ -1061,7 +1079,6 @@ const OfflineMode = () => {
     setPatientCnic('');
     setSelectedOperation('');
     setSelectedOTDoctor('');
-    setTotalOperationCost('');
     setDoctorFee('');
     setNotes('');
   };
@@ -1353,11 +1370,12 @@ const OfflineMode = () => {
                     <Input
                       id="total-cost"
                       type="number"
-                      value={totalOperationCost}
-                      onChange={(e) => setTotalOperationCost(e.target.value)}
-                      placeholder="Enter total operation cost"
-                      min="0"
-                      step="100"
+                      value={selectedOperation ? 
+                        otOperations.find(op => op.id === selectedOperation)?.expenses?.reduce((sum, exp) => sum + exp.cost, 0) || 0
+                        : 0}
+                      disabled
+                      placeholder="Auto-calculated from operation expenses"
+                      className="bg-gray-100"
                     />
                   </div>
                   <div>
@@ -1395,7 +1413,9 @@ const OfflineMode = () => {
                     <Input
                       id="hospital-amount"
                       type="number"
-                      value={totalOperationCost && doctorFee ? (parseFloat(totalOperationCost) - parseFloat(doctorFee)).toString() : ''}
+                      value={selectedOperation && doctorFee ? 
+                        ((otOperations.find(op => op.id === selectedOperation)?.expenses?.reduce((sum, exp) => sum + exp.cost, 0) || 0) - parseFloat(doctorFee)).toString() 
+                        : ''}
                       disabled
                       placeholder="Auto-calculated"
                       className="bg-gray-100"
