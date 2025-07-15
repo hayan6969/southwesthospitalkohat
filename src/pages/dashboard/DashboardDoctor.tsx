@@ -166,6 +166,7 @@ export default function DashboardDoctor() {
             </TabsList>
 
             <TabsContent value="overview" className="space-y-8">
+              {/* Statistics Cards */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 <StatsCard
                   title="Today's Appointments"
@@ -197,7 +198,8 @@ export default function DashboardDoctor() {
                 />
               </div>
 
-              <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
+              {/* Content Tables */}
+              <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
                 <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
                   <div className="flex items-center justify-between mb-6">
                     <h3 className="font-semibold text-lg text-gray-900">Today's Schedule</h3>
