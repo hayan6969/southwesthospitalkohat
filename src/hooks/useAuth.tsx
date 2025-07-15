@@ -270,15 +270,38 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  const cleanupAuthState = () => {
+    // Remove standard auth tokens
+    localStorage.removeItem('supabase.auth.token');
+    // Remove all Supabase auth keys from localStorage
+    Object.keys(localStorage).forEach((key) => {
+      if (key.startsWith('supabase.auth.') || key.includes('sb-')) {
+        localStorage.removeItem(key);
+      }
+    });
+    // Remove from sessionStorage if in use
+    Object.keys(sessionStorage || {}).forEach((key) => {
+      if (key.startsWith('supabase.auth.') || key.includes('sb-')) {
+        sessionStorage.removeItem(key);
+      }
+    });
+  };
+
   const signOut = async () => {
     try {
       if (user) {
-        // Audit logging can be added later via a separate hook
         console.log('User signed out:', user.email);
       }
       
-      const { error } = await supabase.auth.signOut();
-      if (error) throw error;
+      // Clean up auth state first
+      cleanupAuthState();
+      
+      // Attempt global sign out (fallback if it fails)
+      try {
+        await supabase.auth.signOut({ scope: 'global' });
+      } catch (err) {
+        // Ignore errors as we already cleaned up locally
+      }
       
       setUser(null);
       setProfile(null);
@@ -288,6 +311,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       window.location.href = '/auth';
     } catch (error) {
       console.error('Error signing out:', error);
+      // Even if there's an error, force logout
+      window.location.href = '/auth';
     }
   };
 
