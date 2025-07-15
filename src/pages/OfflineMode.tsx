@@ -75,8 +75,17 @@ const OfflineMode = () => {
   useEffect(() => {
     loadCachedData();
     
+    // If online, fetch fresh data and cache it
+    if (isOnline) {
+      fetchAndCacheData();
+    }
+    
     // Monitor online status
-    const handleOnline = () => setIsOnline(true);
+    const handleOnline = () => {
+      setIsOnline(true);
+      // Fetch fresh data when coming back online
+      fetchAndCacheData();
+    };
     const handleOffline = () => setIsOnline(false);
     
     window.addEventListener('online', handleOnline);
@@ -100,6 +109,79 @@ const OfflineMode = () => {
       }
     }
   }, [offlineInvoices]);
+
+  const fetchAndCacheData = async () => {
+    if (!isOnline) return;
+    
+    try {
+      console.log('🔄 Fetching fresh data for offline mode...');
+      
+      // Fetch doctors with their profile information
+      const { data: doctorsData, error: doctorsError } = await supabase
+        .from('doctors')
+        .select(`
+          id,
+          consultation_fee,
+          specialization,
+          profiles!inner(first_name, last_name, role)
+        `)
+        .eq('profiles.role', 'doctor')
+        .eq('profiles.is_active', true);
+
+      if (doctorsError) {
+        console.error('Error fetching doctors:', doctorsError);
+      } else {
+        const formattedDoctors = doctorsData.map(doctor => ({
+          id: doctor.id,
+          first_name: doctor.profiles.first_name,
+          last_name: doctor.profiles.last_name,
+          specialization: doctor.specialization || 'General',
+          consultation_fee: doctor.consultation_fee || 0
+        }));
+        setDoctors(formattedDoctors);
+        localStorage.setItem('cached_doctors', JSON.stringify(formattedDoctors));
+        console.log('✅ Doctors cached:', formattedDoctors.length);
+      }
+
+      // Fetch lab tests
+      const { data: labTestsData, error: labTestsError } = await supabase
+        .from('lab_tests')
+        .select('id, name, price, category')
+        .order('name');
+
+      if (labTestsError) {
+        console.error('Error fetching lab tests:', labTestsError);
+      } else {
+        setLabTests(labTestsData);
+        localStorage.setItem('cached_lab_tests', JSON.stringify(labTestsData));
+        console.log('✅ Lab tests cached:', labTestsData.length);
+      }
+
+      // Fetch OT operations
+      const { data: otOperationsData, error: otOperationsError } = await supabase
+        .from('ot_operations')
+        .select('id, operation_name')
+        .order('operation_name');
+
+      if (otOperationsError) {
+        console.error('Error fetching OT operations:', otOperationsError);
+      } else {
+        setOTOperations(otOperationsData);
+        localStorage.setItem('cached_ot_operations', JSON.stringify(otOperationsData));
+        console.log('✅ OT operations cached:', otOperationsData.length);
+      }
+
+      console.log('🎉 All data fetched and cached successfully');
+      
+    } catch (error) {
+      console.error('Error fetching data:', error);
+      toast({
+        title: "Data Sync Error",
+        description: "Failed to sync latest data. Using cached version.",
+        variant: "destructive"
+      });
+    }
+  };
 
   const loadCachedData = () => {
     try {
