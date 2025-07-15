@@ -43,9 +43,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       if (!navigator.onLine) {
         const cachedProfile = localStorage.getItem(`profile_${userId}`);
         if (cachedProfile) {
-          console.log('Using cached profile for offline access');
-          return JSON.parse(cachedProfile);
+          console.log('🔄 Using cached profile for offline access');
+          const parsed = JSON.parse(cachedProfile);
+          return parsed;
         }
+        console.log('❌ No cached profile found for offline user');
+        return null;
       }
       
       const { data, error } = await supabase
@@ -56,13 +59,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
       if (error) {
         console.error('Error fetching user profile:', error);
-        // If offline and error, try cache
-        if (!navigator.onLine) {
-          const cachedProfile = localStorage.getItem(`profile_${userId}`);
-          if (cachedProfile) {
-            console.log('Using cached profile after error');
-            return JSON.parse(cachedProfile);
-          }
+        // If error occurred, try cache as fallback
+        const cachedProfile = localStorage.getItem(`profile_${userId}`);
+        if (cachedProfile) {
+          console.log('🔄 Using cached profile after error');
+          const parsed = JSON.parse(cachedProfile);
+          return parsed;
         }
         // If profile doesn't exist, return null but don't throw
         if (error.code === 'PGRST116') {
@@ -82,6 +84,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         
         // Cache the profile for offline use
         localStorage.setItem(`profile_${userId}`, JSON.stringify(profile));
+        console.log('✅ Profile cached for offline use');
         
         return profile;
       }
@@ -91,12 +94,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     } catch (error) {
       console.error('Exception while fetching user profile:', error);
       // Try cache on any error
-      if (!navigator.onLine) {
-        const cachedProfile = localStorage.getItem(`profile_${userId}`);
-        if (cachedProfile) {
-          console.log('Using cached profile after catch error');
-          return JSON.parse(cachedProfile);
-        }
+      const cachedProfile = localStorage.getItem(`profile_${userId}`);
+      if (cachedProfile) {
+        console.log('🔄 Using cached profile after catch error');
+        const parsed = JSON.parse(cachedProfile);
+        return parsed;
       }
       return null;
     }
@@ -117,6 +119,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         
         // Cache session for offline use (only for staff roles)
         if (session) {
+          console.log('💾 Caching session for offline use');
           localStorage.setItem('cached_session', JSON.stringify({
             user: session.user,
             access_token: session.access_token,
@@ -124,6 +127,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           }));
         } else {
           // Clear all cached data when signing out
+          console.log('🗑️ Clearing cached auth data');
           localStorage.removeItem('cached_session');
           Object.keys(localStorage).forEach((key) => {
             if (key.startsWith('profile_')) {
@@ -140,11 +144,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             try {
               const profileData = await fetchUserProfile(session.user.id);
               if (mounted) {
+                console.log('📝 Setting profile data:', profileData);
                 setProfile(profileData);
-                // Cache profile for offline use (with user ID)
-                if (profileData) {
-                  localStorage.setItem(`profile_${session.user.id}`, JSON.stringify(profileData));
-                }
                 setLoading(false);
               }
             } catch (error) {
@@ -167,84 +168,81 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     // Check for existing session
     const initializeAuth = async () => {
       try {
-        // First try to get session from Supabase
-        let session = null;
-        let profileData = null;
+        console.log('🔍 Initializing auth...');
+        
+        // First try to get session from Supabase if online
+        let currentSession = null;
+        let currentProfile = null;
         
         if (navigator.onLine) {
+          console.log('📡 Online - checking for active session...');
           const { data: { session: onlineSession }, error } = await supabase.auth.getSession();
           
           if (error) {
             console.error('Error getting session:', error);
-          } else {
-            session = onlineSession;
+          } else if (onlineSession?.user) {
+            console.log('✅ Found active online session for:', onlineSession.user.email);
+            currentSession = onlineSession;
+            currentProfile = await fetchUserProfile(onlineSession.user.id);
           }
         }
         
         // If no online session or offline, try cached session
-        if (!session) {
+        if (!currentSession) {
+          console.log('🔄 No online session, checking cache...');
           const cachedSession = localStorage.getItem('cached_session');
           
           if (cachedSession) {
-            const parsedSession = JSON.parse(cachedSession);
-            const cachedProfile = localStorage.getItem(`profile_${parsedSession.user.id}`);
-            
-            if (cachedProfile) {
-              const parsedProfile = JSON.parse(cachedProfile);
+            try {
+              const parsedSession = JSON.parse(cachedSession);
+              console.log('🔄 Found cached session for:', parsedSession.user.email);
               
               // Check if cached session is still valid (not expired)
               if (parsedSession.expires_at && new Date(parsedSession.expires_at * 1000) > new Date()) {
-                console.log('🔄 Using cached session for offline access');
-                session = parsedSession;
-                profileData = parsedProfile;
+                console.log('✅ Cached session is still valid');
+                const cachedProfile = localStorage.getItem(`profile_${parsedSession.user.id}`);
+                
+                if (cachedProfile) {
+                  const parsedProfile = JSON.parse(cachedProfile);
+                  console.log('🔄 Using cached session and profile for offline access');
+                  
+                  if (mounted) {
+                    setUser(parsedSession.user);
+                    setProfile(parsedProfile);
+                    setLoading(false);
+                  }
+                  return; // Early return to avoid duplicate state setting
+                } else {
+                  console.log('❌ No cached profile found for cached session');
+                }
               } else {
-                console.log('⏰ Cached session expired');
+                console.log('⏰ Cached session expired, removing');
                 localStorage.removeItem('cached_session');
                 localStorage.removeItem(`profile_${parsedSession.user.id}`);
               }
+            } catch (error) {
+              console.error('Error parsing cached session:', error);
+              localStorage.removeItem('cached_session');
             }
           } else {
             console.log('💾 No cached session found');
           }
         }
-
-        console.log('Initial session check:', session?.user?.email);
         
+        // Set the final state
         if (!mounted) return;
         
-        setSession(session);
-        setUser(session?.user ?? null);
+        setSession(currentSession);
+        setUser(currentSession?.user ?? null);
+        setProfile(currentProfile);
+        setLoading(false);
         
-        if (session?.user) {
-          try {
-            // Use cached profile if available, otherwise fetch
-            if (profileData) {
-              setProfile(profileData);
-            } else if (navigator.onLine) {
-              profileData = await fetchUserProfile(session.user.id);
-              if (mounted) {
-                setProfile(profileData);
-                if (profileData) {
-                  localStorage.setItem(`profile_${session.user.id}`, JSON.stringify(profileData));
-                }
-              }
-            }
-            
-            if (mounted) {
-              setLoading(false);
-            }
-          } catch (error) {
-            console.error('Error fetching profile in init:', error);
-            if (mounted) {
-              setProfile(null);
-              setLoading(false);
-            }
-          }
-        } else {
-          if (mounted) {
-            setLoading(false);
-          }
-        }
+        console.log('🏁 Auth initialization complete:', { 
+          hasSession: !!currentSession, 
+          hasProfile: !!currentProfile,
+          userEmail: currentSession?.user?.email 
+        });
+        
       } catch (error) {
         console.error('Error in initializeAuth:', error);
         if (mounted) {
