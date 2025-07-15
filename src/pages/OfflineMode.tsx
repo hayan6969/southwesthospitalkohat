@@ -160,9 +160,16 @@ const OfflineMode = () => {
 
   const generatePDF = (invoice: OfflineInvoice) => {
     try {
-      console.log('Generating PDF for invoice:', invoice.invoice_number);
+      console.log('Starting PDF generation for invoice:', invoice.invoice_number);
+      console.log('Invoice data:', invoice);
+      
+      if (!jsPDF) {
+        console.error('jsPDF not available');
+        throw new Error('PDF library not loaded');
+      }
       
       const doc = new jsPDF();
+      console.log('jsPDF instance created');
       const pageWidth = doc.internal.pageSize.width;
       let yPosition = 20;
 
