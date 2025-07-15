@@ -123,6 +123,31 @@ export const useRealTimeUpdates = () => {
         {
           event: '*',
           schema: 'public',
+          table: 'ot_schedules'
+        },
+        () => {
+          // Invalidate related queries when OT schedules change
+          queryClient.invalidateQueries({ queryKey: ['ot-schedules'] });
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'queue_positions'
+        },
+        () => {
+          // Invalidate related queries when queue positions change
+          queryClient.invalidateQueries({ queryKey: ['appointments'] });
+          queryClient.invalidateQueries({ queryKey: ['queue-positions'] });
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
           table: 'lab_reports'
         },
         () => {

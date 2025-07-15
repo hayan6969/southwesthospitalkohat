@@ -121,40 +121,8 @@ export const useAppointments = () => {
     }
   });
 
-  // Set up real-time updates
-  useEffect(() => {
-    const channel = supabase
-      .channel('appointments-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'appointments'
-        },
-        () => {
-          console.log('Appointments updated, refetching...');
-          queryClient.invalidateQueries({ queryKey: ['appointments'] });
-        }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'queue_positions'
-        },
-        () => {
-          console.log('Queue positions updated, refetching appointments...');
-          queryClient.invalidateQueries({ queryKey: ['appointments'] });
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, []); // Remove queryClient dependency to prevent re-subscriptions
+  // Real-time updates are handled by the global useRealTimeUpdates hook
+  // Removed duplicate subscription to prevent conflicts
 
   return query;
 };

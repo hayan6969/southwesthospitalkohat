@@ -65,20 +65,8 @@ export function StaffOT() {
     fetchOperations();
     fetchOTSchedules();
     
-    // Set up real-time subscription
-    const channel = supabase
-      .channel('ot_schedules_changes')
-      .on('postgres_changes', 
-        { event: '*', schema: 'public', table: 'ot_schedules' },
-        () => {
-          fetchOTSchedules();
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
+    // Real-time updates are handled by the global useRealTimeUpdates hook
+    // Removed duplicate subscription to prevent conflicts
   }, []);
 
   const fetchOTSchedules = async () => {
