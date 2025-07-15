@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
 export const useStats = () => {
@@ -101,7 +102,9 @@ export const useDoctors = () => {
 };
 
 export const useAppointments = () => {
-  return useQuery({
+  const queryClient = useQueryClient();
+
+  const query = useQuery({
     queryKey: ['appointments'],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -117,6 +120,43 @@ export const useAppointments = () => {
       return data;
     }
   });
+
+  // Set up real-time updates
+  useEffect(() => {
+    const channel = supabase
+      .channel('appointments-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'appointments'
+        },
+        () => {
+          console.log('Appointments updated, refetching...');
+          queryClient.invalidateQueries({ queryKey: ['appointments'] });
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'queue_positions'
+        },
+        () => {
+          console.log('Queue positions updated, refetching appointments...');
+          queryClient.invalidateQueries({ queryKey: ['appointments'] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [queryClient]);
+
+  return query;
 };
 
 export const useLabReports = () => {
