@@ -34,7 +34,7 @@ export function DoctorPaymentStatus() {
     to: endOfMonth(new Date())
   });
 
-  const { data: payments, isLoading } = useQuery({
+  const { data: payments, isLoading: paymentsLoading } = useQuery({
     queryKey: ['doctor-payments-status', profile?.id, dateRange],
     queryFn: async () => {
       if (!profile?.id) return [];
@@ -57,8 +57,65 @@ export function DoctorPaymentStatus() {
     refetchInterval: 30000
   });
 
-  const totalPending = payments?.filter(p => p.payment_status === 'pending')
-    .reduce((sum, p) => sum + p.total_earnings, 0) || 0;
+  // Get unpaid earnings from completed appointments
+  const { data: unpaidEarnings, isLoading: earningsLoading } = useQuery({
+    queryKey: ['doctor-unpaid-earnings', profile?.id, dateRange],
+    queryFn: async () => {
+      if (!profile?.id) return { appointmentCount: 0, otCount: 0, consultationEarnings: 0, otEarnings: 0, totalEarnings: 0 };
+
+      const startDate = dateRange.from.toISOString().split('T')[0];
+      const endDate = dateRange.to.toISOString().split('T')[0];
+
+      // Get doctor's consultation fee
+      const { data: doctorData } = await supabase
+        .from('doctors')
+        .select('consultation_fee')
+        .eq('id', profile.id)
+        .single();
+
+      const consultationFee = doctorData?.consultation_fee || 0;
+
+      // Get completed appointments that haven't been paid
+      const { data: appointments } = await supabase
+        .from('appointments')
+        .select('id, appointment_date')
+        .eq('doctor_id', profile.id)
+        .eq('status', 'completed')
+        .gte('appointment_date', startDate)
+        .lte('appointment_date', endDate);
+
+      // Get completed OT operations that haven't been paid
+      const { data: otOperations } = await supabase
+        .from('ot_schedules')
+        .select('doctor_expense')
+        .eq('doctor_id', profile.id)
+        .eq('status', 'completed')
+        .gte('operation_date', startDate)
+        .lte('operation_date', endDate);
+
+      const appointmentCount = appointments?.length || 0;
+      const otCount = otOperations?.length || 0;
+      const consultationEarnings = appointmentCount * consultationFee;
+      const otEarnings = otOperations?.reduce((sum, op) => sum + (op.doctor_expense || 0), 0) || 0;
+      const totalEarnings = consultationEarnings + otEarnings;
+
+      return {
+        appointmentCount,
+        otCount,
+        consultationEarnings,
+        otEarnings,
+        totalEarnings
+      };
+    },
+    enabled: !!profile?.id,
+    refetchInterval: 30000
+  });
+
+  const isLoading = paymentsLoading || earningsLoading;
+
+  // Calculate totals including unpaid earnings
+  const totalPending = (unpaidEarnings?.totalEarnings || 0) + 
+    (payments?.filter(p => p.payment_status === 'pending').reduce((sum, p) => sum + p.total_earnings, 0) || 0);
 
   const totalReceived = payments?.filter(p => p.payment_status === 'paid')
     .reduce((sum, p) => sum + p.total_earnings, 0) || 0;
@@ -146,7 +203,7 @@ export function DoctorPaymentStatus() {
               <AlertCircle className="h-8 w-8 text-orange-600" />
             </div>
             <p className="text-xs text-muted-foreground mt-2">
-              {pendingPayments.length} payment(s) pending
+              {(unpaidEarnings?.appointmentCount || 0) + pendingPayments.length} payment(s) pending
             </p>
           </CardContent>
         </Card>
@@ -186,13 +243,50 @@ export function DoctorPaymentStatus() {
         </Card>
       </div>
 
+      {/* Current Month Unpaid Earnings */}
+      {unpaidEarnings && unpaidEarnings.totalEarnings > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Clock className="w-5 h-5 text-orange-600" />
+              Current Month Unpaid Earnings
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+              <div className="bg-blue-50 p-4 rounded-lg">
+                <p className="text-sm font-medium text-blue-600">Appointments</p>
+                <p className="text-2xl font-bold text-blue-700">{unpaidEarnings.appointmentCount}</p>
+              </div>
+              <div className="bg-purple-50 p-4 rounded-lg">
+                <p className="text-sm font-medium text-purple-600">OT Operations</p>
+                <p className="text-2xl font-bold text-purple-700">{unpaidEarnings.otCount}</p>
+              </div>
+              <div className="bg-green-50 p-4 rounded-lg">
+                <p className="text-sm font-medium text-green-600">Consultation</p>
+                <p className="text-lg font-bold text-green-700">{formatPkrAmount(unpaidEarnings.consultationEarnings)}</p>
+              </div>
+              <div className="bg-orange-50 p-4 rounded-lg">
+                <p className="text-sm font-medium text-orange-600">OT Earnings</p>
+                <p className="text-lg font-bold text-orange-700">{formatPkrAmount(unpaidEarnings.otEarnings)}</p>
+              </div>
+            </div>
+            <div className="bg-gray-50 p-4 rounded-lg">
+              <p className="text-sm font-medium text-gray-600">Total Unpaid Amount</p>
+              <p className="text-2xl font-bold text-gray-800">{formatPkrAmount(unpaidEarnings.totalEarnings)}</p>
+              <p className="text-xs text-gray-500 mt-1">Waiting for finance team to process payment</p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Pending Payments */}
       {pendingPayments.length > 0 && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Clock className="w-5 h-5 text-orange-600" />
-              Pending Payments
+              Pending Payments (Finance Processing)
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -297,13 +391,13 @@ export function DoctorPaymentStatus() {
       )}
 
       {/* No Payments Message */}
-      {(!payments || payments.length === 0) && (
+      {(!payments || payments.length === 0) && (!unpaidEarnings || unpaidEarnings.totalEarnings === 0) && (
         <Card>
           <CardContent className="p-8 text-center">
             <Coins className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
             <h3 className="text-lg font-medium text-muted-foreground mb-2">No Payment Records</h3>
             <p className="text-sm text-muted-foreground">
-              Your payment records will appear here once the finance team processes them.
+              Complete appointments and OT operations to see your earnings here.
             </p>
           </CardContent>
         </Card>
