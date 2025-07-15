@@ -427,14 +427,71 @@ const OfflineMode = () => {
                 paid_at: new Date().toISOString(),
                 due_date: null
               })
-              .select()
-              .single();
+               .select()
+               .single();
 
-            if (invoiceError) {
-              console.error('❌ Error creating appointment invoice:', invoiceError);
-            } else {
-              console.log('✅ Appointment invoice created successfully:', createdInvoice);
-            }
+             if (invoiceError) {
+               console.error('❌ Error creating appointment invoice:', invoiceError);
+             } else {
+               console.log('✅ Appointment invoice created successfully:', createdInvoice);
+               
+               // Create doctor payment record for the consultation
+               if (operation.data.doctor_id && invoiceAmount > 0) {
+                 console.log('💳 Creating doctor payment record...');
+                 
+                 // Check if doctor payment record already exists for this period
+                 const currentMonth = new Date().toISOString().slice(0, 7); // YYYY-MM format
+                 const periodStart = `${currentMonth}-01`;
+                 const periodEnd = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).toISOString().slice(0, 10);
+                 
+                 const { data: existingPayment } = await supabase
+                   .from('doctor_payments')
+                   .select('*')
+                   .eq('doctor_id', operation.data.doctor_id)
+                   .eq('period_start', periodStart)
+                   .eq('period_end', periodEnd)
+                   .single();
+                 
+                 if (existingPayment) {
+                   // Update existing payment record
+                   const { error: updateError } = await supabase
+                     .from('doctor_payments')
+                     .update({
+                        appointment_count: existingPayment.appointment_count + 1,
+                        consultation_earnings: parseFloat(existingPayment.consultation_earnings.toString()) + invoiceAmount,
+                        total_earnings: parseFloat(existingPayment.total_earnings.toString()) + invoiceAmount
+                     })
+                     .eq('id', existingPayment.id);
+                     
+                   if (updateError) {
+                     console.error('❌ Error updating doctor payment:', updateError);
+                   } else {
+                     console.log('✅ Doctor payment updated successfully');
+                   }
+                 } else {
+                   // Create new payment record
+                   const { error: paymentError } = await supabase
+                     .from('doctor_payments')
+                     .insert({
+                       doctor_id: operation.data.doctor_id,
+                       period_start: periodStart,
+                       period_end: periodEnd,
+                       appointment_count: 1,
+                       ot_count: 0,
+                       consultation_earnings: invoiceAmount,
+                       ot_earnings: 0,
+                       total_earnings: invoiceAmount,
+                       payment_status: 'pending'
+                     });
+                     
+                   if (paymentError) {
+                     console.error('❌ Error creating doctor payment:', paymentError);
+                   } else {
+                     console.log('✅ Doctor payment record created successfully');
+                   }
+                 }
+               }
+             }
           }
         } else if (operation.table === 'lab_reports' && operation.action === 'insert') {
           // Create lab report record
@@ -489,17 +546,24 @@ const OfflineMode = () => {
             }
           }
         } else if (operation.table === 'ot_schedules' && operation.action === 'insert') {
-          // Create OT schedule record
+          // Create OT schedule record with doctor expense
+          const totalCost = parseFloat(operation.data.total_cost) || 0;
+          const doctorExpense = totalCost * 0.3; // 30% goes to doctor
+          
           const { data: otSchedule, error: otError } = await supabase
             .from('ot_schedules')
             .insert({
               patient_id: dummyPatient.id,
               operation_id: operation.data.operation_id,
-              doctor_name: `Offline Patient: ${operation.data.patient_name} (CNIC: ${operation.data.patient_cnic})`,
+              doctor_id: operation.data.doctor_id || null,
+              doctor_name: operation.data.doctor_id ? 
+                `Dr. ${operation.data.doctor_name || 'Unknown'} | Offline Patient: ${operation.data.patient_name} (CNIC: ${operation.data.patient_cnic})` :
+                `Offline Patient: ${operation.data.patient_name} (CNIC: ${operation.data.patient_cnic})`,
               operation_date: new Date().toISOString().split('T')[0],
               queue_position: 1,
               status: 'completed',
-              total_cost: operation.data.total_cost,
+              total_cost: totalCost,
+              doctor_expense: doctorExpense,
               notes: operation.data.notes || ''
             })
             .select()
@@ -508,16 +572,18 @@ const OfflineMode = () => {
           if (otError) {
             console.error('Error uploading OT schedule:', otError);
           } else {
+            console.log('✅ OT schedule created successfully:', otSchedule);
+            
             // Create invoice for the OT operation
-            const invoiceAmount = parseFloat(operation.data.total_cost) || 0;
+            const invoiceAmount = totalCost;
             const invoiceNumber = `INV-OFFLINE-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
             console.log('💰 Creating OT invoice:', {
               patient_id: dummyPatient.id,
               amount: invoiceAmount,
               status: 'paid',
               invoice_number: invoiceNumber,
-              raw_total_cost: operation.data.total_cost,
-              parsed_amount: invoiceAmount
+              total_cost: totalCost,
+              doctor_expense: doctorExpense
             });
             
             const { data: createdInvoice, error: invoiceError } = await supabase
@@ -538,6 +604,62 @@ const OfflineMode = () => {
               console.error('❌ Error creating OT invoice:', invoiceError);
             } else {
               console.log('✅ OT invoice created successfully:', createdInvoice);
+              
+              // Create doctor payment record for OT if doctor is assigned
+              if (operation.data.doctor_id && doctorExpense > 0) {
+                console.log('💳 Creating doctor OT payment record...');
+                
+                const currentMonth = new Date().toISOString().slice(0, 7);
+                const periodStart = `${currentMonth}-01`;
+                const periodEnd = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).toISOString().slice(0, 10);
+                
+                const { data: existingPayment } = await supabase
+                  .from('doctor_payments')
+                  .select('*')
+                  .eq('doctor_id', operation.data.doctor_id)
+                  .eq('period_start', periodStart)
+                  .eq('period_end', periodEnd)
+                  .single();
+                
+                if (existingPayment) {
+                  // Update existing payment record
+                  const { error: updateError } = await supabase
+                    .from('doctor_payments')
+                    .update({
+                      ot_count: existingPayment.ot_count + 1,
+                      ot_earnings: parseFloat(existingPayment.ot_earnings.toString()) + doctorExpense,
+                      total_earnings: parseFloat(existingPayment.total_earnings.toString()) + doctorExpense
+                    })
+                    .eq('id', existingPayment.id);
+                    
+                  if (updateError) {
+                    console.error('❌ Error updating doctor OT payment:', updateError);
+                  } else {
+                    console.log('✅ Doctor OT payment updated successfully');
+                  }
+                } else {
+                  // Create new payment record
+                  const { error: paymentError } = await supabase
+                    .from('doctor_payments')
+                    .insert({
+                      doctor_id: operation.data.doctor_id,
+                      period_start: periodStart,
+                      period_end: periodEnd,
+                      appointment_count: 0,
+                      ot_count: 1,
+                      consultation_earnings: 0,
+                      ot_earnings: doctorExpense,
+                      total_earnings: doctorExpense,
+                      payment_status: 'pending'
+                    });
+                    
+                  if (paymentError) {
+                    console.error('❌ Error creating doctor OT payment:', paymentError);
+                  } else {
+                    console.log('✅ Doctor OT payment record created successfully');
+                  }
+                }
+              }
             }
           }
         }
