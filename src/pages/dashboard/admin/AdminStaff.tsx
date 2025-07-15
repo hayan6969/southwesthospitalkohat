@@ -39,6 +39,7 @@ export default function AdminStaff() {
         isActive: newStatus 
       });
       toast.success(`User ${action} successfully`);
+      refetch(); // Refresh the data to show updated status
     } catch (error) {
       toast.error(`Failed to ${newStatus ? "unblock" : "block"} user`);
     }
