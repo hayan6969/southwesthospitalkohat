@@ -314,3 +314,23 @@ export const useCreatePatientNote = () => {
     },
   });
 };
+
+// Hook to get patient documents
+export const usePatientDocuments = (patientId?: string) => {
+  return useQuery({
+    queryKey: ['patient-documents', patientId],
+    queryFn: async () => {
+      if (!patientId) return [];
+      
+      const { data, error } = await supabase
+        .from('patient_documents')
+        .select('*')
+        .eq('patient_id', patientId)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!patientId
+  });
+};

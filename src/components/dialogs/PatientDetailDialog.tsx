@@ -7,8 +7,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { usePatientAppointmentHistory, usePatientMedicalRecords, useCreateUpdateMedicalRecord, usePatientNotes, useCreatePatientNote } from "@/hooks/useDoctorData";
-import { User, Calendar, FileText, Clock, Plus, Save } from "lucide-react";
+import { usePatientAppointmentHistory, usePatientMedicalRecords, useCreateUpdateMedicalRecord, usePatientNotes, useCreatePatientNote, usePatientDocuments } from "@/hooks/useDoctorData";
+import { User, Calendar, FileText, Clock, Plus, Save, File, Eye } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
 
@@ -33,6 +33,7 @@ export function PatientDetailDialog({ isOpen, onClose, patient }: PatientDetailD
   const { data: appointmentHistory, isLoading: historyLoading } = usePatientAppointmentHistory(patient?.id);
   const { data: medicalRecords, isLoading: recordsLoading } = usePatientMedicalRecords(patient?.id);
   const { data: patientNotes, isLoading: notesLoading } = usePatientNotes(patient?.id);
+  const { data: patientDocuments, isLoading: documentsLoading } = usePatientDocuments(patient?.id);
   const createUpdateRecord = useCreateUpdateMedicalRecord();
   const createPatientNote = useCreatePatientNote();
 
@@ -107,11 +108,12 @@ export function PatientDetailDialog({ isOpen, onClose, patient }: PatientDetailD
         </DialogHeader>
 
         <Tabs defaultValue="overview" className="space-y-4">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="appointments">Appointments</TabsTrigger>
             <TabsTrigger value="diagnoses">Diagnoses & Rx</TabsTrigger>
             <TabsTrigger value="notes">Patient Notes</TabsTrigger>
+            <TabsTrigger value="documents">Documents</TabsTrigger>
           </TabsList>
 
           <TabsContent value="overview">
@@ -408,6 +410,73 @@ export function PatientDetailDialog({ isOpen, onClose, patient }: PatientDetailD
                     </div>
                   )}
                 </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="documents">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <File className="w-5 h-5" />
+                  Patient Documents
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {documentsLoading ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {Array.from({ length: 6 }).map((_, i) => (
+                      <div key={i} className="p-4 border rounded-lg">
+                        <div className="h-32 bg-gray-200 rounded animate-pulse mb-3"></div>
+                        <div className="h-4 bg-gray-200 rounded animate-pulse mb-2"></div>
+                        <div className="h-3 bg-gray-200 rounded animate-pulse"></div>
+                      </div>
+                    ))}
+                  </div>
+                ) : patientDocuments && patientDocuments.length > 0 ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {patientDocuments.map((doc) => (
+                      <div key={doc.id} className="p-4 border rounded-lg hover:shadow-md transition-shadow">
+                        <div className="aspect-square bg-muted rounded-lg mb-3 flex items-center justify-center overflow-hidden">
+                          {doc.file_type?.startsWith('image/') ? (
+                            <img 
+                              src={doc.file_url} 
+                              alt={doc.document_name}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <File className="w-12 h-12 text-muted-foreground" />
+                          )}
+                        </div>
+                        <div className="space-y-2">
+                          <h4 className="font-medium truncate" title={doc.document_name}>
+                            {doc.document_name}
+                          </h4>
+                          <p className="text-sm text-muted-foreground truncate" title={doc.document_label}>
+                            {doc.document_label}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {format(new Date(doc.created_at), 'MMM d, yyyy')}
+                          </p>
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            className="w-full"
+                            onClick={() => window.open(doc.file_url, '_blank')}
+                          >
+                            <Eye className="w-4 h-4 mr-2" />
+                            View
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center text-muted-foreground py-8">
+                    <File className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
+                    <p>No documents found for this patient</p>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
