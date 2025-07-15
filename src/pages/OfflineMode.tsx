@@ -381,8 +381,16 @@ const OfflineMode = () => {
       const dummyPatient = { id: offlinePatientId };
       console.log('✅ Using offline patient:', dummyPatient);
 
+      // Clear offline data BEFORE starting upload to prevent re-uploading on subsequent attempts
+      console.log('🧹 Pre-clearing offline data to prevent duplicates...');
+      const operationsToUpload = [...operations]; // Make a copy to work with
+      localStorage.removeItem('offline_operations');
+      localStorage.removeItem('offline_invoices');
+      setPendingCount(0);
+      setOfflineInvoices([]);
+      
       // Upload operations to Supabase and create corresponding invoices
-      for (const operation of operations) {
+      for (const operation of operationsToUpload) {
         if (operation.table === 'appointments' && operation.action === 'insert') {
           // Create appointment record
           const { data: appointment, error: appointmentError } = await supabase
@@ -665,8 +673,8 @@ const OfflineMode = () => {
         }
       }
 
-      // Clear all offline data after successful upload
-      console.log('🧹 Clearing all offline data from cache...');
+      // Final cleanup - ensure everything is cleared
+      console.log('🧹 Final cleanup of any remaining offline data...');
       
       // Remove all offline-related items from localStorage
       localStorage.removeItem('offline_operations');
@@ -693,7 +701,7 @@ const OfflineMode = () => {
 
       toast({
         title: "Upload Complete",
-        description: `Successfully uploaded ${operations.length} items to the database. All offline data has been cleared from cache.`,
+        description: `Successfully uploaded ${operationsToUpload.length} items to the database. All offline data has been cleared from cache.`,
         variant: "default"
       });
 
