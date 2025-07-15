@@ -18,9 +18,14 @@ export const useRealTimeUpdates = () => {
         },
         () => {
           // Invalidate related queries when appointments change
+          console.log('🔄 Real-time: Appointments updated, invalidating queries...');
           queryClient.invalidateQueries({ queryKey: ['appointments'] });
           queryClient.invalidateQueries({ queryKey: ['stats'] });
           queryClient.invalidateQueries({ queryKey: ['appointment-stats'] });
+          queryClient.invalidateQueries({ queryKey: ['doctor-today-appointments'] });
+          // Force immediate refetch for appointments
+          queryClient.refetchQueries({ queryKey: ['appointments'] });
+          queryClient.refetchQueries({ queryKey: ['doctor-today-appointments'] });
         }
       )
       .on(
@@ -139,8 +144,11 @@ export const useRealTimeUpdates = () => {
         },
         () => {
           // Invalidate related queries when queue positions change
+          console.log('🔄 Real-time: Queue positions updated, invalidating queries...');
           queryClient.invalidateQueries({ queryKey: ['appointments'] });
           queryClient.invalidateQueries({ queryKey: ['queue-positions'] });
+          // Force immediate refetch for appointments
+          queryClient.refetchQueries({ queryKey: ['appointments'] });
         }
       )
       .on(
