@@ -1,11 +1,15 @@
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { DollarSign, Calendar, CheckCircle, Clock, AlertCircle } from "lucide-react";
-import { format } from "date-fns";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { DollarSign, Calendar as CalendarIcon, CheckCircle, Clock, AlertCircle } from "lucide-react";
+import { format, startOfMonth, endOfMonth } from "date-fns";
 import { formatPkrAmount } from "@/utils/currency";
 
 interface DoctorPayment {
@@ -25,18 +29,26 @@ interface DoctorPayment {
 
 export function DoctorPaymentStatus() {
   const { profile } = useAuth();
+  const [dateRange, setDateRange] = useState({
+    from: startOfMonth(new Date()),
+    to: endOfMonth(new Date())
+  });
 
   const { data: payments, isLoading } = useQuery({
-    queryKey: ['doctor-payments-status', profile?.id],
+    queryKey: ['doctor-payments-status', profile?.id, dateRange],
     queryFn: async () => {
       if (!profile?.id) return [];
+
+      const startDate = dateRange.from.toISOString().split('T')[0];
+      const endDate = dateRange.to.toISOString().split('T')[0];
 
       const { data, error } = await supabase
         .from('doctor_payments')
         .select('*')
         .eq('doctor_id', profile.id)
-        .order('created_at', { ascending: false })
-        .limit(10);
+        .gte('period_start', startDate)
+        .lte('period_end', endDate)
+        .order('created_at', { ascending: false });
 
       if (error) throw error;
       return data as DoctorPayment[];
@@ -75,6 +87,51 @@ export function DoctorPaymentStatus() {
 
   return (
     <div className="space-y-6">
+      {/* Date Range Filter */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle>Payment Status</CardTitle>
+            <div className="flex gap-2">
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" className="w-auto justify-start text-left font-normal">
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {format(dateRange.from, "LLL dd, y")} - {format(dateRange.to, "LLL dd, y")}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    initialFocus
+                    mode="range"
+                    defaultMonth={dateRange.from}
+                    selected={{ from: dateRange.from, to: dateRange.to }}
+                    onSelect={(range) => {
+                      if (range?.from) {
+                        setDateRange({
+                          from: range.from,
+                          to: range.to || range.from
+                        });
+                      }
+                    }}
+                    numberOfMonths={2}
+                    className="pointer-events-auto"
+                  />
+                </PopoverContent>
+              </Popover>
+              <Button 
+                variant="outline" 
+                onClick={() => setDateRange({
+                  from: startOfMonth(new Date()),
+                  to: endOfMonth(new Date())
+                })}
+              >
+                This Month
+              </Button>
+            </div>
+          </div>
+        </CardHeader>
+      </Card>
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card>
