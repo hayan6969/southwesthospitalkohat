@@ -1234,6 +1234,10 @@ export type Database = {
           total_earnings: number
         }[]
       }
+      delete_user_safely: {
+        Args: { user_uuid: string }
+        Returns: boolean
+      }
       generate_doctor_payments: {
         Args: { target_month: string }
         Returns: number

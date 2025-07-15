@@ -643,18 +643,26 @@ export const useDeleteUser = () => {
   
   return useMutation({
     mutationFn: async (userId: string) => {
-      // Only delete from profiles table - cascade will handle related data
-      const { error } = await supabase
-        .from('profiles')
-        .delete()
-        .eq('id', userId);
+      // Use the safe delete function to remove user and all related data
+      const { data, error } = await supabase.rpc('delete_user_safely', {
+        user_uuid: userId
+      });
 
       if (error) throw error;
+      
+      // Check if the deletion was successful
+      if (!data) {
+        throw new Error('Failed to delete user - operation returned false');
+      }
+      
       return { success: true };
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['users'] });
       queryClient.invalidateQueries({ queryKey: ['profiles'] });
+      queryClient.invalidateQueries({ queryKey: ['patients'] });
+      queryClient.invalidateQueries({ queryKey: ['doctors'] });
+      queryClient.invalidateQueries({ queryKey: ['appointments'] });
     },
   });
 };
