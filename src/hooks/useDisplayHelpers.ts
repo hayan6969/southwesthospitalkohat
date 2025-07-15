@@ -12,20 +12,28 @@ export const usePatientNames = () => {
         return cachedData ? JSON.parse(cachedData) : [];
       }
 
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('id, first_name, last_name, phone, email, created_at')
-        .eq('role', 'patient');
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('id, first_name, last_name, phone, email, created_at')
+          .eq('role', 'patient');
 
-      if (error) throw error;
-      
-      // Cache the data for offline use
-      if (data) {
-        localStorage.setItem('cached_patient_names', JSON.stringify(data));
+        if (error) throw error;
+        
+        // Cache the data for offline use
+        if (data) {
+          localStorage.setItem('cached_patient_names', JSON.stringify(data));
+        }
+        
+        return data;
+      } catch (error) {
+        console.error('Error fetching patient names:', error);
+        // Fallback to cached data
+        const cachedData = localStorage.getItem('cached_patient_names');
+        return cachedData ? JSON.parse(cachedData) : [];
       }
-      
-      return data;
-    }
+    },
+    retry: false,
   });
 };
 
@@ -40,20 +48,28 @@ export const useDoctorNames = () => {
         return cachedData ? JSON.parse(cachedData) : [];
       }
 
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('id, first_name, last_name, phone, email')
-        .eq('role', 'doctor');
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('id, first_name, last_name, phone, email')
+          .eq('role', 'doctor');
 
-      if (error) throw error;
-      
-      // Cache the data for offline use
-      if (data) {
-        localStorage.setItem('cached_doctor_names', JSON.stringify(data));
+        if (error) throw error;
+        
+        // Cache the data for offline use
+        if (data) {
+          localStorage.setItem('cached_doctor_names', JSON.stringify(data));
+        }
+        
+        return data;
+      } catch (error) {
+        console.error('Error fetching doctor names:', error);
+        // Fallback to cached data
+        const cachedData = localStorage.getItem('cached_doctor_names');
+        return cachedData ? JSON.parse(cachedData) : [];
       }
-      
-      return data;
-    }
+    },
+    retry: false,
   });
 };
 
@@ -76,60 +92,74 @@ export const useSearchPatientsWithNames = (searchTerm: string) => {
         return [];
       }
       
-      // Search patients by patient_number (Patient ID)
-      const { data: patients, error: patientsError } = await supabase
-        .from('patients')
-        .select('*')
-        .ilike('patient_number', `%${searchTerm}%`)
-        .limit(10);
+      try {
+        // Search patients by patient_number (Patient ID)
+        const { data: patients, error: patientsError } = await supabase
+          .from('patients')
+          .select('*')
+          .ilike('patient_number', `%${searchTerm}%`)
+          .limit(10);
 
-      if (patientsError) throw patientsError;
-      if (!patients || patients.length === 0) return [];
+        if (patientsError) throw patientsError;
+        if (!patients || patients.length === 0) return [];
 
-      // Then get profile data for these patients
-      const patientIds = patients.map(p => p.id);
-      const { data: profiles, error: profilesError } = await supabase
-        .from('profiles')
-        .select('id, first_name, last_name, phone, email')
-        .in('id', patientIds);
+        // Then get profile data for these patients
+        const patientIds = patients.map(p => p.id);
+        const { data: profiles, error: profilesError } = await supabase
+          .from('profiles')
+          .select('id, first_name, last_name, phone, email')
+          .in('id', patientIds);
 
-      if (profilesError) throw profilesError;
+        if (profilesError) throw profilesError;
 
-      // Combine the data
-      const combinedData = patients.map(patient => {
-        const profile = profiles?.find(p => p.id === patient.id);
-        return {
-          ...patient,
-          profile: profile || null
-        };
-      });
-      
-      // Cache the data for offline use (update existing cache)
-      const existingCache = localStorage.getItem('cached_patients');
-      let cachedPatients = existingCache ? JSON.parse(existingCache) : [];
-      
-      // Add new patients to cache (avoid duplicates)
-      combinedData.forEach(newPatient => {
-        const existingIndex = cachedPatients.findIndex((p: any) => p.id === newPatient.id);
-        if (existingIndex >= 0) {
-          cachedPatients[existingIndex] = newPatient;
-        } else {
-          cachedPatients.push(newPatient);
+        // Combine the data
+        const combinedData = patients.map(patient => {
+          const profile = profiles?.find(p => p.id === patient.id);
+          return {
+            ...patient,
+            profile: profile || null
+          };
+        });
+        
+        // Cache the data for offline use (update existing cache)
+        const existingCache = localStorage.getItem('cached_patients');
+        let cachedPatients = existingCache ? JSON.parse(existingCache) : [];
+        
+        // Add new patients to cache (avoid duplicates)
+        combinedData.forEach(newPatient => {
+          const existingIndex = cachedPatients.findIndex((p: any) => p.id === newPatient.id);
+          if (existingIndex >= 0) {
+            cachedPatients[existingIndex] = newPatient;
+          } else {
+            cachedPatients.push(newPatient);
+          }
+        });
+        
+        // Keep cache reasonable size (last 100 patients)
+        if (cachedPatients.length > 100) {
+          cachedPatients = cachedPatients.slice(-100);
         }
-      });
-      
-      // Keep cache reasonable size (last 100 patients)
-      if (cachedPatients.length > 100) {
-        cachedPatients = cachedPatients.slice(-100);
+        
+        localStorage.setItem('cached_patients', JSON.stringify(cachedPatients));
+        
+        return combinedData;
+      } catch (error) {
+        console.error('Error searching patients:', error);
+        // Fallback to cached data on error
+        const cachedPatients = localStorage.getItem('cached_patients');
+        if (cachedPatients) {
+          const patients = JSON.parse(cachedPatients);
+          return patients.filter((patient: any) => 
+            patient.patient_number?.toLowerCase().includes(searchTerm.toLowerCase())
+          ).slice(0, 10);
+        }
+        return [];
       }
-      
-      localStorage.setItem('cached_patients', JSON.stringify(cachedPatients));
-      
-      return combinedData;
     },
-    enabled: !!searchTerm && searchTerm.length >= 1, // Live search with minimum 1 character
-    staleTime: 0, // Always fetch fresh data when online
-    gcTime: 0, // Don't cache the data (replaced cacheTime)
+    enabled: !!searchTerm && searchTerm.length >= 1,
+    retry: false, // Don't retry on offline
+    staleTime: 0,
+    gcTime: 0,
   });
 };
 

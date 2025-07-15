@@ -157,10 +157,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             
             // Check if cached session is still valid (not expired)
             if (parsedSession.expires_at && new Date(parsedSession.expires_at * 1000) > new Date()) {
-              console.log('Using cached session for offline access');
+              console.log('🔄 Using cached session for offline access');
               session = parsedSession;
               profileData = parsedProfile;
+            } else {
+              console.log('⏰ Cached session expired');
+              localStorage.removeItem('cached_session');
+              localStorage.removeItem('cached_profile');
             }
+          } else {
+            console.log('💾 No cached session found');
           }
         }
 

@@ -1,10 +1,9 @@
-const CACHE_NAME = 'health-nexus-v1';
+const CACHE_NAME = 'health-nexus-v2';
 const urlsToCache = [
   '/',
-  '/src/main.tsx',
-  '/src/index.css',
-  '/src/App.tsx',
-  '/manifest.json'
+  '/index.html',
+  '/manifest.json',
+  '/assets/', // This will cache the built assets
 ];
 
 // Install service worker and cache resources
@@ -14,14 +13,21 @@ self.addEventListener('install', (event) => {
     caches.open(CACHE_NAME)
       .then((cache) => {
         console.log('Service Worker: Caching files');
-        return cache.addAll(urlsToCache);
+        // Cache the basic files first
+        return cache.addAll([
+          '/',
+          '/index.html',
+          '/manifest.json'
+        ]);
       })
       .then(() => {
-        console.log('Service Worker: Cached all files');
+        console.log('Service Worker: Cached essential files');
         self.skipWaiting();
       })
       .catch((error) => {
         console.error('Service Worker: Cache failed', error);
+        // Don't fail the install if caching fails
+        self.skipWaiting();
       })
   );
 });
@@ -58,39 +64,61 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
+  // Skip API requests to Supabase - let them fail naturally when offline
+  if (event.request.url.includes('supabase.co')) {
+    return;
+  }
+
   event.respondWith(
     caches.match(event.request)
       .then((response) => {
-        // Return cached version or fetch from network
+        // Return cached version if available
         if (response) {
           console.log('Service Worker: Serving from cache', event.request.url);
           return response;
         }
 
-        console.log('Service Worker: Fetching from network', event.request.url);
-        return fetch(event.request).then((response) => {
-          // Don't cache if not a valid response
-          if (!response || response.status !== 200 || response.type !== 'basic') {
+        // If online, fetch and cache
+        if (navigator.onLine) {
+          console.log('Service Worker: Fetching from network', event.request.url);
+          return fetch(event.request).then((response) => {
+            // Don't cache if not a valid response
+            if (!response || response.status !== 200 || response.type !== 'basic') {
+              return response;
+            }
+
+            // Clone the response
+            const responseToCache = response.clone();
+
+            caches.open(CACHE_NAME)
+              .then((cache) => {
+                cache.put(event.request, responseToCache);
+              });
+
             return response;
+          });
+        } else {
+          // Offline fallback - serve cached index.html for navigation requests
+          if (event.request.mode === 'navigate') {
+            return caches.match('/') || caches.match('/index.html');
           }
-
-          // Clone the response
-          const responseToCache = response.clone();
-
-          caches.open(CACHE_NAME)
-            .then((cache) => {
-              cache.put(event.request, responseToCache);
-            });
-
-          return response;
-        });
+          
+          // For other requests when offline, return a basic offline response
+          return new Response('Offline - Content not available', {
+            status: 503,
+            statusText: 'Service Unavailable',
+            headers: new Headers({
+              'Content-Type': 'text/plain'
+            })
+          });
+        }
       })
       .catch(() => {
         // Offline fallback - serve cached index.html for navigation requests
         if (event.request.mode === 'navigate') {
-          return caches.match('/');
+          return caches.match('/') || caches.match('/index.html');
         }
-        throw new Error('Offline and no cached response available');
+        return new Response('Offline', { status: 503 });
       })
   );
 });
