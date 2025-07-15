@@ -14,6 +14,7 @@ import { usePatientNames, useDoctorNames, getPatientName, getDoctorName } from "
 import { supabase } from "@/integrations/supabase/client";
 import { Calendar, UserPlus, Receipt, Users, Clock, CreditCard, Printer, Search, FileText, Download, CalendarIcon, X, RotateCcw, Gift } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { format, isSameDay } from "date-fns";
 import { toast } from "@/hooks/use-toast";
@@ -32,6 +33,7 @@ export function StaffCounter() {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [patientNumbers, setPatientNumbers] = useState<{[key: string]: string}>({});
   const [appointments, setAppointments] = useState<any[]>([]);
+  const [activeTab, setActiveTab] = useState("upcoming");
   
   // Fetch appointments with invoice data to check for free status
   useEffect(() => {
@@ -141,9 +143,9 @@ export function StaffCounter() {
     fetchQueuePositions();
   }, [filteredAppointments]);
 
-  // Get all appointments (not just scheduled) for search functionality
-  const queueAppointments = useMemo(() => {
-    let filtered = filteredAppointments; // Show all appointments, not just scheduled
+  // Get upcoming appointments (scheduled only)
+  const upcomingAppointments = useMemo(() => {
+    let filtered = filteredAppointments.filter(apt => apt.status === 'scheduled');
     
     // Filter by search term
     if (searchTerm) {
@@ -171,6 +173,32 @@ export function StaffCounter() {
       return new Date(a.appointment_date).getTime() - new Date(b.appointment_date).getTime();
     });
   }, [filteredAppointments, searchTerm, patientNames, doctorNames, queuePositions]);
+
+  // Get past appointments (completed and cancelled)
+  const pastAppointments = useMemo(() => {
+    let filtered = filteredAppointments.filter(apt => 
+      apt.status === 'completed' || apt.status === 'cancelled'
+    );
+    
+    // Filter by search term
+    if (searchTerm) {
+      filtered = filtered.filter(apt => {
+        const patientName = getPatientName(apt.patient_id, patientNames || []).toLowerCase();
+        const doctorName = getDoctorName(apt.doctor_id, doctorNames || []).toLowerCase();
+        const patientId = apt.patient_id.toLowerCase();
+        const search = searchTerm.toLowerCase();
+        
+        return patientName.includes(search) || 
+               doctorName.includes(search) || 
+               patientId.includes(search);
+      });
+    }
+    
+    // Sort by appointment date (newest first)
+    return filtered.sort((a, b) => 
+      new Date(b.appointment_date).getTime() - new Date(a.appointment_date).getTime()
+    );
+  }, [filteredAppointments, searchTerm, patientNames, doctorNames]);
 
   const handleGenerateInvoice = async (appointment: any) => {
     setProcessingInvoice(appointment.id);
@@ -336,7 +364,7 @@ export function StaffCounter() {
             <Clock className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{queueAppointments.length}</div>
+            <div className="text-2xl font-bold">{upcomingAppointments.length}</div>
             <p className="text-xs text-muted-foreground">Patients waiting</p>
           </CardContent>
         </Card>
@@ -436,188 +464,251 @@ export function StaffCounter() {
         </CardContent>
       </Card>
 
-      {/* Patient Queue Table */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Clock className="w-5 h-5" />
-            All Appointments - {format(selectedDate, "PPP")} ({queueAppointments.length} appointments)
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Position</TableHead>
-                  <TableHead>Patient ID</TableHead>
-                  <TableHead>Patient Name</TableHead>
-                  <TableHead>Doctor</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Booking Type</TableHead>
-                  <TableHead>Payment Status</TableHead>
-                  <TableHead>Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {appointmentsLoading ? (
-                  <TableRow>
-                    <TableCell colSpan={8} className="text-center py-8">
-                      <div className="animate-pulse">Loading appointments...</div>
-                    </TableCell>
-                  </TableRow>
-                ) : queueAppointments.length > 0 ? (
-                  queueAppointments.map((appointment, index) => (
-                     <TableRow key={appointment.id}>
-                       <TableCell className="font-bold">
-                         {appointment.status === 'scheduled' 
-                           ? `#${queuePositions[appointment.id]?.position || (index + 1)}`
-                           : '-'
-                         }
-                       </TableCell>
-                       <TableCell className="font-mono text-sm font-medium">
-                         {patientNumbers[appointment.patient_id] || 'Loading...'}
-                       </TableCell>
-                       <TableCell className="font-medium">
-                         {getPatientName(appointment.patient_id, patientNames || [])}
-                       </TableCell>
-                       <TableCell>
-                         {getDoctorName(appointment.doctor_id, doctorNames || [])}
-                       </TableCell>
-                       <TableCell>
-                         <Badge className={
-                           appointment.status === 'completed' ? 'bg-green-100 text-green-700' :
-                           appointment.status === 'scheduled' ? 'bg-blue-100 text-blue-700' :
-                           appointment.status === 'cancelled' ? 'bg-red-100 text-red-700' :
-                           'bg-gray-100 text-gray-700'
-                         }>
-                           {appointment.status}
-                         </Badge>
-                       </TableCell>
-                      <TableCell>
-                        <Badge variant={appointment.booking_type === 'online' ? 'default' : 'secondary'}>
-                          {appointment.booking_type || 'walk-in'}
-                        </Badge>
-                      </TableCell>
-                       <TableCell>
-                         <div className="flex flex-col gap-1">
-                           <Badge variant={appointment.payment_status === 'paid' ? 'default' : 'destructive'}>
-                             {appointment.payment_status || 'pending'}
-                           </Badge>
-                           {/* Check if appointment is marked as free */}
-                           {(appointment.invoice?.amount === 0 || appointment.invoice?.description?.includes('Free')) && (
-                             <Badge className="bg-yellow-100 text-yellow-700 text-xs">
-                               <Gift className="w-3 h-3 mr-1" />
-                               Marked as Free
-                             </Badge>
-                           )}
-                         </div>
-                       </TableCell>
-                       <TableCell>
-                         <div className="flex gap-2">
-                           {/* Cancel appointment with confirmation dialog */}
-                           <AlertDialog>
-                             <AlertDialogTrigger asChild>
-                               <Button 
-                                 size="sm" 
-                                 variant="destructive"
-                                 disabled={cancellingAppointment === appointment.id}
-                               >
-                                 {cancellingAppointment === appointment.id ? (
-                                   <>
-                                     <Clock className="w-3 h-3 mr-1 animate-spin" />
-                                     Cancelling...
-                                   </>
-                                 ) : (
-                                   <>
-                                     <X className="w-3 h-3 mr-1" />
-                                     Cancel
-                                   </>
-                                 )}
-                               </Button>
-                             </AlertDialogTrigger>
-                             <AlertDialogContent>
-                               <AlertDialogHeader>
-                                 <AlertDialogTitle>Cancel Appointment</AlertDialogTitle>
-                                 <AlertDialogDescription>
-                                   Are you sure you want to cancel this appointment for {getPatientName(appointment.patient_id, patientNames || [])}? 
-                                   {appointment.payment_status === 'paid' && ' This will also adjust the revenue and mark any related invoices as refunded.'}
-                                 </AlertDialogDescription>
-                               </AlertDialogHeader>
-                               <AlertDialogFooter>
-                                 <AlertDialogCancel>Keep Appointment</AlertDialogCancel>
-                                 <AlertDialogAction 
-                                   onClick={() => handleCancelAppointment(appointment)}
-                                   className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                                 >
-                                   Yes, Cancel Appointment
-                                 </AlertDialogAction>
-                               </AlertDialogFooter>
-                             </AlertDialogContent>
-                           </AlertDialog>
+      {/* Appointments Tabs */}
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="upcoming" className="flex items-center gap-2">
+            <Clock className="w-4 h-4" />
+            Upcoming ({upcomingAppointments.length})
+          </TabsTrigger>
+          <TabsTrigger value="past" className="flex items-center gap-2">
+            <Calendar className="w-4 h-4" />
+            Past ({pastAppointments.length})
+          </TabsTrigger>
+        </TabsList>
 
-                           {/* Generate/Regenerate Invoice */}
-                           {appointment.payment_status !== 'paid' && (
-                             <Button 
-                               size="sm" 
-                               variant="default"
-                               onClick={() => handleGenerateInvoice(appointment)}
-                               disabled={processingInvoice === appointment.id}
-                             >
-                               {processingInvoice === appointment.id ? (
-                                 <>
-                                   <Clock className="w-3 h-3 mr-1 animate-spin" />
-                                   Processing...
-                                 </>
-                               ) : (
-                                 <>
-                                   <FileText className="w-3 h-3 mr-1" />
-                                   Generate Invoice
-                                 </>
-                               )}
-                             </Button>
-                           )}
-
-                           {/* Regenerate Invoice for paid appointments */}
-                           {appointment.payment_status === 'paid' && (
-                             <Button 
-                               size="sm" 
-                               variant="outline"
-                               onClick={() => handleGenerateInvoice(appointment)}
-                               disabled={processingInvoice === appointment.id}
-                             >
-                               {processingInvoice === appointment.id ? (
-                                 <>
-                                   <Clock className="w-3 h-3 mr-1 animate-spin" />
-                                   Processing...
-                                 </>
-                               ) : (
-                                 <>
-                                   <RotateCcw className="w-3 h-3 mr-1" />
-                                   Regenerate Invoice
-                                 </>
-                               )}
-                             </Button>
-                           )}
-                         </div>
-                       </TableCell>
+        {/* Upcoming Appointments Tab */}
+        <TabsContent value="upcoming" className="mt-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Clock className="w-5 h-5" />
+                Upcoming Appointments - {format(selectedDate, "PPP")} ({upcomingAppointments.length} appointments)
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Position</TableHead>
+                      <TableHead>Patient ID</TableHead>
+                      <TableHead>Patient Name</TableHead>
+                      <TableHead>Doctor</TableHead>
+                      <TableHead>People Ahead</TableHead>
+                      <TableHead>Booking Type</TableHead>
+                      <TableHead>Payment Status</TableHead>
+                      <TableHead>Actions</TableHead>
                     </TableRow>
-                  ))
-                ) : (
-                  <TableRow>
-                    <TableCell colSpan={8} className="text-center text-gray-500 py-8">
-                      {searchTerm ? 'No appointments found matching your search' : 'No patients in queue'}
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </div>
-        </CardContent>
-      </Card>
+                  </TableHeader>
+                  <TableBody>
+                    {appointmentsLoading ? (
+                      <TableRow>
+                        <TableCell colSpan={8} className="text-center py-8">
+                          <div className="animate-pulse">Loading appointments...</div>
+                        </TableCell>
+                      </TableRow>
+                    ) : upcomingAppointments.length > 0 ? (
+                      upcomingAppointments.map((appointment, index) => (
+                        <TableRow key={appointment.id}>
+                          <TableCell className="font-bold">#{queuePositions[appointment.id]?.position || (index + 1)}</TableCell>
+                          <TableCell className="font-mono text-sm font-medium">
+                            {patientNumbers[appointment.patient_id] || 'Loading...'}
+                          </TableCell>
+                          <TableCell className="font-medium">
+                            {getPatientName(appointment.patient_id, patientNames || [])}
+                          </TableCell>
+                          <TableCell>
+                            {getDoctorName(appointment.doctor_id, doctorNames || [])}
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              <Badge variant="outline" className="font-mono">
+                                {queuePositions[appointment.id]?.aheadCount ?? 0}
+                              </Badge>
+                              <span className="text-sm text-gray-500">
+                                {queuePositions[appointment.id]?.aheadCount === 0 ? "Next" : "waiting"}
+                              </span>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant={appointment.booking_type === 'online' ? 'default' : 'secondary'}>
+                              {appointment.booking_type || 'walk-in'}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex flex-col gap-1">
+                              <Badge variant={appointment.payment_status === 'paid' ? 'default' : 'destructive'}>
+                                {appointment.payment_status || 'pending'}
+                              </Badge>
+                              {/* Check if appointment is marked as free */}
+                              {(appointment.invoice?.amount === 0 || appointment.invoice?.description?.includes('Free')) && (
+                                <Badge className="bg-yellow-100 text-yellow-700 text-xs">
+                                  <Gift className="w-3 h-3 mr-1" />
+                                  Marked as Free
+                                </Badge>
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex gap-2">
+                              {/* Cancel appointment with confirmation dialog */}
+                              <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                  <Button 
+                                    size="sm" 
+                                    variant="destructive"
+                                    disabled={cancellingAppointment === appointment.id}
+                                  >
+                                    <X className="w-3 h-3 mr-1" />
+                                    Cancel
+                                  </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>Cancel Appointment</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                      Are you sure you want to cancel this appointment? This action cannot be undone.
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel>Keep Appointment</AlertDialogCancel>
+                                    <AlertDialogAction 
+                                      onClick={() => handleCancelAppointment(appointment)}
+                                      className="bg-red-600 hover:bg-red-700"
+                                    >
+                                      Cancel Appointment
+                                    </AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
+
+                              {/* Generate Invoice button */}
+                              <Button
+                                size="sm"
+                                onClick={() => handleGenerateInvoice(appointment)}
+                                disabled={processingInvoice === appointment.id}
+                                className="bg-green-600 hover:bg-green-700"
+                              >
+                                <Receipt className="w-3 h-3 mr-1" />
+                                {processingInvoice === appointment.id ? 'Processing...' : 'Generate Invoice'}
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    ) : (
+                      <TableRow>
+                        <TableCell colSpan={8} className="text-center text-gray-500 py-12">
+                          No upcoming appointments found for {format(selectedDate, "PPP")}
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Past Appointments Tab */}
+        <TabsContent value="past" className="mt-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Calendar className="w-5 h-5" />
+                Past Appointments - {format(selectedDate, "PPP")} ({pastAppointments.length} appointments)
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Time</TableHead>
+                      <TableHead>Patient ID</TableHead>
+                      <TableHead>Patient Name</TableHead>
+                      <TableHead>Doctor</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Booking Type</TableHead>
+                      <TableHead>Payment Status</TableHead>
+                      <TableHead>Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {appointmentsLoading ? (
+                      <TableRow>
+                        <TableCell colSpan={8} className="text-center py-8">
+                          <div className="animate-pulse">Loading appointments...</div>
+                        </TableCell>
+                      </TableRow>
+                    ) : pastAppointments.length > 0 ? (
+                      pastAppointments.map((appointment) => (
+                        <TableRow key={appointment.id}>
+                          <TableCell className="font-medium">
+                            {format(new Date(appointment.appointment_date), 'h:mm a')}
+                          </TableCell>
+                          <TableCell className="font-mono text-sm font-medium">
+                            {patientNumbers[appointment.patient_id] || 'Loading...'}
+                          </TableCell>
+                          <TableCell className="font-medium">
+                            {getPatientName(appointment.patient_id, patientNames || [])}
+                          </TableCell>
+                          <TableCell>
+                            {getDoctorName(appointment.doctor_id, doctorNames || [])}
+                          </TableCell>
+                          <TableCell>
+                            <Badge className={
+                              appointment.status === 'completed' ? 'bg-green-100 text-green-700' :
+                              appointment.status === 'cancelled' ? 'bg-red-100 text-red-700' :
+                              'bg-gray-100 text-gray-700'
+                            }>
+                              {appointment.status}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant={appointment.booking_type === 'online' ? 'default' : 'secondary'}>
+                              {appointment.booking_type || 'walk-in'}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex flex-col gap-1">
+                              <Badge variant={appointment.payment_status === 'paid' ? 'default' : 'destructive'}>
+                                {appointment.payment_status || 'pending'}
+                              </Badge>
+                              {/* Check if appointment is marked as free */}
+                              {(appointment.invoice?.amount === 0 || appointment.invoice?.description?.includes('Free')) && (
+                                <Badge className="bg-yellow-100 text-yellow-700 text-xs">
+                                  <Gift className="w-3 h-3 mr-1" />
+                                  Marked as Free
+                                </Badge>
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <Button size="sm" variant="outline">
+                              <FileText className="w-3 h-3 mr-1" />
+                              View Details
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    ) : (
+                      <TableRow>
+                        <TableCell colSpan={8} className="text-center text-gray-500 py-12">
+                          No past appointments found for {format(selectedDate, "PPP")}
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
 
       <div className="grid grid-cols-1 lg:grid-cols-1 gap-6">
-
         {/* Doctors Schedule */}
         <Card>
           <CardHeader>
