@@ -7,7 +7,7 @@ import { DemoTable } from "@/components/DemoTable";
 import { AuditLog } from "@/components/AuditLog";
 import { PharmacyOverview } from "@/components/PharmacyOverview";
 import { AppointmentDialog } from "@/components/dialogs/AppointmentDialog";
-import { useUsers, useDepartments, useAuditLogs } from "@/hooks/useDatabase";
+import { useUsers, useDepartments, useAuditLogs, useUpdateUserStatus } from "@/hooks/useDatabase";
 import { useRealStatsData } from "@/hooks/useRealStatsData";
 import { useRecentActivity } from "@/hooks/useRecentActivity";
 import { useFinancialAnalytics } from "@/hooks/useFinancialAnalytics";
@@ -26,6 +26,7 @@ import { formatPkrAmount } from "@/utils/currency";
 import { useHospitalSettings } from "@/hooks/useHospitalSettings";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import AdminLabs from "./admin/AdminLabs";
 import { AdminOT } from "./admin/AdminOT";
 
@@ -39,7 +40,8 @@ export default function DashboardAdmin() {
   const { data: recentActivity } = useRecentActivity();
   const { data: financialAnalytics } = useFinancialAnalytics();
   const { settings: hospitalSettings, updateSettings } = useHospitalSettings();
-  const { toast } = useToast();
+  const { toast: toastHook } = useToast();
+  const updateUserStatus = useUpdateUserStatus();
   const [editingUser, setEditingUser] = useState<any>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   
@@ -94,6 +96,22 @@ export default function DashboardAdmin() {
 
   const handleUserUpdated = () => {
     refetchUsers();
+  };
+
+  const handleToggleUserStatus = async (user: any) => {
+    const newStatus = !user.is_active;
+    const action = newStatus ? "unblocked" : "blocked";
+    
+    try {
+      await updateUserStatus.mutateAsync({ 
+        userId: user.id, 
+        isActive: newStatus 
+      });
+      toast.success(`User ${action} successfully`);
+      refetchUsers();
+    } catch (error) {
+      toast.error(`Failed to ${newStatus ? "unblock" : "block"} user`);
+    }
   };
 
   // Initialize forms when hospital settings load
@@ -506,6 +524,8 @@ export default function DashboardAdmin() {
                                 <Button 
                                   size="sm" 
                                   variant={user.is_active ? "destructive" : "default"}
+                                  onClick={() => handleToggleUserStatus(user)}
+                                  disabled={updateUserStatus.isPending}
                                 >
                                   {user.is_active ? 'Block' : 'Unblock'}
                                 </Button>
@@ -750,12 +770,12 @@ export default function DashboardAdmin() {
                          const success = await updateSettings({
                            payroll_payment_date: timingsForm.payroll_payment_date || hospitalSettings?.payroll_payment_date || 1
                          });
-                         if (success) {
-                           toast({
-                             title: "Success",
-                             description: "Payroll settings updated successfully",
-                           });
-                         }
+                          if (success) {
+                            toastHook({
+                              title: "Success",
+                              description: "Payroll settings updated successfully",
+                            });
+                          }
                        }}
                      >
                        Save Payroll Settings
@@ -807,12 +827,12 @@ export default function DashboardAdmin() {
                            contact_number: hospitalForm.contact_number,
                            hospital_address: hospitalForm.hospital_address
                          });
-                         if (success) {
-                           toast({
-                             title: "Success",
-                             description: "Hospital information updated successfully",
-                           });
-                         }
+                          if (success) {
+                            toastHook({
+                              title: "Success",
+                              description: "Hospital information updated successfully",
+                            });
+                          }
                        }}
                      >
                        Save Hospital Information
