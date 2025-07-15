@@ -794,6 +794,54 @@ export const useUpdateInvoice = () => {
   });
 };
 
+export const useMarkAppointmentFree = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async (appointmentId: string) => {
+      // First get the appointment to find the associated invoice
+      const { data: appointment, error: appointmentError } = await supabase
+        .from('appointments')
+        .select('patient_id, invoice_generated_at')
+        .eq('id', appointmentId)
+        .single();
+
+      if (appointmentError) throw appointmentError;
+
+      // Find the invoice for this patient created around the same time
+      if (appointment.invoice_generated_at) {
+        const { data: invoice, error: invoiceError } = await supabase
+          .from('invoices')
+          .select('id')
+          .eq('patient_id', appointment.patient_id)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (invoice && !invoiceError) {
+          // Update the invoice to 0 amount and mark as free
+          const { error: updateInvoiceError } = await supabase
+            .from('invoices')
+            .update({ 
+              amount: 0,
+              description: 'Free consultation (marked by doctor)',
+              status: 'paid'
+            })
+            .eq('id', invoice.id);
+
+          if (updateInvoiceError) throw updateInvoiceError;
+        }
+      }
+
+      return { success: true };
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['appointments'] });
+      queryClient.invalidateQueries({ queryKey: ['invoices'] });
+    },
+  });
+};
+
 export const useUpdateLabReport = () => {
   const queryClient = useQueryClient();
   

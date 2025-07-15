@@ -1,8 +1,8 @@
 
 import { useState, useEffect } from "react";
-import { useAppointments, useUpdateAppointment } from "@/hooks/useDatabase";
+import { useAppointments, useUpdateAppointment, useMarkAppointmentFree } from "@/hooks/useDatabase";
 import { usePatientNames, getPatientName } from "@/hooks/useDisplayHelpers";
-import { Calendar, Clock, User, Edit3, CheckCircle, X, Hash, CreditCard, AlertTriangle, Filter, Search, CalendarIcon } from "lucide-react";
+import { Calendar, Clock, User, Edit3, CheckCircle, X, Hash, CreditCard, AlertTriangle, Filter, Search, CalendarIcon, Gift } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -22,6 +22,7 @@ import { getCurrentPakistanTime } from "@/utils/timezone";
 export default function DoctorSchedule() { // Fixed ordering syntax
   const { data: appointments, isLoading } = useAppointments();
   const updateAppointment = useUpdateAppointment();
+  const markAppointmentFree = useMarkAppointmentFree();
   const { data: patientNames } = usePatientNames();
   const [selectedPatient, setSelectedPatient] = useState<{ id: string; name: string } | null>(null);
   const [appointmentsWithQueue, setAppointmentsWithQueue] = useState<any[]>([]);
@@ -299,6 +300,21 @@ export default function DoctorSchedule() { // Fixed ordering syntax
     }
   };
 
+  const handleMarkFree = async (appointmentId: string, appointment: any) => {
+    // Only allow marking as free if payment is already paid
+    if (appointment.payment_status !== 'paid' && appointment.booking_type !== 'counter') {
+      toast.error('Can only mark paid appointments as free');
+      return;
+    }
+
+    try {
+      await markAppointmentFree.mutateAsync(appointmentId);
+      toast.success('Appointment marked as free (PKR 0)');
+    } catch (error) {
+      toast.error('Failed to mark appointment as free');
+    }
+  };
+
   const handlePatientClick = (patientId: string, patientName: string) => {
     setSelectedPatient({ id: patientId, name: patientName });
   };
@@ -507,6 +523,19 @@ export default function DoctorSchedule() { // Fixed ordering syntax
                             <X className="w-3 h-3 mr-1" />
                             Cancel
                           </Button>
+                          {/* Free button - only show after payment is made */}
+                          {(appointment.payment_status === 'paid' || appointment.booking_type === 'counter') && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleMarkFree(appointment.id, appointment)}
+                              disabled={markAppointmentFree.isPending}
+                              className="bg-yellow-50 border-yellow-200 text-yellow-700 hover:bg-yellow-100"
+                            >
+                              <Gift className="w-3 h-3 mr-1" />
+                              Free
+                            </Button>
+                          )}
                         </>
                       )}
                     </div>
