@@ -13,25 +13,18 @@ export const useRealStatsData = () => {
       const yesterdayStart = startOfDay(yesterday);
       const yesterdayEnd = endOfDay(yesterday);
 
-      // Get today's data
+      // Get today's and yesterday's data for appointments and invoices only
+      // (doctors and patients don't have created_at columns)
       const [
-        todayDoctorsResult,
-        todayPatientsResult,
         todayAppointmentsResult,
         todayInvoicesResult,
-        yesterdayDoctorsResult,
-        yesterdayPatientsResult,
         yesterdayAppointmentsResult,
         yesterdayInvoicesResult
       ] = await Promise.all([
         // Today's data
-        supabase.from('doctors').select('id').gte('created_at', todayStart.toISOString()).lte('created_at', todayEnd.toISOString()),
-        supabase.from('patients').select('id').gte('created_at', todayStart.toISOString()).lte('created_at', todayEnd.toISOString()),
         supabase.from('appointments').select('id').gte('created_at', todayStart.toISOString()).lte('created_at', todayEnd.toISOString()),
         supabase.from('invoices').select('amount').gte('created_at', todayStart.toISOString()).lte('created_at', todayEnd.toISOString()),
         // Yesterday's data
-        supabase.from('doctors').select('id').gte('created_at', yesterdayStart.toISOString()).lte('created_at', yesterdayEnd.toISOString()),
-        supabase.from('patients').select('id').gte('created_at', yesterdayStart.toISOString()).lte('created_at', yesterdayEnd.toISOString()),
         supabase.from('appointments').select('id').gte('created_at', yesterdayStart.toISOString()).lte('created_at', yesterdayEnd.toISOString()),
         supabase.from('invoices').select('amount').gte('created_at', yesterdayStart.toISOString()).lte('created_at', yesterdayEnd.toISOString())
       ]);
@@ -45,13 +38,9 @@ export const useRealStatsData = () => {
       ]);
 
       // Calculate totals
-      const todayDoctorsCount = todayDoctorsResult.data?.length || 0;
-      const todayPatientsCount = todayPatientsResult.data?.length || 0;
       const todayAppointmentsCount = todayAppointmentsResult.data?.length || 0;
       const todayRevenue = todayInvoicesResult.data?.reduce((sum, invoice) => sum + (invoice.amount || 0), 0) || 0;
 
-      const yesterdayDoctorsCount = yesterdayDoctorsResult.data?.length || 0;
-      const yesterdayPatientsCount = yesterdayPatientsResult.data?.length || 0;
       const yesterdayAppointmentsCount = yesterdayAppointmentsResult.data?.length || 0;
       const yesterdayRevenue = yesterdayInvoicesResult.data?.reduce((sum, invoice) => sum + (invoice.amount || 0), 0) || 0;
 
@@ -68,8 +57,8 @@ export const useRealStatsData = () => {
         return today >= yesterday ? 'positive' : 'negative';
       };
 
-      // Generate trend data for the last 5 days
-      const generateTrendData = async (table: 'doctors' | 'patients' | 'appointments' | 'invoices', valueField: string = 'id') => {
+      // Generate trend data for the last 5 days (only for tables with created_at)
+      const generateTrendData = async (table: 'appointments' | 'invoices', valueField: string = 'id') => {
         const data = [];
         for (let i = 4; i >= 0; i--) {
           const date = subDays(today, i);
@@ -98,22 +87,29 @@ export const useRealStatsData = () => {
         return data;
       };
 
-      const [doctorsTrend, patientsTrend, appointmentsTrend, revenueTrend] = await Promise.all([
-        generateTrendData('doctors'),
-        generateTrendData('patients'),
+      // Generate static trend data for doctors and patients (no created_at columns)
+      const generateStaticTrendData = (totalCount: number) => {
+        return Array(5).fill({ value: Math.floor(totalCount / 5) });
+      };
+
+      const [appointmentsTrend, revenueTrend] = await Promise.all([
         generateTrendData('appointments'),
         generateTrendData('invoices', 'amount')
       ]);
+
+      // Generate static trends for doctors and patients
+      const doctorsTrend = generateStaticTrendData(totalDoctors.count || 0);
+      const patientsTrend = generateStaticTrendData(totalPatients.count || 0);
 
       return {
         totalDoctors: totalDoctors.count || 0,
         totalPatients: totalPatients.count || 0,
         totalAppointments: totalAppointments.count || 0,
         totalRevenue,
-        doctorsChange: calculateChange(todayDoctorsCount, yesterdayDoctorsCount),
-        doctorsChangeType: calculateChangeType(todayDoctorsCount, yesterdayDoctorsCount),
-        patientsChange: calculateChange(todayPatientsCount, yesterdayPatientsCount),
-        patientsChangeType: calculateChangeType(todayPatientsCount, yesterdayPatientsCount),
+        doctorsChange: '0%', // No created_at data available
+        doctorsChangeType: 'positive' as const,
+        patientsChange: '0%', // No created_at data available  
+        patientsChangeType: 'positive' as const,
         appointmentsChange: calculateChange(todayAppointmentsCount, yesterdayAppointmentsCount),
         appointmentsChangeType: calculateChangeType(todayAppointmentsCount, yesterdayAppointmentsCount),
         revenueChange: calculateChange(todayRevenue, yesterdayRevenue),
