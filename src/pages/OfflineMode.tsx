@@ -363,14 +363,30 @@ const OfflineMode = () => {
       console.log('📦 Uploading operations:', operations);
       console.log('📦 Uploading invoices:', invoices);
 
-      // Upload operations to Supabase
+      // First create a dummy patient for offline transactions
+      const { data: dummyPatient, error: patientError } = await supabase
+        .from('patients')
+        .insert({
+          id: crypto.randomUUID(),
+          patient_number: `OFFLINE-${Date.now()}`,
+          cnic: 'OFFLINE-PATIENT'
+        })
+        .select()
+        .single();
+
+      if (patientError) {
+        console.error('Error creating dummy patient:', patientError);
+        throw patientError;
+      }
+
+      // Upload operations to Supabase and create corresponding invoices
       for (const operation of operations) {
         if (operation.table === 'appointments' && operation.action === 'insert') {
           // Create appointment record
-          const { error: appointmentError } = await supabase
+          const { data: appointment, error: appointmentError } = await supabase
             .from('appointments')
             .insert({
-              patient_id: null, // We'll need to create patient first or handle differently
+              patient_id: dummyPatient.id,
               doctor_id: operation.data.doctor_id,
               appointment_date: new Date().toISOString(),
               type: operation.data.type || 'consultation',
@@ -379,17 +395,37 @@ const OfflineMode = () => {
               booking_type: 'offline',
               payment_status: 'paid',
               notes: `Offline Patient: ${operation.data.patient_name} (CNIC: ${operation.data.patient_cnic}). ${operation.data.notes || ''}`
-            });
+            })
+            .select()
+            .single();
 
           if (appointmentError) {
             console.error('Error uploading appointment:', appointmentError);
+          } else {
+            // Create invoice for the appointment
+            const invoiceNumber = `INV-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+            const { error: invoiceError } = await supabase
+              .from('invoices')
+              .insert({
+                patient_id: dummyPatient.id,
+                amount: operation.data.consultation_fee || 0,
+                status: 'paid',
+                invoice_number: invoiceNumber,
+                description: `Offline Consultation - ${operation.data.patient_name}`,
+                paid_at: new Date().toISOString(),
+                created_at: new Date().toISOString()
+              });
+
+            if (invoiceError) {
+              console.error('Error creating appointment invoice:', invoiceError);
+            }
           }
         } else if (operation.table === 'lab_reports' && operation.action === 'insert') {
           // Create lab report record
-          const { error: labError } = await supabase
+          const { data: labReport, error: labError } = await supabase
             .from('lab_reports')
             .insert({
-              patient_id: null, // We'll use external doctor approach
+              patient_id: dummyPatient.id,
               test_id: operation.data.test_id,
               test_name: operation.data.test_name,
               external_doctor_name: `Offline Patient: ${operation.data.patient_name} (CNIC: ${operation.data.patient_cnic})`,
@@ -397,17 +433,37 @@ const OfflineMode = () => {
               status: 'completed',
               test_date: new Date().toISOString(),
               notes: operation.data.notes || ''
-            });
+            })
+            .select()
+            .single();
 
           if (labError) {
             console.error('Error uploading lab report:', labError);
+          } else {
+            // Create invoice for the lab report
+            const invoiceNumber = `INV-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+            const { error: invoiceError } = await supabase
+              .from('invoices')
+              .insert({
+                patient_id: dummyPatient.id,
+                amount: operation.data.price || 0,
+                status: 'paid',
+                invoice_number: invoiceNumber,
+                description: `Offline Lab Test - ${operation.data.test_name} - ${operation.data.patient_name}`,
+                paid_at: new Date().toISOString(),
+                created_at: new Date().toISOString()
+              });
+
+            if (invoiceError) {
+              console.error('Error creating lab invoice:', invoiceError);
+            }
           }
         } else if (operation.table === 'ot_schedules' && operation.action === 'insert') {
           // Create OT schedule record
-          const { error: otError } = await supabase
+          const { data: otSchedule, error: otError } = await supabase
             .from('ot_schedules')
             .insert({
-              patient_id: null, // We'll use patient_name field instead
+              patient_id: dummyPatient.id,
               operation_id: operation.data.operation_id,
               doctor_name: `Offline Patient: ${operation.data.patient_name} (CNIC: ${operation.data.patient_cnic})`,
               operation_date: new Date().toISOString().split('T')[0],
@@ -415,10 +471,30 @@ const OfflineMode = () => {
               status: 'completed',
               total_cost: operation.data.total_cost,
               notes: operation.data.notes || ''
-            });
+            })
+            .select()
+            .single();
 
           if (otError) {
             console.error('Error uploading OT schedule:', otError);
+          } else {
+            // Create invoice for the OT operation
+            const invoiceNumber = `INV-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+            const { error: invoiceError } = await supabase
+              .from('invoices')
+              .insert({
+                patient_id: dummyPatient.id,
+                amount: operation.data.total_cost || 0,
+                status: 'paid',
+                invoice_number: invoiceNumber,
+                description: `Offline OT Operation - ${operation.data.patient_name}`,
+                paid_at: new Date().toISOString(),
+                created_at: new Date().toISOString()
+              });
+
+            if (invoiceError) {
+              console.error('Error creating OT invoice:', invoiceError);
+            }
           }
         }
       }
