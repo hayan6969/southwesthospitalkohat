@@ -116,65 +116,106 @@ export default function DashboardPatient() {
   const totalLabReports = patientLabReports.length;
 
   const renderOverviewTab = () => (
-    <div>
-      <h2 className="text-2xl font-bold mb-8">Welcome back, {profile?.first_name}!</h2>
+    <div className="space-y-6">
+      <h2 className="text-xl sm:text-2xl font-bold">Welcome back, {profile?.first_name}!</h2>
       
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
         <StatsCard
           title="Upcoming Appointments"
           value={upcomingAppointments.toString()}
-          icon={<Calendar className="w-5 h-5 text-blue-600" />}
+          icon={<Calendar className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600" />}
         />
         <StatsCard
           title="Medical Records"
           value={totalMedicalRecords.toString()}
-          icon={<FileText className="w-5 h-5 text-green-600" />}
+          icon={<FileText className="w-4 h-4 sm:w-5 sm:h-5 text-green-600" />}
         />
         <StatsCard
           title="Outstanding Bills"
           value={`$${outstandingBills.toFixed(2)}`}
-          icon={<Banknote className="w-5 h-5 text-red-600" />}
+          icon={<Banknote className="w-4 h-4 sm:w-5 sm:h-5 text-red-600" />}
         />
         <StatsCard
           title="Lab Reports"
           value={totalLabReports.toString()}
-          icon={<Activity className="w-5 h-5 text-purple-600" />}
+          icon={<Activity className="w-4 h-4 sm:w-5 sm:h-5 text-purple-600" />}
         />
       </div>
 
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-8 mb-8">
-        <div className="bg-white rounded-lg border shadow-sm p-6">
-          <h3 className="font-semibold mb-4">Upcoming Appointments</h3>
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 lg:gap-8">
+        <div className="bg-white rounded-lg border shadow-sm p-4 sm:p-6">
+          <h3 className="font-semibold mb-4 text-sm sm:text-base">Upcoming Appointments</h3>
           {patientAppointments.length > 0 ? (
-            <DemoTable
-              columns={["Date", "Doctor", "Type"]}
-              data={patientAppointments.slice(0, 5).map(appointment => [
-                format(new Date(appointment.appointment_date), 'MMM d, yyyy'),
-                appointment.doctor?.profiles ? 
-                  `Dr. ${appointment.doctor.profiles.first_name} ${appointment.doctor.profiles.last_name}` : 
-                  'Unknown Doctor',
-                appointment.type || 'Consultation'
-              ])}
-            />
+            <div className="overflow-x-auto">
+              <div className="hidden sm:block">
+                <DemoTable
+                  columns={["Date", "Doctor", "Type"]}
+                  data={patientAppointments.slice(0, 5).map(appointment => [
+                    format(new Date(appointment.appointment_date), 'MMM d, yyyy'),
+                    appointment.doctor?.profiles ? 
+                      `Dr. ${appointment.doctor.profiles.first_name} ${appointment.doctor.profiles.last_name}` : 
+                      'Unknown Doctor',
+                    appointment.type || 'Consultation'
+                  ])}
+                />
+              </div>
+              <div className="sm:hidden space-y-2">
+                {patientAppointments.slice(0, 3).map((appointment, index) => (
+                  <div key={index} className="p-3 bg-gray-50 rounded-lg">
+                    <div className="text-sm font-medium">
+                      {format(new Date(appointment.appointment_date), 'MMM d, yyyy')}
+                    </div>
+                    <div className="text-xs text-gray-600">
+                      {appointment.doctor?.profiles ? 
+                        `Dr. ${appointment.doctor.profiles.first_name} ${appointment.doctor.profiles.last_name}` : 
+                        'Unknown Doctor'}
+                    </div>
+                    <div className="text-xs text-blue-600">{appointment.type || 'Consultation'}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
           ) : (
-            <p className="text-gray-500">No upcoming appointments</p>
+            <p className="text-gray-500 text-sm">No upcoming appointments</p>
           )}
         </div>
         
-        <div className="bg-white rounded-lg border shadow-sm p-6">
-          <h3 className="font-semibold mb-4">Recent Invoices</h3>
+        <div className="bg-white rounded-lg border shadow-sm p-4 sm:p-6">
+          <h3 className="font-semibold mb-4 text-sm sm:text-base">Recent Invoices</h3>
           {patientInvoices.length > 0 ? (
-            <DemoTable
-              columns={["Invoice #", "Date", "Amount", "Status"]}
-              data={patientInvoices.slice(0, 5).map(invoice => [
-                invoice.invoice_number,
-                format(new Date(invoice.created_at), 'MMM d, yyyy'),
-                `$${invoice.amount.toFixed(2)}`,
-                invoice.status === 'paid' ? 'Paid' : 'Pending'
-              ])}
-            />
+            <div className="overflow-x-auto">
+              <div className="hidden sm:block">
+                <DemoTable
+                  columns={["Invoice #", "Date", "Amount", "Status"]}
+                  data={patientInvoices.slice(0, 5).map(invoice => [
+                    invoice.invoice_number,
+                    format(new Date(invoice.created_at), 'MMM d, yyyy'),
+                    `$${invoice.amount.toFixed(2)}`,
+                    invoice.status === 'paid' ? 'Paid' : 'Pending'
+                  ])}
+                />
+              </div>
+              <div className="sm:hidden space-y-2">
+                {patientInvoices.slice(0, 3).map((invoice, index) => (
+                  <div key={index} className="p-3 bg-gray-50 rounded-lg">
+                    <div className="text-sm font-medium">{invoice.invoice_number}</div>
+                    <div className="text-xs text-gray-600">
+                      {format(new Date(invoice.created_at), 'MMM d, yyyy')}
+                    </div>
+                    <div className="flex justify-between items-center mt-1">
+                      <span className="text-sm font-medium">${invoice.amount.toFixed(2)}</span>
+                      <span className={`px-2 py-1 text-xs rounded-full ${
+                        invoice.status === 'paid' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'
+                      }`}>
+                        {invoice.status === 'paid' ? 'Paid' : 'Pending'}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
           ) : (
-            <p className="text-gray-500">No invoices found</p>
+            <p className="text-gray-500 text-sm">No invoices found</p>
           )}
         </div>
 
@@ -197,15 +238,15 @@ export default function DashboardPatient() {
   );
 
   const renderAppointmentsTab = () => (
-    <div>
-      <h2 className="text-2xl font-bold mb-8">Book Appointment</h2>
+    <div className="space-y-6">
+      <h2 className="text-xl sm:text-2xl font-bold">Book Appointment</h2>
       <AppointmentBooking />
     </div>
   );
 
   const renderMyAppointmentsTab = () => (
-    <div>
-      <h2 className="text-2xl font-bold mb-8">My Appointments</h2>
+    <div className="space-y-6">
+      <h2 className="text-xl sm:text-2xl font-bold">My Appointments</h2>
       <MyAppointments />
     </div>
   );
@@ -237,36 +278,45 @@ export default function DashboardPatient() {
   return (
     <PatientLayout>
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-7 mb-8">
-          <TabsTrigger value="overview" className="flex items-center gap-2">
-            <Activity className="w-4 h-4" />
-            Overview
-          </TabsTrigger>
-          <TabsTrigger value="book-appointment" className="flex items-center gap-2">
-            <Calendar className="w-4 h-4" />
-            Book Appointment
-          </TabsTrigger>
-          <TabsTrigger value="my-appointments" className="flex items-center gap-2">
-            <Clock className="w-4 h-4" />
-            My Appointments
-          </TabsTrigger>
-          <TabsTrigger value="records" className="flex items-center gap-2">
-            <FileText className="w-4 h-4" />
-            Records
-          </TabsTrigger>
-          <TabsTrigger value="labs" className="flex items-center gap-2">
-            <TestTube className="w-4 h-4" />
-            Lab Reports
-          </TabsTrigger>
-          <TabsTrigger value="invoices" className="flex items-center gap-2">
-            <Banknote className="w-4 h-4" />
-            Invoices
-          </TabsTrigger>
-          <TabsTrigger value="ot" className="flex items-center gap-2">
-            <Building2 className="w-4 h-4" />
-            OT
-          </TabsTrigger>
-        </TabsList>
+        <div className="mb-6 overflow-x-auto">
+          <TabsList className="grid w-full min-w-max grid-cols-7 lg:grid-cols-7">
+            <TabsTrigger value="overview" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-4">
+              <Activity className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
+              <span className="hidden sm:inline">Overview</span>
+              <span className="sm:hidden">Overview</span>
+            </TabsTrigger>
+            <TabsTrigger value="book-appointment" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-4">
+              <Calendar className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
+              <span className="hidden md:inline">Book Appointment</span>
+              <span className="md:hidden">Book</span>
+            </TabsTrigger>
+            <TabsTrigger value="my-appointments" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-4">
+              <Clock className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
+              <span className="hidden md:inline">My Appointments</span>
+              <span className="md:hidden">My Apt</span>
+            </TabsTrigger>
+            <TabsTrigger value="records" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-4">
+              <FileText className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
+              <span className="hidden sm:inline">Records</span>
+              <span className="sm:hidden">Records</span>
+            </TabsTrigger>
+            <TabsTrigger value="labs" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-4">
+              <TestTube className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
+              <span className="hidden sm:inline">Lab Reports</span>
+              <span className="sm:hidden">Labs</span>
+            </TabsTrigger>
+            <TabsTrigger value="invoices" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-4">
+              <Banknote className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
+              <span className="hidden sm:inline">Invoices</span>
+              <span className="sm:hidden">Bills</span>
+            </TabsTrigger>
+            <TabsTrigger value="ot" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-4">
+              <Building2 className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
+              <span className="hidden sm:inline">OT</span>
+              <span className="sm:hidden">OT</span>
+            </TabsTrigger>
+          </TabsList>
+        </div>
 
         <TabsContent value="overview" className="space-y-4">
           {renderOverviewTab()}

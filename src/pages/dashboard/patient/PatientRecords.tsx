@@ -154,30 +154,103 @@ export default function PatientRecords() {
   };
 
   return (
-    <div className="space-y-8">
-      <div className="flex items-center justify-between">
+    <div className="space-y-6 sm:space-y-8">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold">Medical Records</h1>
-          <p className="text-muted-foreground mt-1">View your complete medical history and documents</p>
+          <h1 className="text-2xl sm:text-3xl font-bold">Medical Records</h1>
+          <p className="text-muted-foreground mt-1 text-sm sm:text-base">View your complete medical history and documents</p>
         </div>
       </div>
 
       <Tabs defaultValue="history" className="space-y-6">
-        <TabsList>
-          <TabsTrigger value="history">Medical History</TabsTrigger>
-          <TabsTrigger value="documents">Documents</TabsTrigger>
-        </TabsList>
+        <div className="overflow-x-auto">
+          <TabsList>
+            <TabsTrigger value="history">Medical History</TabsTrigger>
+            <TabsTrigger value="documents">Documents</TabsTrigger>
+          </TabsList>
+        </div>
 
         <TabsContent value="history">
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <FileText className="w-5 h-5" />
+              <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+                <FileText className="w-4 h-4 sm:w-5 sm:h-5" />
                 Medical History
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="overflow-x-auto">
+              {/* Mobile view for medical records */}
+              <div className="sm:hidden">
+                {medicalLoading ? (
+                  <div className="space-y-4">
+                    {Array.from({ length: 3 }).map((_, i) => (
+                      <div key={i} className="p-4 border rounded-lg animate-pulse">
+                        <div className="h-4 bg-muted rounded w-3/4 mb-2"></div>
+                        <div className="h-3 bg-muted rounded w-1/2 mb-2"></div>
+                        <div className="h-3 bg-muted rounded w-1/4"></div>
+                      </div>
+                    ))}
+                  </div>
+                ) : patientRecords.length > 0 ? (
+                  <div className="space-y-4">
+                    {patientRecords.map((record) => (
+                      <div key={record.id} className="p-4 border rounded-lg space-y-3">
+                        <div className="flex items-center gap-2">
+                          <Calendar className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                          <span className="font-medium text-sm">
+                            {format(new Date(record.visit_date), 'MMM d, yyyy')}
+                          </span>
+                        </div>
+                        <div className="space-y-2">
+                          <div className="flex items-start gap-2">
+                            <User className="w-4 h-4 text-muted-foreground flex-shrink-0 mt-0.5" />
+                            <div>
+                              <div className="font-medium text-sm">
+                                Dr. {record.doctor?.profiles?.first_name} {record.doctor?.profiles?.last_name}
+                              </div>
+                              <div className="text-xs text-muted-foreground">
+                                {record.doctor?.specialization}
+                              </div>
+                            </div>
+                          </div>
+                          {record.diagnosis && (
+                            <div>
+                              <span className="text-xs font-medium text-gray-700">Diagnosis:</span>
+                              <p className="text-sm">{record.diagnosis}</p>
+                            </div>
+                          )}
+                          {record.treatment && (
+                            <div>
+                              <span className="text-xs font-medium text-gray-700">Treatment:</span>
+                              <p className="text-sm">{record.treatment}</p>
+                            </div>
+                          )}
+                          {record.prescription && (
+                            <div>
+                              <span className="text-xs font-medium text-gray-700">Prescription:</span>
+                              <p className="text-sm">{record.prescription}</p>
+                            </div>
+                          )}
+                          {record.notes && (
+                            <div>
+                              <span className="text-xs font-medium text-gray-700">Notes:</span>
+                              <p className="text-sm text-muted-foreground">{record.notes}</p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8">
+                    <FileText className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                    <p className="text-muted-foreground">No medical records found</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Desktop view for medical records */}
+              <div className="hidden sm:block overflow-x-auto">
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -259,8 +332,8 @@ export default function PatientRecords() {
             {/* Upload Section */}
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Upload className="w-5 h-5" />
+                <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+                  <Upload className="w-4 h-4 sm:w-5 sm:h-5" />
                   Upload Document
                 </CardTitle>
               </CardHeader>
@@ -315,8 +388,8 @@ export default function PatientRecords() {
             {/* Documents List */}
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <File className="w-5 h-5" />
+                <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+                  <File className="w-4 h-4 sm:w-5 sm:h-5" />
                   My Documents
                 </CardTitle>
               </CardHeader>
@@ -330,24 +403,26 @@ export default function PatientRecords() {
                 ) : documents && documents.length > 0 ? (
                   <div className="space-y-3">
                     {documents.map((document) => (
-                      <div key={document.id} className="flex items-center justify-between p-4 border rounded-lg">
-                        <div className="flex items-center gap-3">
-                          <File className="w-5 h-5 text-muted-foreground" />
-                          <div>
-                            <h4 className="font-medium">{document.document_label}</h4>
-                            <p className="text-sm text-muted-foreground">{document.document_name}</p>
-                            <div className="flex items-center gap-2 mt-1">
-                              <Badge variant="secondary">{document.file_type}</Badge>
-                              <span className="text-xs text-muted-foreground">
-                                {document.file_size && formatFileSize(document.file_size)}
-                              </span>
+                      <div key={document.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-4 border rounded-lg gap-4">
+                        <div className="flex items-start gap-3 flex-1 min-w-0">
+                          <File className="w-5 h-5 text-muted-foreground flex-shrink-0 mt-0.5" />
+                          <div className="min-w-0 flex-1">
+                            <h4 className="font-medium truncate">{document.document_label}</h4>
+                            <p className="text-sm text-muted-foreground truncate">{document.document_name}</p>
+                            <div className="flex flex-wrap items-center gap-2 mt-1">
+                              <Badge variant="secondary" className="text-xs">{document.file_type}</Badge>
+                              {document.file_size && (
+                                <span className="text-xs text-muted-foreground">
+                                  {formatFileSize(document.file_size)}
+                                </span>
+                              )}
                               <span className="text-xs text-muted-foreground">
                                 {format(new Date(document.created_at), 'MMM d, yyyy')}
                               </span>
                             </div>
                           </div>
                         </div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 self-end sm:self-center">
                           <Dialog>
                             <DialogTrigger asChild>
                               <Button
@@ -356,11 +431,12 @@ export default function PatientRecords() {
                                 onClick={() => setViewingDocument(document)}
                               >
                                 <Eye className="w-4 h-4" />
+                                <span className="sr-only sm:not-sr-only sm:ml-2">View</span>
                               </Button>
                             </DialogTrigger>
-                            <DialogContent className="max-w-4xl">
+                            <DialogContent className="max-w-4xl max-h-[90vh] overflow-auto">
                               <DialogHeader>
-                                <DialogTitle>{document.document_label}</DialogTitle>
+                                <DialogTitle className="text-base sm:text-lg">{document.document_label}</DialogTitle>
                               </DialogHeader>
                               <DocumentViewer document={document} />
                             </DialogContent>
@@ -372,6 +448,7 @@ export default function PatientRecords() {
                             disabled={deleteMutation.isPending}
                           >
                             <Trash2 className="w-4 h-4" />
+                            <span className="sr-only sm:not-sr-only sm:ml-2">Delete</span>
                           </Button>
                         </div>
                       </div>

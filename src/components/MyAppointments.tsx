@@ -343,9 +343,10 @@ export const MyAppointments = () => {
   }) => (
     <Popover>
       <PopoverTrigger asChild>
-        <Button variant="outline" className="ml-auto">
-          <Filter className="w-4 h-4 mr-2" />
-          {label}
+        <Button variant="outline" className="text-xs sm:text-sm">
+          <Filter className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+          <span className="hidden sm:inline">{label}</span>
+          <span className="sm:hidden">Filter</span>
           {(dateRange.from || dateRange.to) && (
             <span className="ml-1 text-xs bg-blue-100 text-blue-700 px-1 rounded">•</span>
           )}
@@ -389,50 +390,50 @@ export const MyAppointments = () => {
 
   const renderAppointmentCard = (appointment: AppointmentWithQueue) => (
     <Card key={appointment.id} className="hover:shadow-md transition-shadow">
-      <CardHeader>
-        <div className="flex items-start justify-between">
-          <div>
-            <CardTitle className="flex items-center gap-2">
-              <User className="w-5 h-5 text-blue-600" />
-              Dr. {appointment.doctor.first_name} {appointment.doctor.last_name}
+      <CardHeader className="pb-3">
+        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+          <div className="flex-1 min-w-0">
+            <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+              <User className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600 flex-shrink-0" />
+              <span className="truncate">Dr. {appointment.doctor.first_name} {appointment.doctor.last_name}</span>
             </CardTitle>
-            <CardDescription>
+            <CardDescription className="text-sm">
               {appointment.doctor.specialization}
             </CardDescription>
           </div>
-          <div className="flex gap-2">
-            <Badge className={getStatusColor(appointment.status)}>
+          <div className="flex flex-wrap gap-2">
+            <Badge className={`${getStatusColor(appointment.status)} text-xs`}>
               {appointment.status}
             </Badge>
             {appointment.status === 'scheduled' && (
-              <Badge className={getQueueStatusColor(appointment.queue_position.queue_status)}>
+              <Badge className={`${getQueueStatusColor(appointment.queue_position.queue_status)} text-xs`}>
                 Queue: {appointment.queue_position.queue_status}
               </Badge>
             )}
           </div>
         </div>
       </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <CardContent className="space-y-4 pt-0">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           <div className="space-y-3">
             <div className="flex items-center gap-2 text-sm">
-              <CalendarIcon className="w-4 h-4 text-gray-500" />
+              <CalendarIcon className="w-4 h-4 text-gray-500 flex-shrink-0" />
               <span>{format(new Date(appointment.appointment_date), 'PPP')}</span>
             </div>
             <div className="flex items-center gap-2 text-sm">
-              <FileText className="w-4 h-4 text-gray-500" />
+              <FileText className="w-4 h-4 text-gray-500 flex-shrink-0" />
               <span>{appointment.type}</span>
             </div>
             <div className="flex items-center gap-2 text-sm">
-              <Banknote className="w-4 h-4 text-gray-500" />
+              <Banknote className="w-4 h-4 text-gray-500 flex-shrink-0" />
               <span>PKR {appointment.doctor.consultation_fee}</span>
             </div>
           </div>
 
           {appointment.status === 'scheduled' && (
             <div className="space-y-3">
-              <div className="bg-blue-50 p-4 rounded-lg">
-                <h4 className="font-semibold text-blue-900 mb-2 flex items-center gap-2">
+              <div className="bg-blue-50 p-3 sm:p-4 rounded-lg">
+                <h4 className="font-semibold text-blue-900 mb-2 flex items-center gap-2 text-sm sm:text-base">
                   <Clock className="w-4 h-4" />
                   Queue Status
                 </h4>
