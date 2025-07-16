@@ -34,13 +34,13 @@ type ReturnItem = {
 export default function PharmacyReturns() {
   const [returnCart, setReturnCart] = useState<ReturnItem[]>([]);
   const [selectedMedicineId, setSelectedMedicineId] = useState("");
-  const [quantity, setQuantity] = useState(1);
+  const [quantity, setQuantity] = useState<number | "">("");
   const [isProcessing, setIsProcessing] = useState(false);
 
   const { data: medicines, isLoading } = useMedicines();
 
   const addToReturnCart = () => {
-    if (!selectedMedicineId || quantity <= 0) {
+    if (!selectedMedicineId || !quantity || quantity <= 0) {
       toast.error("Please select a medicine and valid quantity");
       return;
     }
@@ -57,23 +57,22 @@ export default function PharmacyReturns() {
     if (existingItemIndex > -1) {
       // Update existing item
       const updatedCart = [...returnCart];
-      updatedCart[existingItemIndex].quantity += quantity;
+      updatedCart[existingItemIndex].quantity += Number(quantity);
       updatedCart[existingItemIndex].totalPrice = updatedCart[existingItemIndex].quantity * medicine.selling_price;
       setReturnCart(updatedCart);
     } else {
-      // Add new item
       const newItem: ReturnItem = {
         medicineId: selectedMedicineId,
         name: medicine.name,
         unitPrice: medicine.selling_price,
-        quantity: quantity,
-        totalPrice: quantity * medicine.selling_price,
+        quantity: Number(quantity),
+        totalPrice: Number(quantity) * medicine.selling_price,
       };
       setReturnCart([...returnCart, newItem]);
     }
 
     setSelectedMedicineId("");
-    setQuantity(1);
+    setQuantity("");
     toast.success(`${medicine.name} added to return cart`);
   };
 
@@ -225,7 +224,7 @@ export default function PharmacyReturns() {
                   type="number"
                   min="1"
                   value={quantity}
-                  onChange={(e) => setQuantity(parseInt(e.target.value) || 1)}
+                  onChange={(e) => setQuantity(e.target.value === "" ? "" : parseInt(e.target.value))}
                   placeholder="Enter quantity"
                 />
               </div>
@@ -233,7 +232,7 @@ export default function PharmacyReturns() {
               <Button 
                 onClick={addToReturnCart} 
                 className="w-full"
-                disabled={!selectedMedicineId || quantity <= 0}
+                disabled={!selectedMedicineId || !quantity || Number(quantity) <= 0}
               >
                 <Plus className="w-4 h-4 mr-2" />
                 Add to Return Cart
