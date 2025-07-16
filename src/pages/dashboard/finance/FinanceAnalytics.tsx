@@ -6,12 +6,13 @@ import { supabase } from "@/integrations/supabase/client";
 import { formatPkrAmount } from "@/utils/currency";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell } from "recharts";
 import { TrendingUp, TrendingDown, Banknote, Activity } from "lucide-react";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { format, subMonths, startOfMonth, endOfMonth } from "date-fns";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import { CalendarIcon } from "lucide-react";
+import { useFinancialAnalytics } from "@/hooks/useFinancialAnalytics";
 
 // Helper function to format large numbers with abbreviations
 const formatLargeNumber = (amount: number) => {
@@ -30,367 +31,60 @@ export default function FinanceAnalytics() {
   const [timeRange, setTimeRange] = useState("6months");
   const [selectedDate, setSelectedDate] = useState<Date | undefined>();
 
-  // Get invoices for hospital revenue
-  const { data: invoices, isLoading: invoicesLoading } = useQuery({
-    queryKey: ['invoices'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('invoices')
-        .select('*')
-        .order('created_at', { ascending: false });
-      if (error) throw error;
-      return data;
-    }
-  });
+  // Use the updated financial analytics hook with real-time data
+  const { data: financialData, isLoading, refetch } = useFinancialAnalytics();
 
-  // Get pharmacy invoices
-  const { data: pharmacyInvoices, isLoading: pharmacyLoading } = useQuery({
-    queryKey: ['pharmacy-invoices'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('pharmacy_invoices')
-        .select('*')
-        .order('created_at', { ascending: false });
-      if (error) throw error;
-      return data;
-    }
-  });
+  // Set up real-time subscriptions for all financial tables
+  useEffect(() => {
+    const channels = [
+      supabase.channel('invoices-changes').on('postgres_changes', { event: '*', schema: 'public', table: 'invoices' }, () => refetch()),
+      supabase.channel('pharmacy-invoices-changes').on('postgres_changes', { event: '*', schema: 'public', table: 'pharmacy_invoices' }, () => refetch()),
+      supabase.channel('lab-reports-changes').on('postgres_changes', { event: '*', schema: 'public', table: 'lab_reports' }, () => refetch()),
+      supabase.channel('ot-schedules-changes').on('postgres_changes', { event: '*', schema: 'public', table: 'ot_schedules' }, () => refetch()),
+      supabase.channel('expenses-changes').on('postgres_changes', { event: '*', schema: 'public', table: 'expenses' }, () => refetch()),
+      supabase.channel('refunds-changes').on('postgres_changes', { event: '*', schema: 'public', table: 'refunds' }, () => refetch())
+    ];
 
-  // Get lab reports for revenue
-  const { data: labReports, isLoading: labLoading } = useQuery({
-    queryKey: ['lab-reports-revenue'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('lab_reports')
-        .select('*')
-        .order('created_at', { ascending: false });
-      if (error) throw error;
-      return data;
-    }
-  });
+    channels.forEach(channel => channel.subscribe());
 
-  // Get OT schedules for revenue calculation
-  const { data: otSchedules, isLoading: otLoading } = useQuery({
-    queryKey: ['ot-schedules-revenue'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('ot_schedules')
-        .select('*')
-        .order('created_at', { ascending: false });
-      if (error) throw error;
-      return data;
-    }
-  });
+    return () => {
+      channels.forEach(channel => supabase.removeChannel(channel));
+    };
+  }, [refetch]);
 
-  // Get real expenses data
-  const { data: expenses, isLoading: expensesLoading } = useQuery({
-    queryKey: ['expenses'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('expenses')
-        .select('*')
-        .order('created_at', { ascending: false });
-      if (error) throw error;
-      return data;
-    }
-  });
+  // Use financial data from the hook, or fallback to empty values if loading
+  const totalRevenue = financialData?.totalRevenue || 0;
+  const totalExpenses = financialData?.totalExpenses || 0;
+  const netProfit = financialData?.netProfit || 0;
+  const profitMargin = financialData?.profitMargin || 0;
+  const revenueBySource = financialData?.revenueBySource || { hospital: 0, pharmacy: 0, lab: 0, ot: 0 };
+  const monthlyRevenue = financialData?.monthlyRevenue || [];
+  const monthlyExpenses = financialData?.monthlyExpenses || [];
+  const recentActivities = financialData?.recentActivities || [];
 
-  // Filter data based on selected date
-  const filteredInvoices = useMemo(() => {
-    if (!selectedDate || !invoices) return invoices;
-    return invoices.filter(inv => {
-      if (!inv.created_at) return false;
-      try {
-        const invDate = new Date(inv.created_at);
-        const selectedDateOnly = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate());
-        const invDateOnly = new Date(invDate.getFullYear(), invDate.getMonth(), invDate.getDate());
-        return invDateOnly.getTime() === selectedDateOnly.getTime();
-      } catch {
-        return false;
-      }
-    });
-  }, [invoices, selectedDate]);
-
-  const filteredPharmacyInvoices = useMemo(() => {
-    if (!selectedDate || !pharmacyInvoices) return pharmacyInvoices;
-    return pharmacyInvoices.filter(inv => {
-      if (!inv.created_at) return false;
-      try {
-        const invDate = new Date(inv.created_at);
-        const selectedDateOnly = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate());
-        const invDateOnly = new Date(invDate.getFullYear(), invDate.getMonth(), invDate.getDate());
-        return invDateOnly.getTime() === selectedDateOnly.getTime();
-      } catch {
-        return false;
-      }
-    });
-  }, [pharmacyInvoices, selectedDate]);
-
-  const filteredLabReports = useMemo(() => {
-    if (!selectedDate || !labReports) return labReports;
-    return labReports.filter(lab => {
-      if (!lab.created_at) return false;
-      try {
-        const labDate = new Date(lab.created_at);
-        const selectedDateOnly = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate());
-        const labDateOnly = new Date(labDate.getFullYear(), labDate.getMonth(), labDate.getDate());
-        return labDateOnly.getTime() === selectedDateOnly.getTime();
-      } catch {
-        return false;
-      }
-    });
-  }, [labReports, selectedDate]);
-
-  const filteredOtSchedules = useMemo(() => {
-    if (!selectedDate || !otSchedules) return otSchedules;
-    return otSchedules.filter(schedule => {
-      if (!schedule.created_at) return false;
-      try {
-        const scheduleDate = new Date(schedule.created_at);
-        const selectedDateOnly = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate());
-        const scheduleDateOnly = new Date(scheduleDate.getFullYear(), scheduleDate.getMonth(), scheduleDate.getDate());
-        return scheduleDateOnly.getTime() === selectedDateOnly.getTime();
-      } catch {
-        return false;
-      }
-    });
-  }, [otSchedules, selectedDate]);
-
-  const filteredExpenses = useMemo(() => {
-    if (!selectedDate || !expenses) return expenses;
-    return expenses.filter(exp => {
-      if (!exp.created_at) return false;
-      try {
-        const expDate = new Date(exp.created_at);
-        const selectedDateOnly = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate());
-        const expDateOnly = new Date(expDate.getFullYear(), expDate.getMonth(), expDate.getDate());
-        return expDateOnly.getTime() === selectedDateOnly.getTime();
-      } catch {
-        return false;
-      }
-    });
-  }, [expenses, selectedDate]);
-
-  // Calculate real metrics using filtered data (excluding doctor charges)
-  const totalRevenue = (filteredInvoices?.reduce((sum, inv) => sum + (inv.amount || 0), 0) || 0);
-  const pharmacyRevenue = (filteredPharmacyInvoices?.reduce((sum, inv) => sum + (inv.final_amount || 0), 0) || 0);
-  const labRevenue = (filteredLabReports?.reduce((sum, lab) => sum + (lab.price || 0), 0) || 0);
-  // Calculate OT revenue excluding doctor expenses
-  const otRevenue = (filteredOtSchedules?.reduce((sum, schedule) => {
-    if (!schedule.total_cost || !schedule.doctor_expense) return sum;
-    return sum + (Number(schedule.total_cost) - Number(schedule.doctor_expense));
-  }, 0) || 0);
-  const totalExpenses = (filteredExpenses?.reduce((sum, exp) => sum + (exp.amount || 0), 0) || 0);
-  const combinedRevenue = totalRevenue + pharmacyRevenue + labRevenue + otRevenue;
-  const netProfit = combinedRevenue - totalExpenses;
-  const profitMargin = combinedRevenue > 0 ? ((netProfit / combinedRevenue) * 100) : 0;
-
-  // Calculate monthly data from real database records with filtering
+  // Calculate monthly data from the hook data
   const monthlyData = useMemo(() => {
-    // Return empty array if data is still loading or null
-    if (!invoices || !pharmacyInvoices || !labReports || !otSchedules || !expenses) {
-      return [];
-    }
-    
-    try {
-      const months = [];
-      const now = new Date();
-      
-      // If a specific date is selected, show only that day's data
-      if (selectedDate) {
-        const selectedDateOnly = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate());
-        
-        const dayInvoices = (invoices || []).filter(inv => {
-          if (!inv.created_at) return false;
-          try {
-            const invDate = new Date(inv.created_at);
-            const invDateOnly = new Date(invDate.getFullYear(), invDate.getMonth(), invDate.getDate());
-            return invDateOnly.getTime() === selectedDateOnly.getTime();
-          } catch {
-            return false;
-          }
-        });
-        
-        const dayPharmacyInvoices = (pharmacyInvoices || []).filter(inv => {
-          if (!inv.created_at) return false;
-          try {
-            const invDate = new Date(inv.created_at);
-            const invDateOnly = new Date(invDate.getFullYear(), invDate.getMonth(), invDate.getDate());
-            return invDateOnly.getTime() === selectedDateOnly.getTime();
-          } catch {
-            return false;
-          }
-        });
-        
-        const dayLabReports = (labReports || []).filter(lab => {
-          if (!lab.created_at) return false;
-          try {
-            const labDate = new Date(lab.created_at);
-            const labDateOnly = new Date(labDate.getFullYear(), labDate.getMonth(), labDate.getDate());
-            return labDateOnly.getTime() === selectedDateOnly.getTime();
-          } catch {
-            return false;
-          }
-        });
-        
-        const dayOtSchedules = (otSchedules || []).filter(schedule => {
-          if (!schedule.created_at) return false;
-          try {
-            const scheduleDate = new Date(schedule.created_at);
-            const scheduleDateOnly = new Date(scheduleDate.getFullYear(), scheduleDate.getMonth(), scheduleDate.getDate());
-            return scheduleDateOnly.getTime() === selectedDateOnly.getTime();
-          } catch {
-            return false;
-          }
-        });
-        
-        const dayExpenses = (expenses || []).filter(exp => {
-          if (!exp.created_at) return false;
-          try {
-            const expDate = new Date(exp.created_at);
-            const expDateOnly = new Date(expDate.getFullYear(), expDate.getMonth(), expDate.getDate());
-            return expDateOnly.getTime() === selectedDateOnly.getTime();
-          } catch {
-            return false;
-          }
-        });
-        
-        const hospitalRevenue = dayInvoices.reduce((sum, inv) => sum + (Number(inv.amount) || 0), 0);
-        const pharmacy = dayPharmacyInvoices.reduce((sum, inv) => sum + (Number(inv.final_amount) || 0), 0);
-        const lab = dayLabReports.reduce((sum, lab) => sum + (Number(lab.price) || 0), 0);
-        // Calculate OT revenue excluding doctor expenses
-        const ot = dayOtSchedules.reduce((sum, schedule) => {
-          if (!schedule.total_cost || !schedule.doctor_expense) return sum;
-          return sum + (Number(schedule.total_cost) - Number(schedule.doctor_expense));
-        }, 0);
-        const dailyExpenses = dayExpenses.reduce((sum, exp) => sum + (Number(exp.amount) || 0), 0);
-        const totalRev = hospitalRevenue + pharmacy + lab + ot;
-        
-        months.push({
-          month: format(selectedDate, 'MMM dd'),
-          hospital: hospitalRevenue,
-          pharmacy,
-          lab,
-          ot,
-          total: totalRev,
-          expenses: dailyExpenses,
-          profit: totalRev - dailyExpenses
-        });
-        
-        return months;
-      }
-      
-      // Otherwise, show time range data
-      // Determine the number of months to show based on timeRange
-      let monthsToShow = 6; // default
-      switch (timeRange) {
-        case "1month":
-          monthsToShow = 1;
-          break;
-        case "3months":
-          monthsToShow = 3;
-          break;
-        case "6months":
-          monthsToShow = 6;
-          break;
-        case "1year":
-          monthsToShow = 12;
-          break;
-      }
-      
-      // Generate months based on selected time range
-      for (let i = monthsToShow - 1; i >= 0; i--) {
-        const monthDate = subMonths(now, i);
-        const monthStart = startOfMonth(monthDate);
-        const monthEnd = endOfMonth(monthDate);
-        
-        // Safe filtering with null checks
-        const monthInvoices = (invoices || []).filter(inv => {
-          if (!inv.created_at) return false;
-          try {
-            const invDate = new Date(inv.created_at);
-            return invDate >= monthStart && invDate <= monthEnd;
-          } catch {
-            return false;
-          }
-        });
-        
-        const monthPharmacyInvoices = (pharmacyInvoices || []).filter(inv => {
-          if (!inv.created_at) return false;
-          try {
-            const invDate = new Date(inv.created_at);
-            return invDate >= monthStart && invDate <= monthEnd;
-          } catch {
-            return false;
-          }
-        });
-        
-        const monthLabReports = (labReports || []).filter(lab => {
-          if (!lab.created_at) return false;
-          try {
-            const labDate = new Date(lab.created_at);
-            return labDate >= monthStart && labDate <= monthEnd;
-          } catch {
-            return false;
-          }
-        });
-        
-        const monthOtSchedules = (otSchedules || []).filter(schedule => {
-          if (!schedule.created_at) return false;
-          try {
-            const scheduleDate = new Date(schedule.created_at);
-            return scheduleDate >= monthStart && scheduleDate <= monthEnd;
-          } catch {
-            return false;
-          }
-        });
-        
-        const monthExpenses = (expenses || []).filter(exp => {
-          if (!exp.created_at) return false;
-          try {
-            const expDate = new Date(exp.created_at);
-            return expDate >= monthStart && expDate <= monthEnd;
-          } catch {
-            return false;
-          }
-        });
-        
-        const hospitalRevenue = monthInvoices.reduce((sum, inv) => sum + (Number(inv.amount) || 0), 0);
-        const pharmacy = monthPharmacyInvoices.reduce((sum, inv) => sum + (Number(inv.final_amount) || 0), 0);
-        const lab = monthLabReports.reduce((sum, lab) => sum + (Number(lab.price) || 0), 0);
-        // Calculate OT revenue excluding doctor expenses
-        const ot = monthOtSchedules.reduce((sum, schedule) => {
-          if (!schedule.total_cost || !schedule.doctor_expense) return sum;
-          return sum + (Number(schedule.total_cost) - Number(schedule.doctor_expense));
-        }, 0);
-        const monthlyExpenses = monthExpenses.reduce((sum, exp) => sum + (Number(exp.amount) || 0), 0);
-        const totalRev = hospitalRevenue + pharmacy + lab + ot;
-        
-        months.push({
-          month: format(monthDate, 'MMM'),
-          hospital: hospitalRevenue,
-          pharmacy,
-          lab,
-          ot,
-          total: totalRev,
-          expenses: monthlyExpenses,
-          profit: totalRev - monthlyExpenses
-        });
-      }
-      
-      return months;
-    } catch (error) {
-      console.error('Error calculating monthly data:', error);
-      return [];
-    }
-  }, [invoices, pharmacyInvoices, labReports, otSchedules, expenses, timeRange, selectedDate]);
+    return monthlyRevenue.map((revenue, index) => {
+      const expense = monthlyExpenses[index] || { amount: 0 };
+      return {
+        month: revenue.month,
+        total: revenue.amount,
+        expenses: expense.amount,
+        profit: revenue.amount - expense.amount,
+        hospital: revenueBySource.hospital,
+        pharmacy: revenueBySource.pharmacy,
+        lab: revenueBySource.lab,
+        ot: revenueBySource.ot
+      };
+    });
+  }, [monthlyRevenue, monthlyExpenses, revenueBySource]);
 
   // Revenue breakdown
   const revenueBreakdown = [
-    { name: 'Hospital Services', value: totalRevenue, color: '#3b82f6' },
-    { name: 'Pharmacy Sales', value: pharmacyRevenue, color: '#10b981' },
-    { name: 'Lab Services', value: labRevenue, color: '#f59e0b' },
-    { name: 'OT Services (Hospital)', value: otRevenue, color: '#8b5cf6' },
+    { name: 'Hospital Services', value: revenueBySource.hospital, color: '#3b82f6' },
+    { name: 'Pharmacy Sales', value: revenueBySource.pharmacy, color: '#10b981' },
+    { name: 'Lab Services', value: revenueBySource.lab, color: '#f59e0b' },
+    { name: 'OT Services (Hospital)', value: revenueBySource.ot, color: '#8b5cf6' },
   ].filter(item => item.value > 0);
 
   // Calculate percentage changes (using current vs previous month)
@@ -409,8 +103,8 @@ export default function FinanceAnalytics() {
     ? (((currentMonth.profit || 0) - (previousMonth.profit || 0)) / Math.abs(previousMonth.profit)) * 100
     : 0;
 
-  // Show loading state after all hooks are processed
-  if (invoicesLoading || pharmacyLoading || labLoading || otLoading || expensesLoading) {
+  // Show loading state
+  if (isLoading) {
     return <div className="p-8">Loading analytics...</div>;
   }
 
@@ -513,10 +207,10 @@ export default function FinanceAnalytics() {
             </CardHeader>
             <CardContent className="pt-0">
               <div className="text-lg xl:text-xl font-bold break-words text-green-600">
-                {formatLargeNumber(combinedRevenue)}
+                {formatLargeNumber(totalRevenue)}
               </div>
               <div className="text-xs text-muted-foreground mt-1">
-                {formatPkrAmount(combinedRevenue)}
+                {formatPkrAmount(totalRevenue)}
               </div>
               <p className={`text-xs flex items-center gap-1 mt-2 ${revenueChange >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                 {revenueChange >= 0 ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
@@ -637,7 +331,7 @@ export default function FinanceAnalytics() {
                <ul className="space-y-2 text-sm">
                  <li className="flex items-center gap-2">
                    <Banknote className="w-4 h-4 text-green-600" />
-                   <span className="break-all">Total Revenue: {formatLargeNumber(combinedRevenue)}</span>
+                   <span className="break-all">Total Revenue: {formatLargeNumber(totalRevenue)}</span>
                  </li>
                  <li className="flex items-center gap-2">
                    <Banknote className="w-4 h-4 text-red-600" />
@@ -654,18 +348,57 @@ export default function FinanceAnalytics() {
                <ul className="space-y-2 text-sm">
                  <li className="flex items-center gap-2">
                    <div className="w-3 h-3 bg-blue-500 rounded-full flex-shrink-0"></div>
-                   <span className="break-all">Hospital Services: {formatLargeNumber(totalRevenue)}</span>
+                   <span className="break-all">Hospital Services: {formatLargeNumber(revenueBySource.hospital)}</span>
                  </li>
                  <li className="flex items-center gap-2">
                    <div className="w-3 h-3 bg-purple-500 rounded-full flex-shrink-0"></div>
-                   <span className="break-all">Pharmacy: {formatLargeNumber(pharmacyRevenue)}</span>
+                   <span className="break-all">Pharmacy: {formatLargeNumber(revenueBySource.pharmacy)}</span>
                  </li>
                  <li className="flex items-center gap-2">
                    <div className="w-3 h-3 bg-green-500 rounded-full flex-shrink-0"></div>
-                   <span className="break-all">Lab Tests: {formatLargeNumber(labRevenue)}</span>
+                   <span className="break-all">Lab Tests: {formatLargeNumber(revenueBySource.lab)}</span>
                  </li>
                </ul>
              </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Recent Activities */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Recent Financial Activities</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-3">
+            {recentActivities.length > 0 ? (
+              recentActivities.map((activity) => (
+                <div key={activity.id} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                  <div className="flex items-center gap-3">
+                    <div className={`w-2 h-2 rounded-full ${
+                      activity.type === 'Refund' ? 'bg-orange-500' :
+                      activity.amount > 0 ? 'bg-green-500' : 'bg-red-500'
+                    }`} />
+                    <div>
+                      <p className="font-medium">{activity.type}</p>
+                      <p className="text-sm text-gray-600 dark:text-gray-400">{activity.description}</p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className={`font-medium ${
+                      activity.amount > 0 ? 'text-green-600' : 'text-red-600'
+                    }`}>
+                      {activity.amount > 0 ? '+' : ''}{formatPkrAmount(activity.amount)}
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      {format(new Date(activity.date), 'MMM dd, HH:mm')}
+                    </p>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <p className="text-gray-500 text-center py-4">No recent activities</p>
+            )}
           </div>
         </CardContent>
       </Card>
