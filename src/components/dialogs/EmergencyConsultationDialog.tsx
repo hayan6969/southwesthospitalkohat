@@ -14,6 +14,7 @@ export function EmergencyConsultationDialog() {
   const [open, setOpen] = useState(false);
   const [patientName, setPatientName] = useState("");
   const [cnic, setCnic] = useState("");
+  const [contactNumber, setContactNumber] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
   const { settings: hospitalSettings } = useHospitalSettings();
 
@@ -27,8 +28,14 @@ export function EmergencyConsultationDialog() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!patientName.trim() || !cnic.trim()) {
+    if (!patientName.trim() || !cnic.trim() || !contactNumber.trim()) {
       toast.error("Please fill in all required fields");
+      return;
+    }
+
+    // Basic validation for contact number
+    if (contactNumber.length < 11) {
+      toast.error("Please enter a valid contact number");
       return;
     }
 
@@ -63,8 +70,9 @@ export function EmergencyConsultationDialog() {
             first_name: patientName.split(' ')[0] || '',
             last_name: patientName.split(' ').slice(1).join(' ') || '',
             email: '',
-            cnic: cnic
-          }
+            phone: contactNumber
+          },
+          cnic: cnic
         }
       };
 
@@ -77,6 +85,7 @@ export function EmergencyConsultationDialog() {
       // Reset form
       setPatientName("");
       setCnic("");
+      setContactNumber("");
     } catch (error) {
       console.error('Error creating emergency consultation:', error);
       toast.error("Failed to create emergency consultation invoice");
@@ -129,6 +138,18 @@ export function EmergencyConsultationDialog() {
               value={cnic}
               onChange={(e) => setCnic(e.target.value)}
               placeholder="XXXXX-XXXXXXX-X"
+              required
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="contactNumber">Contact Number *</Label>
+            <Input
+              id="contactNumber"
+              type="tel"
+              value={contactNumber}
+              onChange={(e) => setContactNumber(e.target.value)}
+              placeholder="03XXXXXXXXX"
               required
             />
           </div>

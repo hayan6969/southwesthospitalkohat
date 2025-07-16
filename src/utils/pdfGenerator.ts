@@ -239,9 +239,9 @@ export const generateInvoicePDF = async (invoice: any) => {
   let yPosition = await addHospitalHeader(doc, 'MEDICAL INVOICE');
   yPosition += 10;
 
-  // Invoice details in a comprehensive box
+  // Invoice details in a comprehensive box - made taller for CNIC
   doc.setDrawColor(0, 0, 0);
-  doc.rect(15, yPosition - 5, pageWidth - 30, 50); // Taller box for more info
+  doc.rect(15, yPosition - 5, pageWidth - 30, 60); // Increased height for CNIC field
   
   doc.setFontSize(11);
   doc.setFont('helvetica', 'bold');
@@ -282,7 +282,16 @@ export const generateInvoicePDF = async (invoice: any) => {
   doc.setFont('helvetica', 'normal');
   doc.text(invoice.status, 155, yPosition + 5);
   
-  // Fourth row (if due date exists)
+  // Fourth row - Add CNIC if available (for emergency consultations)
+  if (invoice.patient?.cnic) {
+    yPosition += 10;
+    doc.setFont('helvetica', 'bold');
+    doc.text('CNIC:', 20, yPosition + 5);
+    doc.setFont('helvetica', 'normal');
+    doc.text(invoice.patient.cnic, 50, yPosition + 5);
+  }
+  
+  // Fifth row (if due date exists) - adjusted for CNIC addition
   if (invoice.due_date) {
     yPosition += 10;
     doc.setFont('helvetica', 'bold');
@@ -291,7 +300,7 @@ export const generateInvoicePDF = async (invoice: any) => {
     doc.text(new Date(invoice.due_date).toLocaleDateString(), 65, yPosition + 5);
   }
 
-  yPosition += 50;
+  yPosition += 60; // Adjusted for larger info box
 
   // Services table
   const tableStartY = yPosition;
