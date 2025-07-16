@@ -12,26 +12,7 @@ export default function ProtectedRoute({ children, allowedRoles }: ProtectedRout
   const [shouldRedirectOffline, setShouldRedirectOffline] = useState(false);
 
   useEffect(() => {
-    if (!navigator.onLine) {
-      const cachedSession = localStorage.getItem('cached_session');
-      if (cachedSession) {
-        try {
-          const parsedSession = JSON.parse(cachedSession);
-          const cachedProfile = localStorage.getItem(`profile_${parsedSession.user.id}`);
-          if (cachedProfile) {
-            const parsedProfile = JSON.parse(cachedProfile);
-            if (parsedProfile.role === 'staff') {
-              console.log('📱 Redirecting offline staff to offline mode');
-              setShouldRedirectOffline(true);
-              window.location.href = '/offline-mode';
-              return;
-            }
-          }
-        } catch (error) {
-          console.error('Error checking offline mode:', error);
-        }
-      }
-    }
+    // Removed offline caching logic
   }, []);
 
   // Show loading if we're redirecting to offline mode

@@ -39,18 +39,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     try {
       console.log('Fetching profile for user:', userId);
       
-      // First try to get from cache if offline
-      if (!navigator.onLine) {
-        const cachedProfile = localStorage.getItem(`profile_${userId}`);
-        if (cachedProfile) {
-          console.log('🔄 Using cached profile for offline access');
-          const parsed = JSON.parse(cachedProfile);
-          return parsed;
-        }
-        console.log('❌ No cached profile found for offline user');
-        return null;
-      }
-      
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
@@ -59,13 +47,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
       if (error) {
         console.error('Error fetching user profile:', error);
-        // If error occurred, try cache as fallback
-        const cachedProfile = localStorage.getItem(`profile_${userId}`);
-        if (cachedProfile) {
-          console.log('🔄 Using cached profile after error');
-          const parsed = JSON.parse(cachedProfile);
-          return parsed;
-        }
         // If profile doesn't exist, return null but don't throw
         if (error.code === 'PGRST116') {
           console.log('No profile found for user, this might be a new user');
@@ -82,10 +63,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           role: data.role as 'admin' | 'doctor' | 'staff' | 'pharmacy' | 'patient' | 'finance'
         };
         
-        // Cache the profile for offline use
-        localStorage.setItem(`profile_${userId}`, JSON.stringify(profile));
-        console.log('✅ Profile cached for offline use');
-        
         return profile;
       }
 
@@ -93,13 +70,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       return null;
     } catch (error) {
       console.error('Exception while fetching user profile:', error);
-      // Try cache on any error
-      const cachedProfile = localStorage.getItem(`profile_${userId}`);
-      if (cachedProfile) {
-        console.log('🔄 Using cached profile after catch error');
-        const parsed = JSON.parse(cachedProfile);
-        return parsed;
-      }
       return null;
     }
   };
@@ -116,63 +86,24 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setSession(session);
         setUser(session?.user ?? null);
 
-        // Cache session for offline use
-        if (session) {
-          console.log('💾 Caching session for offline use');
-          localStorage.setItem('cached_session', JSON.stringify({
-            user: session.user,
-            access_token: session.access_token,
-            expires_at: session.expires_at
-          }));
-        } else {
-          // Clear all cached data when signing out
-          console.log('🗑️ Clearing cached auth data');
-          localStorage.removeItem('cached_session');
-          Object.keys(localStorage).forEach((key) => {
-            if (key.startsWith('profile_')) {
-              localStorage.removeItem(key);
-            }
-          });
-        }
-
         if (session?.user) {
-          // For auth state changes, only fetch profile if we don't have it cached or if online
-          const cachedProfile = localStorage.getItem(`profile_${session.user.id}`);
-          
-          if (cachedProfile && !navigator.onLine) {
-            // Use cached profile when offline
-            console.log('🔄 Using cached profile from auth state change');
-            const parsedProfile = JSON.parse(cachedProfile);
-            if (mounted) {
-              setProfile(parsedProfile);
-              setLoading(false);
-            }
-          } else {
-            // Fetch fresh profile when online or no cache
-            setTimeout(async () => {
-              if (!mounted) return;
-              
-              try {
-                const profileData = await fetchUserProfile(session.user.id);
-                if (mounted) {
-                  console.log('📝 Setting profile data from auth state change:', profileData);
-                  setProfile(profileData);
-                  setLoading(false);
-                }
-              } catch (error) {
-                console.error('Error in profile fetch timeout:', error);
-                // Fallback to cached profile if fetch fails
-                const fallbackProfile = localStorage.getItem(`profile_${session.user.id}`);
-                if (fallbackProfile && mounted) {
-                  console.log('🔄 Using cached profile as fallback');
-                  setProfile(JSON.parse(fallbackProfile));
-                }
-                if (mounted) {
-                  setLoading(false);
-                }
+          setTimeout(async () => {
+            if (!mounted) return;
+            
+            try {
+              const profileData = await fetchUserProfile(session.user.id);
+              if (mounted) {
+                console.log('📝 Setting profile data from auth state change:', profileData);
+                setProfile(profileData);
+                setLoading(false);
               }
-            }, 50); // Reduced timeout for faster response
-          }
+            } catch (error) {
+              console.error('Error in profile fetch timeout:', error);
+              if (mounted) {
+                setLoading(false);
+              }
+            }
+          }, 50);
         } else {
           if (mounted) {
             setProfile(null);
@@ -187,91 +118,24 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       try {
         console.log('🔍 Initializing auth...');
         
-        // Always check for cached session first for better offline experience
-        const cachedSession = localStorage.getItem('cached_session');
-        let currentSession = null;
-        let currentProfile = null;
+        const { data: { session: onlineSession }, error } = await supabase.auth.getSession();
         
-        if (cachedSession) {
-          try {
-            const parsedSession = JSON.parse(cachedSession);
-            console.log('🔄 Found cached session for:', parsedSession.user.email);
-            
-            // Check if cached session is still valid (not expired)
-            if (parsedSession.expires_at && new Date(parsedSession.expires_at * 1000) > new Date()) {
-              console.log('✅ Cached session is still valid');
-              const cachedProfile = localStorage.getItem(`profile_${parsedSession.user.id}`);
-              
-              if (cachedProfile) {
-                const parsedProfile = JSON.parse(cachedProfile);
-                console.log('🔄 Using cached session and profile');
-                
-                // Set cached data immediately
-                if (mounted) {
-                  setUser(parsedSession.user);
-                  setProfile(parsedProfile);
-                  setLoading(false);
-                }
-                
-                // If online, try to get fresh session in background
-                if (navigator.onLine) {
-                  try {
-                    const { data: { session: onlineSession }, error } = await supabase.auth.getSession();
-                    if (!error && onlineSession?.user) {
-                      console.log('📡 Updated with fresh online session');
-                      // Don't set loading true again, just update data
-                      currentSession = onlineSession;
-                      // Profile will be updated by auth state change listener
-                    }
-                  } catch (error) {
-                    console.log('Background session refresh failed, using cache');
-                  }
-                }
-                return; // Early return since we have valid cached data
-              } else {
-                console.log('❌ No cached profile found for cached session');
-              }
-            } else {
-              console.log('⏰ Cached session expired, removing');
-              localStorage.removeItem('cached_session');
-              localStorage.removeItem(`profile_${parsedSession.user.id}`);
-            }
-          } catch (error) {
-            console.error('Error parsing cached session:', error);
-            localStorage.removeItem('cached_session');
-          }
-        }
-        
-        // If no valid cache, try to get fresh session (only if online)
-        if (navigator.onLine) {
-          console.log('📡 Online - checking for fresh session...');
-          const { data: { session: onlineSession }, error } = await supabase.auth.getSession();
+        if (error) {
+          console.error('Error getting session:', error);
+        } else if (onlineSession?.user) {
+          console.log('✅ Found active online session for:', onlineSession.user.email);
+          const currentProfile = await fetchUserProfile(onlineSession.user.id);
           
-          if (error) {
-            console.error('Error getting session:', error);
-          } else if (onlineSession?.user) {
-            console.log('✅ Found active online session for:', onlineSession.user.email);
-            currentSession = onlineSession;
-            currentProfile = await fetchUserProfile(onlineSession.user.id);
+          if (mounted) {
+            setSession(onlineSession);
+            setUser(onlineSession.user);
+            setProfile(currentProfile);
           }
-        } else {
-          console.log('📱 Offline - no valid cache found');
         }
         
-        // Set the final state
-        if (!mounted) return;
-        
-        setSession(currentSession);
-        setUser(currentSession?.user ?? null);
-        setProfile(currentProfile);
-        setLoading(false);
-        
-        console.log('🏁 Auth initialization complete:', { 
-          hasSession: !!currentSession, 
-          hasProfile: !!currentProfile,
-          userEmail: currentSession?.user?.email,
-          isOnline: navigator.onLine
-        });
+        if (mounted) {
+          setLoading(false);
+        }
         
       } catch (error) {
         console.error('Error in initializeAuth:', error);
