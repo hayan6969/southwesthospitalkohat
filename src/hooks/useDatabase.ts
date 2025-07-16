@@ -501,26 +501,17 @@ export const useCreatePatientWithProfile = () => {
       const email = `${patientData.phone}@patient.local`;
       console.log('Creating patient with email:', email);
 
-      // Store current session and access token
-      const { data: currentSession } = await supabase.auth.getSession();
-      const originalAccessToken = currentSession?.session?.access_token;
-      const originalRefreshToken = currentSession?.session?.refresh_token;
-      
-      // Create user account first with phone as email and CNIC as password
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email,
-        password: patientData.cnic,
-        options: {
-          data: {
-            first_name: patientData.first_name,
-            last_name: patientData.last_name,
-            role: 'patient'
-          }
-        }
+      // Create user account using admin function to avoid auto-signin
+      const { data: authData, error: authError } = await supabase.rpc('create_user_account', {
+        p_email: email,
+        p_password: patientData.cnic,
+        p_first_name: patientData.first_name,
+        p_last_name: patientData.last_name,
+        p_role: 'patient'
       });
 
       if (authError) {
-        console.error('Auth signup error:', authError);
+        console.error('Auth creation error:', authError);
         if (authError.message.includes('already registered') || authError.message.includes('User already registered')) {
           throw new Error('DUPLICATE_PHONE');
         }
@@ -529,9 +520,9 @@ export const useCreatePatientWithProfile = () => {
         }
         throw authError;
       }
-      if (!authData.user) throw new Error('Failed to create user account');
+      if (!authData) throw new Error('Failed to create user account');
 
-      const patientId = authData.user.id;
+      const patientId = authData;
       
       // Create patient record
       const { data: patient, error: patientError } = await supabase
@@ -544,45 +535,7 @@ export const useCreatePatientWithProfile = () => {
         .single();
 
       if (patientError) {
-        // CNIC uniqueness is not enforced anymore - multiple patients can share CNIC
         throw patientError;
-      }
-
-      // Immediately sign out the new patient account and restore original session
-      if (currentSession?.session && originalAccessToken && originalRefreshToken) {
-        try {
-          // Sign out the new patient account first
-          await supabase.auth.signOut();
-          
-          // Small delay to ensure signout is processed
-          await new Promise(resolve => setTimeout(resolve, 100));
-          
-          // Restore the original session
-          await supabase.auth.setSession({
-            access_token: originalAccessToken,
-            refresh_token: originalRefreshToken
-          });
-        } catch (error) {
-          console.error('Failed to restore original session:', error);
-          // If session restoration fails, try manual cleanup and restoration
-          try {
-            // Clear any remaining session state
-            await supabase.auth.signOut({ scope: 'global' });
-            
-            // Attempt to restore session one more time
-            await supabase.auth.setSession({
-              access_token: originalAccessToken,
-              refresh_token: originalRefreshToken
-            });
-          } catch (retryError) {
-            console.error('Session restoration retry failed:', retryError);
-            // Last resort: force page reload to get clean state
-            window.location.reload();
-          }
-        }
-      } else {
-        // If no original session, just sign out the patient account
-        await supabase.auth.signOut();
       }
 
       // Profile will be created automatically by the trigger
