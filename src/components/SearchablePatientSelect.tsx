@@ -40,9 +40,25 @@ export function SearchablePatientSelect({
   isLoading = false,
 }: SearchablePatientSelectProps) {
   const [open, setOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
 
   const selectedPatient = patients?.find((patient) => patient.id === value);
   const selectedPatientName = selectedPatient ? getPatientName(selectedPatient.id, patientNames || []) : "";
+
+  // Filter patients based on search query
+  const filteredPatients = patients?.filter((patient) => {
+    if (!searchQuery) return true;
+    
+    const patientName = getPatientName(patient.id, patientNames || []).toLowerCase();
+    const patientNumber = (patient.patient_number || '').toLowerCase();
+    const query = searchQuery.toLowerCase();
+    
+    return (
+      patientName.includes(query) ||
+      patientNumber.includes(query) ||
+      patient.id.toLowerCase().includes(query)
+    );
+  }) || [];
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -61,24 +77,28 @@ export function SearchablePatientSelect({
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-full p-0" align="start">
-        <Command>
-          <CommandInput placeholder="Search by patient ID or name..." />
-          <CommandList>
+        <Command shouldFilter={false}>
+          <CommandInput 
+            placeholder="Search by patient ID or name..." 
+            value={searchQuery}
+            onValueChange={setSearchQuery}
+          />
+          <CommandList className="max-h-[200px] overflow-y-auto">
             <CommandEmpty>No patient found.</CommandEmpty>
             <CommandGroup>
-              {patients?.map((patient) => {
+              {filteredPatients.map((patient) => {
                 const patientName = getPatientName(patient.id, patientNames || []);
-                const displayText = `${patient.patient_number || 'N/A'} - ${patientName}`;
-                const searchValue = `${patient.patient_number || ''} ${patientName} ${patient.id}`.toLowerCase();
                 
                 return (
                   <CommandItem
                     key={patient.id}
-                    value={searchValue}
+                    value={patient.id}
                     onSelect={() => {
                       onValueChange(patient.id);
                       setOpen(false);
+                      setSearchQuery("");
                     }}
+                    className="cursor-pointer"
                   >
                     <Check
                       className={cn(
@@ -89,7 +109,7 @@ export function SearchablePatientSelect({
                     <div className="flex flex-col flex-1">
                       <span className="font-medium">{patientName}</span>
                       <span className="text-sm text-muted-foreground">
-                        Patient ID: {patient.patient_number || 'N/A'}
+                        ID: {patient.patient_number || 'N/A'}
                       </span>
                     </div>
                   </CommandItem>
