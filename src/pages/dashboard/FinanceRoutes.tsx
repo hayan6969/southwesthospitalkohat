@@ -8,12 +8,14 @@ import FinancePayroll from "./finance/FinancePayroll";
 import FinanceDoctorPayments from "./finance/FinanceDoctorPayments";
 import FinancePharmacy from "./finance/FinancePharmacy";
 import FinanceRefunds from "./finance/FinanceRefunds";
+import FinanceDaily from "./finance/FinanceDaily";
 
 export default function FinanceRoutes() {
   return (
     <FinanceLayout>
       <Routes>
         <Route index element={<DashboardFinance />} />
+        <Route path="daily" element={<FinanceDaily />} />
         <Route path="income" element={<FinanceIncome />} />
         <Route path="expenses" element={<FinanceExpenses />} />
         <Route path="analytics" element={<FinanceAnalytics />} />

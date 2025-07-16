@@ -1,7 +1,7 @@
 import { ReactNode } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useLocation, useNavigate } from "react-router-dom";
-import { Calculator, ChartBar, Receipt, Users, Info, User, LogOut, Stethoscope, Pill, RotateCcw } from "lucide-react";
+import { Calculator, ChartBar, Receipt, Users, Info, User, LogOut, Stethoscope, Pill, RotateCcw, Calendar } from "lucide-react";
 import { useHospitalSettings } from "@/hooks/useHospitalSettings";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
@@ -19,6 +19,7 @@ export default function FinanceLayout({ children }: FinanceLayoutProps) {
   const getCurrentTab = () => {
     const path = location.pathname;
     if (path === "/dashboard/finance") return "dashboard";
+    if (path === "/dashboard/finance/daily") return "daily";
     if (path === "/dashboard/finance/income") return "income";
     if (path === "/dashboard/finance/analytics") return "analytics";
     if (path === "/dashboard/finance/expenses") return "expenses";
@@ -33,6 +34,9 @@ export default function FinanceLayout({ children }: FinanceLayoutProps) {
     switch (value) {
       case "dashboard":
         navigate("/dashboard/finance");
+        break;
+      case "daily":
+        navigate("/dashboard/finance/daily");
         break;
       case "income":
         navigate("/dashboard/finance/income");
@@ -102,10 +106,14 @@ export default function FinanceLayout({ children }: FinanceLayoutProps) {
         </div>
 
       <Tabs value={getCurrentTab()} onValueChange={handleTabChange} className="w-full">
-        <TabsList className="grid w-full grid-cols-8 mb-8">
+        <TabsList className="grid w-full grid-cols-9 mb-8">
           <TabsTrigger value="dashboard" className="flex items-center gap-2">
             <Info className="w-4 h-4" />
             Dashboard
+          </TabsTrigger>
+          <TabsTrigger value="daily" className="flex items-center gap-2">
+            <Calendar className="w-4 h-4" />
+            Daily
           </TabsTrigger>
           <TabsTrigger value="income" className="flex items-center gap-2">
             <Calculator className="w-4 h-4" />
