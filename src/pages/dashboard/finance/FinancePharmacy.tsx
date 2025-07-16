@@ -11,6 +11,7 @@ import { TrendingUp, Banknote, Package, ShoppingCart, AlertTriangle, FileText, C
 import { format, subDays, startOfDay } from "date-fns";
 import { formatPkrAmount } from "@/utils/currency";
 import { PharmacyInvoiceDetailsDialog } from "@/components/dialogs/PharmacyInvoiceDetailsDialog";
+import { PharmacyAccountDialog } from "@/components/dialogs/PharmacyAccountDialog";
 
 export default function FinancePharmacy() {
   const { data: stats, isLoading: statsLoading } = usePharmacyStats();
@@ -19,6 +20,7 @@ export default function FinancePharmacy() {
   const [timeRange, setTimeRange] = useState("30");
   const [selectedInvoice, setSelectedInvoice] = useState(null);
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
+  const [accountDialogOpen, setAccountDialogOpen] = useState(false);
 
   const getDaysArray = (days: number) => {
     const result = [];
@@ -110,17 +112,26 @@ export default function FinancePharmacy() {
           <p className="text-gray-600 mt-1">Monitor pharmacy sales performance, revenue trends, and inventory status</p>
         </div>
         
-        <Select value={timeRange} onValueChange={setTimeRange}>
-          <SelectTrigger className="w-40">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="7">Last 7 days</SelectItem>
-            <SelectItem value="14">Last 14 days</SelectItem>
-            <SelectItem value="30">Last 30 days</SelectItem>
-            <SelectItem value="90">Last 90 days</SelectItem>
-          </SelectContent>
-        </Select>
+        <div className="flex items-center gap-3">
+          <Button 
+            onClick={() => setAccountDialogOpen(true)}
+            className="bg-blue-600 hover:bg-blue-700"
+          >
+            Pharmacy Account
+          </Button>
+          
+          <Select value={timeRange} onValueChange={setTimeRange}>
+            <SelectTrigger className="w-40">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="7">Last 7 days</SelectItem>
+              <SelectItem value="14">Last 14 days</SelectItem>
+              <SelectItem value="30">Last 30 days</SelectItem>
+              <SelectItem value="90">Last 90 days</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       {/* Financial KPIs */}
@@ -362,6 +373,11 @@ export default function FinancePharmacy() {
         invoice={selectedInvoice}
         open={detailsDialogOpen}
         onOpenChange={setDetailsDialogOpen}
+      />
+
+      <PharmacyAccountDialog
+        open={accountDialogOpen}
+        onOpenChange={setAccountDialogOpen}
       />
     </div>
   );

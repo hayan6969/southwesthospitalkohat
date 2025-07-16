@@ -1083,6 +1083,33 @@ export type Database = {
           },
         ]
       }
+      pharmacy_account: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          notes: string | null
+          starting_balance: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          notes?: string | null
+          starting_balance?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          notes?: string | null
+          starting_balance?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       pharmacy_invoice_items: {
         Row: {
           created_at: string | null
