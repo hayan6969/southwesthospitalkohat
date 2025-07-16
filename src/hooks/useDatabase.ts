@@ -546,21 +546,41 @@ export const useCreatePatientWithProfile = () => {
         throw patientError;
       }
 
-      // Immediately sign out the new patient account
-      await supabase.auth.signOut();
-      
-      // Restore the original session if it exists
+      // Immediately sign out the new patient account and restore original session
       if (currentSession?.session && originalAccessToken && originalRefreshToken) {
         try {
+          // Sign out the new patient account first
+          await supabase.auth.signOut();
+          
+          // Small delay to ensure signout is processed
+          await new Promise(resolve => setTimeout(resolve, 100));
+          
+          // Restore the original session
           await supabase.auth.setSession({
             access_token: originalAccessToken,
             refresh_token: originalRefreshToken
           });
         } catch (error) {
           console.error('Failed to restore original session:', error);
-          // If session restoration fails, force a page reload to get clean state
-          window.location.reload();
+          // If session restoration fails, try manual cleanup and restoration
+          try {
+            // Clear any remaining session state
+            await supabase.auth.signOut({ scope: 'global' });
+            
+            // Attempt to restore session one more time
+            await supabase.auth.setSession({
+              access_token: originalAccessToken,
+              refresh_token: originalRefreshToken
+            });
+          } catch (retryError) {
+            console.error('Session restoration retry failed:', retryError);
+            // Last resort: force page reload to get clean state
+            window.location.reload();
+          }
         }
+      } else {
+        // If no original session, just sign out the patient account
+        await supabase.auth.signOut();
       }
 
       // Profile will be created automatically by the trigger
