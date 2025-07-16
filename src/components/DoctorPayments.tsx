@@ -9,7 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { CalendarIcon, Banknote, Users, ClipboardList, CheckCircle, Clock, AlertCircle } from "lucide-react";
-import { format, startOfMonth, endOfMonth, subMonths } from "date-fns";
+import { format } from "date-fns";
 import { formatPkrAmount } from "@/utils/currency";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
@@ -44,15 +44,14 @@ export function DoctorPayments() {
   const { profile } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [selectedMonth, setSelectedMonth] = useState(new Date());
+  const [selectedDate, setSelectedDate] = useState(new Date());
   const [paymentNotes, setPaymentNotes] = useState<Record<string, string>>({});
 
-  // Fetch doctor payments
+  // Fetch doctor payments for the selected date
   const { data: doctorPayments, isLoading } = useQuery({
-    queryKey: ['doctor-payments', selectedMonth],
+    queryKey: ['doctor-payments', selectedDate],
     queryFn: async () => {
-      const startDate = startOfMonth(selectedMonth).toISOString().split('T')[0];
-      const endDate = endOfMonth(selectedMonth).toISOString().split('T')[0];
+      const targetDate = selectedDate.toISOString().split('T')[0];
 
       const { data, error } = await supabase
         .from('doctor_payments')
@@ -67,8 +66,8 @@ export function DoctorPayments() {
             )
           )
         `)
-        .gte('period_start', startDate)
-        .lte('period_end', endDate)
+        .eq('period_start', targetDate)
+        .eq('period_end', targetDate)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -88,12 +87,12 @@ export function DoctorPayments() {
     refetchInterval: 30000
   });
 
-  // Generate payments for current month
+  // Generate payments for selected date
   const generatePaymentsMutation = useMutation({
     mutationFn: async () => {
       const { data, error } = await supabase
-        .rpc('generate_doctor_payments', {
-          target_month: selectedMonth.toISOString().split('T')[0]
+        .rpc('generate_daily_doctor_payments', {
+          target_date: selectedDate.toISOString().split('T')[0]
         });
 
       if (error) throw error;
@@ -101,8 +100,8 @@ export function DoctorPayments() {
     },
     onSuccess: (count) => {
       toast({
-        title: "Payments Generated",
-        description: `Generated ${count} doctor payment records for ${format(selectedMonth, 'MMMM yyyy')}`,
+        title: "Daily Payments Generated",
+        description: `Generated ${count} doctor payment records for ${format(selectedDate, 'MMM d, yyyy')}`,
       });
       queryClient.invalidateQueries({ queryKey: ['doctor-payments'] });
     },
@@ -183,26 +182,26 @@ export function DoctorPayments() {
 
   return (
     <div className="space-y-6">
-      {/* Header with Month Selector */}
+      {/* Header with Date Selector */}
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
-            <CardTitle>Doctor Payments Management</CardTitle>
+            <CardTitle>Daily Doctor Payments Management</CardTitle>
             <div className="flex gap-2">
               <Popover>
                 <PopoverTrigger asChild>
                   <Button variant="outline" className="w-auto justify-start text-left font-normal">
                     <CalendarIcon className="mr-2 h-4 w-4" />
-                    {format(selectedMonth, "MMMM yyyy")}
+                    {format(selectedDate, "PPP")}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="start">
                   <Calendar
                     mode="single"
-                    selected={selectedMonth}
-                    onSelect={(date) => date && setSelectedMonth(date)}
+                    selected={selectedDate}
+                    onSelect={(date) => date && setSelectedDate(date)}
                     initialFocus
-                    className="pointer-events-auto"
+                    className={cn("p-3 pointer-events-auto")}
                   />
                 </PopoverContent>
               </Popover>
@@ -210,7 +209,7 @@ export function DoctorPayments() {
                 onClick={() => generatePaymentsMutation.mutate()}
                 disabled={generatePaymentsMutation.isPending}
               >
-                {generatePaymentsMutation.isPending ? "Generating..." : "Generate Payments"}
+                {generatePaymentsMutation.isPending ? "Generating..." : "Generate Daily Payments"}
               </Button>
             </div>
           </div>
@@ -240,7 +239,7 @@ export function DoctorPayments() {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-muted-foreground">Paid This Month</p>
+                <p className="text-sm font-medium text-muted-foreground">Paid Today</p>
                 <p className="text-2xl font-bold text-green-600">
                   {formatPkrAmount(totalPaidAmount)}
                 </p>
@@ -265,7 +264,7 @@ export function DoctorPayments() {
               <Users className="h-8 w-8 text-blue-600" />
             </div>
             <p className="text-xs text-muted-foreground mt-2">
-              Active in {format(selectedMonth, "MMMM yyyy")}
+              Active on {format(selectedDate, "PPP")}
             </p>
           </CardContent>
         </Card>
@@ -282,7 +281,7 @@ export function DoctorPayments() {
               <Banknote className="h-8 w-8 text-purple-600" />
             </div>
             <p className="text-xs text-muted-foreground mt-2">
-              Complete month earnings
+              Complete daily earnings
             </p>
           </CardContent>
         </Card>
@@ -317,7 +316,10 @@ export function DoctorPayments() {
                         Dr. {payment.doctor.first_name} {payment.doctor.last_name}
                       </TableCell>
                       <TableCell>
-                        {format(new Date(payment.period_start), 'MMM d')} - {format(new Date(payment.period_end), 'MMM d, yyyy')}
+                        {payment.period_start === payment.period_end ? 
+                          format(new Date(payment.period_start), 'PPP') :
+                          `${format(new Date(payment.period_start), 'MMM d')} - ${format(new Date(payment.period_end), 'MMM d, yyyy')}`
+                        }
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-1">
@@ -405,7 +407,7 @@ export function DoctorPayments() {
                 ) : (
                   <TableRow>
                     <TableCell colSpan={9} className="text-center text-muted-foreground py-8">
-                      No doctor payments found for {format(selectedMonth, 'MMMM yyyy')}
+                      No doctor payments found for {format(selectedDate, 'PPP')}
                     </TableCell>
                   </TableRow>
                 )}

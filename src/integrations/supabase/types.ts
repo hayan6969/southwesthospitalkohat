@@ -1390,6 +1390,10 @@ export type Database = {
         Args: { user_uuid: string }
         Returns: boolean
       }
+      generate_daily_doctor_payments: {
+        Args: { target_date: string }
+        Returns: number
+      }
       generate_doctor_payments: {
         Args: { target_month: string }
         Returns: number
