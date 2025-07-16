@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Combobox } from "@/components/ui/combobox";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { useMedicines, useCreatePharmacyInvoice } from "@/hooks/useDatabase";
 import { formatPkrAmount } from "@/utils/currency";
@@ -31,13 +31,6 @@ export default function PharmacySell() {
 
   const { data: medicines, isLoading } = useMedicines();
   const createInvoice = useCreatePharmacyInvoice();
-
-  // Prepare medicine options for searchable dropdown
-  const medicineOptions = medicines?.filter(m => m.stock_quantity > 0).map(medicine => ({
-    value: medicine.id,
-    label: `${medicine.name} - ${formatPkrAmount(medicine.selling_price)} (Stock: ${medicine.stock_quantity})`,
-    searchText: `${medicine.name} ${medicine.formula || ''} ${medicine.company_name || ''}`.toLowerCase()
-  })) || [];
 
   const addToCart = () => {
     if (!selectedMedicineId || quantity <= 0) {
@@ -160,15 +153,7 @@ export default function PharmacySell() {
         }))
       };
       
-      console.log("Generating PDF with data:", pdfData);
-      
-      try {
-        await generatePharmacyInvoicePDF(pdfData);
-        toast.success("Sale completed successfully! Invoice opened in new tab.");
-      } catch (pdfError) {
-        console.error("PDF generation error:", pdfError);
-        toast.error("Sale completed but failed to generate PDF. Please try downloading from the invoices list.");
-      }
+      await generatePharmacyInvoicePDF(pdfData);
       
       // Clear the form
       setCart([]);
@@ -176,6 +161,7 @@ export default function PharmacySell() {
       setCustomerPhone("");
       setDiscount(0);
       
+      toast.success("Sale completed successfully! Invoice opened in new tab.");
     } catch (error) {
       toast.error("Failed to complete sale");
       console.error("Sale error:", error);
@@ -202,15 +188,18 @@ export default function PharmacySell() {
             <CardContent className="space-y-4">
               <div>
                 <Label>Select Medicine</Label>
-                <Combobox
-                  options={medicineOptions}
-                  value={selectedMedicineId}
-                  onValueChange={setSelectedMedicineId}
-                  placeholder="Search medicine by name, formula, or company..."
-                  searchPlaceholder="Search medicines..."
-                  emptyText="No medicine found."
-                  className="w-full"
-                />
+                <Select value={selectedMedicineId} onValueChange={setSelectedMedicineId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Choose medicine..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {medicines?.filter(m => m.stock_quantity > 0).map((medicine) => (
+                      <SelectItem key={medicine.id} value={medicine.id}>
+                        {medicine.name} - {formatPkrAmount(medicine.selling_price)} (Stock: {medicine.stock_quantity})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
               <div>
