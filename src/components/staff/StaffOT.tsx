@@ -57,6 +57,7 @@ export function StaffOT() {
   const [completeDialog, setCompleteDialog] = useState(false);
   const [completionNotes, setCompletionNotes] = useState("");
   const [selectedScheduleItem, setSelectedScheduleItem] = useState<OTScheduleItem | null>(null);
+  const [downloadingInvoice, setDownloadingInvoice] = useState<string | null>(null);
   const { toast } = useToast();
   const { data: patientNames } = usePatientNames();
   const { data: doctorNames } = useDoctorNames();
@@ -79,7 +80,9 @@ export function StaffOT() {
         (payload) => {
           console.log('🔄 OT schedule change detected:', payload);
           // Refetch OT schedules when changes occur
-          fetchOTSchedules();
+          setTimeout(() => {
+            fetchOTSchedules();
+          }, 100); // Small delay to ensure DB consistency
         }
       )
       .subscribe();
@@ -89,7 +92,7 @@ export function StaffOT() {
       console.log('🔌 Cleaning up OT real-time channel...');
       supabase.removeChannel(channel);
     };
-  }, []);
+  }, [patientNames, doctorNames]); // Add dependencies to ensure proper filtering
 
   const fetchOTSchedules = async () => {
     try {
@@ -229,6 +232,7 @@ export function StaffOT() {
   };
 
   const handleDownloadInvoice = async (scheduleItem: OTScheduleItem) => {
+    setDownloadingInvoice(scheduleItem.id);
     try {
       const patientName = getPatientName(scheduleItem.patient_id, patientNames || []);
       
@@ -325,6 +329,8 @@ export function StaffOT() {
         description: "Failed to generate invoice PDF",
         variant: "destructive",
       });
+    } finally {
+      setDownloadingInvoice(null);
     }
   };
 
@@ -503,10 +509,20 @@ export function StaffOT() {
                               size="sm" 
                               variant="outline"
                               onClick={() => handleDownloadInvoice(ot)}
+                              disabled={downloadingInvoice === ot.id}
                               className="text-blue-600 hover:text-blue-700"
                             >
-                              <Download className="w-3 h-3 mr-1" />
-                              Invoice
+                              {downloadingInvoice === ot.id ? (
+                                <>
+                                  <div className="w-3 h-3 mr-1 animate-spin rounded-full border-2 border-blue-600 border-t-transparent" />
+                                  Generating...
+                                </>
+                              ) : (
+                                <>
+                                  <Download className="w-3 h-3 mr-1" />
+                                  Invoice
+                                </>
+                              )}
                             </Button>
                           </div>
                         </TableCell>
