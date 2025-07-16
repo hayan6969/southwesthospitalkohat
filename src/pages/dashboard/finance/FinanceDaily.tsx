@@ -12,6 +12,7 @@ import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { formatPkrAmount } from "@/utils/currency";
+import { generateDailyClosingPDF } from "@/utils/pdfGenerator";
 import { StatsCard } from "@/components/StatsCard";
 import { toast } from "sonner";
 
@@ -308,17 +309,17 @@ export default function FinanceDaily() {
     mutationFn: async () => {
       if (!detailedData || !dailyData) throw new Error('No data available');
 
-      const { error } = await supabase.rpc('create_daily_closing', {
-        p_closing_date: targetDate,
-        p_closing_time: new Date().toISOString(),
-        p_day_name: format(selectedDate, 'EEEE'),
-        p_hospital_revenue: dailyData.totalHospitalRevenue,
-        p_pharmacy_revenue: dailyData.pharmacyRevenue,
-        p_pharmacy_profit: dailyData.pharmacyProfit,
-        p_total_expenses: dailyData.totalExpenses,
-        p_total_refunds: dailyData.totalRefunds,
-        p_net_profit: (dailyData.totalHospitalRevenue + dailyData.pharmacyProfit) - dailyData.totalExpenses - dailyData.totalRefunds,
-        p_transactions_data: {
+      const closingData = {
+        closingDate: targetDate,
+        closingTime: new Date().toISOString(),
+        dayName: format(selectedDate, 'EEEE'),
+        hospitalRevenue: dailyData.totalHospitalRevenue,
+        pharmacyRevenue: dailyData.pharmacyRevenue,
+        pharmacyProfit: dailyData.pharmacyProfit,
+        totalExpenses: dailyData.totalExpenses,
+        totalRefunds: dailyData.totalRefunds,
+        netProfit: (dailyData.totalHospitalRevenue + dailyData.pharmacyProfit) - dailyData.totalExpenses - dailyData.totalRefunds,
+        transactionsData: {
           hospitalInvoices: detailedData.hospitalInvoices,
           pharmacyInvoices: detailedData.pharmacyInvoices,
           labReports: detailedData.labReports,
@@ -327,12 +328,30 @@ export default function FinanceDaily() {
           expenses: detailedData.expenses,
           refunds: detailedData.refunds
         }
+      };
+
+      const { error } = await supabase.rpc('create_daily_closing', {
+        p_closing_date: closingData.closingDate,
+        p_closing_time: closingData.closingTime,
+        p_day_name: closingData.dayName,
+        p_hospital_revenue: closingData.hospitalRevenue,
+        p_pharmacy_revenue: closingData.pharmacyRevenue,
+        p_pharmacy_profit: closingData.pharmacyProfit,
+        p_total_expenses: closingData.totalExpenses,
+        p_total_refunds: closingData.totalRefunds,
+        p_net_profit: closingData.netProfit,
+        p_transactions_data: closingData.transactionsData
       });
 
       if (error) throw error;
+      
+      // Generate PDF after successful database insertion
+      await generateDailyClosingPDF(closingData);
+      
+      return closingData;
     },
     onSuccess: () => {
-      toast.success('Daily closing completed successfully!');
+      toast.success('Daily closing completed successfully! PDF report generated.');
       setShowClosingDialog(false);
       queryClient.invalidateQueries({ queryKey: ['last-daily-closing'] });
     },

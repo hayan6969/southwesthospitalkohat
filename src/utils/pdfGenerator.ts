@@ -539,3 +539,269 @@ export const generateOTPDF = async (data: {
   const pdfUrl = URL.createObjectURL(pdfBlob);
   window.open(pdfUrl, '_blank');
 };
+
+// Generate daily closing PDF
+export const generateDailyClosingPDF = async (data: {
+  closingDate: string;
+  closingTime: string;
+  dayName: string;
+  hospitalRevenue: number;
+  pharmacyRevenue: number;
+  pharmacyProfit: number;
+  totalExpenses: number;
+  totalRefunds: number;
+  netProfit: number;
+  transactionsData: any;
+}) => {
+  const doc = new jsPDF();
+  const pageWidth = doc.internal.pageSize.width;
+  let yPosition = 30;
+
+  // Add header
+  await addHospitalHeader(doc, 'Daily Financial Closing Report');
+  yPosition += 60;
+
+  // Date and Day information
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(16);
+  doc.setTextColor(40, 40, 40);
+  doc.text(`${data.dayName}, ${new Date(data.closingDate).toLocaleDateString()}`, pageWidth / 2, yPosition, { align: 'center' });
+  yPosition += 10;
+  
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(10);
+  doc.setTextColor(100, 100, 100);
+  doc.text(`Closing Time: ${new Date(data.closingTime).toLocaleString()}`, pageWidth / 2, yPosition, { align: 'center' });
+  yPosition += 20;
+
+  // Pharmacy Section
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(14);
+  doc.setTextColor(40, 40, 40);
+  doc.text('PHARMACY TRANSACTIONS', 20, yPosition);
+  yPosition += 15;
+
+  // Pharmacy Invoices
+  if (data.transactionsData?.pharmacyInvoices?.length > 0) {
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(11);
+    doc.text('Pharmacy Sales:', 25, yPosition);
+    yPosition += 10;
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+    data.transactionsData.pharmacyInvoices.forEach((invoice: any, index: number) => {
+      if (yPosition > 250) {
+        doc.addPage();
+        yPosition = 30;
+      }
+      
+      const customerName = invoice.customer_name || 'Walk-in Customer';
+      const invoiceDetails = `${index + 1}. Invoice #${invoice.invoice_number} - ${customerName} - ${formatPkrAmount(invoice.final_amount)}`;
+      doc.text(invoiceDetails, 30, yPosition);
+      yPosition += 8;
+
+      // Add medicine details
+      if (invoice.pharmacy_invoice_items?.length > 0) {
+        invoice.pharmacy_invoice_items.forEach((item: any) => {
+          if (yPosition > 250) {
+            doc.addPage();
+            yPosition = 30;
+          }
+          const medicineName = item.medicines?.name || 'Unknown Medicine';
+          const itemDetail = `   • ${medicineName} (Qty: ${item.quantity}) - ${formatPkrAmount(item.total_price)}`;
+          doc.text(itemDetail, 35, yPosition);
+          yPosition += 6;
+        });
+      }
+      yPosition += 3;
+    });
+    yPosition += 10;
+  }
+
+  // Hospital Section
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(14);
+  doc.setTextColor(40, 40, 40);
+  doc.text('HOSPITAL TRANSACTIONS', 20, yPosition);
+  yPosition += 15;
+
+  // Hospital Invoices (Consultations)
+  if (data.transactionsData?.hospitalInvoices?.length > 0) {
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(11);
+    doc.text('Consultation Fees:', 25, yPosition);
+    yPosition += 10;
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+    data.transactionsData.hospitalInvoices.forEach((invoice: any, index: number) => {
+      if (yPosition > 250) {
+        doc.addPage();
+        yPosition = 30;
+      }
+      
+      const patientName = invoice.patients?.profiles?.first_name && invoice.patients?.profiles?.last_name 
+        ? `${invoice.patients.profiles.first_name} ${invoice.patients.profiles.last_name}`
+        : 'Unknown Patient';
+      const invoiceDetails = `${index + 1}. Invoice #${invoice.invoice_number} - ${patientName} - ${formatPkrAmount(invoice.amount)}`;
+      doc.text(invoiceDetails, 30, yPosition);
+      yPosition += 8;
+    });
+    yPosition += 10;
+  }
+
+  // Lab Reports
+  if (data.transactionsData?.labReports?.length > 0) {
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(11);
+    doc.text('Laboratory Tests:', 25, yPosition);
+    yPosition += 10;
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+    data.transactionsData.labReports.forEach((lab: any, index: number) => {
+      if (yPosition > 250) {
+        doc.addPage();
+        yPosition = 30;
+      }
+      
+      const patientName = lab.patients?.profiles?.first_name && lab.patients?.profiles?.last_name 
+        ? `${lab.patients.profiles.first_name} ${lab.patients.profiles.last_name}`
+        : 'Unknown Patient';
+      const labDetails = `${index + 1}. ${lab.test_name} - ${patientName} - ${formatPkrAmount(lab.price || 0)}`;
+      doc.text(labDetails, 30, yPosition);
+      yPosition += 8;
+    });
+    yPosition += 10;
+  }
+
+  // OT Schedules
+  if (data.transactionsData?.otSchedules?.length > 0) {
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(11);
+    doc.text('Operation Theater:', 25, yPosition);
+    yPosition += 10;
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+    data.transactionsData.otSchedules.forEach((ot: any, index: number) => {
+      if (yPosition > 250) {
+        doc.addPage();
+        yPosition = 30;
+      }
+      
+      const patientName = ot.patients?.profiles?.first_name && ot.patients?.profiles?.last_name 
+        ? `${ot.patients.profiles.first_name} ${ot.patients.profiles.last_name}`
+        : 'Unknown Patient';
+      const operationName = ot.ot_operations?.operation_name || 'Operation';
+      const otRevenue = (ot.total_cost || 0) - (ot.doctor_expense || 0);
+      const otDetails = `${index + 1}. ${operationName} - ${patientName} - ${formatPkrAmount(otRevenue)}`;
+      doc.text(otDetails, 30, yPosition);
+      yPosition += 8;
+    });
+    yPosition += 10;
+  }
+
+  // Emergency Consultations
+  if (data.transactionsData?.emergencyAppointments?.length > 0) {
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(11);
+    doc.text('Emergency Consultations:', 25, yPosition);
+    yPosition += 10;
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+    data.transactionsData.emergencyAppointments.forEach((emergency: any, index: number) => {
+      if (yPosition > 250) {
+        doc.addPage();
+        yPosition = 30;
+      }
+      
+      const patientName = emergency.patients?.profiles?.first_name && emergency.patients?.profiles?.last_name 
+        ? `${emergency.patients.profiles.first_name} ${emergency.patients.profiles.last_name}`
+        : 'Unknown Patient';
+      const doctorName = emergency.doctors?.profiles?.first_name && emergency.doctors?.profiles?.last_name 
+        ? `Dr. ${emergency.doctors.profiles.first_name} ${emergency.doctors.profiles.last_name}`
+        : 'Unknown Doctor';
+      const emergencyDetails = `${index + 1}. ${patientName} - ${doctorName} - ${formatPkrAmount(emergency.consultation_fee_at_time || 0)}`;
+      doc.text(emergencyDetails, 30, yPosition);
+      yPosition += 8;
+    });
+    yPosition += 10;
+  }
+
+  // Expenses Section
+  if (data.transactionsData?.expenses?.length > 0) {
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(14);
+    doc.setTextColor(40, 40, 40);
+    doc.text('DAILY EXPENSES', 20, yPosition);
+    yPosition += 15;
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+    data.transactionsData.expenses.forEach((expense: any, index: number) => {
+      if (yPosition > 250) {
+        doc.addPage();
+        yPosition = 30;
+      }
+      
+      const expenseDetails = `${index + 1}. ${expense.category} - ${expense.description} - ${formatPkrAmount(expense.amount)}`;
+      doc.text(expenseDetails, 25, yPosition);
+      yPosition += 8;
+    });
+    yPosition += 15;
+  }
+
+  // Summary Section
+  if (yPosition > 200) {
+    doc.addPage();
+    yPosition = 30;
+  }
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(16);
+  doc.setTextColor(40, 40, 40);
+  doc.text('FINANCIAL SUMMARY', pageWidth / 2, yPosition, { align: 'center' });
+  yPosition += 20;
+
+  // Summary table
+  const summaryItems = [
+    { label: 'Hospital Revenue:', value: formatPkrAmount(data.hospitalRevenue) },
+    { label: 'Pharmacy Revenue:', value: formatPkrAmount(data.pharmacyRevenue) },
+    { label: 'Pharmacy Profit:', value: formatPkrAmount(data.pharmacyProfit) },
+    { label: 'Total Expenses:', value: formatPkrAmount(data.totalExpenses) },
+    { label: 'Total Refunds:', value: formatPkrAmount(data.totalRefunds) },
+    { label: 'Net Profit:', value: formatPkrAmount(data.netProfit), highlight: true }
+  ];
+
+  doc.setFontSize(12);
+  summaryItems.forEach((item, index) => {
+    if (item.highlight) {
+      doc.setFont('helvetica', 'bold');
+      doc.setFillColor(230, 230, 230);
+      doc.rect(20, yPosition - 5, pageWidth - 40, 12, 'F');
+    } else {
+      doc.setFont('helvetica', 'normal');
+    }
+    
+    doc.setTextColor(40, 40, 40);
+    doc.text(item.label, 25, yPosition + 3);
+    doc.text(item.value, pageWidth - 25, yPosition + 3, { align: 'right' });
+    yPosition += 15;
+  });
+
+  // Footer
+  yPosition += 20;
+  doc.setFontSize(9);
+  doc.setFont('helvetica', 'italic');
+  doc.setTextColor(100, 100, 100);
+  doc.text('This report was generated automatically by the hospital management system.', pageWidth / 2, yPosition, { align: 'center' });
+  doc.text(`Generated on: ${new Date().toLocaleString()}`, pageWidth / 2, yPosition + 8, { align: 'center' });
+
+  // Open PDF in new tab
+  const pdfBlob = doc.output('blob');
+  const pdfUrl = URL.createObjectURL(pdfBlob);
+  window.open(pdfUrl, '_blank');
+};
