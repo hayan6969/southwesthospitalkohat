@@ -58,6 +58,10 @@ export function PatientDialog() {
       
       if (error.message === 'DUPLICATE_PHONE') {
         toast.error("A patient with this phone number already exists. Please use a different phone number.");
+      } else if (error.message === 'DUPLICATE_CNIC') {
+        toast.error("A patient with this CNIC already exists. Multiple patients cannot share the same CNIC.");
+      } else if (error.message?.includes('already registered') || error.message?.includes('already exists')) {
+        toast.error("A patient with this phone number already exists. Please use a different phone number.");
       } else {
         toast.error("Failed to register patient. Please try again.");
       }
