@@ -65,8 +65,30 @@ export function StaffOT() {
     fetchOperations();
     fetchOTSchedules();
     
-    // Real-time updates are handled by the global useRealTimeUpdates hook
-    // Removed duplicate subscription to prevent conflicts
+    // Set up real-time listener for OT schedules
+    console.log('🔄 Setting up OT real-time updates...');
+    const channel = supabase
+      .channel('ot-schedules-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*', // Listen to INSERT, UPDATE, DELETE
+          schema: 'public',
+          table: 'ot_schedules'
+        },
+        (payload) => {
+          console.log('🔄 OT schedule change detected:', payload);
+          // Refetch OT schedules when changes occur
+          fetchOTSchedules();
+        }
+      )
+      .subscribe();
+
+    // Cleanup function
+    return () => {
+      console.log('🔌 Cleaning up OT real-time channel...');
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   const fetchOTSchedules = async () => {
