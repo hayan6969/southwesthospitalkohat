@@ -488,20 +488,18 @@ export const useCreatePatientWithProfile = () => {
       // Check for existing profile with same phone number (username should be unique)
       const { data: existingProfileByPhone } = await supabase
         .from('profiles')
-        .select('id')
+        .select('id, phone')
         .eq('phone', patientData.phone)
         .maybeSingle();
 
       if (existingProfileByPhone) {
+        console.log('Duplicate phone number found:', patientData.phone);
         throw new Error('DUPLICATE_PHONE');
       }
 
-      // Note: CNIC can be the same for multiple patients (family members may share documents)
-      // So we're not checking for duplicate CNIC here
-
-
-      // Create user account first with phone as email and CNIC as password
+      // Also check for existing auth user with same email
       const email = `${patientData.phone}@patient.local`;
+      console.log('Creating patient with email:', email);
 
       // Store current session and access token
       const { data: currentSession } = await supabase.auth.getSession();
@@ -522,7 +520,11 @@ export const useCreatePatientWithProfile = () => {
       });
 
       if (authError) {
-        if (authError.message.includes('already registered')) {
+        console.error('Auth signup error:', authError);
+        if (authError.message.includes('already registered') || authError.message.includes('User already registered')) {
+          throw new Error('DUPLICATE_PHONE');
+        }
+        if (authError.status === 409) {
           throw new Error('DUPLICATE_PHONE');
         }
         throw authError;
