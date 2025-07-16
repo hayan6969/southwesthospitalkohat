@@ -87,7 +87,7 @@ export default function FinanceRefunds() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['refunds'] });
-      queryClient.invalidateQueries({ queryKey: ['financial-metrics'] });
+      queryClient.invalidateQueries({ queryKey: ['financial-analytics'] });
       setFormData({ amount: "", refundType: "", description: "", doctorId: "" });
       setShowConfirmDialog(false);
       toast.success("Refund processed successfully");
