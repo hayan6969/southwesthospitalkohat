@@ -51,7 +51,11 @@ export function DoctorPayments() {
   const { data: doctorPayments, isLoading } = useQuery({
     queryKey: ['doctor-payments', selectedDate],
     queryFn: async () => {
-      const targetDate = selectedDate.toISOString().split('T')[0];
+      // Format date properly to avoid timezone issues
+      const year = selectedDate.getFullYear();
+      const month = String(selectedDate.getMonth() + 1).padStart(2, '0');
+      const day = String(selectedDate.getDate()).padStart(2, '0');
+      const targetDate = `${year}-${month}-${day}`;
 
       const { data, error } = await supabase
         .from('doctor_payments')
@@ -90,9 +94,15 @@ export function DoctorPayments() {
   // Generate payments for selected date
   const generatePaymentsMutation = useMutation({
     mutationFn: async () => {
+      // Format date properly to avoid timezone issues  
+      const year = selectedDate.getFullYear();
+      const month = String(selectedDate.getMonth() + 1).padStart(2, '0');
+      const day = String(selectedDate.getDate()).padStart(2, '0');
+      const targetDate = `${year}-${month}-${day}`;
+      
       const { data, error } = await supabase
         .rpc('generate_daily_doctor_payments', {
-          target_date: selectedDate.toISOString().split('T')[0]
+          target_date: targetDate
         });
 
       if (error) throw error;
@@ -100,8 +110,8 @@ export function DoctorPayments() {
     },
     onSuccess: (count) => {
       toast({
-        title: "Daily Payments Generated",
-        description: `Generated ${count} doctor payment records for ${format(selectedDate, 'MMM d, yyyy')}`,
+        title: "Daily Payments Updated",
+        description: `Updated ${count} doctor payment records for ${format(selectedDate, 'MMM d, yyyy')}`,
       });
       queryClient.invalidateQueries({ queryKey: ['doctor-payments'] });
     },
