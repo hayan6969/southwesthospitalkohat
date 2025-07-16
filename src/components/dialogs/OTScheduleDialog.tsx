@@ -322,22 +322,97 @@ export function OTScheduleDialog() {
         : `${newPatient.first_name} ${newPatient.last_name}`;
       
       const roomName = rooms.find(r => r.id === roomId)?.room_name || "Unknown Room";
+      const doctorName = `Dr. ${doctorNames?.find(d => d.id === doctorId)?.first_name} ${doctorNames?.find(d => d.id === doctorId)?.last_name}`;
       
-      // Generate and open PDF invoice
-      const { generateInvoicePDF } = await import("@/utils/pdfGenerator");
-      const invoiceForPDF = {
-        ...invoiceData,
-        patient: {
-          users: {
-            first_name: patientName.split(' ')[0] || '',
-            last_name: patientName.split(' ').slice(1).join(' ') || '',
-            email: selectedPatient?.profile?.email || ''
-          }
+      // Fetch detailed OT expenses for this operation
+      const { data: expensesData } = await supabase
+        .from('ot_expenses')
+        .select('expense_name, cost')
+        .eq('operation_id', operationId || '');
+
+      // Get patient data for contact info
+      const { data: patientData } = await supabase
+        .from('patients')
+        .select(`
+          patient_number,
+          profiles!patients_id_fkey(email, phone)
+        `)
+        .eq('id', patientId)
+        .single();
+
+      const phoneNumber = patientData?.profiles?.phone || 
+        (patientData?.profiles?.email ? patientData.profiles.email.split('@')[0].replace(/[^0-9]/g, '') : 'N/A');
+
+      // Build items array with detailed breakdown
+      const items = [];
+      
+      // Doctor Charges Section
+      const doctorCharges = parseFloat(doctorExpense) || 0;
+      if (doctorCharges > 0) {
+        items.push({
+          description: `--- DOCTOR CHARGES ---`,
+          quantity: '',
+          unitPrice: '',
+          totalPrice: '',
+          isHeader: true
+        });
+        items.push({
+          description: `Doctor Fee (${doctorName})`,
+          quantity: 1,
+          unitPrice: doctorCharges,
+          totalPrice: doctorCharges
+        });
+      }
+      
+      // Hospital Charges Section
+      items.push({
+        description: `--- HOSPITAL CHARGES ---`,
+        quantity: '',
+        unitPrice: '',
+        totalPrice: '',
+        isHeader: true
+      });
+
+      // Add OT expenses if available
+      if (expensesData && expensesData.length > 0) {
+        expensesData.forEach(expense => {
+          items.push({
+            description: expense.expense_name,
+            quantity: 1,
+            unitPrice: expense.cost,
+            totalPrice: expense.cost
+          });
+        });
+      } else {
+        // Fallback to room charges
+        const roomCharges = operationCost;
+        if (roomCharges > 0) {
+          items.push({
+            description: `OT Room Charges (${roomName})`,
+            quantity: 1,
+            unitPrice: roomCharges,
+            totalPrice: roomCharges
+          });
         }
+      }
+      
+      // Generate detailed OT PDF invoice
+      const { generateOTPDF } = await import("@/utils/pdfGenerator");
+      const otInvoiceData = {
+        invoiceNumber: invoiceNumber,
+        patientName: patientName,
+        patientId: patientData?.patient_number || 'N/A',
+        patientPhone: phoneNumber,
+        doctorName: doctorName,
+        procedure: selectedOperation?.operation_name || 'Unknown',
+        room: roomName,
+        date: new Date(operationDate).toLocaleDateString(),
+        totalAmount: totalCost,
+        items: items
       };
       
       // Generate and open PDF
-      await generateInvoicePDF(invoiceForPDF);
+      await generateOTPDF(otInvoiceData);
       
       // Log the audit event
       const selectedDoctorName = `Dr. ${doctorNames?.find(d => d.id === doctorId)?.first_name} ${doctorNames?.find(d => d.id === doctorId)?.last_name}`;
