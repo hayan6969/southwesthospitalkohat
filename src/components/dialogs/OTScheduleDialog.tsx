@@ -67,6 +67,7 @@ export function OTScheduleDialog() {
   // Data
   const [operations, setOperations] = useState<OTOperation[]>([]);
   const [rooms, setRooms] = useState<OTRoom[]>([]);
+  const [submitting, setSubmitting] = useState(false);
   
   const createPatientWithProfile = useCreatePatientWithProfile();
   const { data: doctors } = useDoctors();
@@ -170,6 +171,7 @@ export function OTScheduleDialog() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setSubmitting(true);
     
     if (!operationId || !roomId || !doctorId) {
       toast.error("Please select operation type, room, and doctor");
@@ -424,6 +426,8 @@ export function OTScheduleDialog() {
     } catch (error) {
       toast.error("Failed to schedule OT operation");
       console.error("Error scheduling OT:", error);
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -835,8 +839,15 @@ export function OTScheduleDialog() {
             <Button type="button" variant="outline" onClick={() => setOpen(false)}>
               Cancel
             </Button>
-            <Button type="submit">
-              Schedule OT Operation
+            <Button type="submit" disabled={submitting}>
+              {submitting ? (
+                <>
+                  <div className="w-4 h-4 mr-2 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                  Scheduling...
+                </>
+              ) : (
+                "Schedule OT Operation"
+              )}
             </Button>
           </div>
         </form>
