@@ -3,14 +3,17 @@ import { useEffect, useState } from "react";
 import AppLayout from "@/layouts/AppLayout";
 import { StatsCard } from "@/components/StatsCard";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
 import { usePharmacyStats, useExpiringMedicines, usePharmacyInvoices } from "@/hooks/useDatabase";
-import { Pill, ShoppingCart, Banknote, AlertTriangle, TrendingUp, FileText } from "lucide-react";
+import { Pill, ShoppingCart, Banknote, AlertTriangle, TrendingUp, FileText, WifiOff } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { formatPkrAmount } from "@/utils/currency";
 import { PharmacyInvoiceDetailsDialog } from "@/components/dialogs/PharmacyInvoiceDetailsDialog";
 import { useHospitalSettings } from "@/hooks/useHospitalSettings";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 export default function DashboardPharmacy() {
   const { data: stats, isLoading: statsLoading } = usePharmacyStats();
@@ -19,8 +22,49 @@ export default function DashboardPharmacy() {
   const [selectedInvoice, setSelectedInvoice] = useState(null);
   const [invoiceDialogOpen, setInvoiceDialogOpen] = useState(false);
   const { settings: hospitalSettings } = useHospitalSettings();
+  const { toast } = useToast();
 
   const urgentExpiring = expiringMedicines?.filter(med => med.daysLeft <= 7) || [];
+
+  // Cache medicine data when component loads
+  useEffect(() => {
+    const cacheMedicineData = async () => {
+      try {
+        console.log('🔄 Caching medicine data for offline use...');
+        
+        const { data: medicinesData, error } = await supabase
+          .from('medicines')
+          .select('*')
+          .order('name');
+
+        if (error) {
+          console.error('Error fetching medicines for cache:', error);
+        } else {
+          localStorage.setItem('cached_medicines', JSON.stringify(medicinesData));
+          console.log('✅ Medicine data cached successfully:', medicinesData.length, 'medicines');
+        }
+      } catch (error) {
+        console.error('Error caching medicine data:', error);
+      }
+    };
+
+    cacheMedicineData();
+  }, []);
+
+  const handleOfflineMode = () => {
+    // Check if medicine data is cached
+    const cachedMedicines = localStorage.getItem('cached_medicines');
+    if (!cachedMedicines) {
+      toast({
+        title: "Data Not Ready",
+        description: "Medicine data is still being cached. Please wait a moment and try again.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    window.location.href = '/offline-mode-pharmacy';
+  };
 
   const handleInvoiceClick = (invoice: any) => {
     setSelectedInvoice(invoice);
@@ -30,20 +74,30 @@ export default function DashboardPharmacy() {
   return (
     <AppLayout>
       <div className="space-y-8">
-        <div>
-          <div className="flex items-center gap-3">
-            {hospitalSettings?.logo_url ? (
-              <img 
-                src={hospitalSettings.logo_url} 
-                alt="Hospital Logo" 
-                className="w-8 h-8 object-contain"
-              />
-            ) : (
-              <span className="inline-block w-2 h-8 bg-blue-500 rounded-full" />
-            )}
-            <h1 className="text-3xl font-bold text-gray-900">{hospitalSettings?.hospital_name || "HIMS"} - Pharmacy</h1>
+        <div className="flex items-center justify-between">
+          <div>
+            <div className="flex items-center gap-3">
+              {hospitalSettings?.logo_url ? (
+                <img 
+                  src={hospitalSettings.logo_url} 
+                  alt="Hospital Logo" 
+                  className="w-8 h-8 object-contain"
+                />
+              ) : (
+                <span className="inline-block w-2 h-8 bg-blue-500 rounded-full" />
+              )}
+              <h1 className="text-3xl font-bold text-gray-900">{hospitalSettings?.hospital_name || "HIMS"} - Pharmacy</h1>
+            </div>
+            <p className="text-gray-600 mt-1">Manage medicines, inventory, and sales</p>
           </div>
-          <p className="text-gray-600 mt-1">Manage medicines, inventory, and sales</p>
+          <Button 
+            onClick={handleOfflineMode}
+            variant="outline" 
+            className="bg-orange-50 border-orange-200 text-orange-700 hover:bg-orange-100"
+          >
+            <WifiOff className="w-4 h-4 mr-2" />
+            Offline Mode
+          </Button>
         </div>
 
         {urgentExpiring.length > 0 && (

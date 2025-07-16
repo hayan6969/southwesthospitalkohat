@@ -13,6 +13,7 @@ import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 import OfflineMode from "./pages/OfflineMode";
+import OfflineModePharmacy from "./pages/OfflineModePharmacy";
 
 // Dashboard main pages
 import DashboardPatient from "./pages/dashboard/DashboardPatient";
@@ -84,6 +85,7 @@ const App = () => (
           <Routes>
             <Route path="/auth" element={<Auth />} />
             <Route path="/offline-mode" element={<OfflineMode />} />
+            <Route path="/offline-mode-pharmacy" element={<OfflineModePharmacy />} />
             <Route path="/" element={
               <ProtectedRoute>
                 <Index />
