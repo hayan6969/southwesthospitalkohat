@@ -56,9 +56,7 @@ export function PatientDialog() {
     } catch (error: any) {
       console.error("Error creating patient:", error);
       
-      if (error.message === 'DUPLICATE_CNIC') {
-        toast.error("A patient with this CNIC already exists. Please check the CNIC number and try again.");
-      } else if (error.message === 'DUPLICATE_PHONE') {
+      if (error.message === 'DUPLICATE_PHONE') {
         toast.error("A patient with this phone number already exists. Please use a different phone number.");
       } else {
         toast.error("Failed to register patient. Please try again.");
@@ -127,8 +125,9 @@ export function PatientDialog() {
           </div>
           
           <div className="text-sm text-gray-600 bg-blue-50 p-3 rounded-lg">
-            <p>• Phone number will be used as username for login</p>
-            <p>• CNIC will be used as password for login</p>
+            <p>• Phone number will be used as username for login (must be unique)</p>
+            <p>• CNIC will be used as password for login (can be shared by family members)</p>
+            <p>• Multiple patients can use the same CNIC for family registrations</p>
             <p>• Patient can complete their profile after logging in</p>
           </div>
 

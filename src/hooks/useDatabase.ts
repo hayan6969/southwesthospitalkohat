@@ -485,18 +485,7 @@ export const useCreatePatientWithProfile = () => {
         };
       }
 
-      // Check for existing patient with same CNIC
-      const { data: existingPatientByCnic } = await supabase
-        .from('patients')
-        .select('id')
-        .eq('cnic', patientData.cnic)
-        .maybeSingle();
-
-      if (existingPatientByCnic) {
-        throw new Error('DUPLICATE_CNIC');
-      }
-
-      // Check for existing profile with same phone number
+      // Check for existing profile with same phone number (username should be unique)
       const { data: existingProfileByPhone } = await supabase
         .from('profiles')
         .select('id')
@@ -506,6 +495,10 @@ export const useCreatePatientWithProfile = () => {
       if (existingProfileByPhone) {
         throw new Error('DUPLICATE_PHONE');
       }
+
+      // Note: CNIC can be the same for multiple patients (family members may share documents)
+      // So we're not checking for duplicate CNIC here
+
 
       // Create user account first with phone as email and CNIC as password
       const email = `${patientData.phone}@patient.local`;
@@ -549,9 +542,7 @@ export const useCreatePatientWithProfile = () => {
         .single();
 
       if (patientError) {
-        if (patientError.code === '23505') {
-          throw new Error('DUPLICATE_CNIC');
-        }
+        // CNIC uniqueness is not enforced anymore - multiple patients can share CNIC
         throw patientError;
       }
 

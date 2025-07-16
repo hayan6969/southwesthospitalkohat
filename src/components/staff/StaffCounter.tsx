@@ -13,7 +13,7 @@ import { EmergencyConsultationDialog } from "@/components/dialogs/EmergencyConsu
 import { useAppointments, usePatients, useDoctors } from "@/hooks/useDatabase";
 import { usePatientNames, useDoctorNames, getPatientName, getDoctorName } from "@/hooks/useDisplayHelpers";
 import { supabase } from "@/integrations/supabase/client";
-import { Calendar, UserPlus, Receipt, Users, Clock, CreditCard, Printer, Search, FileText, Download, CalendarIcon, X, RotateCcw, Gift } from "lucide-react";
+import { Calendar, UserPlus, Receipt, Users, Clock, CreditCard, Printer, Search, FileText, Download, CalendarIcon, X, RotateCcw, Gift, AlertTriangle } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
@@ -472,10 +472,14 @@ export function StaffCounter() {
 
       {/* Appointments Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-2">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="upcoming" className="flex items-center gap-2">
             <Clock className="w-4 h-4" />
             Upcoming ({upcomingAppointments.length})
+          </TabsTrigger>
+          <TabsTrigger value="emergency" className="flex items-center gap-2">
+            <AlertTriangle className="w-4 h-4" />
+            Emergency (0)
           </TabsTrigger>
           <TabsTrigger value="past" className="flex items-center gap-2">
             <Calendar className="w-4 h-4" />
@@ -612,6 +616,35 @@ export function StaffCounter() {
                     )}
                   </TableBody>
                 </Table>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Emergency Tab */}
+        <TabsContent value="emergency" className="mt-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-red-600">
+                <AlertTriangle className="w-5 h-5" />
+                Emergency Consultations - {format(selectedDate, "PPP")}
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-center py-12">
+                <AlertTriangle className="w-16 h-16 text-red-300 mx-auto mb-4" />
+                <h3 className="text-lg font-semibold text-gray-800 mb-2">Emergency Consultation System</h3>
+                <p className="text-gray-600 mb-6">
+                  Use the Emergency button above to quickly register emergency patients and generate invoices
+                </p>
+                <div className="flex justify-center">
+                  <EmergencyConsultationDialog />
+                </div>
+                <div className="mt-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+                  <p className="text-sm text-red-800">
+                    <strong>Note:</strong> Emergency consultations are processed immediately with payment and added to hospital revenue.
+                  </p>
+                </div>
               </div>
             </CardContent>
           </Card>
