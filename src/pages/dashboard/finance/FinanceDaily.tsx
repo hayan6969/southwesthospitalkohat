@@ -78,7 +78,7 @@ export default function FinanceDaily() {
       // OT schedules
       const { data: otSchedules } = await supabase
         .from('ot_schedules')
-        .select('total_cost')
+        .select('total_cost, doctor_expense')
         .eq('status', 'completed')
         .eq('operation_date', targetDate);
 
@@ -161,7 +161,7 @@ export default function FinanceDaily() {
       }
       
       const labRevenue = labReports?.reduce((sum, lab) => sum + (lab.price || 0), 0) || 0;
-      const otRevenue = otSchedules?.reduce((sum, ot) => sum + (ot.total_cost || 0), 0) || 0;
+      const otRevenue = otSchedules?.reduce((sum, ot) => sum + ((ot.total_cost || 0) - (ot.doctor_expense || 0)), 0) || 0;
       const emergencyRevenue = emergencyAppointments?.reduce((sum, apt) => sum + (apt.consultation_fee_at_time || 0), 0) || 0;
       const totalExpenses = expenses?.reduce((sum, exp) => sum + exp.amount, 0) || 0;
       const totalRefunds = refunds?.reduce((sum, ref) => sum + ref.amount, 0) || 0;
