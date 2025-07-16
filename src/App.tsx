@@ -24,7 +24,14 @@ const App = () => {
         <AuthProvider>
           <BrowserRouter>
             <Routes>
-              <Route path="/auth" element={<Auth />} />
+              <Route path="/auth" element={
+                <div className="min-h-screen bg-blue-50 flex items-center justify-center">
+                  <div className="bg-white p-8 rounded-lg shadow-lg">
+                    <h1 className="text-2xl font-bold text-gray-900">Testing Auth Component Loading</h1>
+                    <Auth />
+                  </div>
+                </div>
+              } />
               <Route path="/" element={<Index />} />
               <Route path="*" element={
                 <div className="min-h-screen bg-background text-foreground p-8">
