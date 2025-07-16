@@ -24,6 +24,19 @@ interface FinancialMetrics {
   }>;
 }
 
+// Helper function to get refund type labels
+const getRefundTypeLabel = (type: string) => {
+  const labels = {
+    consultation: "Consultation",
+    ot_doctor: "OT Doctor", 
+    ot_simple: "OT Simple",
+    lab: "Lab Report",
+    pharmacy: "Pharmacy",
+    other: "Other Hospital Services"
+  };
+  return labels[type as keyof typeof labels] || type;
+};
+
 export function useFinancialAnalytics() {
   return useQuery({
     queryKey: ['financial-analytics'],
@@ -48,13 +61,28 @@ export function useFinancialAnalytics() {
         supabase.from('refunds').select('*').gte('created_at', sixMonthsAgo.toISOString())
       ]);
 
-      // Calculate refunds by type
+      // Calculate refunds by category
+      // Doctor-related refunds (consultation, ot_doctor) - these don't affect hospital revenue directly
+      const doctorRefunds = (refunds || [])
+        .filter(refund => ['consultation', 'ot_doctor'].includes(refund.refund_type))
+        .reduce((sum, refund) => sum + Number(refund.amount), 0);
+
+      // Hospital-related refunds (ot_simple, lab, pharmacy, other) - these reduce hospital revenue
+      const hospitalRefunds = (refunds || [])
+        .filter(refund => ['ot_simple', 'lab', 'pharmacy', 'other'].includes(refund.refund_type))
+        .reduce((sum, refund) => sum + Number(refund.amount), 0);
+
+      // Specific refund categories for detailed tracking
       const consultationRefunds = (refunds || [])
         .filter(refund => refund.refund_type === 'consultation')
         .reduce((sum, refund) => sum + Number(refund.amount), 0);
 
-      const otRefunds = (refunds || [])
-        .filter(refund => refund.refund_type === 'ot')
+      const otDoctorRefunds = (refunds || [])
+        .filter(refund => refund.refund_type === 'ot_doctor')
+        .reduce((sum, refund) => sum + Number(refund.amount), 0);
+
+      const otSimpleRefunds = (refunds || [])
+        .filter(refund => refund.refund_type === 'ot_simple')
         .reduce((sum, refund) => sum + Number(refund.amount), 0);
 
       const labRefunds = (refunds || [])
@@ -66,13 +94,14 @@ export function useFinancialAnalytics() {
         .reduce((sum, refund) => sum + Number(refund.amount), 0);
 
       const otherRefunds = (refunds || [])
-        .filter(refund => !['consultation', 'ot', 'lab', 'pharmacy'].includes(refund.refund_type))
+        .filter(refund => refund.refund_type === 'other')
         .reduce((sum, refund) => sum + Number(refund.amount), 0);
 
-      // Calculate revenue by source (subtract refunds)
+      // Calculate revenue by source (subtract hospital-related refunds only)
+      // Hospital consultations and services - subtract other refunds but NOT doctor-related refunds
       const hospitalRevenue = (invoices || [])
         .filter(inv => inv.status === 'paid')
-        .reduce((sum, inv) => sum + Number(inv.amount), 0) - consultationRefunds - otherRefunds;
+        .reduce((sum, inv) => sum + Number(inv.amount), 0) - otherRefunds;
 
       const pharmacyRevenue = (pharmacyInvoices || [])
         .reduce((sum, inv) => sum + Number(inv.final_amount), 0) - pharmacyRefunds;
@@ -81,10 +110,10 @@ export function useFinancialAnalytics() {
         .filter(report => report.price)
         .reduce((sum, report) => sum + Number(report.price), 0) - labRefunds;
 
-      // Calculate OT revenue (hospital portion only, excluding doctor expenses, minus refunds)
+      // Calculate OT revenue (hospital portion only, excluding doctor expenses, minus ot_simple refunds)
       const otRevenue = (otSchedules || [])
         .filter(schedule => schedule.total_cost && schedule.doctor_expense)
-        .reduce((sum, schedule) => sum + (Number(schedule.total_cost) - Number(schedule.doctor_expense)), 0) - otRefunds;
+        .reduce((sum, schedule) => sum + (Number(schedule.total_cost) - Number(schedule.doctor_expense)), 0) - otSimpleRefunds;
 
       const totalRevenue = hospitalRevenue + pharmacyRevenue + labRevenue + otRevenue;
       const totalExpenses = (expenses || [])
@@ -123,12 +152,15 @@ export function useFinancialAnalytics() {
           }
         });
 
-      // Subtract refunds from monthly revenue
+      // Subtract only hospital-related refunds from monthly revenue (not doctor-related refunds)
       (refunds || []).forEach(refund => {
         if (!refund.created_at) return;
-        const month = format(new Date(refund.created_at), 'MMM yyyy');
-        if (monthlyData.has(month)) {
-          monthlyData.set(month, monthlyData.get(month) - Number(refund.amount));
+        // Only subtract hospital-related refunds from revenue
+        if (['ot_simple', 'lab', 'pharmacy', 'other'].includes(refund.refund_type)) {
+          const month = format(new Date(refund.created_at), 'MMM yyyy');
+          if (monthlyData.has(month)) {
+            monthlyData.set(month, monthlyData.get(month) - Number(refund.amount));
+          }
         }
       });
 
@@ -161,7 +193,7 @@ export function useFinancialAnalytics() {
           id: refund.id,
           type: 'Refund',
           amount: -Number(refund.amount),
-          description: `${refund.refund_type} refund: ${refund.description}`,
+          description: `${getRefundTypeLabel(refund.refund_type)} refund: ${refund.description}`,
           date: refund.created_at || ''
         }))
       ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 10);

@@ -110,9 +110,9 @@ export default function FinanceRefunds() {
       return;
     }
 
-    // If refund type is consultation or ot, doctor must be selected
-    if ((formData.refundType === 'consultation' || formData.refundType === 'ot') && !formData.doctorId) {
-      toast.error("Please select a doctor for consultation or OT refunds");
+    // If refund type is consultation or ot_doctor, doctor must be selected
+    if ((formData.refundType === 'consultation' || formData.refundType === 'ot_doctor') && !formData.doctorId) {
+      toast.error("Please select a doctor for consultation or OT Doctor refunds");
       return;
     }
 
@@ -126,7 +126,8 @@ export default function FinanceRefunds() {
   const getRefundTypeLabel = (type: string) => {
     const labels = {
       consultation: "Consultation",
-      ot: "OT/Surgery",
+      ot_doctor: "OT Doctor", 
+      ot_simple: "OT Simple",
       lab: "Lab Report",
       pharmacy: "Pharmacy",
       other: "Other Hospital Services"
@@ -137,7 +138,8 @@ export default function FinanceRefunds() {
   const getRefundTypeColor = (type: string) => {
     const colors = {
       consultation: "bg-blue-100 text-blue-800",
-      ot: "bg-red-100 text-red-800",
+      ot_doctor: "bg-red-100 text-red-800",
+      ot_simple: "bg-orange-100 text-orange-800", 
       lab: "bg-green-100 text-green-800",
       pharmacy: "bg-purple-100 text-purple-800",
       other: "bg-gray-100 text-gray-800"
@@ -145,9 +147,7 @@ export default function FinanceRefunds() {
     return colors[type as keyof typeof colors] || "bg-gray-100 text-gray-800";
   };
 
-  const isDoctorRelated = (type: string) => {
-    return type === 'consultation' || type === 'ot';
-  };
+  const isDoctorRelated = (type: string) => ['consultation', 'ot_doctor'].includes(type);
 
   return (
     <div className="space-y-6">
@@ -190,7 +190,8 @@ export default function FinanceRefunds() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="consultation">Consultation</SelectItem>
-                    <SelectItem value="ot">OT/Surgery</SelectItem>
+                    <SelectItem value="ot_doctor">OT Doctor</SelectItem>
+                    <SelectItem value="ot_simple">OT Simple</SelectItem>
                     <SelectItem value="lab">Lab Report</SelectItem>
                     <SelectItem value="pharmacy">Pharmacy</SelectItem>
                     <SelectItem value="other">Other Hospital Services</SelectItem>
