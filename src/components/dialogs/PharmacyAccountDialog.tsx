@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { formatPkrAmount } from "@/utils/currency";
@@ -19,7 +19,7 @@ interface PharmacyAccountDialogProps {
 export function PharmacyAccountDialog({ open, onOpenChange }: PharmacyAccountDialogProps) {
   const [startingBalance, setStartingBalance] = useState<number>(0);
   const [expenseAmount, setExpenseAmount] = useState<number>(0);
-  const [expenseDescription, setExpenseDescription] = useState<string>("");
+  const [expenseType, setExpenseType] = useState<string>("hospital_profit_withdrawal");
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isAddingExpense, setIsAddingExpense] = useState(false);
@@ -193,8 +193,8 @@ export function PharmacyAccountDialog({ open, onOpenChange }: PharmacyAccountDia
         .from('pharmacy_expenses')
         .insert({
           amount: expenseAmount,
-          expense_type: 'profit_withdrawal',
-          description: expenseDescription || 'Hospital profit withdrawal',
+          expense_type: expenseType,
+          description: expenseType === 'hospital_profit_withdrawal' ? 'Hospital profit withdrawal' : 'Bill payment',
           expense_date: new Date().toISOString().split('T')[0]
         });
 
@@ -209,7 +209,7 @@ export function PharmacyAccountDialog({ open, onOpenChange }: PharmacyAccountDia
 
       // Reset form
       setExpenseAmount(0);
-      setExpenseDescription("");
+      setExpenseType("hospital_profit_withdrawal");
 
       toast({
         title: "Success",
@@ -309,19 +309,21 @@ export function PharmacyAccountDialog({ open, onOpenChange }: PharmacyAccountDia
                   />
                 </div>
                 <div>
-                  <Label htmlFor="expense-description" className="text-lg font-medium">Description (Optional)</Label>
-                  <Textarea
-                    id="expense-description"
-                    value={expenseDescription}
-                    onChange={(e) => setExpenseDescription(e.target.value)}
-                    placeholder="e.g., Daily profit withdrawal"
-                    className="mt-3 h-14 resize-none text-lg"
-                  />
+                  <Label htmlFor="expense-type" className="text-lg font-medium">Expense Type</Label>
+                  <Select value={expenseType} onValueChange={setExpenseType}>
+                    <SelectTrigger className="mt-3 h-14 text-lg">
+                      <SelectValue placeholder="Select expense type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="hospital_profit_withdrawal">Hospital Profit Withdrawal</SelectItem>
+                      <SelectItem value="bill_payment">Bill Payment</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
               <div className="flex justify-between items-center">
                 <p className="text-base text-muted-foreground">
-                  Track profit withdrawals and other pharmacy-related expenses.
+                  Track hospital profit withdrawals and bill payments from pharmacy account.
                 </p>
                 <Button 
                   onClick={handleAddExpense}

@@ -838,6 +838,32 @@ export const generateDailyClosingPDF = async (data: {
   }
 
   // ===========================================
+  // PHARMACY BILLS SECTION
+  // ===========================================
+  if (data.transactionsData?.pharmacyExpenses?.length > 0) {
+    drawSectionHeader('PHARMACY BILLS');
+
+    const pharmacyBillHeaders = ['Type', 'Description', 'Amount', 'Date'];
+    const pharmacyBillColWidths = [50, 60, 30, 30];
+    const pharmacyBillRows: string[][] = [];
+
+    data.transactionsData.pharmacyExpenses.forEach((expense: any) => {
+      const typeDisplay = expense.expense_type === 'hospital_profit_withdrawal' 
+        ? 'Profit Withdrawal' 
+        : 'Bill Payment';
+      
+      pharmacyBillRows.push([
+        typeDisplay,
+        expense.description || '',
+        formatPkrAmount(expense.amount),
+        new Date(expense.expense_date).toLocaleDateString()
+      ]);
+    });
+
+    drawTable(pharmacyBillHeaders, pharmacyBillRows, pharmacyBillColWidths);
+  }
+
+  // ===========================================
   // EXPENSES SECTION
   // ===========================================
   if (data.transactionsData?.expenses?.length > 0) {
@@ -888,7 +914,25 @@ export const generateDailyClosingPDF = async (data: {
   
   drawSectionHeader('FINANCIAL SUMMARY');
 
-  // Summary table with better formatting
+  // Pharmacy Summary Section First
+  drawSubHeader('Pharmacy Account Summary');
+  
+  const pharmacySummaryHeaders = ['Description', 'Amount'];
+  const pharmacySummaryColWidths = [120, 50];
+  const pharmacySummaryRows = [
+    ['Pharmacy Revenue', formatPkrAmount(data.pharmacyRevenue)],
+    ['Pharmacy Profit', formatPkrAmount(data.pharmacyProfit)],
+    ['Pharmacy Bills/Expenses', `(${formatPkrAmount(data.transactionsData?.pharmacyExpenses?.reduce((sum: number, exp: any) => sum + exp.amount, 0) || 0)})`],
+    ['Net Pharmacy Balance', formatPkrAmount(data.pharmacyProfit - (data.transactionsData?.pharmacyExpenses?.reduce((sum: number, exp: any) => sum + exp.amount, 0) || 0))]
+  ];
+
+  drawTable(pharmacySummaryHeaders, pharmacySummaryRows, pharmacySummaryColWidths);
+  
+  yPosition += 15;
+  
+  // Overall Summary table with better formatting
+  drawSubHeader('Overall Daily Summary');
+  
   const summaryHeaders = ['Description', 'Amount'];
   const summaryColWidths = [120, 50];
   const summaryRows = [

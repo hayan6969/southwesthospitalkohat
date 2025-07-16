@@ -77,6 +77,33 @@ export default function DashboardFinance() {
     }
   });
 
+  // Get pharmacy account and expenses
+  const { data: pharmacyAccount, isLoading: pharmacyAccountLoading } = useQuery({
+    queryKey: ['pharmacy-account'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('pharmacy_account')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single();
+      if (error && error.code !== 'PGRST116') throw error;
+      return data;
+    }
+  });
+
+  const { data: pharmacyExpenses, isLoading: pharmacyExpensesLoading } = useQuery({
+    queryKey: ['pharmacy-expenses'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('pharmacy_expenses')
+        .select('*')
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return data;
+    }
+  });
+
   // Calculate revenues and profit (excluding doctor charges)
   const hospitalRevenue = invoices?.reduce((sum, invoice) => sum + (invoice.amount || 0), 0) || 0;
   
@@ -191,7 +218,7 @@ export default function DashboardFinance() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -276,6 +303,48 @@ export default function DashboardFinance() {
                   <span>Net Profit</span>
                   <span className={totalProfit >= 0 ? "text-green-600" : "text-red-600"}>
                     {formatPkrAmount(totalProfit)}
+                  </span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Pill className="w-5 h-5 text-purple-600" />
+                Pharmacy Account Summary
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                <div className="flex justify-between">
+                  <span>Starting Balance</span>
+                  <span className="font-medium">{formatPkrAmount(pharmacyAccount?.starting_balance || 0)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Pharmacy Revenue</span>
+                  <span className="font-medium text-green-600">{formatPkrAmount(pharmacyRevenue)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Pharmacy Profit</span>
+                  <span className="font-medium text-green-600">{formatPkrAmount(pharmacyProfit)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Bills & Expenses</span>
+                  <span className="font-medium text-red-600">-{formatPkrAmount(pharmacyExpenses?.reduce((sum, exp) => sum + exp.amount, 0) || 0)}</span>
+                </div>
+                <hr />
+                <div className="flex justify-between items-center font-bold text-lg">
+                  <span>Current Balance</span>
+                  <span className="text-blue-600">
+                    {formatPkrAmount((pharmacyAccount?.starting_balance || 0) + pharmacyRevenue - (pharmacyExpenses?.reduce((sum, exp) => sum + exp.amount, 0) || 0))}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center font-bold text-lg">
+                  <span>Available Profit</span>
+                  <span className="text-purple-600">
+                    {formatPkrAmount(pharmacyProfit - (pharmacyExpenses?.reduce((sum, exp) => sum + exp.amount, 0) || 0))}
                   </span>
                 </div>
               </div>
