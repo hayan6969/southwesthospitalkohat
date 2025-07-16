@@ -111,6 +111,45 @@ export default function PharmacyReturns() {
     setIsProcessing(true);
 
     try {
+      // Generate a unique invoice number for the return
+      const returnInvoiceNumber = `RTN-${Date.now()}`;
+
+      // Create a return invoice (negative amounts to represent returns)
+      const { data: returnInvoice, error: invoiceError } = await supabase
+        .from('pharmacy_invoices')
+        .insert({
+          invoice_number: returnInvoiceNumber,
+          customer_name: 'RETURN',
+          customer_phone: null,
+          total_amount: -totalReturnAmount, // Negative for return
+          discount_amount: 0,
+          final_amount: -totalReturnAmount, // Negative for return
+          status: 'completed'
+        })
+        .select()
+        .single();
+
+      if (invoiceError) {
+        throw new Error(`Failed to create return invoice: ${invoiceError.message}`);
+      }
+
+      // Create return invoice items (negative quantities to represent returns)
+      for (const item of returnCart) {
+        const { error: itemError } = await supabase
+          .from('pharmacy_invoice_items')
+          .insert({
+            invoice_id: returnInvoice.id,
+            medicine_id: item.medicineId,
+            quantity: -item.quantity, // Negative for return
+            unit_price: item.unitPrice,
+            total_price: -item.totalPrice // Negative for return
+          });
+
+        if (itemError) {
+          throw new Error(`Failed to create return item for ${item.name}: ${itemError.message}`);
+        }
+      }
+
       // Update medicine stock for each returned item
       for (const item of returnCart) {
         // First get the current stock
@@ -137,21 +176,7 @@ export default function PharmacyReturns() {
         }
       }
 
-      // Create expense record for the return (negative revenue)
-      const { error: expenseError } = await supabase
-        .from('expenses')
-        .insert({
-          category: 'Pharmacy Returns',
-          description: `Medicine return: ${returnCart.map(item => `${item.quantity}x ${item.name}`).join(', ')}`,
-          amount: totalReturnAmount,
-          expense_date: new Date().toISOString().split('T')[0],
-        });
-
-      if (expenseError) {
-        throw new Error(`Failed to record return expense: ${expenseError.message}`);
-      }
-
-      toast.success("Return processed successfully!");
+      toast.success(`Return processed successfully! Return invoice ${returnInvoiceNumber} created.`);
       setReturnCart([]);
     } catch (error) {
       console.error("Error processing return:", error);
