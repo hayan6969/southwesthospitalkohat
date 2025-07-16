@@ -57,9 +57,15 @@ export function PatientDialog() {
       console.error("Error creating patient:", error);
       
       if (error.message === 'DUPLICATE_PHONE') {
-        toast.error("A patient account with this phone number (username) already exists. Phone numbers must be unique, but multiple patients can share the same CNIC (password).");
+        toast.error("Username already exists! A patient account with this phone number already exists. Phone numbers must be unique, but multiple patients can share the same CNIC.");
+      } else if (error.message.includes('USER_CREATION_FAILED')) {
+        toast.error(`Failed to create user account: ${error.message.replace('USER_CREATION_FAILED: ', '')}`);
+      } else if (error.message.includes('PATIENT_CREATION_FAILED')) {
+        toast.error(`Failed to create patient record: ${error.message.replace('PATIENT_CREATION_FAILED: ', '')}`);
+      } else if (error.message.includes('REGISTRATION_FAILED')) {
+        toast.error(`Registration failed: ${error.message.replace('REGISTRATION_FAILED: ', '')}`);
       } else {
-        toast.error("Failed to register patient. Please try again.");
+        toast.error("Failed to register patient. Please check all information and try again.");
       }
     }
   };

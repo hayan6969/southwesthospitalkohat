@@ -497,64 +497,74 @@ export const useCreatePatientWithProfile = () => {
         throw new Error('DUPLICATE_PHONE');
       }
 
-      // Also check for existing auth user with same email
+      // Use the database function to create user without affecting current session
       const email = `${patientData.phone}@patient.local`;
       console.log('Creating patient with email:', email);
 
-      // Store the current staff session before creating patient
-      const { data: currentSession } = await supabase.auth.getSession();
-      
-      // Create user account using auth signup
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email,
-        password: patientData.cnic,
-        options: {
-          data: {
-            first_name: patientData.first_name,
-            last_name: patientData.last_name,
-            role: 'patient'
-          }
-        }
-      });
+      try {
+        // Use the create_user_account function to avoid session switching
+        const { data: userId, error: userError } = await supabase.rpc('create_user_account', {
+          p_email: email,
+          p_password: patientData.cnic,
+          p_first_name: patientData.first_name,
+          p_last_name: patientData.last_name,
+          p_role: 'patient'
+        });
 
-      if (authError) {
-        console.error('Auth signup error:', authError);
-        if (authError.message.includes('already registered') || authError.message.includes('User already registered')) {
+        if (userError) {
+          console.error('User creation error:', userError);
+          if (userError.message.includes('already exists') || userError.message.includes('duplicate')) {
+            throw new Error('DUPLICATE_PHONE');
+          }
+          throw new Error(`USER_CREATION_FAILED: ${userError.message}`);
+        }
+
+        if (!userId) {
+          throw new Error('USER_CREATION_FAILED: No user ID returned');
+        }
+
+        // Create patient record
+        const { data: patient, error: patientError } = await supabase
+          .from('patients')
+          .insert({
+            id: userId,
+            cnic: patientData.cnic,
+          })
+          .select()
+          .single();
+
+        if (patientError) {
+          console.error('Patient creation error:', patientError);
+          if (patientError.code === '23505') { // Unique constraint violation
+            throw new Error('DUPLICATE_PHONE');
+          }
+          throw new Error(`PATIENT_CREATION_FAILED: ${patientError.message}`);
+        }
+
+        // Profile will be created automatically by the trigger
+        return { patient, user: { id: userId } };
+        
+      } catch (error: any) {
+        console.error('Error in patient creation:', error);
+        
+        // Handle specific error types
+        if (error.message.includes('DUPLICATE_PHONE')) {
           throw new Error('DUPLICATE_PHONE');
         }
-        throw authError;
-      }
-      if (!authData.user) throw new Error('Failed to create user account');
-
-      const patientId = authData.user.id;
-      
-      // Create patient record
-      const { data: patient, error: patientError } = await supabase
-        .from('patients')
-        .insert({
-          id: patientId,
-          cnic: patientData.cnic,
-        })
-        .select()
-        .single();
-
-      if (patientError) {
-        throw patientError;
-      }
-
-      // Restore the original staff session by re-setting it
-      if (currentSession?.session) {
-        try {
-          await supabase.auth.setSession(currentSession.session);
-        } catch (sessionError) {
-          console.error('Failed to restore staff session:', sessionError);
-          // If restoring fails, force a page reload to get back to auth state
-          window.location.reload();
+        if (error.message.includes('USER_CREATION_FAILED')) {
+          throw error;
         }
+        if (error.message.includes('PATIENT_CREATION_FAILED')) {
+          throw error;
+        }
+        
+        // Handle database constraint errors
+        if (error.code === '23505') {
+          throw new Error('DUPLICATE_PHONE');
+        }
+        
+        throw new Error(`REGISTRATION_FAILED: ${error.message}`);
       }
-
-      // Profile will be created automatically by the trigger
-      return { patient, user: authData.user };
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['patients'] });
