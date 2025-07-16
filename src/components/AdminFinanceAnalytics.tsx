@@ -306,13 +306,18 @@ function calculateAnalytics(data: FinanceData) {
   // Calculate revenues
   const hospitalRevenue = hospitalInvoices.filter(inv => inv.status === 'paid').reduce((sum, inv) => sum + Number(inv.amount), 0);
   const pharmacyRevenue = pharmacyInvoices.reduce((sum, inv) => sum + Number(inv.final_amount), 0);
+  
+  // Calculate pharmacy profit (this would need actual invoice items data for accurate calculation)
+  // For now, we'll use a simplified estimate until we can fetch the full data
+  const pharmacyProfit = pharmacyRevenue * 0.25; // Estimated 25% profit margin as placeholder
+  
   const labRevenue = labReports.filter(lab => lab.price).reduce((sum, lab) => sum + Number(lab.price), 0);
   const otRevenue = otSchedules.filter(schedule => schedule.total_cost && schedule.doctor_expense)
     .reduce((sum, schedule) => sum + (Number(schedule.total_cost) - Number(schedule.doctor_expense)), 0);
 
   const totalRevenue = hospitalRevenue + pharmacyRevenue + labRevenue + otRevenue;
   const totalExpenses = expenses.reduce((sum, exp) => sum + Number(exp.amount), 0);
-  const netProfit = totalRevenue - totalExpenses;
+  const netProfit = totalRevenue - totalExpenses + pharmacyProfit; // Include pharmacy profit
   const profitMargin = totalRevenue > 0 ? (netProfit / totalRevenue) * 100 : 0;
 
   // Calculate daily trends

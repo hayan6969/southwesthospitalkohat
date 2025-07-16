@@ -76,9 +76,9 @@ export default function FinanceAnalytics() {
   const netProfit = financialData?.netProfit || 0;
   const profitMargin = financialData?.profitMargin || 0;
   const revenueBySource = financialData?.revenueBySource || { hospital: 0, pharmacy: 0, lab: 0, ot: 0 };
-  const monthlyRevenue = financialData?.monthlyRevenue || [];
-  const monthlyExpenses = financialData?.monthlyExpenses || [];
-  const recentActivities = financialData?.recentActivities || [];
+  const monthlyRevenue = financialData?.monthlyRevenue || 0;
+  const monthlyExpenses = financialData?.monthlyExpenses || 0;
+  const recentActivities = financialData?.recentActivity || [];
 
   // Debug logging
   console.log('Finance Dashboard Data:', {
@@ -90,19 +90,18 @@ export default function FinanceAnalytics() {
 
   // Calculate monthly data from the hook data
   const monthlyData = useMemo(() => {
-    return monthlyRevenue.map((revenue, index) => {
-      const expense = monthlyExpenses[index] || { amount: 0 };
-      return {
-        month: revenue.month,
-        total: revenue.amount,
-        expenses: expense.amount,
-        profit: revenue.amount - expense.amount,
-        hospital: revenueBySource.hospital,
-        pharmacy: revenueBySource.pharmacy,
-        lab: revenueBySource.lab,
-        ot: revenueBySource.ot
-      };
-    });
+    // Since monthlyRevenue and monthlyExpenses are now numbers, create simple chart data
+    const currentMonth = format(new Date(), 'MMM yyyy');
+    return [{
+      month: currentMonth,
+      total: monthlyRevenue,
+      expenses: monthlyExpenses,
+      profit: monthlyRevenue - monthlyExpenses,
+      hospital: revenueBySource.hospital,
+      pharmacy: revenueBySource.pharmacy,
+      lab: revenueBySource.lab,
+      ot: revenueBySource.ot
+    }];
   }, [monthlyRevenue, monthlyExpenses, revenueBySource]);
 
   // Revenue breakdown
@@ -113,21 +112,12 @@ export default function FinanceAnalytics() {
     { name: 'OT Services (Hospital)', value: revenueBySource.ot, color: '#8b5cf6' },
   ].filter(item => item.value > 0);
 
-  // Calculate percentage changes (using current vs previous month)
-  const currentMonth = monthlyData.length > 0 ? monthlyData[monthlyData.length - 1] : null;
-  const previousMonth = monthlyData.length > 1 ? monthlyData[monthlyData.length - 2] : null;
+  // Calculate percentage changes (simplified for current data structure)
+  const currentMonth = monthlyData.length > 0 ? monthlyData[0] : null;
   
-  const revenueChange = (previousMonth?.total && currentMonth?.total && previousMonth.total > 0) 
-    ? (((currentMonth.total || 0) - (previousMonth.total || 0)) / previousMonth.total) * 100
-    : 0;
-    
-  const expenseChange = (previousMonth?.expenses && currentMonth?.expenses && previousMonth.expenses > 0)
-    ? (((currentMonth.expenses || 0) - (previousMonth.expenses || 0)) / previousMonth.expenses) * 100
-    : 0;
-    
-  const profitChange = (previousMonth?.profit !== undefined && currentMonth?.profit !== undefined && Math.abs(previousMonth.profit) > 0)
-    ? (((currentMonth.profit || 0) - (previousMonth.profit || 0)) / Math.abs(previousMonth.profit)) * 100
-    : 0;
+  const revenueChange = 0; // Placeholder since we don't have historical data
+  const expenseChange = 0; // Placeholder since we don't have historical data  
+  const profitChange = 0; // Placeholder since we don't have historical data
 
   // Show loading state
   if (isLoading) {

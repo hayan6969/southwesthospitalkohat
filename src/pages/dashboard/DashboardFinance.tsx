@@ -15,14 +15,23 @@ export default function DashboardFinance() {
   const { data: stats, isLoading: statsLoading } = useStats();
   const { settings: hospitalSettings } = useHospitalSettings();
   const navigate = useNavigate();
-
-  // Get pharmacy invoices
+  
+  // Get pharmacy invoices with items for profit calculation
   const { data: pharmacyInvoices, isLoading: pharmacyLoading } = useQuery({
-    queryKey: ['pharmacy-invoices'],
+    queryKey: ['pharmacy-invoices-with-profit'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('pharmacy_invoices')
-        .select('*')
+        .select(`
+          *,
+          pharmacy_invoice_items(
+            quantity,
+            unit_price,
+            total_price,
+            medicine_id,
+            medicines(purchase_price, selling_price)
+          )
+        `)
         .order('created_at', { ascending: false });
       if (error) throw error;
       return data;
@@ -70,7 +79,26 @@ export default function DashboardFinance() {
 
   // Calculate revenues and profit (excluding doctor charges)
   const hospitalRevenue = invoices?.reduce((sum, invoice) => sum + (invoice.amount || 0), 0) || 0;
-  const pharmacyRevenue = pharmacyInvoices?.reduce((sum, invoice) => sum + (invoice.final_amount || 0), 0) || 0;
+  
+  // Calculate pharmacy revenue and profit correctly
+  let pharmacyRevenue = 0;
+  let pharmacyProfit = 0;
+  
+  if (pharmacyInvoices) {
+    pharmacyRevenue = pharmacyInvoices.reduce((sum, inv) => sum + (inv.final_amount || 0), 0);
+    
+    // Calculate actual profit based on selling price - purchase price
+    pharmacyProfit = pharmacyInvoices.reduce((totalProfit, invoice) => {
+      const invoiceProfit = (invoice.pharmacy_invoice_items || []).reduce((itemsProfit, item) => {
+        if (item.medicines && item.medicines.selling_price && item.medicines.purchase_price) {
+          const profitPerUnit = item.medicines.selling_price - item.medicines.purchase_price;
+          return itemsProfit + (profitPerUnit * item.quantity);
+        }
+        return itemsProfit;
+      }, 0);
+      return totalProfit + invoiceProfit;
+    }, 0);
+  }
   const labRevenue = labReports?.reduce((sum, lab) => sum + (lab.price || 0), 0) || 0;
   // Only include hospital's portion of OT revenue (excluding doctor expenses)
   const otRevenue = otSchedules?.reduce((sum, schedule) => {
@@ -79,7 +107,8 @@ export default function DashboardFinance() {
   }, 0) || 0;
   const totalRevenue = hospitalRevenue + pharmacyRevenue + labRevenue + otRevenue;
   const totalExpenses = expenses?.reduce((sum, exp) => sum + (exp.amount || 0), 0) || 0;
-  const totalProfit = totalRevenue - totalExpenses;
+  // Include pharmacy profit in total profit calculation
+  const totalProfit = totalRevenue - totalExpenses + pharmacyProfit;
   
   const paidInvoices = invoices?.filter(inv => inv.status === 'paid') || [];
   const pendingInvoices = invoices?.filter(inv => inv.status === 'pending') || [];
@@ -216,6 +245,10 @@ export default function DashboardFinance() {
                 <div className="flex justify-between">
                   <span>Hospital Services</span>
                   <span className="font-medium">{formatPkrAmount(hospitalRevenue)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Pharmacy Profit</span>
+                  <span className="font-medium text-green-600">{formatPkrAmount(pharmacyProfit)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span>Pharmacy Sales</span>

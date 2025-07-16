@@ -371,7 +371,7 @@ export default function DashboardAdmin() {
                   change={realStats?.revenueChange}
                   changeType={realStats?.revenueChangeType}
                   icon={<Banknote className="w-5 h-5 text-green-600" />}
-                  chart={<MiniChart data={financialAnalytics?.monthlyRevenue?.map(m => ({value: m.amount})) || []} type="bar" color="#10b981" />}
+                  chart={<MiniChart data={[{value: financialAnalytics?.monthlyRevenue || 0}]} type="bar" color="#10b981" />}
                 />
                 <StatsCard
                   title="Net Profit"
@@ -379,7 +379,7 @@ export default function DashboardAdmin() {
                   change={financialAnalytics?.profitMargin ? `${financialAnalytics.profitMargin.toFixed(1)}%` : "0%"}
                   changeType={financialAnalytics?.netProfit && financialAnalytics.netProfit > 0 ? "positive" : "negative"}
                   icon={<TrendingUp className="w-5 h-5 text-blue-600" />}
-                  chart={<MiniChart data={financialAnalytics?.monthlyRevenue?.map(m => ({value: m.amount - (financialAnalytics?.monthlyExpenses?.find(e => e.month === m.month)?.amount || 0)})) || []} type="area" color="#3b82f6" />}
+                  chart={<MiniChart data={[{value: Math.max(0, (financialAnalytics?.netProfit || 0))}]} type="area" color="#3b82f6" />}
                 />
                 <StatsCard
                   title="Total Expenses"
@@ -387,7 +387,7 @@ export default function DashboardAdmin() {
                   change="Monthly"
                   changeType="negative"
                   icon={<CreditCard className="w-5 h-5 text-red-600" />}
-                  chart={<MiniChart data={financialAnalytics?.monthlyExpenses?.map(m => ({value: m.amount})) || []} type="bar" color="#ef4444" />}
+                  chart={<MiniChart data={[{value: financialAnalytics?.monthlyExpenses || 0}]} type="bar" color="#ef4444" />}
                 />
                 <StatsCard
                   title="Active Users"
@@ -430,7 +430,7 @@ export default function DashboardAdmin() {
                 <div className="bg-white rounded-lg border shadow-sm p-6">
                   <h3 className="font-semibold mb-4">Recent Financial Activities</h3>
                   <div className="space-y-3">
-                    {financialAnalytics?.recentActivities?.slice(0, 8).map((activity) => (
+                    {financialAnalytics?.recentActivity?.slice(0, 8).map((activity) => (
                       <div key={activity.id} className="flex items-center justify-between">
                         <div className="flex items-center space-x-3">
                           <div className={`w-2 h-2 rounded-full ${activity.amount > 0 ? 'bg-green-500' : 'bg-red-500'}`} />

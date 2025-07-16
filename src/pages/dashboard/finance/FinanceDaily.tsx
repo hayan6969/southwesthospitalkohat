@@ -36,10 +36,19 @@ export default function FinanceDaily() {
         .gte('created_at', `${targetDate}T00:00:00`)
         .lt('created_at', `${targetDate}T23:59:59`);
 
-      // Pharmacy invoices
-      const { data: pharmacyInvoices } = await supabase
+      // Pharmacy invoices with items for profit calculation
+      const { data: pharmacyInvoicesWithItems } = await supabase
         .from('pharmacy_invoices')
-        .select('total_amount, discount_amount, final_amount')
+        .select(`
+          *,
+          pharmacy_invoice_items(
+            quantity,
+            unit_price,
+            total_price,
+            medicine_id,
+            medicines(purchase_price, selling_price)
+          )
+        `)
         .gte('created_at', `${targetDate}T00:00:00`)
         .lt('created_at', `${targetDate}T23:59:59`);
 
@@ -82,17 +91,31 @@ export default function FinanceDaily() {
 
       // Calculate totals
       const hospitalRevenue = hospitalInvoices?.reduce((sum, inv) => sum + (inv.amount || 0), 0) || 0;
-      const pharmacyRevenue = pharmacyInvoices?.reduce((sum, inv) => sum + (inv.total_amount || 0), 0) || 0;
-      const pharmacyDiscount = pharmacyInvoices?.reduce((sum, inv) => sum + (inv.discount_amount || 0), 0) || 0;
-      const pharmacyFinalRevenue = pharmacyInvoices?.reduce((sum, inv) => sum + (inv.final_amount || 0), 0) || 0;
+      
+      // Calculate pharmacy revenue and profit correctly
+      let pharmacyRevenue = 0;
+      let pharmacyProfit = 0;
+      
+      if (pharmacyInvoicesWithItems) {
+        pharmacyRevenue = pharmacyInvoicesWithItems.reduce((sum, inv) => sum + (inv.final_amount || 0), 0);
+        
+        // Calculate actual profit based on selling price - purchase price
+        pharmacyProfit = pharmacyInvoicesWithItems.reduce((totalProfit, invoice) => {
+          const invoiceProfit = (invoice.pharmacy_invoice_items || []).reduce((itemsProfit, item) => {
+            if (item.medicines && item.medicines.selling_price && item.medicines.purchase_price) {
+              const profitPerUnit = item.medicines.selling_price - item.medicines.purchase_price;
+              return itemsProfit + (profitPerUnit * item.quantity);
+            }
+            return itemsProfit;
+          }, 0);
+          return totalProfit + invoiceProfit;
+        }, 0);
+      }
       const labRevenue = labReports?.reduce((sum, lab) => sum + (lab.price || 0), 0) || 0;
       const otRevenue = otSchedules?.reduce((sum, ot) => sum + (ot.total_cost || 0), 0) || 0;
       const emergencyRevenue = emergencyAppointments?.reduce((sum, apt) => sum + (apt.consultation_fee_at_time || 0), 0) || 0;
       const totalExpenses = expenses?.reduce((sum, exp) => sum + exp.amount, 0) || 0;
       const totalRefunds = refunds?.reduce((sum, ref) => sum + ref.amount, 0) || 0;
-
-      // Calculate pharmacy profit (revenue - cost basis, simplified as 70% of revenue)
-      const pharmacyProfit = pharmacyFinalRevenue * 0.3; // Assuming 30% profit margin
 
       // Total hospital revenue and profit
       const totalHospitalRevenue = hospitalRevenue + labRevenue + otRevenue + emergencyRevenue;
@@ -106,7 +129,6 @@ export default function FinanceDaily() {
       return {
         hospitalRevenue,
         pharmacyRevenue,
-        pharmacyFinalRevenue,
         pharmacyProfit,
         labRevenue,
         otRevenue,
@@ -205,7 +227,7 @@ export default function FinanceDaily() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           <StatsCard
             title="Pharmacy Revenue"
-            value={formatPkrAmount(dailyData?.pharmacyFinalRevenue || 0)}
+            value={formatPkrAmount(dailyData?.pharmacyRevenue || 0)}
             icon={<Pill className="w-5 h-5 text-blue-600" />}
             loading={isLoading}
           />
