@@ -69,7 +69,12 @@ export function StaffOT() {
     // Set up real-time listener for OT schedules
     console.log('🔄 Setting up OT real-time updates...');
     const channel = supabase
-      .channel('ot-schedules-changes')
+      .channel('ot-schedules-realtime', {
+        config: {
+          broadcast: { self: true },
+          presence: { key: 'ot-staff' }
+        }
+      })
       .on(
         'postgres_changes',
         {
@@ -79,20 +84,28 @@ export function StaffOT() {
         },
         (payload) => {
           console.log('🔄 OT schedule change detected:', payload);
-          // Refetch OT schedules when changes occur
+          // Add a small delay to ensure database consistency
           setTimeout(() => {
+            console.log('🔄 Refetching OT schedules...');
             fetchOTSchedules();
-          }, 100); // Small delay to ensure DB consistency
+          }, 200);
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log('📡 OT real-time channel status:', status);
+        if (status === 'SUBSCRIBED') {
+          console.log('✅ OT real-time updates successfully subscribed');
+        } else if (status === 'CHANNEL_ERROR') {
+          console.error('❌ OT real-time channel error');
+        }
+      });
 
     // Cleanup function
     return () => {
       console.log('🔌 Cleaning up OT real-time channel...');
       supabase.removeChannel(channel);
     };
-  }, [patientNames, doctorNames]); // Add dependencies to ensure proper filtering
+  }, []); // Remove dependencies to avoid re-subscription
 
   const fetchOTSchedules = async () => {
     try {
