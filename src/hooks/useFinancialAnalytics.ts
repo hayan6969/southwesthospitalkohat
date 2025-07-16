@@ -62,62 +62,38 @@ export function useFinancialAnalytics() {
       ]);
 
       // Calculate refunds by category
-      // Doctor-related refunds (consultation, ot_doctor) - these don't affect hospital revenue directly
+      // Doctor-related refunds (consultation, ot_doctor) - these reduce doctor earnings
       const doctorRefunds = (refunds || [])
         .filter(refund => ['consultation', 'ot_doctor'].includes(refund.refund_type))
         .reduce((sum, refund) => sum + Number(refund.amount), 0);
 
-      // Hospital-related refunds (ot_simple, lab, pharmacy, other) - these reduce hospital revenue
+      // Hospital-related refunds (ot_simple, lab, pharmacy, other) - these become expenses
       const hospitalRefunds = (refunds || [])
         .filter(refund => ['ot_simple', 'lab', 'pharmacy', 'other'].includes(refund.refund_type))
         .reduce((sum, refund) => sum + Number(refund.amount), 0);
 
-      // Specific refund categories for detailed tracking
-      const consultationRefunds = (refunds || [])
-        .filter(refund => refund.refund_type === 'consultation')
-        .reduce((sum, refund) => sum + Number(refund.amount), 0);
-
-      const otDoctorRefunds = (refunds || [])
-        .filter(refund => refund.refund_type === 'ot_doctor')
-        .reduce((sum, refund) => sum + Number(refund.amount), 0);
-
-      const otSimpleRefunds = (refunds || [])
-        .filter(refund => refund.refund_type === 'ot_simple')
-        .reduce((sum, refund) => sum + Number(refund.amount), 0);
-
-      const labRefunds = (refunds || [])
-        .filter(refund => refund.refund_type === 'lab')
-        .reduce((sum, refund) => sum + Number(refund.amount), 0);
-
-      const pharmacyRefunds = (refunds || [])
-        .filter(refund => refund.refund_type === 'pharmacy')
-        .reduce((sum, refund) => sum + Number(refund.amount), 0);
-
-      const otherRefunds = (refunds || [])
-        .filter(refund => refund.refund_type === 'other')
-        .reduce((sum, refund) => sum + Number(refund.amount), 0);
-
-      // Calculate revenue by source (subtract hospital-related refunds only)
-      // Hospital consultations and services - subtract other refunds but NOT doctor-related refunds
+      // Calculate revenue by source (no refund deductions - refunds become expenses)
       const hospitalRevenue = (invoices || [])
         .filter(inv => inv.status === 'paid')
-        .reduce((sum, inv) => sum + Number(inv.amount), 0) - otherRefunds;
+        .reduce((sum, inv) => sum + Number(inv.amount), 0);
 
       const pharmacyRevenue = (pharmacyInvoices || [])
-        .reduce((sum, inv) => sum + Number(inv.final_amount), 0) - pharmacyRefunds;
+        .reduce((sum, inv) => sum + Number(inv.final_amount), 0);
 
       const labRevenue = (labReports || [])
         .filter(report => report.price)
-        .reduce((sum, report) => sum + Number(report.price), 0) - labRefunds;
+        .reduce((sum, report) => sum + Number(report.price), 0);
 
-      // Calculate OT revenue (hospital portion only, excluding doctor expenses, minus ot_simple refunds)
+      // Calculate OT revenue (hospital portion only, excluding doctor expenses)
       const otRevenue = (otSchedules || [])
         .filter(schedule => schedule.total_cost && schedule.doctor_expense)
-        .reduce((sum, schedule) => sum + (Number(schedule.total_cost) - Number(schedule.doctor_expense)), 0) - otSimpleRefunds;
+        .reduce((sum, schedule) => sum + (Number(schedule.total_cost) - Number(schedule.doctor_expense)), 0);
 
       const totalRevenue = hospitalRevenue + pharmacyRevenue + labRevenue + otRevenue;
+      
+      // Total expenses = regular expenses + hospital-related refunds
       const totalExpenses = (expenses || [])
-        .reduce((sum, exp) => sum + Number(exp.amount), 0);
+        .reduce((sum, exp) => sum + Number(exp.amount), 0) + hospitalRefunds;
 
       const netProfit = totalRevenue - totalExpenses;
       const profitMargin = totalRevenue > 0 ? (netProfit / totalRevenue) * 100 : 0;
@@ -152,14 +128,14 @@ export function useFinancialAnalytics() {
           }
         });
 
-      // Subtract only hospital-related refunds from monthly revenue (not doctor-related refunds)
+      // Add hospital-related refunds to monthly expenses
       (refunds || []).forEach(refund => {
         if (!refund.created_at) return;
-        // Only subtract hospital-related refunds from revenue
+        // Add hospital-related refunds as expenses
         if (['ot_simple', 'lab', 'pharmacy', 'other'].includes(refund.refund_type)) {
           const month = format(new Date(refund.created_at), 'MMM yyyy');
-          if (monthlyData.has(month)) {
-            monthlyData.set(month, monthlyData.get(month) - Number(refund.amount));
+          if (expenseData.has(month)) {
+            expenseData.set(month, expenseData.get(month) + Number(refund.amount));
           }
         }
       });
