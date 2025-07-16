@@ -341,68 +341,68 @@ export function PharmacyAccountDialog({ open, onOpenChange }: PharmacyAccountDia
           {/* Financial Breakdown */}
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-8">
             <Card className="border-2 hover:shadow-lg transition-shadow">
-              <CardHeader className="pb-6">
-                <CardTitle className="text-xl font-semibold flex items-center gap-3">
-                  <TrendingUp className="w-6 h-6 text-green-600" />
+              <CardHeader className="pb-4">
+                <CardTitle className="text-lg font-semibold flex items-center gap-2">
+                  <TrendingUp className="w-5 h-5 text-green-600" />
                   Total Revenue
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-4xl font-bold text-green-600 mb-3">
+                <div className="text-2xl font-bold text-green-600 mb-2">
                   {formatPkrAmount(pharmacyStats.totalRevenue)}
                 </div>
-                <p className="text-base text-muted-foreground">
+                <p className="text-sm text-muted-foreground">
                   All pharmacy sales revenue
                 </p>
               </CardContent>
             </Card>
 
             <Card className="border-2 hover:shadow-lg transition-shadow">
-              <CardHeader className="pb-6">
-                <CardTitle className="text-xl font-semibold flex items-center gap-3">
-                  <DollarSign className="w-6 h-6 text-purple-600" />
+              <CardHeader className="pb-4">
+                <CardTitle className="text-lg font-semibold flex items-center gap-2">
+                  <DollarSign className="w-5 h-5 text-purple-600" />
                   Total Profit
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-4xl font-bold text-purple-600 mb-3">
+                <div className="text-2xl font-bold text-purple-600 mb-2">
                   {formatPkrAmount(pharmacyStats.totalProfit)}
                 </div>
-                <p className="text-base text-muted-foreground">
+                <p className="text-sm text-muted-foreground">
                   Selling price - buying price
                 </p>
               </CardContent>
             </Card>
 
             <Card className="border-2 hover:shadow-lg transition-shadow">
-              <CardHeader className="pb-6">
-                <CardTitle className="text-xl font-semibold flex items-center gap-3">
-                  <Minus className="w-6 h-6 text-red-600" />
+              <CardHeader className="pb-4">
+                <CardTitle className="text-lg font-semibold flex items-center gap-2">
+                  <Minus className="w-5 h-5 text-red-600" />
                   Total Expenses
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-4xl font-bold text-red-600 mb-3">
+                <div className="text-2xl font-bold text-red-600 mb-2">
                   {formatPkrAmount(pharmacyStats.totalExpenses)}
                 </div>
-                <p className="text-base text-muted-foreground">
+                <p className="text-sm text-muted-foreground">
                   Profit withdrawals & expenses
                 </p>
               </CardContent>
             </Card>
 
             <Card className="border-2 hover:shadow-lg transition-shadow bg-blue-50/50">
-              <CardHeader className="pb-6">
-                <CardTitle className="text-xl font-semibold flex items-center gap-3">
-                  <Wallet className="w-6 h-6 text-blue-600" />
+              <CardHeader className="pb-4">
+                <CardTitle className="text-lg font-semibold flex items-center gap-2">
+                  <Wallet className="w-5 h-5 text-blue-600" />
                   Net Balance
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-4xl font-bold text-blue-600 mb-3">
+                <div className="text-2xl font-bold text-blue-600 mb-2">
                   {formatPkrAmount(pharmacyStats.netBalance)}
                 </div>
-                <p className="text-base text-muted-foreground">
+                <p className="text-sm text-muted-foreground">
                   Current available balance
                 </p>
               </CardContent>
