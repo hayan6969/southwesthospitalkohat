@@ -76,6 +76,9 @@ export const generateThermalReceipt = async (invoiceData: PharmacyInvoiceData): 
   // Initialize printer and set character set
   receipt += ESC + '@'; // Initialize printer
   receipt += ESC + 't' + '\x10'; // Set character code table (PC437)
+  receipt += ESC + '!' + '\x00'; // Reset font
+  receipt += ESC + 'E' + '\x01'; // Enable bold/emphasized text
+  receipt += GS + '!' + '\x00'; // Set print density to maximum
   
   // Header
   receipt += ESC + 'a' + '\x01'; // Center alignment
@@ -158,21 +161,38 @@ export const generateThermalReceipt = async (invoiceData: PharmacyInvoiceData): 
           <style>
             body {
               font-family: 'Courier New', monospace;
-              font-size: 10px;
-              line-height: 1.2;
+              font-size: 12px;
+              font-weight: bold;
+              line-height: 1.3;
               margin: 0;
               padding: 5px;
               width: 300px;
               background: white;
+              color: #000000;
+              -webkit-print-color-adjust: exact;
+              print-color-adjust: exact;
             }
             .receipt {
               white-space: pre-line;
               word-wrap: break-word;
+              font-weight: bold;
+              color: #000000;
+              text-shadow: 0.5px 0.5px 0px #000000;
             }
             @media print {
               body {
                 margin: 0;
                 padding: 0;
+                font-size: 13px;
+                font-weight: 900;
+                color: #000000 !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+              }
+              .receipt {
+                font-weight: 900;
+                color: #000000 !important;
+                text-shadow: 1px 1px 0px #000000;
               }
             }
           </style>
