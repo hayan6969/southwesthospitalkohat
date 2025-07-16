@@ -572,7 +572,65 @@ export const generateDailyClosingPDF = async (data: {
   doc.setFontSize(10);
   doc.setTextColor(100, 100, 100);
   doc.text(`Closing Time: ${new Date(data.closingTime).toLocaleString()}`, pageWidth / 2, yPosition, { align: 'center' });
-  yPosition += 20;
+  yPosition += 25;
+
+  // Helper function to draw tables
+  const drawTable = (headers: string[], rows: string[][], startY: number, colWidths: number[]) => {
+    let tableY = startY;
+    const tableHeight = 8;
+    const headerHeight = 10;
+    
+    // Draw header
+    doc.setFillColor(240, 240, 240);
+    doc.rect(20, tableY, pageWidth - 40, headerHeight, 'F');
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(10);
+    doc.setTextColor(40, 40, 40);
+    
+    let xPos = 25;
+    headers.forEach((header, i) => {
+      doc.text(header, xPos, tableY + 7);
+      xPos += colWidths[i];
+    });
+    
+    tableY += headerHeight;
+    
+    // Draw rows
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+    rows.forEach((row, rowIndex) => {
+      if (tableY > 250) {
+        doc.addPage();
+        tableY = 30;
+      }
+      
+      if (rowIndex % 2 === 0) {
+        doc.setFillColor(250, 250, 250);
+        doc.rect(20, tableY, pageWidth - 40, tableHeight, 'F');
+      }
+      
+      xPos = 25;
+      row.forEach((cell, colIndex) => {
+        doc.text(cell, xPos, tableY + 6);
+        xPos += colWidths[colIndex];
+      });
+      
+      tableY += tableHeight;
+    });
+    
+    // Draw table border
+    doc.setDrawColor(200, 200, 200);
+    doc.rect(20, startY, pageWidth - 40, tableY - startY);
+    
+    // Draw column lines
+    xPos = 20;
+    for (let i = 0; i < colWidths.length - 1; i++) {
+      xPos += colWidths[i];
+      doc.line(xPos, startY, xPos, tableY);
+    }
+    
+    return tableY + 15;
+  };
 
   // Pharmacy Section
   doc.setFont('helvetica', 'bold');
@@ -581,181 +639,216 @@ export const generateDailyClosingPDF = async (data: {
   doc.text('PHARMACY TRANSACTIONS', 20, yPosition);
   yPosition += 15;
 
-  // Pharmacy Invoices
+  // Pharmacy Invoices Table
   if (data.transactionsData?.pharmacyInvoices?.length > 0) {
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(11);
-    doc.text('Pharmacy Sales:', 25, yPosition);
+    doc.setFontSize(12);
+    doc.text('Sales Transactions:', 25, yPosition);
     yPosition += 10;
 
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(9);
-    data.transactionsData.pharmacyInvoices.forEach((invoice: any, index: number) => {
-      if (yPosition > 250) {
-        doc.addPage();
-        yPosition = 30;
-      }
-      
-      const customerName = invoice.customer_name || 'Walk-in Customer';
-      const invoiceDetails = `${index + 1}. Invoice #${invoice.invoice_number} - ${customerName} - ${formatPkrAmount(invoice.final_amount)}`;
-      doc.text(invoiceDetails, 30, yPosition);
-      yPosition += 8;
+    const pharmacyHeaders = ['Invoice #', 'Customer', 'Items', 'Total Amount'];
+    const pharmacyColWidths = [35, 50, 60, 35];
+    const pharmacyRows: string[][] = [];
 
-      // Add medicine details
+    data.transactionsData.pharmacyInvoices.forEach((invoice: any) => {
+      const customerName = invoice.customer_name || 'Walk-in Customer';
+      const itemsCount = invoice.pharmacy_invoice_items?.length || 0;
+      const itemsText = `${itemsCount} item${itemsCount !== 1 ? 's' : ''}`;
+      
+      pharmacyRows.push([
+        invoice.invoice_number,
+        customerName,
+        itemsText,
+        formatPkrAmount(invoice.final_amount)
+      ]);
+    });
+
+    yPosition = drawTable(pharmacyHeaders, pharmacyRows, yPosition, pharmacyColWidths);
+    
+    // Pharmacy Items Detail Table
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(12);
+    doc.text('Medicine Sales Detail:', 25, yPosition);
+    yPosition += 10;
+
+    const itemHeaders = ['Medicine Name', 'Quantity', 'Unit Price', 'Total'];
+    const itemColWidths = [80, 25, 30, 35];
+    const itemRows: string[][] = [];
+
+    data.transactionsData.pharmacyInvoices.forEach((invoice: any) => {
       if (invoice.pharmacy_invoice_items?.length > 0) {
         invoice.pharmacy_invoice_items.forEach((item: any) => {
-          if (yPosition > 250) {
-            doc.addPage();
-            yPosition = 30;
-          }
           const medicineName = item.medicines?.name || 'Unknown Medicine';
-          const itemDetail = `   • ${medicineName} (Qty: ${item.quantity}) - ${formatPkrAmount(item.total_price)}`;
-          doc.text(itemDetail, 35, yPosition);
-          yPosition += 6;
+          itemRows.push([
+            medicineName,
+            item.quantity.toString(),
+            formatPkrAmount(item.unit_price),
+            formatPkrAmount(item.total_price)
+          ]);
         });
       }
-      yPosition += 3;
     });
-    yPosition += 10;
+
+    if (itemRows.length > 0) {
+      yPosition = drawTable(itemHeaders, itemRows, yPosition, itemColWidths);
+    }
   }
 
-  // Hospital Section
+  // Hospital Section (excluding consultations)
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(14);
   doc.setTextColor(40, 40, 40);
-  doc.text('HOSPITAL TRANSACTIONS', 20, yPosition);
+  doc.text('HOSPITAL SERVICES', 20, yPosition);
   yPosition += 15;
 
-  // Hospital Invoices (Consultations)
-  if (data.transactionsData?.hospitalInvoices?.length > 0) {
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(11);
-    doc.text('Consultation Fees:', 25, yPosition);
-    yPosition += 10;
-
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(9);
-    data.transactionsData.hospitalInvoices.forEach((invoice: any, index: number) => {
-      if (yPosition > 250) {
-        doc.addPage();
-        yPosition = 30;
-      }
-      
-      const patientName = invoice.patients?.profiles?.first_name && invoice.patients?.profiles?.last_name 
-        ? `${invoice.patients.profiles.first_name} ${invoice.patients.profiles.last_name}`
-        : 'Unknown Patient';
-      const invoiceDetails = `${index + 1}. Invoice #${invoice.invoice_number} - ${patientName} - ${formatPkrAmount(invoice.amount)}`;
-      doc.text(invoiceDetails, 30, yPosition);
-      yPosition += 8;
-    });
-    yPosition += 10;
-  }
-
-  // Lab Reports
+  // Lab Reports Table
   if (data.transactionsData?.labReports?.length > 0) {
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(11);
+    doc.setFontSize(12);
     doc.text('Laboratory Tests:', 25, yPosition);
     yPosition += 10;
 
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(9);
-    data.transactionsData.labReports.forEach((lab: any, index: number) => {
-      if (yPosition > 250) {
-        doc.addPage();
-        yPosition = 30;
-      }
-      
+    const labHeaders = ['Test Name', 'Patient Name', 'Status', 'Amount'];
+    const labColWidths = [60, 50, 30, 40];
+    const labRows: string[][] = [];
+
+    data.transactionsData.labReports.forEach((lab: any) => {
       const patientName = lab.patients?.profiles?.first_name && lab.patients?.profiles?.last_name 
         ? `${lab.patients.profiles.first_name} ${lab.patients.profiles.last_name}`
         : 'Unknown Patient';
-      const labDetails = `${index + 1}. ${lab.test_name} - ${patientName} - ${formatPkrAmount(lab.price || 0)}`;
-      doc.text(labDetails, 30, yPosition);
-      yPosition += 8;
+      
+      labRows.push([
+        lab.test_name,
+        patientName,
+        lab.status || 'Completed',
+        formatPkrAmount(lab.price || 0)
+      ]);
     });
-    yPosition += 10;
+
+    yPosition = drawTable(labHeaders, labRows, yPosition, labColWidths);
   }
 
-  // OT Schedules
+  // OT Schedules Table
   if (data.transactionsData?.otSchedules?.length > 0) {
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(11);
-    doc.text('Operation Theater:', 25, yPosition);
+    doc.setFontSize(12);
+    doc.text('Operation Theater Services:', 25, yPosition);
     yPosition += 10;
 
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(9);
-    data.transactionsData.otSchedules.forEach((ot: any, index: number) => {
-      if (yPosition > 250) {
-        doc.addPage();
-        yPosition = 30;
-      }
-      
+    const otHeaders = ['Operation', 'Patient', 'Total Cost', 'Doctor Fee', 'Hospital Revenue'];
+    const otColWidths = [40, 40, 30, 30, 40];
+    const otRows: string[][] = [];
+
+    data.transactionsData.otSchedules.forEach((ot: any) => {
       const patientName = ot.patients?.profiles?.first_name && ot.patients?.profiles?.last_name 
         ? `${ot.patients.profiles.first_name} ${ot.patients.profiles.last_name}`
         : 'Unknown Patient';
       const operationName = ot.ot_operations?.operation_name || 'Operation';
-      const otRevenue = (ot.total_cost || 0) - (ot.doctor_expense || 0);
-      const otDetails = `${index + 1}. ${operationName} - ${patientName} - ${formatPkrAmount(otRevenue)}`;
-      doc.text(otDetails, 30, yPosition);
-      yPosition += 8;
+      const hospitalRevenue = (ot.total_cost || 0) - (ot.doctor_expense || 0);
+      
+      otRows.push([
+        operationName,
+        patientName,
+        formatPkrAmount(ot.total_cost || 0),
+        formatPkrAmount(ot.doctor_expense || 0),
+        formatPkrAmount(hospitalRevenue)
+      ]);
     });
-    yPosition += 10;
+
+    yPosition = drawTable(otHeaders, otRows, yPosition, otColWidths);
   }
 
-  // Emergency Consultations
+  // Emergency Services Table (if any - these might be hospital revenue if they're facility fees)
   if (data.transactionsData?.emergencyAppointments?.length > 0) {
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(11);
-    doc.text('Emergency Consultations:', 25, yPosition);
+    doc.setFontSize(12);
+    doc.text('Emergency Services (Facility Fees):', 25, yPosition);
     yPosition += 10;
 
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(9);
-    data.transactionsData.emergencyAppointments.forEach((emergency: any, index: number) => {
-      if (yPosition > 250) {
-        doc.addPage();
-        yPosition = 30;
-      }
-      
+    const emergencyHeaders = ['Patient Name', 'Doctor', 'Service Fee', 'Time'];
+    const emergencyColWidths = [45, 45, 35, 35];
+    const emergencyRows: string[][] = [];
+
+    data.transactionsData.emergencyAppointments.forEach((emergency: any) => {
       const patientName = emergency.patients?.profiles?.first_name && emergency.patients?.profiles?.last_name 
         ? `${emergency.patients.profiles.first_name} ${emergency.patients.profiles.last_name}`
         : 'Unknown Patient';
       const doctorName = emergency.doctors?.profiles?.first_name && emergency.doctors?.profiles?.last_name 
         ? `Dr. ${emergency.doctors.profiles.first_name} ${emergency.doctors.profiles.last_name}`
         : 'Unknown Doctor';
-      const emergencyDetails = `${index + 1}. ${patientName} - ${doctorName} - ${formatPkrAmount(emergency.consultation_fee_at_time || 0)}`;
-      doc.text(emergencyDetails, 30, yPosition);
-      yPosition += 8;
+      const appointmentTime = new Date(emergency.appointment_date).toLocaleTimeString();
+      
+      emergencyRows.push([
+        patientName,
+        doctorName,
+        formatPkrAmount(emergency.consultation_fee_at_time || 0),
+        appointmentTime
+      ]);
     });
-    yPosition += 10;
+
+    yPosition = drawTable(emergencyHeaders, emergencyRows, yPosition, emergencyColWidths);
   }
 
-  // Expenses Section
+  // Expenses Table
   if (data.transactionsData?.expenses?.length > 0) {
+    if (yPosition > 200) {
+      doc.addPage();
+      yPosition = 30;
+    }
+
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(14);
     doc.setTextColor(40, 40, 40);
     doc.text('DAILY EXPENSES', 20, yPosition);
     yPosition += 15;
 
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(9);
-    data.transactionsData.expenses.forEach((expense: any, index: number) => {
-      if (yPosition > 250) {
-        doc.addPage();
-        yPosition = 30;
-      }
-      
-      const expenseDetails = `${index + 1}. ${expense.category} - ${expense.description} - ${formatPkrAmount(expense.amount)}`;
-      doc.text(expenseDetails, 25, yPosition);
-      yPosition += 8;
+    const expenseHeaders = ['Category', 'Description', 'Amount', 'Date'];
+    const expenseColWidths = [40, 70, 35, 35];
+    const expenseRows: string[][] = [];
+
+    data.transactionsData.expenses.forEach((expense: any) => {
+      expenseRows.push([
+        expense.category,
+        expense.description,
+        formatPkrAmount(expense.amount),
+        new Date(expense.expense_date).toLocaleDateString()
+      ]);
     });
+
+    yPosition = drawTable(expenseHeaders, expenseRows, yPosition, expenseColWidths);
+  }
+
+  // Refunds Table (if any)
+  if (data.transactionsData?.refunds?.length > 0) {
+    if (yPosition > 200) {
+      doc.addPage();
+      yPosition = 30;
+    }
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(14);
+    doc.setTextColor(40, 40, 40);
+    doc.text('REFUNDS & RETURNS', 20, yPosition);
     yPosition += 15;
+
+    const refundHeaders = ['Type', 'Description', 'Amount', 'Date'];
+    const refundColWidths = [40, 70, 35, 35];
+    const refundRows: string[][] = [];
+
+    data.transactionsData.refunds.forEach((refund: any) => {
+      refundRows.push([
+        refund.refund_type,
+        refund.description,
+        formatPkrAmount(refund.amount),
+        new Date(refund.created_at).toLocaleDateString()
+      ]);
+    });
+
+    yPosition = drawTable(refundHeaders, refundRows, yPosition, refundColWidths);
   }
 
   // Summary Section
-  if (yPosition > 200) {
+  if (yPosition > 150) {
     doc.addPage();
     yPosition = 30;
   }
@@ -767,38 +860,31 @@ export const generateDailyClosingPDF = async (data: {
   yPosition += 20;
 
   // Summary table
-  const summaryItems = [
-    { label: 'Hospital Revenue:', value: formatPkrAmount(data.hospitalRevenue) },
-    { label: 'Pharmacy Revenue:', value: formatPkrAmount(data.pharmacyRevenue) },
-    { label: 'Pharmacy Profit:', value: formatPkrAmount(data.pharmacyProfit) },
-    { label: 'Total Expenses:', value: formatPkrAmount(data.totalExpenses) },
-    { label: 'Total Refunds:', value: formatPkrAmount(data.totalRefunds) },
-    { label: 'Net Profit:', value: formatPkrAmount(data.netProfit), highlight: true }
+  const summaryHeaders = ['Description', 'Amount'];
+  const summaryColWidths = [120, 50];
+  const summaryRows = [
+    ['Hospital Services Revenue (Lab + OT + Emergency)', formatPkrAmount(data.hospitalRevenue)],
+    ['Pharmacy Revenue', formatPkrAmount(data.pharmacyRevenue)],
+    ['Pharmacy Profit', formatPkrAmount(data.pharmacyProfit)],
+    ['Total Daily Expenses', `(${formatPkrAmount(data.totalExpenses)})`],
+    ['Total Refunds', `(${formatPkrAmount(data.totalRefunds)})`],
+    ['NET PROFIT', formatPkrAmount(data.netProfit)]
   ];
 
-  doc.setFontSize(12);
-  summaryItems.forEach((item, index) => {
-    if (item.highlight) {
-      doc.setFont('helvetica', 'bold');
-      doc.setFillColor(230, 230, 230);
-      doc.rect(20, yPosition - 5, pageWidth - 40, 12, 'F');
-    } else {
-      doc.setFont('helvetica', 'normal');
-    }
-    
-    doc.setTextColor(40, 40, 40);
-    doc.text(item.label, 25, yPosition + 3);
-    doc.text(item.value, pageWidth - 25, yPosition + 3, { align: 'right' });
-    yPosition += 15;
-  });
+  yPosition = drawTable(summaryHeaders, summaryRows, yPosition, summaryColWidths);
+
+  // Highlight net profit row
+  doc.setFillColor(220, 255, 220);
+  doc.rect(20, yPosition - 23, pageWidth - 40, 8, 'F');
 
   // Footer
   yPosition += 20;
   doc.setFontSize(9);
   doc.setFont('helvetica', 'italic');
   doc.setTextColor(100, 100, 100);
-  doc.text('This report was generated automatically by the hospital management system.', pageWidth / 2, yPosition, { align: 'center' });
-  doc.text(`Generated on: ${new Date().toLocaleString()}`, pageWidth / 2, yPosition + 8, { align: 'center' });
+  doc.text('This report excludes doctor consultation fees as they belong to individual doctor finances.', pageWidth / 2, yPosition, { align: 'center' });
+  doc.text('This report was generated automatically by the hospital management system.', pageWidth / 2, yPosition + 8, { align: 'center' });
+  doc.text(`Generated on: ${new Date().toLocaleString()}`, pageWidth / 2, yPosition + 16, { align: 'center' });
 
   // Open PDF in new tab
   const pdfBlob = doc.output('blob');
