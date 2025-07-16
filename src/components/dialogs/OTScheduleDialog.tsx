@@ -149,12 +149,8 @@ export function OTScheduleDialog() {
 
   const handleDoctorChange = (selectedDoctorId: string) => {
     setDoctorId(selectedDoctorId);
-    const selectedDoctor = doctors?.find(d => d.id === selectedDoctorId);
-    if (selectedDoctor) {
-      const doctorProfile = doctorNames?.find(d => d.id === selectedDoctorId);
-      // Set the doctor's consultation fee as the default expense
-      setDoctorExpense(selectedDoctor.consultation_fee?.toString() || "0");
-    }
+    // Doctor expense should be manually entered for OT operations
+    // Not automatically set from consultation fee
   };
 
   const getNextQueuePosition = async (roomUuid: string, opDate: string) => {
