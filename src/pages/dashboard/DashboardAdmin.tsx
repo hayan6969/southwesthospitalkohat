@@ -31,6 +31,7 @@ import { useToast } from "@/hooks/use-toast";
 import { toast } from "sonner";
 import AdminLabs from "./admin/AdminLabs";
 import { AdminOT } from "./admin/AdminOT";
+import { AdminFinanceAnalytics } from "@/components/AdminFinanceAnalytics";
 
 
 export default function DashboardAdmin() {
@@ -266,9 +267,10 @@ export default function DashboardAdmin() {
           </div>
 
           <Tabs defaultValue="overview" className="space-y-6">
-            <TabsList className="grid w-full grid-cols-8 h-auto gap-1">
+            <TabsList className="grid w-full grid-cols-9 h-auto gap-1">
               <TabsTrigger value="overview" className="whitespace-nowrap">Overview</TabsTrigger>
               <TabsTrigger value="analytics" className="whitespace-nowrap">Analytics</TabsTrigger>
+              <TabsTrigger value="finance" className="whitespace-nowrap">Finance</TabsTrigger>
               <TabsTrigger value="accounts" className="whitespace-nowrap">Account Management</TabsTrigger>
               <TabsTrigger value="pharmacy" className="whitespace-nowrap">Pharmacy</TabsTrigger>
               <TabsTrigger value="lab" className="whitespace-nowrap">Lab</TabsTrigger>
@@ -468,6 +470,10 @@ export default function DashboardAdmin() {
                   </div>
                 </div>
               </div>
+            </TabsContent>
+
+            <TabsContent value="finance">
+              <AdminFinanceAnalytics />
             </TabsContent>
 
             <TabsContent value="accounts">
