@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Building2, Calendar, CreditCard, Clock, Users, Activity, Plus, Edit, Banknote, Search, Check, Download } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -439,89 +440,169 @@ export function StaffOT() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Queue #</TableHead>
-                    <TableHead>Patient</TableHead>
-                    <TableHead>Doctor</TableHead>
-                    <TableHead>Procedure</TableHead>
-                    <TableHead>Date</TableHead>
-                    <TableHead>Room</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Total Cost</TableHead>
-                    <TableHead>Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredOtSchedule.map((ot) => {
-                    const patientName = getPatientName(ot.patient_id, patientNames || []);
-                    
-                    return (
-                      <TableRow key={ot.id}>
-                        <TableCell className="font-medium">#{ot.queue_position}</TableCell>
-                        <TableCell className="font-medium">{patientName}</TableCell>
-                        <TableCell>{ot.doctor_name}</TableCell>
-                        <TableCell>{ot.operation?.operation_name || 'Unknown'}</TableCell>
-                        <TableCell>{new Date(ot.operation_date).toLocaleDateString()}</TableCell>
-                        <TableCell>{ot.room?.room_name || 'Unknown'}</TableCell>
-                        <TableCell>
-                          <Badge variant={
-                            ot.status === 'in_progress' ? 'default' :
-                            ot.status === 'scheduled' ? 'secondary' :
-                            ot.status === 'completed' ? 'outline' :
-                            'destructive'
-                          }>
-                            {ot.status.charAt(0).toUpperCase() + ot.status.slice(1)}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <span className="font-bold text-green-600">
-                            {formatPkrAmount(ot.total_cost)}
-                          </span>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex gap-1">
-                            {ot.status !== 'completed' && ot.status !== 'cancelled' && (
-                              <Button 
-                                size="sm" 
-                                variant="outline"
-                                onClick={() => handleCompleteOT(ot)}
-                                className="text-green-600 hover:text-green-700"
-                              >
-                                <Check className="w-3 h-3 mr-1" />
-                                Complete
-                              </Button>
-                            )}
-                            
-                            <Button 
-                              size="sm" 
-                              variant="outline"
-                              onClick={() => handleDownloadInvoice(ot)}
-                              disabled={downloadingInvoice === ot.id}
-                              className="text-blue-600 hover:text-blue-700"
-                            >
-                              {downloadingInvoice === ot.id ? (
-                                <>
-                                  <div className="w-3 h-3 mr-1 animate-spin rounded-full border-2 border-blue-600 border-t-transparent" />
-                                  Generating...
-                                </>
-                              ) : (
-                                <>
-                                  <Download className="w-3 h-3 mr-1" />
-                                  Invoice
-                                </>
-                              )}
-                            </Button>
-                          </div>
-                        </TableCell>
+            <Tabs defaultValue="upcoming" className="w-full">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="upcoming">Upcoming</TabsTrigger>
+                <TabsTrigger value="past">Past</TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="upcoming" className="mt-4">
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Queue #</TableHead>
+                        <TableHead>Patient</TableHead>
+                        <TableHead>Doctor</TableHead>
+                        <TableHead>Procedure</TableHead>
+                        <TableHead>Date</TableHead>
+                        <TableHead>Room</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Total Cost</TableHead>
+                        <TableHead>Actions</TableHead>
                       </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
-            </div>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredOtSchedule
+                        .filter(ot => ot.status === 'scheduled' || ot.status === 'in_progress')
+                        .map((ot) => {
+                          const patientName = getPatientName(ot.patient_id, patientNames || []);
+                          
+                          return (
+                            <TableRow key={ot.id}>
+                              <TableCell className="font-medium">#{ot.queue_position}</TableCell>
+                              <TableCell className="font-medium">{patientName}</TableCell>
+                              <TableCell>{ot.doctor_name}</TableCell>
+                              <TableCell>{ot.operation?.operation_name || 'Unknown'}</TableCell>
+                              <TableCell>{new Date(ot.operation_date).toLocaleDateString()}</TableCell>
+                              <TableCell>{ot.room?.room_name || 'Unknown'}</TableCell>
+                              <TableCell>
+                                <Badge variant={
+                                  ot.status === 'in_progress' ? 'default' :
+                                  ot.status === 'scheduled' ? 'secondary' :
+                                  'destructive'
+                                }>
+                                  {ot.status.charAt(0).toUpperCase() + ot.status.slice(1)}
+                                </Badge>
+                              </TableCell>
+                              <TableCell>
+                                <span className="font-bold text-green-600">
+                                  {formatPkrAmount(ot.total_cost)}
+                                </span>
+                              </TableCell>
+                              <TableCell>
+                                <div className="flex gap-1">
+                                  <Button 
+                                    size="sm" 
+                                    variant="outline"
+                                    onClick={() => handleCompleteOT(ot)}
+                                    className="text-green-600 hover:text-green-700"
+                                  >
+                                    <Check className="w-3 h-3 mr-1" />
+                                    Complete
+                                  </Button>
+                                  
+                                  <Button 
+                                    size="sm" 
+                                    variant="outline"
+                                    onClick={() => handleDownloadInvoice(ot)}
+                                    disabled={downloadingInvoice === ot.id}
+                                    className="text-blue-600 hover:text-blue-700"
+                                  >
+                                    {downloadingInvoice === ot.id ? (
+                                      <>
+                                        <div className="w-3 h-3 mr-1 animate-spin rounded-full border-2 border-blue-600 border-t-transparent" />
+                                        Generating...
+                                      </>
+                                    ) : (
+                                      <>
+                                        <Download className="w-3 h-3 mr-1" />
+                                        Invoice
+                                      </>
+                                    )}
+                                  </Button>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
+                    </TableBody>
+                  </Table>
+                </div>
+              </TabsContent>
+
+              <TabsContent value="past" className="mt-4">
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Queue #</TableHead>
+                        <TableHead>Patient</TableHead>
+                        <TableHead>Doctor</TableHead>
+                        <TableHead>Procedure</TableHead>
+                        <TableHead>Date</TableHead>
+                        <TableHead>Room</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Total Cost</TableHead>
+                        <TableHead>Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredOtSchedule
+                        .filter(ot => ot.status === 'completed' || ot.status === 'cancelled')
+                        .map((ot) => {
+                          const patientName = getPatientName(ot.patient_id, patientNames || []);
+                          
+                          return (
+                            <TableRow key={ot.id}>
+                              <TableCell className="font-medium">#{ot.queue_position}</TableCell>
+                              <TableCell className="font-medium">{patientName}</TableCell>
+                              <TableCell>{ot.doctor_name}</TableCell>
+                              <TableCell>{ot.operation?.operation_name || 'Unknown'}</TableCell>
+                              <TableCell>{new Date(ot.operation_date).toLocaleDateString()}</TableCell>
+                              <TableCell>{ot.room?.room_name || 'Unknown'}</TableCell>
+                              <TableCell>
+                                <Badge variant={
+                                  ot.status === 'completed' ? 'outline' :
+                                  'destructive'
+                                }>
+                                  {ot.status.charAt(0).toUpperCase() + ot.status.slice(1)}
+                                </Badge>
+                              </TableCell>
+                              <TableCell>
+                                <span className="font-bold text-green-600">
+                                  {formatPkrAmount(ot.total_cost)}
+                                </span>
+                              </TableCell>
+                              <TableCell>
+                                <Button 
+                                  size="sm" 
+                                  variant="outline"
+                                  onClick={() => handleDownloadInvoice(ot)}
+                                  disabled={downloadingInvoice === ot.id}
+                                  className="text-blue-600 hover:text-blue-700"
+                                >
+                                  {downloadingInvoice === ot.id ? (
+                                    <>
+                                      <div className="w-3 h-3 mr-1 animate-spin rounded-full border-2 border-blue-600 border-t-transparent" />
+                                      Generating...
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Download className="w-3 h-3 mr-1" />
+                                      Invoice
+                                    </>
+                                  )}
+                                </Button>
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
+                    </TableBody>
+                  </Table>
+                </div>
+              </TabsContent>
+            </Tabs>
           </CardContent>
         </Card>
       </div>
