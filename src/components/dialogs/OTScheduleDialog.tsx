@@ -245,13 +245,14 @@ export function OTScheduleDialog() {
 
       if (scheduleError) throw scheduleError;
 
-      // Generate invoice
+      // Generate invoice (hospital portion only)
       const invoiceNumber = `OT-${Date.now()}`;
+      const hospitalAmount = operationCost; // Only hospital portion for invoice
       const { data: invoiceData, error: invoiceError } = await supabase
         .from("invoices")
         .insert({
           patient_id: patientId,
-          amount: totalCost,
+          amount: hospitalAmount, // Only hospital portion
           status: 'paid',
           paid_at: new Date().toISOString(),
           invoice_number: invoiceNumber,
@@ -262,6 +263,59 @@ export function OTScheduleDialog() {
         .single();
 
       if (invoiceError) throw invoiceError;
+
+      // Create doctor payment record for OT
+      const doctorExpenseAmount = parseFloat(doctorExpense) || 0;
+      if (doctorExpenseAmount > 0) {
+        console.log('💳 Creating doctor OT payment record...');
+        
+        const currentMonth = new Date().toISOString().slice(0, 7);
+        const periodStart = `${currentMonth}-01`;
+        const periodEnd = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).toISOString().slice(0, 10);
+        
+        const { data: existingPayment } = await supabase
+          .from('doctor_payments')
+          .select('*')
+          .eq('doctor_id', doctorId)
+          .eq('period_start', periodStart)
+          .eq('period_end', periodEnd)
+          .single();
+        
+        if (existingPayment) {
+          // Update existing payment record
+          const { error: updateError } = await supabase
+            .from('doctor_payments')
+            .update({
+              ot_count: existingPayment.ot_count + 1,
+              ot_earnings: parseFloat(existingPayment.ot_earnings.toString()) + doctorExpenseAmount,
+              total_earnings: parseFloat(existingPayment.total_earnings.toString()) + doctorExpenseAmount
+            })
+            .eq('id', existingPayment.id);
+
+          if (updateError) {
+            console.error('Error updating doctor payment:', updateError);
+          }
+        } else {
+          // Create new payment record
+          const { error: createError } = await supabase
+            .from('doctor_payments')
+            .insert({
+              doctor_id: doctorId,
+              period_start: periodStart,
+              period_end: periodEnd,
+              appointment_count: 0,
+              ot_count: 1,
+              consultation_earnings: 0,
+              ot_earnings: doctorExpenseAmount,
+              total_earnings: doctorExpenseAmount,
+              payment_status: 'pending'
+            });
+
+          if (createError) {
+            console.error('Error creating doctor payment:', createError);
+          }
+        }
+      }
 
       const patientName = selectedPatient 
         ? `${selectedPatient.profile?.first_name} ${selectedPatient.profile?.last_name}`
