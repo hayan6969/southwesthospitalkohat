@@ -325,6 +325,7 @@ export type Database = {
           closing_time: string
           contact_number: string | null
           created_at: string | null
+          emergency_consultation_fee: number | null
           emergency_slots_percentage: number
           hospital_address: string | null
           hospital_name: string
@@ -341,6 +342,7 @@ export type Database = {
           closing_time?: string
           contact_number?: string | null
           created_at?: string | null
+          emergency_consultation_fee?: number | null
           emergency_slots_percentage?: number
           hospital_address?: string | null
           hospital_name?: string
@@ -357,6 +359,7 @@ export type Database = {
           closing_time?: string
           contact_number?: string | null
           created_at?: string | null
+          emergency_consultation_fee?: number | null
           emergency_slots_percentage?: number
           hospital_address?: string | null
           hospital_name?: string

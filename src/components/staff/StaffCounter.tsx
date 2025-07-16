@@ -9,6 +9,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { EnhancedAppointmentDialog } from "@/components/dialogs/EnhancedAppointmentDialog";
 import { PatientDialog } from "@/components/dialogs/PatientDialog";
 import { InvoiceDialog } from "@/components/dialogs/InvoiceDialog";
+import { EmergencyConsultationDialog } from "@/components/dialogs/EmergencyConsultationDialog";
 import { useAppointments, usePatients, useDoctors } from "@/hooks/useDatabase";
 import { usePatientNames, useDoctorNames, getPatientName, getDoctorName } from "@/hooks/useDisplayHelpers";
 import { supabase } from "@/integrations/supabase/client";
@@ -413,6 +414,7 @@ export function StaffCounter() {
         <EnhancedAppointmentDialog />
         <PatientDialog />
         <InvoiceDialog />
+        <EmergencyConsultationDialog />
         <Button variant="outline">
           <Printer className="w-4 h-4 mr-2" />
           Print Patient Card

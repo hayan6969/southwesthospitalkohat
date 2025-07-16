@@ -15,6 +15,7 @@ interface HospitalSettings {
   hospital_address: string;
   logo_url?: string;
   payroll_payment_date?: number;
+  emergency_consultation_fee?: number;
 }
 
 export const useHospitalSettings = () => {
