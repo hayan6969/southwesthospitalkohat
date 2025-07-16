@@ -21,8 +21,18 @@ export function AppointmentDialog() {
   const [patientId, setPatientId] = useState("");
   const [doctorId, setDoctorId] = useState("");
   const [doctorOpen, setDoctorOpen] = useState(false);
-  const [appointmentDate, setAppointmentDate] = useState("");
-  const [appointmentTime, setAppointmentTime] = useState("");
+  
+  // Set default date and time to current date and time
+  const getCurrentDateTime = () => {
+    const now = new Date();
+    const date = now.toISOString().split('T')[0]; // YYYY-MM-DD format
+    const time = now.toTimeString().split(' ')[0].substring(0, 5); // HH:MM format
+    return { date, time };
+  };
+  
+  const { date: currentDate, time: currentTime } = getCurrentDateTime();
+  const [appointmentDate, setAppointmentDate] = useState(currentDate);
+  const [appointmentTime, setAppointmentTime] = useState(currentTime);
   const [type, setType] = useState("");
   const [notes, setNotes] = useState("");
 
@@ -88,8 +98,9 @@ export function AppointmentDialog() {
       setPatientId("");
       setDoctorId("");
       setDoctorOpen(false);
-      setAppointmentDate("");
-      setAppointmentTime("");
+      const { date: newCurrentDate, time: newCurrentTime } = getCurrentDateTime();
+      setAppointmentDate(newCurrentDate);
+      setAppointmentTime(newCurrentTime);
       setType("");
       setNotes("");
     } catch (error) {
@@ -206,13 +217,19 @@ export function AppointmentDialog() {
 
           <div className="space-y-2">
             <Label htmlFor="type">Appointment Type</Label>
-            <Input
-              id="type"
-              value={type}
-              onChange={(e) => setType(e.target.value)}
-              placeholder="e.g., Consultation, Check-up, Follow-up"
-              required
-            />
+            <Select value={type} onValueChange={setType} required>
+              <SelectTrigger>
+                <SelectValue placeholder="Select appointment type" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="consultation">Consultation</SelectItem>
+                <SelectItem value="follow-up">Follow-up</SelectItem>
+                <SelectItem value="check-up">Check-up</SelectItem>
+                <SelectItem value="routine">Routine Visit</SelectItem>
+                <SelectItem value="emergency">Emergency</SelectItem>
+                <SelectItem value="specialist">Specialist Consultation</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="space-y-2">
