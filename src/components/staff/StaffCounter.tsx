@@ -152,11 +152,13 @@ export function StaffCounter() {
       filtered = filtered.filter(apt => {
         const patientName = getPatientName(apt.patient_id, patientNames || []).toLowerCase();
         const doctorName = getDoctorName(apt.doctor_id, doctorNames || []).toLowerCase();
+        const patientNumber = patientNumbers[apt.patient_id] || '';
         const patientId = apt.patient_id.toLowerCase();
         const search = searchTerm.toLowerCase();
         
         return patientName.includes(search) || 
                doctorName.includes(search) || 
+               patientNumber.toLowerCase().includes(search) ||
                patientId.includes(search);
       });
     }
@@ -185,11 +187,13 @@ export function StaffCounter() {
       filtered = filtered.filter(apt => {
         const patientName = getPatientName(apt.patient_id, patientNames || []).toLowerCase();
         const doctorName = getDoctorName(apt.doctor_id, doctorNames || []).toLowerCase();
+        const patientNumber = patientNumbers[apt.patient_id] || '';
         const patientId = apt.patient_id.toLowerCase();
         const search = searchTerm.toLowerCase();
         
         return patientName.includes(search) || 
                doctorName.includes(search) || 
+               patientNumber.toLowerCase().includes(search) ||
                patientId.includes(search);
       });
     }
@@ -426,7 +430,7 @@ export function StaffCounter() {
         <CardContent>
           <div className="flex flex-col md:flex-row gap-4">
             <Input
-              placeholder="Search by patient name, patient ID, or doctor..."
+              placeholder="Search by patient name, patient number, doctor name, or patient ID..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="flex-1"
