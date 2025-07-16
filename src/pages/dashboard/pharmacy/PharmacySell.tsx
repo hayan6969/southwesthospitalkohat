@@ -153,15 +153,7 @@ export default function PharmacySell() {
         }))
       };
       
-      console.log("Generating PDF with data:", pdfData);
-      
-      try {
-        await generatePharmacyInvoicePDF(pdfData);
-        toast.success("Sale completed successfully! Invoice opened in new tab.");
-      } catch (pdfError) {
-        console.error("PDF generation error:", pdfError);
-        toast.error("Sale completed but failed to generate PDF. Please try downloading from the invoices list.");
-      }
+      await generatePharmacyInvoicePDF(pdfData);
       
       // Clear the form
       setCart([]);
@@ -169,6 +161,7 @@ export default function PharmacySell() {
       setCustomerPhone("");
       setDiscount(0);
       
+      toast.success("Sale completed successfully! Invoice opened in new tab.");
     } catch (error) {
       toast.error("Failed to complete sale");
       console.error("Sale error:", error);

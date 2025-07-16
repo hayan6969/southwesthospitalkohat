@@ -42,22 +42,56 @@ const getHospitalSettings = async () => {
   }
 };
 
-// Add hospital header to thermal receipt
-const addThermalHeader = async (pdf: jsPDF, title: string) => {
+// Add hospital header to PDF
+const addHospitalHeader = async (pdf: jsPDF, title: string) => {
   const settings = await getHospitalSettings();
   const pageWidth = pdf.internal.pageSize.width;
-  let yPosition = 10;
+  let yPosition = 20;
+
+  // Hospital logo (if available)
+  if (settings.logo_url) {
+    try {
+      // Create a new image element to load the logo
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      
+      await new Promise((resolve, reject) => {
+        img.onload = () => {
+          try {
+            // Add the logo to PDF (top-left corner)
+            pdf.addImage(img, 'JPEG', 20, yPosition - 5, 30, 20);
+            resolve(true);
+          } catch (error) {
+            console.error('Error adding logo to PDF:', error);
+            resolve(false);
+          }
+        };
+        img.onerror = () => {
+          console.error('Failed to load logo image');
+          resolve(false);
+        };
+        // Set a timeout to avoid hanging
+        setTimeout(() => {
+          console.warn('Logo loading timeout');
+          resolve(false);
+        }, 5000);
+        img.src = settings.logo_url;
+      });
+    } catch (error) {
+      console.error('Error loading logo:', error);
+    }
+  }
 
   // Hospital name (center-aligned)
-  pdf.setFontSize(12);
+  pdf.setFontSize(18);
   pdf.setFont('helvetica', 'bold');
   pdf.setTextColor(40, 40, 40);
-  pdf.text(`${settings.hospital_name}`, pageWidth / 2, yPosition, { align: 'center' });
+  pdf.text(`${settings.hospital_name} - Pharmacy`, pageWidth / 2, yPosition + 8, { align: 'center' });
   
-  yPosition += 8;
+  yPosition += 16;
   
   // Hospital address
-  pdf.setFontSize(8);
+  pdf.setFontSize(10);
   pdf.setFont('helvetica', 'normal');
   pdf.setTextColor(60, 60, 60);
   pdf.text(settings.hospital_address, pageWidth / 2, yPosition, { align: 'center' });
@@ -67,235 +101,174 @@ const addThermalHeader = async (pdf: jsPDF, title: string) => {
   // Contact number
   pdf.text(`Phone: ${settings.contact_number}`, pageWidth / 2, yPosition, { align: 'center' });
   
-  yPosition += 10;
-  
-  // Separator line
-  pdf.setDrawColor(0, 0, 0);
-  pdf.line(5, yPosition, pageWidth - 5, yPosition);
-  
-  yPosition += 8;
+  yPosition += 15;
   
   // Document title
-  pdf.setFontSize(10);
+  pdf.setFontSize(16);
   pdf.setFont('helvetica', 'bold');
   pdf.setTextColor(40, 40, 40);
   pdf.text(title, pageWidth / 2, yPosition, { align: 'center' });
   
-  return yPosition + 10;
+  return yPosition + 15;
 };
 
 export const generatePharmacyInvoicePDF = async (invoiceData: PharmacyInvoiceData): Promise<void> => {
-  // Create PDF with thermal receipt dimensions (80mm width)
-  const pdf = new jsPDF({
-    unit: 'mm',
-    format: [80, 200], // 80mm width, adjustable height
-    orientation: 'portrait'
-  });
-  
+  const pdf = new jsPDF();
   const pageWidth = pdf.internal.pageSize.width;
-  const margin = 3;
 
   // Add hospital header
-  let yPosition = await addThermalHeader(pdf, 'PHARMACY RECEIPT');
+  let yPosition = await addHospitalHeader(pdf, 'PHARMACY INVOICE');
+  yPosition += 10;
   
-  // Separator line
+  // Invoice Details Box - Comprehensive format
   pdf.setDrawColor(0, 0, 0);
-  pdf.line(margin, yPosition, pageWidth - margin, yPosition);
-  yPosition += 5;
+  pdf.rect(15, yPosition - 5, pageWidth - 30, 50); // Taller box for more info
   
-  // Invoice Details (stacked vertically for narrow format)
-  pdf.setFontSize(8);
+  // Invoice Number and Date
+  pdf.setFontSize(11);
   pdf.setFont('helvetica', 'bold');
   pdf.setTextColor(40, 40, 40);
   
-  // Invoice Number
-  pdf.text('Invoice #:', margin, yPosition);
+  // First row
+  pdf.text('Invoice Number:', 20, yPosition + 5);
   pdf.setFont('helvetica', 'normal');
-  pdf.text(invoiceData.invoice_number, margin + 20, yPosition);
-  yPosition += 5;
+  pdf.text(invoiceData.invoice_number, 70, yPosition + 5);
   
-  // Date
   pdf.setFont('helvetica', 'bold');
-  pdf.text('Date:', margin, yPosition);
+  pdf.text('Date:', 120, yPosition + 5);
   pdf.setFont('helvetica', 'normal');
   const invoiceDate = new Date(invoiceData.created_at).toLocaleDateString();
-  pdf.text(invoiceDate, margin + 15, yPosition);
-  yPosition += 5;
+  pdf.text(invoiceDate, 135, yPosition + 5);
   
-  // Customer
+  // Second row
+  yPosition += 10;
   pdf.setFont('helvetica', 'bold');
-  pdf.text('Customer:', margin, yPosition);
+  pdf.text('Customer Name:', 20, yPosition + 5);
   pdf.setFont('helvetica', 'normal');
   const customerName = invoiceData.customer_name || 'Walk-in Customer';
-  // Split long customer names across lines
-  if (customerName.length > 20) {
-    const words = customerName.split(' ');
-    let line1 = '';
-    let line2 = '';
-    let currentLength = 0;
-    
-    for (const word of words) {
-      if (currentLength + word.length < 20) {
-        line1 += (line1 ? ' ' : '') + word;
-        currentLength += word.length + 1;
-      } else {
-        line2 += (line2 ? ' ' : '') + word;
-      }
-    }
-    
-    pdf.text(line1, margin + 20, yPosition);
-    if (line2) {
-      yPosition += 4;
-      pdf.text(line2, margin + 20, yPosition);
-    }
-  } else {
-    pdf.text(customerName, margin + 20, yPosition);
-  }
-  yPosition += 5;
+  pdf.text(customerName, 75, yPosition + 5);
   
-  // Contact
-  if (invoiceData.customer_phone) {
-    pdf.setFont('helvetica', 'bold');
-    pdf.text('Phone:', margin, yPosition);
-    pdf.setFont('helvetica', 'normal');
-    pdf.text(invoiceData.customer_phone, margin + 15, yPosition);
-    yPosition += 5;
-  }
-  
-  yPosition += 3;
-  
-  // Separator line before items
-  pdf.line(margin, yPosition, pageWidth - margin, yPosition);
-  yPosition += 5;
-  
-  // Items Header
   pdf.setFont('helvetica', 'bold');
-  pdf.setFontSize(7);
-  pdf.text('ITEM', margin, yPosition);
-  pdf.text('QTY', pageWidth - 35, yPosition);
-  pdf.text('RATE', pageWidth - 25, yPosition);
-  pdf.text('TOTAL', pageWidth - 15, yPosition);
-  yPosition += 3;
-  
-  // Separator line after header
-  pdf.line(margin, yPosition, pageWidth - margin, yPosition);
-  yPosition += 3;
-  
-  // Items
+  pdf.text('Customer ID:', 120, yPosition + 5);
   pdf.setFont('helvetica', 'normal');
-  pdf.setFontSize(7);
-  pdf.setTextColor(60, 60, 60);
+  pdf.text('WALK-IN', 170, yPosition + 5);
   
-  invoiceData.items.forEach((item) => {
-    // Medicine name (wrap if too long)
-    const maxNameLength = 25;
-    let medicineName = item.medicine_name;
-    
-    if (medicineName.length > maxNameLength) {
-      // Split into multiple lines
-      const words = medicineName.split(' ');
-      let line1 = '';
-      let line2 = '';
-      let currentLength = 0;
-      
-      for (const word of words) {
-        if (currentLength + word.length < maxNameLength) {
-          line1 += (line1 ? ' ' : '') + word;
-          currentLength += word.length + 1;
-        } else {
-          line2 += (line2 ? ' ' : '') + word;
-        }
-      }
-      
-      pdf.text(line1, margin, yPosition);
-      if (line2) {
-        yPosition += 3;
-        pdf.text(line2.length > maxNameLength ? line2.substring(0, maxNameLength - 3) + '...' : line2, margin, yPosition);
-      }
-    } else {
-      pdf.text(medicineName, margin, yPosition);
-    }
-    
-    // Quantity, Rate, Total (right aligned)
-    pdf.text(item.quantity.toString(), pageWidth - 35, yPosition);
-    pdf.text(formatPkrAmount(item.unit_price).replace('PKR ', ''), pageWidth - 25, yPosition);
-    pdf.text(formatPkrAmount(item.total_price).replace('PKR ', ''), pageWidth - 15, yPosition);
-    
-    yPosition += 5;
-  });
-  
-  // Separator line before totals
-  pdf.line(margin, yPosition, pageWidth - margin, yPosition);
-  yPosition += 5;
-  
-  // Totals Section
+  // Third row
+  yPosition += 10;
+  pdf.setFont('helvetica', 'bold');
+  pdf.text('Contact:', 20, yPosition + 5);
   pdf.setFont('helvetica', 'normal');
-  pdf.setFontSize(8);
-  pdf.setTextColor(60, 60, 60);
+  const phoneNumber = invoiceData.customer_phone ? invoiceData.customer_phone.replace(/[^0-9]/g, '') : 'N/A';
+  pdf.text(phoneNumber, 60, yPosition + 5);
   
-  // Subtotal
-  pdf.text('Subtotal:', margin, yPosition);
-  pdf.text(formatPkrAmount(invoiceData.total_amount), pageWidth - 25, yPosition);
-  yPosition += 4;
+  pdf.setFont('helvetica', 'bold');
+  pdf.text('Payment:', 120, yPosition + 5);
+  pdf.setFont('helvetica', 'normal');
+  pdf.text('Cash Sale', 155, yPosition + 5);
   
-  // Discount (if any)
-  if (invoiceData.discount_amount && invoiceData.discount_amount > 0) {
-    pdf.text('Discount:', margin, yPosition);
-    pdf.text(`-${formatPkrAmount(invoiceData.discount_amount)}`, pageWidth - 25, yPosition);
-    yPosition += 4;
-  }
+  yPosition += 50;
   
-  // Grand Total
+  // Items Table Header
+  const tableStartY = yPosition;
+  const colWidths = [80, 25, 35, 35];
+  const headers = ['Medicine Name', 'Qty', 'Unit Price', 'Total'];
+  
+  pdf.setFillColor(240, 240, 240);
+  pdf.rect(15, yPosition, pageWidth - 30, 10, 'F');
+  
   pdf.setFont('helvetica', 'bold');
   pdf.setFontSize(10);
   pdf.setTextColor(40, 40, 40);
-  pdf.text('TOTAL:', margin, yPosition);
-  pdf.text(formatPkrAmount(invoiceData.final_amount), pageWidth - 25, yPosition);
+  let xPosition = 20;
+  headers.forEach((header, index) => {
+    pdf.text(header, xPosition, yPosition + 7);
+    xPosition += colWidths[index];
+  });
   
+  yPosition += 15; // More spacing before first item
+  
+  // Items
+  pdf.setFont('helvetica', 'normal');
+  pdf.setTextColor(60, 60, 60);
+  invoiceData.items.forEach((item) => {
+    if (yPosition > 250) {
+      pdf.addPage();
+      yPosition = 20;
+    }
+    
+    xPosition = 20;
+    
+    // Medicine name (with text wrapping if too long)
+    const medicineName = item.medicine_name.length > 35 
+      ? item.medicine_name.substring(0, 32) + '...' 
+      : item.medicine_name;
+    pdf.text(medicineName, xPosition, yPosition);
+    xPosition += colWidths[0];
+    
+    // Quantity
+    pdf.text(item.quantity.toString(), xPosition, yPosition);
+    xPosition += colWidths[1];
+    
+    // Unit Price
+    pdf.text(formatPkrAmount(item.unit_price), xPosition, yPosition);
+    xPosition += colWidths[2];
+    
+    // Total Price
+    pdf.text(formatPkrAmount(item.total_price), xPosition, yPosition);
+    
+    yPosition += 8;
+  });
+  
+  // Draw table border
+  pdf.setDrawColor(0, 0, 0);
+  pdf.rect(15, tableStartY, pageWidth - 30, yPosition - tableStartY);
+  
+  // Vertical lines for table
+  xPosition = 15;
+  for (let i = 0; i < colWidths.length - 1; i++) {
+    xPosition += colWidths[i];
+    pdf.line(xPosition, tableStartY, xPosition, yPosition);
+  }
+  
+  yPosition += 15;
+  
+  // Totals Section
+  const totalsX = pageWidth - 80;
+  
+  pdf.setFont('helvetica', 'normal');
+  pdf.setTextColor(60, 60, 60);
+  pdf.text('Subtotal:', totalsX - 25, yPosition);
+  pdf.text(formatPkrAmount(invoiceData.total_amount), totalsX, yPosition);
   yPosition += 8;
   
-  // Separator line before footer
-  pdf.line(margin, yPosition, pageWidth - margin, yPosition);
-  yPosition += 5;
+  if (invoiceData.discount_amount && invoiceData.discount_amount > 0) {
+    pdf.text('Discount:', totalsX - 25, yPosition);
+    pdf.text(`-${formatPkrAmount(invoiceData.discount_amount)}`, totalsX, yPosition);
+    yPosition += 8;
+  }
+  
+  // Final total with border
+  yPosition += 8;
+  const finalTotalX = pageWidth - 85; // Position box from right edge
+  pdf.setFont('helvetica', 'bold');
+  pdf.setFontSize(12);
+  pdf.setTextColor(40, 40, 40);
+  pdf.rect(finalTotalX, yPosition - 5, 80, 18); // Wider box for better fit
+  pdf.text('Total Amount:', finalTotalX + 5, yPosition + 4); // Text starts inside box
+  pdf.text(formatPkrAmount(invoiceData.final_amount), finalTotalX + 5, yPosition + 12); // Amount below label
+  
+  yPosition += 25;
   
   // Footer
-  pdf.setFont('helvetica', 'normal');
-  pdf.setFontSize(7);
+  pdf.setFont('helvetica', 'italic');
+  pdf.setFontSize(9);
   pdf.setTextColor(100, 100, 100);
   pdf.text('Thank you for your business!', pageWidth / 2, yPosition, { align: 'center' });
-  yPosition += 4;
-  pdf.text('Visit again soon!', pageWidth / 2, yPosition, { align: 'center' });
-  yPosition += 6;
+  yPosition += 8;
+  pdf.text('For any queries, please contact us at the above number.', pageWidth / 2, yPosition, { align: 'center' });
   
-  // Current time
-  const currentTime = new Date().toLocaleString();
-  pdf.text(`Printed: ${currentTime}`, pageWidth / 2, yPosition, { align: 'center' });
-  
-  // Open PDF in new window directly (simplified approach)
+  // Open PDF in new window
   const pdfBlob = pdf.output('blob');
   const pdfUrl = URL.createObjectURL(pdfBlob);
-  
-  // Open in new tab/window
-  const newWindow = window.open(pdfUrl, '_blank');
-  
-  if (!newWindow) {
-    // If popup was blocked, try alternative method
-    const link = document.createElement('a');
-    link.href = pdfUrl;
-    link.target = '_blank';
-    link.download = `pharmacy-invoice-${new Date().getTime()}.pdf`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    
-    // Clean up URL after download
-    setTimeout(() => {
-      URL.revokeObjectURL(pdfUrl);
-    }, 1000);
-  } else {
-    // Clean up URL after a delay when opened in new window
-    setTimeout(() => {
-      URL.revokeObjectURL(pdfUrl);
-    }, 10000);
-  }
+  window.open(pdfUrl, '_blank');
 };
