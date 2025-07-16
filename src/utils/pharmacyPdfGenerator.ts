@@ -1,7 +1,6 @@
 import jsPDF from 'jspdf';
 import { formatPkrAmount } from './currency';
 import { supabase } from '@/integrations/supabase/client';
-import { generateThermalReceipt } from './thermalPrinterGenerator';
 
 interface InvoiceItem {
   medicine_name: string;
@@ -86,13 +85,6 @@ const addThermalHeader = async (pdf: jsPDF, title: string) => {
 };
 
 export const generatePharmacyInvoicePDF = async (invoiceData: PharmacyInvoiceData): Promise<void> => {
-  // Check if user wants thermal printing (you can add a setting for this)
-  const useThermalPrinter = true; // Set this based on user preference
-  
-  if (useThermalPrinter) {
-    await generateThermalReceipt(invoiceData);
-    return;
-  }
   // Create PDF with thermal receipt dimensions (80mm width)
   const pdf = new jsPDF({
     unit: 'mm',
@@ -180,8 +172,8 @@ export const generatePharmacyInvoicePDF = async (invoiceData: PharmacyInvoiceDat
   pdf.setFont('helvetica', 'bold');
   pdf.setFontSize(7);
   pdf.text('ITEM', margin, yPosition);
-  pdf.text('QTY', pageWidth - 45, yPosition);
-  pdf.text('RATE', pageWidth - 30, yPosition);
+  pdf.text('QTY', pageWidth - 35, yPosition);
+  pdf.text('RATE', pageWidth - 25, yPosition);
   pdf.text('TOTAL', pageWidth - 15, yPosition);
   yPosition += 3;
   
@@ -224,10 +216,10 @@ export const generatePharmacyInvoicePDF = async (invoiceData: PharmacyInvoiceDat
       pdf.text(medicineName, margin, yPosition);
     }
     
-    // Quantity, Rate, Total (right aligned) - remove PKR prefix for individual items
-    pdf.text(item.quantity.toString(), pageWidth - 45, yPosition);
-    pdf.text(item.unit_price.toFixed(0), pageWidth - 30, yPosition);
-    pdf.text(item.total_price.toFixed(0), pageWidth - 15, yPosition);
+    // Quantity, Rate, Total (right aligned)
+    pdf.text(item.quantity.toString(), pageWidth - 35, yPosition);
+    pdf.text(formatPkrAmount(item.unit_price).replace('PKR ', ''), pageWidth - 25, yPosition);
+    pdf.text(formatPkrAmount(item.total_price).replace('PKR ', ''), pageWidth - 15, yPosition);
     
     yPosition += 5;
   });

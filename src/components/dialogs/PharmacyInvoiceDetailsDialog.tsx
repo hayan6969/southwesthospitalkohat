@@ -152,11 +152,11 @@ export function PharmacyInvoiceDetailsDialog({
           <div className="flex justify-end gap-2">
             <Button variant="outline" onClick={handleGeneratePDF}>
               <Eye className="w-4 h-4 mr-2" />
-              Print Thermal Receipt
+              View PDF
             </Button>
             <Button onClick={handleGeneratePDF}>
               <Download className="w-4 h-4 mr-2" />
-              Print Receipt
+              Download PDF
             </Button>
           </div>
         </div>
