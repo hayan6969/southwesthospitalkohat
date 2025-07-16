@@ -52,6 +52,7 @@ export function StaffOT() {
   const [otSchedule, setOtSchedule] = useState<OTScheduleItem[]>([]);
   const [filteredOtSchedule, setFilteredOtSchedule] = useState<OTScheduleItem[]>([]);
   const [operations, setOperations] = useState<OTOperation[]>([]);
+  const [availableRoomsCount, setAvailableRoomsCount] = useState(0);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [completeDialog, setCompleteDialog] = useState(false);
@@ -65,6 +66,7 @@ export function StaffOT() {
   useEffect(() => {
     fetchOperations();
     fetchOTSchedules();
+    fetchAvailableRoomsCount();
     
     // Set up real-time listener for OT schedules
     console.log('🔄 Setting up OT real-time updates...');
@@ -100,10 +102,19 @@ export function StaffOT() {
         }
       });
 
+    // Listen for custom events from the dialog
+    const handleOTScheduleUpdate = () => {
+      console.log('📅 Custom OT schedule update event received');
+      fetchOTSchedules();
+    };
+
+    window.addEventListener('otScheduleUpdate', handleOTScheduleUpdate);
+
     // Cleanup function
     return () => {
       console.log('🔌 Cleaning up OT real-time channel...');
       supabase.removeChannel(channel);
+      window.removeEventListener('otScheduleUpdate', handleOTScheduleUpdate);
     };
   }, []); // Remove dependencies to avoid re-subscription
 
@@ -181,6 +192,20 @@ export function StaffOT() {
       setOperations(formattedOperations);
     } catch (error) {
       console.error("Error fetching operations:", error);
+    }
+  };
+
+  const fetchAvailableRoomsCount = async () => {
+    try {
+      const { count, error } = await supabase
+        .from("ot_rooms")
+        .select("*", { count: 'exact', head: true })
+        .eq("is_available", true);
+
+      if (error) throw error;
+      setAvailableRoomsCount(count || 0);
+    } catch (error) {
+      console.error("Error fetching available rooms count:", error);
     }
   };
 
@@ -361,7 +386,7 @@ export function StaffOT() {
             <Building2 className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">2</div>
+            <div className="text-2xl font-bold">{availableRoomsCount}</div>
             <p className="text-xs text-muted-foreground">Ready for use</p>
           </CardContent>
         </Card>

@@ -421,6 +421,9 @@ export function OTScheduleDialog() {
       
       toast.success(`OT operation scheduled successfully! Queue position: ${queuePosition}. Invoice generated: ${invoiceNumber}`);
       
+      // Trigger a refresh event to update the parent table
+      window.dispatchEvent(new CustomEvent('otScheduleUpdate'));
+      
       setOpen(false);
       resetForm();
     } catch (error) {
