@@ -7,7 +7,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Camera, Upload } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Camera, Upload, Clock, Calendar, X } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 
 interface DoctorProfile {
@@ -233,6 +234,188 @@ export const DoctorProfileSettings = () => {
     );
   }
 
+  // Working hours states
+  const [workingHours, setWorkingHours] = useState<{[key: number]: {start_time: string, end_time: string, is_working: boolean}}>({});
+  const [specificSchedules, setSpecificSchedules] = useState<any[]>([]);
+  const [newSpecificDate, setNewSpecificDate] = useState<string>('');
+  const [newSpecificStartTime, setNewSpecificStartTime] = useState<string>('09:00');
+  const [newSpecificEndTime, setNewSpecificEndTime] = useState<string>('17:00');
+  const [newSpecificIsWorking, setNewSpecificIsWorking] = useState<boolean>(true);
+
+  // Days of week mapping
+  const daysOfWeek = [
+    { value: 0, label: 'Sunday' },
+    { value: 1, label: 'Monday' },
+    { value: 2, label: 'Tuesday' },
+    { value: 3, label: 'Wednesday' },
+    { value: 4, label: 'Thursday' },
+    { value: 5, label: 'Friday' },
+    { value: 6, label: 'Saturday' }
+  ];
+
+  // Fetch working hours and specific schedules
+  useEffect(() => {
+    if (profile?.id) {
+      fetchWorkingHours();
+      fetchSpecificSchedules();
+    }
+  }, [profile?.id]);
+
+  const fetchWorkingHours = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('doctor_working_hours')
+        .select('*')
+        .eq('doctor_id', profile?.id);
+
+      if (error) throw error;
+
+      const hoursMap: {[key: number]: {start_time: string, end_time: string, is_working: boolean}} = {};
+      
+      // Initialize with default hours for all days
+      daysOfWeek.forEach(day => {
+        hoursMap[day.value] = {
+          start_time: '09:00',
+          end_time: '17:00',
+          is_working: true
+        };
+      });
+
+      // Override with saved data
+      data?.forEach(hour => {
+        hoursMap[hour.day_of_week] = {
+          start_time: hour.start_time,
+          end_time: hour.end_time,
+          is_working: hour.is_working
+        };
+      });
+
+      setWorkingHours(hoursMap);
+    } catch (error) {
+      console.error('Error fetching working hours:', error);
+    }
+  };
+
+  const fetchSpecificSchedules = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('doctor_specific_schedules')
+        .select('*')
+        .eq('doctor_id', profile?.id)
+        .order('specific_date', { ascending: true });
+
+      if (error) throw error;
+      setSpecificSchedules(data || []);
+    } catch (error) {
+      console.error('Error fetching specific schedules:', error);
+    }
+  };
+
+  const handleWorkingHoursUpdate = async (dayOfWeek: number, field: string, value: any) => {
+    const updatedHours = {
+      ...workingHours,
+      [dayOfWeek]: {
+        ...workingHours[dayOfWeek],
+        [field]: value
+      }
+    };
+    setWorkingHours(updatedHours);
+
+    try {
+      const { error } = await supabase
+        .from('doctor_working_hours')
+        .upsert({
+          doctor_id: profile?.id,
+          day_of_week: dayOfWeek,
+          start_time: updatedHours[dayOfWeek].start_time,
+          end_time: updatedHours[dayOfWeek].end_time,
+          is_working: updatedHours[dayOfWeek].is_working
+        }, {
+          onConflict: 'doctor_id, day_of_week'
+        });
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Working hours updated successfully",
+      });
+    } catch (error) {
+      console.error('Error updating working hours:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update working hours",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleAddSpecificSchedule = async () => {
+    if (!newSpecificDate) return;
+
+    try {
+      const { error } = await supabase
+        .from('doctor_specific_schedules')
+        .upsert({
+          doctor_id: profile?.id,
+          specific_date: newSpecificDate,
+          start_time: newSpecificStartTime,
+          end_time: newSpecificEndTime,
+          is_working: newSpecificIsWorking
+        }, {
+          onConflict: 'doctor_id, specific_date'
+        });
+
+      if (error) throw error;
+
+      // Reset form
+      setNewSpecificDate('');
+      setNewSpecificStartTime('09:00');
+      setNewSpecificEndTime('17:00');
+      setNewSpecificIsWorking(true);
+
+      // Refresh data
+      fetchSpecificSchedules();
+
+      toast({
+        title: "Success",
+        description: "Specific schedule added successfully",
+      });
+    } catch (error) {
+      console.error('Error adding specific schedule:', error);
+      toast({
+        title: "Error",
+        description: "Failed to add specific schedule",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDeleteSpecificSchedule = async (scheduleId: string) => {
+    try {
+      const { error } = await supabase
+        .from('doctor_specific_schedules')
+        .delete()
+        .eq('id', scheduleId);
+
+      if (error) throw error;
+
+      fetchSpecificSchedules();
+
+      toast({
+        title: "Success",
+        description: "Specific schedule deleted successfully",
+      });
+    } catch (error) {
+      console.error('Error deleting specific schedule:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete specific schedule",
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <div className="max-w-4xl mx-auto space-y-6">
       {/* Profile Photo Section */}
@@ -397,6 +580,147 @@ export const DoctorProfileSettings = () => {
               This fee will be shown to patients when they book appointments with you
             </p>
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Working Hours Section */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Clock className="w-5 h-5" />
+            Weekly Working Hours
+          </CardTitle>
+          <CardDescription>
+            Set your regular working hours for each day of the week
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {daysOfWeek.map(day => (
+            <div key={day.value} className="flex items-center gap-4 p-3 border rounded-lg">
+              <div className="w-24 font-medium">{day.label}</div>
+              <Switch
+                checked={workingHours[day.value]?.is_working || false}
+                onCheckedChange={(checked) => handleWorkingHoursUpdate(day.value, 'is_working', checked)}
+              />
+              {workingHours[day.value]?.is_working && (
+                <>
+                  <Input
+                    type="time"
+                    value={workingHours[day.value]?.start_time || '09:00'}
+                    onChange={(e) => handleWorkingHoursUpdate(day.value, 'start_time', e.target.value)}
+                    className="w-32"
+                  />
+                  <span>to</span>
+                  <Input
+                    type="time"
+                    value={workingHours[day.value]?.end_time || '17:00'}
+                    onChange={(e) => handleWorkingHoursUpdate(day.value, 'end_time', e.target.value)}
+                    className="w-32"
+                  />
+                </>
+              )}
+              {!workingHours[day.value]?.is_working && (
+                <span className="text-gray-500">Not working</span>
+              )}
+            </div>
+          ))}
+        </CardContent>
+      </Card>
+
+      {/* Specific Date Schedules Section */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Calendar className="w-5 h-5" />
+            Specific Date Schedules
+          </CardTitle>
+          <CardDescription>
+            Override your regular schedule for specific dates (holidays, special hours, etc.)
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {/* Add new specific schedule */}
+          <div className="border rounded-lg p-4 bg-gray-50">
+            <h4 className="font-medium mb-3">Add Specific Date Schedule</h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+              <div>
+                <Label htmlFor="specific_date">Date</Label>
+                <Input
+                  id="specific_date"
+                  type="date"
+                  value={newSpecificDate}
+                  onChange={(e) => setNewSpecificDate(e.target.value)}
+                />
+              </div>
+              <div className="flex items-center gap-2">
+                <Switch
+                  checked={newSpecificIsWorking}
+                  onCheckedChange={setNewSpecificIsWorking}
+                />
+                <Label>Working</Label>
+              </div>
+              {newSpecificIsWorking && (
+                <>
+                  <div>
+                    <Label htmlFor="specific_start">Start Time</Label>
+                    <Input
+                      id="specific_start"
+                      type="time"
+                      value={newSpecificStartTime}
+                      onChange={(e) => setNewSpecificStartTime(e.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="specific_end">End Time</Label>
+                    <Input
+                      id="specific_end"
+                      type="time"
+                      value={newSpecificEndTime}
+                      onChange={(e) => setNewSpecificEndTime(e.target.value)}
+                    />
+                  </div>
+                </>
+              )}
+            </div>
+            <Button 
+              onClick={handleAddSpecificSchedule}
+              className="mt-3"
+              disabled={!newSpecificDate}
+            >
+              Add Schedule
+            </Button>
+          </div>
+
+          {/* List existing specific schedules */}
+          {specificSchedules.length > 0 && (
+            <div className="space-y-2">
+              <h4 className="font-medium">Existing Specific Schedules</h4>
+              {specificSchedules.map(schedule => (
+                <div key={schedule.id} className="flex items-center justify-between p-3 border rounded-lg">
+                  <div className="flex items-center gap-4">
+                    <span className="font-medium">{schedule.specific_date}</span>
+                    {schedule.is_working ? (
+                      <span className="text-green-600">
+                        {schedule.start_time} - {schedule.end_time}
+                      </span>
+                    ) : (
+                      <span className="text-red-600">Not working</span>
+                    )}
+                    {schedule.notes && (
+                      <span className="text-gray-500 text-sm">({schedule.notes})</span>
+                    )}
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleDeleteSpecificSchedule(schedule.id)}
+                  >
+                    <X className="w-4 h-4" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+          )}
         </CardContent>
       </Card>
 

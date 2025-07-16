@@ -96,94 +96,8 @@ export default function DoctorSchedule() { // Fixed ordering syntax
     fetchAppointmentsWithDetails();
   }, [appointments]);
 
-  // Auto-cancel overdue appointments and manage payment timers
+  // Queue cleanup (no auto-cancellation)
   useEffect(() => {
-    // Efficient payment timer management using JOINs
-    const managePaymentTimers = async () => {
-      try {
-        const today = new Date().toISOString().split('T')[0];
-        
-        // Single efficient query to get first scheduled appointment for each doctor today
-        const { data: firstInQueueData, error } = await supabase
-          .from('queue_positions')
-          .select(`
-            doctor_id,
-            appointment_id,
-            queue_position,
-            appointments!inner (
-              id,
-              payment_status,
-              booking_type,
-              payment_due_time,
-              status
-            )
-          `)
-          .eq('appointment_date', today)
-          .eq('appointments.status', 'scheduled')
-          .order('queue_position', { ascending: true });
-
-        if (error) {
-          console.error('Error fetching queue data:', error);
-          return;
-        }
-
-        // Group by doctor and get first appointment for each
-        const doctorFirstAppointments = new Map();
-        
-        firstInQueueData?.forEach(queueItem => {
-          const doctorId = queueItem.doctor_id;
-          const appointment = queueItem.appointments;
-          
-          if (!doctorFirstAppointments.has(doctorId)) {
-            doctorFirstAppointments.set(doctorId, {
-              ...appointment,
-              queue_position: queueItem.queue_position
-            });
-          } else {
-            // Keep the one with lower queue position
-            const existing = doctorFirstAppointments.get(doctorId);
-            if (queueItem.queue_position < existing.queue_position) {
-              doctorFirstAppointments.set(doctorId, {
-                ...appointment,
-                queue_position: queueItem.queue_position
-              });
-            }
-          }
-        });
-
-        console.log(`Found ${doctorFirstAppointments.size} doctors with scheduled appointments`);
-
-        // Process first appointments for payment timers
-        for (const [doctorId, appointment] of doctorFirstAppointments) {
-          console.log(`Doctor ${doctorId} - First scheduled appointment:`, appointment);
-          
-          if (appointment.payment_status === 'pending' && 
-              appointment.booking_type === 'online' && 
-              !appointment.payment_due_time) {
-            
-            // Set payment due time to 3 minutes from now
-            const paymentDueTime = new Date(Date.now() + 3 * 60 * 1000).toISOString();
-            console.log(`Setting payment due time for appointment ${appointment.id} to ${paymentDueTime}`);
-            
-            const { error: updateError } = await supabase
-              .from('appointments')
-              .update({ payment_due_time: paymentDueTime })
-              .eq('id', appointment.id);
-
-            if (updateError) {
-              console.error('Error setting payment due time:', updateError);
-            } else {
-              console.log(`Successfully set 3-minute payment timer for appointment ${appointment.id}`);
-            }
-          } else if (appointment.payment_due_time) {
-            console.log(`Appointment ${appointment.id} already has timer: ${appointment.payment_due_time}`);
-          }
-        }
-      } catch (error) {
-        console.error('Error managing payment timers:', error);
-      }
-    };
-
     // Cleanup function to remove completed/cancelled appointments from queue
     const cleanupQueue = async () => {
       try {
@@ -208,31 +122,11 @@ export default function DoctorSchedule() { // Fixed ordering syntax
       }
     };
 
-    // Run initial setup
-    managePaymentTimers();
-
-    const interval = setInterval(async () => {
-      try {
-        console.log('Running auto-cancellation check...');
-        // Auto-cancel overdue appointments
-        const { error: cancelError } = await supabase.rpc('auto_cancel_overdue_appointments');
-        if (cancelError) {
-          console.error('Error cancelling overdue appointments:', cancelError);
-        } else {
-          console.log('Auto-cancellation check completed');
-        }
-        
-        // Clean up queue positions (run less frequently)
-        if (Date.now() % 300000 < 60000) { // Every 5 minutes
-          await cleanupQueue();
-        }
-        
-        // Manage payment timers for new first-in-queue patients
-        await managePaymentTimers();
-      } catch (error) {
-        console.error('Error in scheduled tasks:', error);
-      }
-    }, 60000); // Run every minute
+    // Run cleanup every 5 minutes
+    const interval = setInterval(cleanupQueue, 300000);
+    
+    // Run initial cleanup
+    cleanupQueue();
 
     return () => clearInterval(interval);
   }, []);
@@ -323,6 +217,7 @@ export default function DoctorSchedule() { // Fixed ordering syntax
   };
 
   const [showMarkFreeDialog, setShowMarkFreeDialog] = useState<{appointmentId: string, appointment: any} | null>(null);
+  const [cancellingAppointment, setCancellingAppointment] = useState<string | null>(null);
 
   const handleMarkFreeClick = (appointmentId: string, appointment: any) => {
     // Only allow marking as free if payment is already paid
@@ -345,6 +240,24 @@ export default function DoctorSchedule() { // Fixed ordering syntax
     } catch (error) {
       toast.error('Failed to mark appointment as free');
       setShowMarkFreeDialog(null);
+    }
+  };
+
+  const handleCancelAppointment = async (appointmentId: string) => {
+    setCancellingAppointment(appointmentId);
+    try {
+      await updateAppointment.mutateAsync({
+        id: appointmentId,
+        status: 'cancelled' as any,
+        updated_at: new Date().toISOString()
+      });
+
+      toast.success('Appointment cancelled successfully');
+      refetchAppointments();
+    } catch (error) {
+      toast.error('Failed to cancel appointment');
+    } finally {
+      setCancellingAppointment(null);
     }
   };
 
@@ -574,11 +487,11 @@ export default function DoctorSchedule() { // Fixed ordering syntax
                           <Button
                             size="sm"
                             variant="destructive"
-                            onClick={() => handleStatusUpdate(appointment.id, 'cancelled', appointment)}
-                            disabled={updateAppointment.isPending}
+                            onClick={() => handleCancelAppointment(appointment.id)}
+                            disabled={cancellingAppointment === appointment.id}
                           >
                             <X className="w-3 h-3 mr-1" />
-                            Cancel
+                            {cancellingAppointment === appointment.id ? 'Cancelling...' : 'Cancel'}
                           </Button>
                           {/* Free button - only show after payment is made and not already free */}
                           {(appointment.payment_status === 'paid' || appointment.booking_type === 'counter') && (

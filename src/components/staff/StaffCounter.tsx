@@ -10,10 +10,11 @@ import { EnhancedAppointmentDialog } from "@/components/dialogs/EnhancedAppointm
 import { PatientDialog } from "@/components/dialogs/PatientDialog";
 import { InvoiceDialog } from "@/components/dialogs/InvoiceDialog";
 import { EmergencyConsultationDialog } from "@/components/dialogs/EmergencyConsultationDialog";
+import { DoctorScheduleDialog } from "@/components/dialogs/DoctorScheduleDialog";
 import { useAppointments, usePatients, useDoctors } from "@/hooks/useDatabase";
 import { usePatientNames, useDoctorNames, getPatientName, getDoctorName } from "@/hooks/useDisplayHelpers";
 import { supabase } from "@/integrations/supabase/client";
-import { Calendar, UserPlus, Receipt, Users, Clock, CreditCard, Printer, Search, FileText, Download, CalendarIcon, X, RotateCcw, Gift, AlertTriangle } from "lucide-react";
+import { Calendar, UserPlus, Receipt, Users, Clock, CreditCard, Printer, Search, FileText, Download, CalendarIcon, X, RotateCcw, Gift, AlertTriangle, Eye } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
@@ -30,11 +31,11 @@ export function StaffCounter() {
   const { data: doctorNames } = useDoctorNames();
   const [searchTerm, setSearchTerm] = useState("");
   const [processingInvoice, setProcessingInvoice] = useState<string | null>(null);
-  const [cancellingAppointment, setCancellingAppointment] = useState<string | null>(null);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [patientNumbers, setPatientNumbers] = useState<{[key: string]: string}>({});
   const [appointments, setAppointments] = useState<any[]>([]);
   const [activeTab, setActiveTab] = useState("upcoming");
+  const [selectedDoctorForSchedule, setSelectedDoctorForSchedule] = useState<{id: string, name: string} | null>(null);
   
   // Fetch appointments with invoice data to check for free status
   useEffect(() => {
@@ -360,58 +361,7 @@ export function StaffCounter() {
     }
   };
 
-  const handleCancelAppointment = async (appointment: any) => {
-    setCancellingAppointment(appointment.id);
-    try {
-      // Update appointment status to cancelled
-      await supabase
-        .from('appointments')
-        .update({ 
-          status: 'cancelled',
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', appointment.id);
-
-      // If the appointment was paid, we need to handle revenue removal
-      if (appointment.payment_status === 'paid') {
-        // Update any existing invoice to refund/cancelled status
-        await supabase
-          .from('invoices')
-          .update({ 
-            status: 'pending', // Or create a 'refunded' status
-            paid_at: null
-          })
-          .eq('patient_id', appointment.patient_id)
-          .eq('description', `Consultation with ${getDoctorName(appointment.doctor_id, doctorNames || [])}`);
-      }
-
-      // Update queue position status
-      await supabase
-        .from('queue_positions')
-        .update({ 
-          status: 'cancelled',
-          updated_at: new Date().toISOString()
-        })
-        .eq('appointment_id', appointment.id);
-
-      toast({
-        title: "Appointment Cancelled",
-        description: "The appointment has been successfully cancelled and revenue has been adjusted",
-      });
-      
-      // Refresh appointments
-      refetchAppointments();
-    } catch (error) {
-      console.error('Error cancelling appointment:', error);
-      toast({
-        title: "Error",
-        description: "Failed to cancel appointment",
-        variant: "destructive",
-      });
-    } finally {
-      setCancellingAppointment(null);
-    }
-  };
+  // Removed cancel appointment function - doctors can now cancel their own appointments
 
   return (
     <div className="space-y-6">
@@ -446,6 +396,15 @@ export function StaffCounter() {
           <CardContent>
             <div className="text-2xl font-bold">{doctors?.length || 0}</div>
             <p className="text-xs text-muted-foreground">On duty today</p>
+            <Button
+              variant="outline"
+              size="sm"
+              className="mt-2 w-full"
+              onClick={() => setSelectedDoctorForSchedule({id: '', name: ''})}
+            >
+              <Eye className="w-4 h-4 mr-2" />
+              View Schedules
+            </Button>
           </CardContent>
         </Card>
 
@@ -614,49 +573,16 @@ export function StaffCounter() {
                             </div>
                           </TableCell>
                           <TableCell>
-                            <div className="flex gap-2">
-                              {/* Cancel appointment with confirmation dialog */}
-                              <AlertDialog>
-                                <AlertDialogTrigger asChild>
-                                  <Button 
-                                    size="sm" 
-                                    variant="destructive"
-                                    disabled={cancellingAppointment === appointment.id}
-                                  >
-                                    <X className="w-3 h-3 mr-1" />
-                                    Cancel
-                                  </Button>
-                                </AlertDialogTrigger>
-                                <AlertDialogContent>
-                                  <AlertDialogHeader>
-                                    <AlertDialogTitle>Cancel Appointment</AlertDialogTitle>
-                                    <AlertDialogDescription>
-                                      Are you sure you want to cancel this appointment? This action cannot be undone.
-                                    </AlertDialogDescription>
-                                  </AlertDialogHeader>
-                                  <AlertDialogFooter>
-                                    <AlertDialogCancel>Keep Appointment</AlertDialogCancel>
-                                    <AlertDialogAction 
-                                      onClick={() => handleCancelAppointment(appointment)}
-                                      className="bg-red-600 hover:bg-red-700"
-                                    >
-                                      Cancel Appointment
-                                    </AlertDialogAction>
-                                  </AlertDialogFooter>
-                                </AlertDialogContent>
-                              </AlertDialog>
-
-                              {/* Generate Invoice button */}
-                              <Button
-                                size="sm"
-                                onClick={() => handleGenerateInvoice(appointment)}
-                                disabled={processingInvoice === appointment.id}
-                                className="bg-green-600 hover:bg-green-700"
-                              >
-                                <Receipt className="w-3 h-3 mr-1" />
-                                {processingInvoice === appointment.id ? 'Processing...' : 'Generate Invoice'}
-                              </Button>
-                            </div>
+                            {/* Generate Invoice button */}
+                            <Button
+                              size="sm"
+                              onClick={() => handleGenerateInvoice(appointment)}
+                              disabled={processingInvoice === appointment.id}
+                              className="bg-green-600 hover:bg-green-700"
+                            >
+                              <Receipt className="w-3 h-3 mr-1" />
+                              {processingInvoice === appointment.id ? 'Processing...' : 'Generate Invoice'}
+                            </Button>
                           </TableCell>
                         </TableRow>
                       ))
@@ -872,12 +798,24 @@ export function StaffCounter() {
                       </p>
                       <p className="text-sm text-gray-600">{doctor.specialization}</p>
                     </div>
-                    <div className="text-right">
-                      <p className="text-sm font-medium text-green-600">Available</p>
-                      <p className="text-xs text-gray-500">
-                        {filteredAppointments.filter(apt => apt.doctor_id === doctor.id).length} appointments
-                      </p>
-                    </div>
+                     <div className="flex items-center gap-2">
+                       <div className="text-right">
+                         <p className="text-sm font-medium text-green-600">Available</p>
+                         <p className="text-xs text-gray-500">
+                           {filteredAppointments.filter(apt => apt.doctor_id === doctor.id).length} appointments
+                         </p>
+                       </div>
+                       <Button
+                         size="sm"
+                         variant="outline"
+                         onClick={() => setSelectedDoctorForSchedule({
+                           id: doctor.id, 
+                           name: getDoctorName(doctor.id, doctorNames || [])
+                         })}
+                       >
+                         <Eye className="w-4 h-4" />
+                       </Button>
+                     </div>
                   </div>
                 ))
               ) : (
@@ -887,6 +825,14 @@ export function StaffCounter() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Doctor Schedule Dialog */}
+      <DoctorScheduleDialog
+        isOpen={!!selectedDoctorForSchedule}
+        onClose={() => setSelectedDoctorForSchedule(null)}
+        doctorId={selectedDoctorForSchedule?.id || null}
+        doctorName={selectedDoctorForSchedule?.name || ''}
+      />
     </div>
   );
 }
