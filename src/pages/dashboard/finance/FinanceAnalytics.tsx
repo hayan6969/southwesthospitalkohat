@@ -80,6 +80,14 @@ export default function FinanceAnalytics() {
   const monthlyExpenses = financialData?.monthlyExpenses || [];
   const recentActivities = financialData?.recentActivities || [];
 
+  // Debug logging
+  console.log('Finance Dashboard Data:', {
+    totalRevenue,
+    totalExpenses,
+    netProfit,
+    financialData
+  });
+
   // Calculate monthly data from the hook data
   const monthlyData = useMemo(() => {
     return monthlyRevenue.map((revenue, index) => {
@@ -132,6 +140,9 @@ export default function FinanceAnalytics() {
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold">Financial Analytics</h2>
         <div className="flex gap-4">
+          <Button onClick={() => refetch()} variant="outline">
+            Refresh Data
+          </Button>
           <Popover>
             <PopoverTrigger asChild>
               <Button

@@ -39,7 +39,7 @@ const getRefundTypeLabel = (type: string) => {
 
 export function useFinancialAnalytics() {
   return useQuery({
-    queryKey: ['financial-analytics'],
+    queryKey: ['financial-analytics', Date.now()], // Add timestamp to prevent caching issues
     queryFn: async (): Promise<FinancialMetrics> => {
       const now = new Date();
       const sixMonthsAgo = subMonths(now, 6);
