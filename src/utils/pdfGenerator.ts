@@ -567,21 +567,15 @@ export const generateDailyClosingPDF = async (data: {
   // CLOSING BALANCE SECTION (AT TOP)
   // ===========================================
   
-  // Fetch previous day's closing balance
-  let previousClosingBalance = 0;
-  try {
-    const { data: closingBalanceData } = await supabase
-      .from('hospital_closing_balance')
-      .select('closing_balance')
-      .eq('closing_date', data.closingDate)
-      .single();
+  // Get the latest closing balance (single updatable value)
+  const { data: latestBalance } = await supabase
+    .from('hospital_closing_balance')
+    .select('closing_balance')
+    .order('closing_date', { ascending: false })
+    .limit(1)
+    .maybeSingle();
 
-    if (closingBalanceData) {
-      previousClosingBalance = closingBalanceData.closing_balance || 0;
-    }
-  } catch (error) {
-    console.log('No closing balance found for this date');
-  }
+  const previousClosingBalance = latestBalance?.closing_balance || 0;
 
   // Add header
   await addHospitalHeader(doc, 'Daily Financial Closing Report');
@@ -952,16 +946,23 @@ export const generateDailyClosingPDF = async (data: {
   
   drawSectionHeader('FINANCIAL SUMMARY');
 
-  // Pharmacy Summary Section First
+  // Pharmacy Account Summary with full details
   drawSubHeader('Pharmacy Account Summary');
+  
+  // Get pharmacy account data from transactions
+  const pharmacyStartingBalance = data.transactionsData?.pharmacyAccount?.starting_balance || 0;
+  const pharmacyExpenses = data.transactionsData?.pharmacyExpenses?.reduce((sum: number, exp: any) => sum + exp.amount, 0) || 0;
+  const netPharmacyBalance = pharmacyStartingBalance + data.pharmacyProfit - pharmacyExpenses;
   
   const pharmacySummaryHeaders = ['Description', 'Amount'];
   const pharmacySummaryColWidths = [120, 50];
   const pharmacySummaryRows = [
-    ['Pharmacy Revenue', formatPkrAmount(data.pharmacyRevenue)],
-    ['Pharmacy Profit', formatPkrAmount(data.pharmacyProfit)],
-    ['Pharmacy Bills/Expenses', `(${formatPkrAmount(data.transactionsData?.pharmacyExpenses?.reduce((sum: number, exp: any) => sum + exp.amount, 0) || 0)})`],
-    ['Net Pharmacy Balance', formatPkrAmount(data.pharmacyProfit - (data.transactionsData?.pharmacyExpenses?.reduce((sum: number, exp: any) => sum + exp.amount, 0) || 0))]
+    ['Opening Balance', formatPkrAmount(pharmacyStartingBalance)],
+    ['Today\'s Sales Revenue', formatPkrAmount(data.pharmacyRevenue)],
+    ['Today\'s Gross Profit', formatPkrAmount(data.pharmacyProfit)],
+    ['Bills Paid Today', `(${formatPkrAmount(pharmacyExpenses)})`],
+    ['Current Account Balance', formatPkrAmount(netPharmacyBalance)],
+    ['Total Medicines Stock Value', formatPkrAmount(data.transactionsData?.totalStockValue || 0)]
   ];
 
   drawTable(pharmacySummaryHeaders, pharmacySummaryRows, pharmacySummaryColWidths);
@@ -1025,40 +1026,37 @@ export const generateDailyClosingPDF = async (data: {
 
   yPosition += 35;
 
-  // Save the new closing balance to database
+  // Save the new closing balance to database (single updatable value)
   try {
     const { supabase } = await import('@/integrations/supabase/client');
     
-    // Calculate next day's date
-    const nextDay = new Date(data.closingDate);
-    nextDay.setDate(nextDay.getDate() + 1);
-    const nextDayString = nextDay.toISOString().split('T')[0];
-    
-    // Check if record exists for next day
-    const { data: existingRecord } = await supabase
+    // Get the latest record to update
+    const { data: latestRecord } = await supabase
       .from('hospital_closing_balance')
       .select('id')
-      .eq('closing_date', nextDayString)
-      .single();
+      .order('closing_date', { ascending: false })
+      .limit(1)
+      .maybeSingle();
 
-    if (existingRecord) {
-      // Update existing record
+    if (latestRecord) {
+      // Update the existing record with new balance
       await supabase
         .from('hospital_closing_balance')
         .update({ 
+          closing_date: data.closingDate,
           closing_balance: newClosingBalance,
-          notes: `Auto-updated from daily closing on ${data.closingDate}`,
+          notes: `Updated from daily closing on ${data.closingDate}`,
           updated_at: new Date().toISOString()
         })
-        .eq('id', existingRecord.id);
+        .eq('id', latestRecord.id);
     } else {
-      // Create new record for next day
+      // Create the first record
       await supabase
         .from('hospital_closing_balance')
         .insert({ 
-          closing_date: nextDayString,
+          closing_date: data.closingDate,
           closing_balance: newClosingBalance,
-          notes: `Auto-generated from daily closing on ${data.closingDate}`
+          notes: `First closing balance created on ${data.closingDate}`
         });
     }
   } catch (error) {

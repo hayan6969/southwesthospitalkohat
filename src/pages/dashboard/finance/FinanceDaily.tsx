@@ -226,7 +226,10 @@ export default function FinanceDaily() {
         otSchedulesRes,
         emergencyAppointmentsRes,
         expensesRes,
-        refundsRes
+        refundsRes,
+        pharmacyExpensesRes,
+        pharmacyAccountRes,
+        totalStockRes
       ] = await Promise.all([
         supabase
           .from('invoices')
@@ -280,8 +283,28 @@ export default function FinanceDaily() {
           .from('refunds')
           .select('*')
           .gte('created_at', `${targetDate}T00:00:00`)
-          .lt('created_at', `${targetDate}T23:59:59`)
+          .lt('created_at', `${targetDate}T23:59:59`),
+        
+        supabase
+          .from('pharmacy_expenses')
+          .select('*')
+          .eq('expense_date', targetDate),
+        
+        supabase
+          .from('pharmacy_account')
+          .select('*')
+          .order('created_at', { ascending: false })
+          .limit(1),
+        
+        supabase
+          .from('medicines')
+          .select('stock_quantity, selling_price')
       ]);
+
+      // Calculate total stock value
+      const totalStockValue = (totalStockRes.data || []).reduce((total: number, medicine: any) => {
+        return total + (medicine.stock_quantity * medicine.selling_price);
+      }, 0);
 
       return {
         hospitalInvoices: hospitalInvoicesRes.data || [],
@@ -290,7 +313,10 @@ export default function FinanceDaily() {
         otSchedules: otSchedulesRes.data || [],
         emergencyAppointments: emergencyAppointmentsRes.data || [],
         expenses: expensesRes.data || [],
-        refunds: refundsRes.data || []
+        refunds: refundsRes.data || [],
+        pharmacyExpenses: pharmacyExpensesRes.data || [],
+        pharmacyAccount: pharmacyAccountRes.data?.[0] || null,
+        totalStockValue
       };
     },
     enabled: showClosingDialog
@@ -328,7 +354,10 @@ export default function FinanceDaily() {
           otSchedules: detailedData.otSchedules,
           emergencyAppointments: detailedData.emergencyAppointments,
           expenses: detailedData.expenses,
-          refunds: detailedData.refunds
+          refunds: detailedData.refunds,
+          pharmacyExpenses: detailedData.pharmacyExpenses,
+          pharmacyAccount: detailedData.pharmacyAccount,
+          totalStockValue: detailedData.totalStockValue
         }
       };
 
