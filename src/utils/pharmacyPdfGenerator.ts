@@ -271,29 +271,31 @@ export const generatePharmacyInvoicePDF = async (invoiceData: PharmacyInvoiceDat
   const currentTime = new Date().toLocaleString();
   pdf.text(`Printed: ${currentTime}`, pageWidth / 2, yPosition, { align: 'center' });
   
-  // Adjust PDF height to content
-  const finalHeight = yPosition + 10;
-  if (finalHeight < 200) {
-    const newPdf = new jsPDF({
-      unit: 'mm',
-      format: [80, finalHeight],
-      orientation: 'portrait'
-    });
+  // Open PDF in new window directly (simplified approach)
+  const pdfBlob = pdf.output('blob');
+  const pdfUrl = URL.createObjectURL(pdfBlob);
+  
+  // Open in new tab/window
+  const newWindow = window.open(pdfUrl, '_blank');
+  
+  if (!newWindow) {
+    // If popup was blocked, try alternative method
+    const link = document.createElement('a');
+    link.href = pdfUrl;
+    link.target = '_blank';
+    link.download = `pharmacy-invoice-${new Date().getTime()}.pdf`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
     
-    // Copy content to new PDF with correct height
-    const pageData = pdf.output('datauristring');
-    const img = new Image();
-    img.src = pageData;
-    img.onload = () => {
-      newPdf.addImage(img, 'JPEG', 0, 0, 80, finalHeight);
-      const pdfBlob = newPdf.output('blob');
-      const pdfUrl = URL.createObjectURL(pdfBlob);
-      window.open(pdfUrl, '_blank');
-    };
+    // Clean up URL after download
+    setTimeout(() => {
+      URL.revokeObjectURL(pdfUrl);
+    }, 1000);
   } else {
-    // Open PDF in new window
-    const pdfBlob = pdf.output('blob');
-    const pdfUrl = URL.createObjectURL(pdfBlob);
-    window.open(pdfUrl, '_blank');
+    // Clean up URL after a delay when opened in new window
+    setTimeout(() => {
+      URL.revokeObjectURL(pdfUrl);
+    }, 10000);
   }
 };
