@@ -77,10 +77,9 @@ const RealTimeProvider = ({ children }: { children: React.ReactNode }) => {
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
-      <TooltipProvider>
-        <RealTimeProvider>
-          <Toaster />
-          <Sonner />
+      <RealTimeProvider>
+        <Toaster />
+        <Sonner />
           <BrowserRouter>
           <Routes>
             <Route path="/auth" element={<Auth />} />
@@ -247,7 +246,6 @@ const App = () => (
           </Routes>
           </BrowserRouter>
         </RealTimeProvider>
-      </TooltipProvider>
     </AuthProvider>
   </QueryClientProvider>
 );
