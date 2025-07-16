@@ -28,6 +28,8 @@ export default function FinanceDaily() {
   const { data: dailyData, isLoading, refetch } = useQuery({
     queryKey: ['daily-finance', targetDate],
     queryFn: async () => {
+      console.log('Daily Finance Query for date:', targetDate);
+      
       // Hospital invoices (consultations)
       const { data: hospitalInvoices } = await supabase
         .from('invoices')
@@ -35,6 +37,8 @@ export default function FinanceDaily() {
         .eq('status', 'paid')
         .gte('created_at', `${targetDate}T00:00:00`)
         .lt('created_at', `${targetDate}T23:59:59`);
+
+      console.log('Hospital invoices found:', hospitalInvoices?.length, hospitalInvoices);
 
       // Pharmacy invoices with items for profit calculation
       const { data: pharmacyInvoicesWithItems } = await supabase
@@ -52,6 +56,8 @@ export default function FinanceDaily() {
         .gte('created_at', `${targetDate}T00:00:00`)
         .lt('created_at', `${targetDate}T23:59:59`);
 
+      console.log('Pharmacy invoices found:', pharmacyInvoicesWithItems?.length, pharmacyInvoicesWithItems);
+
       // Lab reports
       const { data: labReports } = await supabase
         .from('lab_reports')
@@ -60,6 +66,8 @@ export default function FinanceDaily() {
         .gte('created_at', `${targetDate}T00:00:00`)
         .lt('created_at', `${targetDate}T23:59:59`);
 
+      console.log('Lab reports found:', labReports?.length, labReports);
+
       // OT schedules
       const { data: otSchedules } = await supabase
         .from('ot_schedules')
@@ -67,14 +75,27 @@ export default function FinanceDaily() {
         .eq('status', 'completed')
         .eq('operation_date', targetDate);
 
-      // Emergency consultations (appointments with emergency type)
+      console.log('OT schedules found:', otSchedules?.length, otSchedules);
+
+      // Emergency consultations - let's check multiple ways
       const { data: emergencyAppointments } = await supabase
         .from('appointments')
-        .select('consultation_fee_at_time')
+        .select('consultation_fee_at_time, type, status, appointment_date')
         .eq('type', 'emergency')
         .eq('status', 'completed')
         .gte('appointment_date', `${targetDate}T00:00:00`)
         .lt('appointment_date', `${targetDate}T23:59:59`);
+
+      console.log('Emergency appointments found:', emergencyAppointments?.length, emergencyAppointments);
+
+      // Let's also check all appointments for that date to see if any exist
+      const { data: allAppointments } = await supabase
+        .from('appointments')
+        .select('consultation_fee_at_time, type, status, appointment_date')
+        .gte('appointment_date', `${targetDate}T00:00:00`)
+        .lt('appointment_date', `${targetDate}T23:59:59`);
+
+      console.log('All appointments for date:', allAppointments?.length, allAppointments);
 
       // Daily expenses
       const { data: expenses } = await supabase
@@ -82,12 +103,23 @@ export default function FinanceDaily() {
         .select('amount')
         .eq('expense_date', targetDate);
 
+      console.log('Expenses found:', expenses?.length, expenses);
+
       // Refunds for the day
       const { data: refunds } = await supabase
         .from('refunds')
-        .select('amount, refund_type, description')
+        .select('amount, refund_type, description, created_at')
         .gte('created_at', `${targetDate}T00:00:00`)
         .lt('created_at', `${targetDate}T23:59:59`);
+
+      console.log('Refunds found:', refunds?.length, refunds);
+
+      // Let's also check all refunds to see if any exist
+      const { data: allRefunds } = await supabase
+        .from('refunds')
+        .select('amount, refund_type, description, created_at');
+
+      console.log('All refunds in system:', allRefunds?.length, allRefunds);
 
       // Calculate totals
       const hospitalRevenue = hospitalInvoices?.reduce((sum, inv) => sum + (inv.amount || 0), 0) || 0;
@@ -111,6 +143,7 @@ export default function FinanceDaily() {
           return totalProfit + invoiceProfit;
         }, 0);
       }
+      
       const labRevenue = labReports?.reduce((sum, lab) => sum + (lab.price || 0), 0) || 0;
       const otRevenue = otSchedules?.reduce((sum, ot) => sum + (ot.total_cost || 0), 0) || 0;
       const emergencyRevenue = emergencyAppointments?.reduce((sum, apt) => sum + (apt.consultation_fee_at_time || 0), 0) || 0;
@@ -125,6 +158,22 @@ export default function FinanceDaily() {
       const otRefunds = refunds?.filter(r => r.refund_type === 'ot_schedule')?.reduce((sum, r) => sum + r.amount, 0) || 0;
       const pharmacyRefunds = refunds?.filter(r => r.refund_type === 'pharmacy_invoice')?.reduce((sum, r) => sum + r.amount, 0) || 0;
       const otherRefunds = refunds?.filter(r => !['ot_schedule', 'pharmacy_invoice'].includes(r.refund_type))?.reduce((sum, r) => sum + r.amount, 0) || 0;
+
+      console.log('Calculated values:', {
+        hospitalRevenue,
+        pharmacyRevenue,
+        pharmacyProfit,
+        labRevenue,
+        otRevenue,
+        emergencyRevenue,
+        totalHospitalRevenue,
+        totalHospitalProfit,
+        totalExpenses,
+        totalRefunds,
+        otRefunds,
+        pharmacyRefunds,
+        otherRefunds
+      });
 
       return {
         hospitalRevenue,
