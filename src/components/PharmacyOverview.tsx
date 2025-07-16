@@ -1,63 +1,16 @@
 
 import { usePharmacyStats, usePharmacyInvoices } from "@/hooks/useDatabase";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Pill, ShoppingCart, Banknote, TrendingUp, Calendar, Download } from "lucide-react";
+import { Pill, ShoppingCart, Banknote, TrendingUp, Calendar } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { formatPkrAmount } from "@/utils/currency";
-import { generatePharmacyInvoicePDF } from "@/utils/pharmacyPdfGenerator";
-import { useToast } from "@/hooks/use-toast";
 
 export function PharmacyOverview() {
   const { data: stats, isLoading: statsLoading } = usePharmacyStats();
   const { data: allInvoices, isLoading: invoicesLoading } = usePharmacyInvoices();
-  const { toast } = useToast();
 
   // Get recent invoices (last 5)
   const recentInvoices = allInvoices?.slice(0, 5) || [];
-
-  const handleDownloadPDF = async (invoice: any) => {
-    try {
-      if (!invoice.pharmacy_invoice_items || invoice.pharmacy_invoice_items.length === 0) {
-        toast({
-          title: "Error",
-          description: "No invoice items found for this invoice.",
-          variant: "destructive"
-        });
-        return;
-      }
-
-      // Format data for PDF generation
-      const invoiceData = {
-        invoice_number: invoice.invoice_number,
-        customer_name: invoice.customer_name,
-        customer_phone: invoice.customer_phone,
-        total_amount: invoice.total_amount,
-        discount_amount: invoice.discount_amount,
-        final_amount: invoice.final_amount,
-        created_at: invoice.created_at,
-        items: invoice.pharmacy_invoice_items.map((item: any) => ({
-          medicine_name: item.medicine?.name || 'Unknown Medicine',
-          quantity: item.quantity,
-          unit_price: item.unit_price,
-          total_price: item.total_price
-        }))
-      };
-
-      await generatePharmacyInvoicePDF(invoiceData);
-      
-      toast({
-        title: "Success",
-        description: "Invoice PDF downloaded successfully!"
-      });
-    } catch (error) {
-      console.error("Error generating PDF:", error);
-      toast({
-        title: "Error",
-        description: "Failed to generate PDF. Please try again.",
-        variant: "destructive"
-      });
-    }
-  };
 
   return (
     <div className="space-y-6">
@@ -150,21 +103,11 @@ export function PharmacyOverview() {
                       {invoice.customer_name || 'Walk-in Customer'}
                     </p>
                   </div>
-                  <div className="flex items-center gap-3">
-                    <div className="text-right">
-                      <p className="font-bold">{formatPkrAmount(invoice.final_amount)}</p>
-                      <p className="text-xs text-gray-500">
-                        {new Date(invoice.created_at).toLocaleDateString()}
-                      </p>
-                    </div>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => handleDownloadPDF(invoice)}
-                      className="h-8 w-8 p-0"
-                    >
-                      <Download className="h-4 w-4" />
-                    </Button>
+                  <div className="text-right">
+                    <p className="font-bold">{formatPkrAmount(invoice.final_amount)}</p>
+                    <p className="text-xs text-gray-500">
+                      {new Date(invoice.created_at).toLocaleDateString()}
+                    </p>
                   </div>
                 </div>
               ))}

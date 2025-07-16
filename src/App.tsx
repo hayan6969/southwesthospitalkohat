@@ -69,8 +69,7 @@ const queryClient = new QueryClient({
 
 // Component to initialize real-time updates only (no auto-sync in offline mode)
 const RealTimeProvider = ({ children }: { children: React.ReactNode }) => {
-  // Temporarily disabled to fix React context issues
-  // useRealTimeUpdates();
+  useRealTimeUpdates();
   // Removed useOfflineDataSync to prevent automatic uploads
   return <>{children}</>;
 };
@@ -78,9 +77,10 @@ const RealTimeProvider = ({ children }: { children: React.ReactNode }) => {
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
-      <RealTimeProvider>
-        <Toaster />
-        <Sonner />
+      <TooltipProvider>
+        <RealTimeProvider>
+          <Toaster />
+          <Sonner />
           <BrowserRouter>
           <Routes>
             <Route path="/auth" element={<Auth />} />
@@ -247,6 +247,7 @@ const App = () => (
           </Routes>
           </BrowserRouter>
         </RealTimeProvider>
+      </TooltipProvider>
     </AuthProvider>
   </QueryClientProvider>
 );

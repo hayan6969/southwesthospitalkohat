@@ -503,20 +503,26 @@ export const useCreatePatientWithProfile = () => {
       // Create user account first with phone as email and CNIC as password
       const email = `${patientData.phone}@patient.local`;
 
-      // Use the admin auth API to create user without affecting current session
-      const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+      // Store current session and access token
+      const { data: currentSession } = await supabase.auth.getSession();
+      const originalAccessToken = currentSession?.session?.access_token;
+      const originalRefreshToken = currentSession?.session?.refresh_token;
+      
+      // Create user account first with phone as email and CNIC as password
+      const { data: authData, error: authError } = await supabase.auth.signUp({
         email,
         password: patientData.cnic,
-        user_metadata: {
-          first_name: patientData.first_name,
-          last_name: patientData.last_name,
-          role: 'patient'
-        },
-        email_confirm: true // Auto-confirm the email
+        options: {
+          data: {
+            first_name: patientData.first_name,
+            last_name: patientData.last_name,
+            role: 'patient'
+          }
+        }
       });
 
       if (authError) {
-        if (authError.message.includes('already registered') || authError.message.includes('already exists')) {
+        if (authError.message.includes('already registered')) {
           throw new Error('DUPLICATE_PHONE');
         }
         throw authError;
@@ -536,18 +542,25 @@ export const useCreatePatientWithProfile = () => {
         .single();
 
       if (patientError) {
-        // If patient creation fails, clean up the auth user
-        try {
-          await supabase.auth.admin.deleteUser(patientId);
-        } catch (cleanupError) {
-          console.error('Failed to cleanup auth user after patient creation failure:', cleanupError);
-        }
-        
-        // Handle CNIC constraint violation
-        if (patientError.code === '23505' && patientError.message.includes('patients_cnic_unique_idx')) {
-          throw new Error('DUPLICATE_CNIC');
-        }
+        // CNIC uniqueness is not enforced anymore - multiple patients can share CNIC
         throw patientError;
+      }
+
+      // Immediately sign out the new patient account
+      await supabase.auth.signOut();
+      
+      // Restore the original session if it exists
+      if (currentSession?.session && originalAccessToken && originalRefreshToken) {
+        try {
+          await supabase.auth.setSession({
+            access_token: originalAccessToken,
+            refresh_token: originalRefreshToken
+          });
+        } catch (error) {
+          console.error('Failed to restore original session:', error);
+          // If session restoration fails, force a page reload to get clean state
+          window.location.reload();
+        }
       }
 
       // Profile will be created automatically by the trigger
