@@ -161,38 +161,6 @@ export function AdminFinanceAnalytics() {
         </div>
       </div>
 
-      {/* Key Metrics */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <StatsCard
-          title="Total Revenue"
-          value={formatPkrAmount(analytics.totalRevenue)}
-          change={`${analytics.revenueChange.toFixed(1)}%`}
-          changeType={analytics.revenueChange > 0 ? "positive" : "negative"}
-          icon={<Banknote className="w-5 h-5 text-green-600" />}
-        />
-        <StatsCard
-          title="Total Expenses"
-          value={formatPkrAmount(analytics.totalExpenses)}
-          change={`${analytics.expenseChange.toFixed(1)}%`}
-          changeType="negative"
-          icon={<CreditCard className="w-5 h-5 text-red-600" />}
-        />
-        <StatsCard
-          title="Net Profit"
-          value={formatPkrAmount(analytics.netProfit)}
-          change={analytics.profitMargin ? `${analytics.profitMargin.toFixed(1)}%` : "0%"}
-          changeType={analytics.netProfit > 0 ? "positive" : "negative"}
-          icon={analytics.netProfit > 0 ? <TrendingUp className="w-5 h-5 text-green-600" /> : <TrendingDown className="w-5 h-5 text-red-600" />}
-        />
-        <StatsCard
-          title="Daily Average"
-          value={formatPkrAmount(analytics.dailyAverage)}
-          change="Revenue"
-          changeType="positive"
-          icon={<BarChart3 className="w-5 h-5 text-blue-600" />}
-        />
-      </div>
-
       {/* Main Analytics Tabs */}
       <Tabs defaultValue="overview" className="space-y-6">
         <TabsList className="grid w-full grid-cols-5">
@@ -204,6 +172,57 @@ export function AdminFinanceAnalytics() {
         </TabsList>
 
         <TabsContent value="overview" className="space-y-6">
+          {/* Overview Summary Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-lg">Today's Revenue</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  <div className="text-2xl font-bold text-green-600">{formatPkrAmount(analytics.totalRevenue)}</div>
+                  <div className="text-sm text-gray-600">Total earnings today</div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-lg">Monthly Revenue</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  <div className="text-2xl font-bold text-blue-600">{formatPkrAmount(analytics.totalRevenue)}</div>
+                  <div className="text-sm text-gray-600">This month's earnings</div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-lg">Net Profit</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  <div className="text-2xl font-bold text-purple-600">{formatPkrAmount(analytics.netProfit)}</div>
+                  <div className="text-sm text-gray-600">Revenue - Expenses</div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-lg">Total Expenses</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  <div className="text-2xl font-bold text-orange-600">{formatPkrAmount(analytics.totalExpenses)}</div>
+                  <div className="text-sm text-gray-600">All expenses</div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Revenue Trend Chart */}
             <Card>
@@ -258,87 +277,6 @@ export function AdminFinanceAnalytics() {
               </CardContent>
             </Card>
           </div>
-
-          {/* Detailed Breakdown */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-lg">Hospital Services</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  <div className="text-2xl font-bold text-green-600">{formatPkrAmount(analytics.hospitalRevenue)}</div>
-                  <div className="text-sm text-gray-600">{analytics.hospitalInvoiceCount} invoices</div>
-                  <div className="text-sm text-gray-600">Avg: {formatPkrAmount(analytics.hospitalAverage)}</div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-lg">Pharmacy Sales</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  <div className="text-2xl font-bold text-blue-600">{formatPkrAmount(analytics.pharmacyRevenue)}</div>
-                  <div className="text-sm text-gray-600">{analytics.pharmacyInvoiceCount} sales</div>
-                  <div className="text-sm text-gray-600">Avg: {formatPkrAmount(analytics.pharmacyAverage)}</div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-lg">Lab Services</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  <div className="text-2xl font-bold text-purple-600">{formatPkrAmount(analytics.labRevenue)}</div>
-                  <div className="text-sm text-gray-600">{analytics.labReportCount} reports</div>
-                  <div className="text-sm text-gray-600">Avg: {formatPkrAmount(analytics.labAverage)}</div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-lg">OT Services</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  <div className="text-2xl font-bold text-orange-600">{formatPkrAmount(analytics.otRevenue)}</div>
-                  <div className="text-sm text-gray-600">{analytics.otScheduleCount} operations</div>
-                  <div className="text-sm text-gray-600">Avg: {formatPkrAmount(analytics.otAverage)}</div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Recent Activities */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Recent Financial Activities</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3 max-h-64 overflow-y-auto">
-                {analytics.recentActivities.map((activity, index) => (
-                  <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                    <div className="flex items-center gap-3">
-                      <div className={`w-3 h-3 rounded-full ${activity.amount > 0 ? 'bg-green-500' : 'bg-red-500'}`} />
-                      <div>
-                        <div className="font-medium">{activity.type}</div>
-                        <div className="text-sm text-gray-600">{activity.description}</div>
-                        <div className="text-xs text-gray-500">{format(new Date(activity.date), 'MMM dd, yyyy HH:mm')}</div>
-                      </div>
-                    </div>
-                    <div className={`font-bold ${activity.amount > 0 ? 'text-green-600' : 'text-red-600'}`}>
-                      {activity.amount > 0 ? '+' : ''}{formatPkrAmount(Math.abs(activity.amount))}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
         </TabsContent>
 
         {/* Individual source tabs with detailed analytics */}
@@ -467,30 +405,73 @@ function calculateDailyTrends(revenueData: any[], expenseData: any[]) {
 
 // Individual analytics components
 function HospitalAnalytics({ data }: { data: any[] }) {
+  const totalRevenue = data.filter(inv => inv.status === 'paid').reduce((sum, inv) => sum + Number(inv.amount), 0);
+  
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-      <Card>
-        <CardHeader>
-          <CardTitle>Hospital Invoice Status</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-3">
-            {['paid', 'pending', 'overdue'].map(status => {
-              const count = data.filter(inv => inv.status === status).length;
-              const amount = data.filter(inv => inv.status === status).reduce((sum, inv) => sum + Number(inv.amount), 0);
-              return (
-                <div key={status} className="flex justify-between items-center">
-                  <span className="capitalize font-medium">{status}</span>
-                  <div className="text-right">
-                    <div className="font-semibold">{formatPkrAmount(amount)}</div>
-                    <div className="text-sm text-gray-500">{count} invoices</div>
+    <div className="space-y-6">
+      {/* Hospital Summary Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg">Today's Revenue</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              <div className="text-2xl font-bold text-green-600">{formatPkrAmount(totalRevenue)}</div>
+              <div className="text-sm text-gray-600">Hospital earnings today</div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg">Monthly Revenue</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              <div className="text-2xl font-bold text-blue-600">{formatPkrAmount(totalRevenue)}</div>
+              <div className="text-sm text-gray-600">This month's earnings</div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg">Total Invoices</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              <div className="text-2xl font-bold text-purple-600">{data.length}</div>
+              <div className="text-sm text-gray-600">All hospital invoices</div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Hospital Invoice Status</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {['paid', 'pending', 'overdue'].map(status => {
+                const count = data.filter(inv => inv.status === status).length;
+                const amount = data.filter(inv => inv.status === status).reduce((sum, inv) => sum + Number(inv.amount), 0);
+                return (
+                  <div key={status} className="flex justify-between items-center">
+                    <span className="capitalize font-medium">{status}</span>
+                    <div className="text-right">
+                      <div className="font-semibold">{formatPkrAmount(amount)}</div>
+                      <div className="text-sm text-gray-500">{count} invoices</div>
+                    </div>
                   </div>
-                </div>
-              );
-            })}
-          </div>
-        </CardContent>
-      </Card>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }
@@ -500,28 +481,69 @@ function PharmacyAnalytics({ data }: { data: any[] }) {
   const totalDiscount = data.reduce((sum, inv) => sum + Number(inv.discount_amount || 0), 0);
   
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-      <Card>
-        <CardHeader>
-          <CardTitle>Pharmacy Sales Summary</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-3">
-            <div className="flex justify-between">
-              <span>Total Sales</span>
-              <span className="font-semibold">{formatPkrAmount(totalSales)}</span>
+    <div className="space-y-6">
+      {/* Pharmacy Summary Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg">Today's Sales</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              <div className="text-2xl font-bold text-green-600">{formatPkrAmount(totalSales)}</div>
+              <div className="text-sm text-gray-600">Pharmacy earnings today</div>
             </div>
-            <div className="flex justify-between">
-              <span>Total Discounts</span>
-              <span className="font-semibold text-red-600">-{formatPkrAmount(totalDiscount)}</span>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg">Monthly Sales</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              <div className="text-2xl font-bold text-blue-600">{formatPkrAmount(totalSales)}</div>
+              <div className="text-sm text-gray-600">This month's sales</div>
             </div>
-            <div className="flex justify-between">
-              <span>Average Sale</span>
-              <span className="font-semibold">{formatPkrAmount(data.length > 0 ? totalSales / data.length : 0)}</span>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg">Total Invoices</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              <div className="text-2xl font-bold text-purple-600">{data.length}</div>
+              <div className="text-sm text-gray-600">All pharmacy sales</div>
             </div>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Pharmacy Sales Summary</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              <div className="flex justify-between">
+                <span>Total Sales</span>
+                <span className="font-semibold">{formatPkrAmount(totalSales)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Total Discounts</span>
+                <span className="font-semibold text-red-600">-{formatPkrAmount(totalDiscount)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Average Sale</span>
+                <span className="font-semibold">{formatPkrAmount(data.length > 0 ? totalSales / data.length : 0)}</span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }
@@ -529,30 +551,72 @@ function PharmacyAnalytics({ data }: { data: any[] }) {
 function LabAnalytics({ data }: { data: any[] }) {
   const completedTests = data.filter(lab => lab.status === 'completed').length;
   const pendingTests = data.filter(lab => lab.status === 'pending').length;
+  const totalRevenue = data.reduce((sum, lab) => sum + Number(lab.price || 0), 0);
   
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-      <Card>
-        <CardHeader>
-          <CardTitle>Lab Test Status</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-3">
-            <div className="flex justify-between">
-              <span>Completed Tests</span>
-              <span className="font-semibold text-green-600">{completedTests}</span>
+    <div className="space-y-6">
+      {/* Lab Summary Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg">Today's Revenue</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              <div className="text-2xl font-bold text-green-600">{formatPkrAmount(totalRevenue)}</div>
+              <div className="text-sm text-gray-600">Lab earnings today</div>
             </div>
-            <div className="flex justify-between">
-              <span>Pending Tests</span>
-              <span className="font-semibold text-yellow-600">{pendingTests}</span>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg">Monthly Revenue</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              <div className="text-2xl font-bold text-blue-600">{formatPkrAmount(totalRevenue)}</div>
+              <div className="text-sm text-gray-600">This month's earnings</div>
             </div>
-            <div className="flex justify-between">
-              <span>Total Revenue</span>
-              <span className="font-semibold">{formatPkrAmount(data.reduce((sum, lab) => sum + Number(lab.price || 0), 0))}</span>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg">Total Tests</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              <div className="text-2xl font-bold text-purple-600">{data.length}</div>
+              <div className="text-sm text-gray-600">All lab tests</div>
             </div>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Lab Test Status</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              <div className="flex justify-between">
+                <span>Completed Tests</span>
+                <span className="font-semibold text-green-600">{completedTests}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Pending Tests</span>
+                <span className="font-semibold text-yellow-600">{pendingTests}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Total Revenue</span>
+                <span className="font-semibold">{formatPkrAmount(totalRevenue)}</span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }
@@ -560,30 +624,72 @@ function LabAnalytics({ data }: { data: any[] }) {
 function OTAnalytics({ data }: { data: any[] }) {
   const completedOTs = data.filter(ot => ot.status === 'completed').length;
   const scheduledOTs = data.filter(ot => ot.status === 'scheduled').length;
+  const totalRevenue = data.reduce((sum, ot) => sum + (Number(ot.total_cost || 0) - Number(ot.doctor_expense || 0)), 0);
   
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-      <Card>
-        <CardHeader>
-          <CardTitle>OT Operations Status</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-3">
-            <div className="flex justify-between">
-              <span>Completed Operations</span>
-              <span className="font-semibold text-green-600">{completedOTs}</span>
+    <div className="space-y-6">
+      {/* OT Summary Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg">Today's Revenue</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              <div className="text-2xl font-bold text-green-600">{formatPkrAmount(totalRevenue)}</div>
+              <div className="text-sm text-gray-600">OT earnings today</div>
             </div>
-            <div className="flex justify-between">
-              <span>Scheduled Operations</span>
-              <span className="font-semibold text-blue-600">{scheduledOTs}</span>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg">Monthly Revenue</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              <div className="text-2xl font-bold text-blue-600">{formatPkrAmount(totalRevenue)}</div>
+              <div className="text-sm text-gray-600">This month's earnings</div>
             </div>
-            <div className="flex justify-between">
-              <span>Hospital Revenue</span>
-              <span className="font-semibold">{formatPkrAmount(data.reduce((sum, ot) => sum + (Number(ot.total_cost || 0) - Number(ot.doctor_expense || 0)), 0))}</span>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg">Total Operations</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              <div className="text-2xl font-bold text-purple-600">{data.length}</div>
+              <div className="text-sm text-gray-600">All OT operations</div>
             </div>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>OT Operations Status</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              <div className="flex justify-between">
+                <span>Completed Operations</span>
+                <span className="font-semibold text-green-600">{completedOTs}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Scheduled Operations</span>
+                <span className="font-semibold text-blue-600">{scheduledOTs}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Hospital Revenue</span>
+                <span className="font-semibold">{formatPkrAmount(totalRevenue)}</span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }
