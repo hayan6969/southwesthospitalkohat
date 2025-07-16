@@ -1259,6 +1259,60 @@ export type Database = {
           },
         ]
       }
+      refunds: {
+        Row: {
+          amount: number
+          created_at: string
+          description: string
+          doctor_id: string | null
+          id: string
+          patient_id: string | null
+          processed_by: string
+          refund_type: string
+          related_record_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          description: string
+          doctor_id?: string | null
+          id?: string
+          patient_id?: string | null
+          processed_by: string
+          refund_type: string
+          related_record_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          description?: string
+          doctor_id?: string | null
+          id?: string
+          patient_id?: string | null
+          processed_by?: string
+          refund_type?: string
+          related_record_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "refunds_doctor_id_fkey"
+            columns: ["doctor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "refunds_processed_by_fkey"
+            columns: ["processed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       users: {
         Row: {
           created_at: string | null
