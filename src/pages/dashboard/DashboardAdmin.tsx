@@ -60,7 +60,8 @@ export default function DashboardAdmin() {
     opening_time: '',
     closing_time: '',
     working_days: [] as string[],
-    payroll_payment_date: 1
+    payroll_payment_date: 1,
+    emergency_consultation_fee: 10000
   });
   const [hospitalForm, setHospitalForm] = useState({
     hospital_name: '',
@@ -151,6 +152,13 @@ export default function DashboardAdmin() {
       setBrandingForm({
         hospital_name: hospitalSettings.hospital_name || '',
         logo_url: hospitalSettings.logo_url || ''
+      });
+      setTimingsForm({
+        opening_time: hospitalSettings.opening_time || '',
+        closing_time: hospitalSettings.closing_time || '',
+        working_days: hospitalSettings.working_days || [],
+        payroll_payment_date: hospitalSettings.payroll_payment_date || 1,
+        emergency_consultation_fee: hospitalSettings.emergency_consultation_fee || 10000
       });
       setHospitalForm({
         hospital_name: hospitalSettings.hospital_name || '',
@@ -781,44 +789,60 @@ export default function DashboardAdmin() {
                    </div>
                  </div>
 
-                 {/* Payroll Settings */}
-                 <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
-                   <h4 className="text-lg font-semibold mb-4">Payroll Settings</h4>
-                   <div className="space-y-4">
-                     <div>
-                       <label className="block text-sm font-medium text-gray-700 mb-2">
-                         Monthly Payment Date (Day of Month)
-                       </label>
-                       <Input 
-                         type="number" 
-                         value={hospitalSettings?.payroll_payment_date || 1}
-                         onChange={(e) => setTimingsForm(prev => ({ ...prev, payroll_payment_date: parseInt(e.target.value) }))}
-                         min="1" 
-                         max="31" 
-                         placeholder="Enter day of month (1-31)"
-                       />
-                       <p className="text-sm text-gray-500 mt-1">
-                         Day of month when salaries should be paid (e.g., 1 for 1st of every month)
-                       </p>
-                     </div>
-                     <Button 
-                       className="w-full"
-                       onClick={async () => {
-                         const success = await updateSettings({
-                           payroll_payment_date: timingsForm.payroll_payment_date || hospitalSettings?.payroll_payment_date || 1
-                         });
-                          if (success) {
-                            toastHook({
-                              title: "Success",
-                              description: "Payroll settings updated successfully",
-                            });
-                          }
-                       }}
-                     >
-                       Save Payroll Settings
-                     </Button>
-                   </div>
-                 </div>
+                  {/* Payroll & Emergency Settings */}
+                  <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+                    <h4 className="text-lg font-semibold mb-4">Payroll & Emergency Settings</h4>
+                    <div className="space-y-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Monthly Payment Date (Day of Month)
+                        </label>
+                        <Input 
+                          type="number" 
+                          value={timingsForm.payroll_payment_date}
+                          onChange={(e) => setTimingsForm(prev => ({ ...prev, payroll_payment_date: parseInt(e.target.value) || 1 }))}
+                          min="1" 
+                          max="31" 
+                          placeholder="Enter day of month (1-31)"
+                        />
+                        <p className="text-sm text-gray-500 mt-1">
+                          Day of month when salaries should be paid (e.g., 1 for 1st of every month)
+                        </p>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Emergency Consultation Fee (PKR)
+                        </label>
+                        <Input 
+                          type="number" 
+                          value={timingsForm.emergency_consultation_fee}
+                          onChange={(e) => setTimingsForm(prev => ({ ...prev, emergency_consultation_fee: parseInt(e.target.value) || 10000 }))}
+                          min="0" 
+                          placeholder="Enter emergency consultation fee in PKR"
+                        />
+                        <p className="text-sm text-gray-500 mt-1">
+                          Fee charged for emergency consultations (will be used throughout the system)
+                        </p>
+                      </div>
+                      <Button 
+                        className="w-full"
+                        onClick={async () => {
+                          const success = await updateSettings({
+                            payroll_payment_date: timingsForm.payroll_payment_date,
+                            emergency_consultation_fee: timingsForm.emergency_consultation_fee
+                          });
+                           if (success) {
+                             toastHook({
+                               title: "Success",
+                               description: "Payroll and emergency settings updated successfully",
+                             });
+                           }
+                        }}
+                      >
+                        Save Settings
+                      </Button>
+                    </div>
+                  </div>
 
                  {/* Hospital Information */}
                  <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
