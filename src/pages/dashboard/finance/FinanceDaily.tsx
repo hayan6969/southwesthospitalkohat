@@ -77,11 +77,11 @@ export default function FinanceDaily() {
 
       console.log('OT schedules found:', otSchedules?.length, otSchedules);
 
-      // Emergency consultations - let's check multiple ways
+      // Emergency consultations - check both 'emergency' and 'Emergency' and include completed status
       const { data: emergencyAppointments } = await supabase
         .from('appointments')
         .select('consultation_fee_at_time, type, status, appointment_date')
-        .eq('type', 'emergency')
+        .ilike('type', 'emergency')
         .eq('status', 'completed')
         .gte('appointment_date', `${targetDate}T00:00:00`)
         .lt('appointment_date', `${targetDate}T23:59:59`);
@@ -127,12 +127,21 @@ export default function FinanceDaily() {
       // Calculate pharmacy revenue and profit correctly
       let pharmacyRevenue = 0;
       let pharmacyProfit = 0;
+      let pharmacyReturnsFromInvoices = 0;
       
       if (pharmacyInvoicesWithItems) {
-        pharmacyRevenue = pharmacyInvoicesWithItems.reduce((sum, inv) => sum + (inv.final_amount || 0), 0);
+        // Separate positive (sales) and negative (returns) amounts
+        const positiveInvoices = pharmacyInvoicesWithItems.filter(inv => (inv.final_amount || 0) >= 0);
+        const negativeInvoices = pharmacyInvoicesWithItems.filter(inv => (inv.final_amount || 0) < 0);
         
-        // Calculate actual profit based on selling price - purchase price
-        pharmacyProfit = pharmacyInvoicesWithItems.reduce((totalProfit, invoice) => {
+        // Revenue only from positive sales
+        pharmacyRevenue = positiveInvoices.reduce((sum, inv) => sum + (inv.final_amount || 0), 0);
+        
+        // Returns from negative invoices (make positive for display)
+        pharmacyReturnsFromInvoices = Math.abs(negativeInvoices.reduce((sum, inv) => sum + (inv.final_amount || 0), 0));
+        
+        // Calculate actual profit only from positive sales based on selling price - purchase price
+        pharmacyProfit = positiveInvoices.reduce((totalProfit, invoice) => {
           const invoiceProfit = (invoice.pharmacy_invoice_items || []).reduce((itemsProfit, item) => {
             if (item.medicines && item.medicines.selling_price && item.medicines.purchase_price) {
               const profitPerUnit = item.medicines.selling_price - item.medicines.purchase_price;
@@ -155,9 +164,9 @@ export default function FinanceDaily() {
       const totalHospitalProfit = totalHospitalRevenue - totalExpenses;
 
       // Categorize refunds
-      const otRefunds = refunds?.filter(r => r.refund_type === 'ot_schedule')?.reduce((sum, r) => sum + r.amount, 0) || 0;
-      const pharmacyRefunds = refunds?.filter(r => r.refund_type === 'pharmacy_invoice')?.reduce((sum, r) => sum + r.amount, 0) || 0;
-      const otherRefunds = refunds?.filter(r => !['ot_schedule', 'pharmacy_invoice'].includes(r.refund_type))?.reduce((sum, r) => sum + r.amount, 0) || 0;
+      const otRefunds = refunds?.filter(r => r.refund_type.includes('ot'))?.reduce((sum, r) => sum + r.amount, 0) || 0;
+      const pharmacyRefunds = pharmacyReturnsFromInvoices + (refunds?.filter(r => r.refund_type === 'pharmacy_invoice')?.reduce((sum, r) => sum + r.amount, 0) || 0);
+      const otherRefunds = refunds?.filter(r => !r.refund_type.includes('ot') && r.refund_type !== 'pharmacy_invoice')?.reduce((sum, r) => sum + r.amount, 0) || 0;
 
       console.log('Calculated values:', {
         hospitalRevenue,
