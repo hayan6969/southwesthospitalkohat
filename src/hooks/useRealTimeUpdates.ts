@@ -66,9 +66,11 @@ export const useRealTimeUpdates = () => {
         },
         () => {
           // Invalidate related queries when invoices change
+          console.log('🔄 Real-time: Invoices updated, invalidating queries...');
           queryClient.invalidateQueries({ queryKey: ['invoices'] });
           queryClient.invalidateQueries({ queryKey: ['stats'] });
           queryClient.invalidateQueries({ queryKey: ['finance-stats'] });
+          queryClient.invalidateQueries({ queryKey: ['emergency-invoices'] });
         }
       )
       .on(

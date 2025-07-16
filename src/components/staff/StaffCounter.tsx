@@ -208,6 +208,7 @@ export function StaffCounter() {
   // Get emergency invoices for selected date
   const [emergencyInvoices, setEmergencyInvoices] = useState<any[]>([]);
   
+  
   useEffect(() => {
     const fetchEmergencyInvoices = async () => {
       if (!selectedDate) return;
@@ -229,6 +230,28 @@ export function StaffCounter() {
     };
     
     fetchEmergencyInvoices();
+
+    // Set up real-time subscription for emergency invoices
+    const channel = supabase
+      .channel('emergency-invoices-updates')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'invoices',
+          filter: 'description.ilike.%Emergency Consultation%'
+        },
+        () => {
+          console.log('🚨 Emergency invoice updated, refetching...');
+          fetchEmergencyInvoices();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [selectedDate]);
 
   const handleGenerateInvoice = async (appointment: any) => {
