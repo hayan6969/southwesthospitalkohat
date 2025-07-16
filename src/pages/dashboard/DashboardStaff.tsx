@@ -7,6 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { StaffCounter } from "@/components/staff/StaffCounter";
 import { StaffLab } from "@/components/staff/StaffLab";
 import { StaffOT } from "@/components/staff/StaffOT";
+import { PatientSearchDialog } from "@/components/staff/PatientSearchDialog";
 import { Receipt, TestTube, Building2 } from "lucide-react";
 import { useHospitalSettings } from "@/hooks/useHospitalSettings";
 
@@ -61,8 +62,11 @@ export default function DashboardStaff() {
       {/* Main Content */}
       <main className="p-6">
         <div className="space-y-6">
-          <div>
-            <p className="text-gray-600 mt-1">Manage hospital operations across departments</p>
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-gray-600 mt-1">Manage hospital operations across departments</p>
+            </div>
+            <PatientSearchDialog />
           </div>
 
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
