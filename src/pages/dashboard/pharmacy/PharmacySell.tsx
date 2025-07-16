@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { SearchableMedicineSelect } from "@/components/SearchableMedicineSelect";
 import { Separator } from "@/components/ui/separator";
 import { useMedicines, useCreatePharmacyInvoice } from "@/hooks/useDatabase";
 import { formatPkrAmount } from "@/utils/currency";
@@ -188,18 +188,13 @@ export default function PharmacySell() {
             <CardContent className="space-y-4">
               <div>
                 <Label>Select Medicine</Label>
-                <Select value={selectedMedicineId} onValueChange={setSelectedMedicineId}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Choose medicine..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {medicines?.filter(m => m.stock_quantity > 0).map((medicine) => (
-                      <SelectItem key={medicine.id} value={medicine.id}>
-                        {medicine.name} - {formatPkrAmount(medicine.selling_price)} (Stock: {medicine.stock_quantity})
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <SearchableMedicineSelect
+                  medicines={medicines}
+                  value={selectedMedicineId}
+                  onValueChange={setSelectedMedicineId}
+                  placeholder="Search and select medicine..."
+                  isLoading={isLoading}
+                />
               </div>
 
               <div>
