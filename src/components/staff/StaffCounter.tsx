@@ -239,12 +239,16 @@ export function StaffCounter() {
         {
           event: '*',
           schema: 'public',
-          table: 'invoices',
-          filter: 'description.ilike.%Emergency Consultation%'
+          table: 'invoices'
         },
-        () => {
-          console.log('🚨 Emergency invoice updated, refetching...');
-          fetchEmergencyInvoices();
+        (payload: any) => {
+          console.log('🚨 Invoice updated, checking if emergency...', payload);
+          // Check if it's an emergency invoice
+          if ((payload.new && payload.new.description && payload.new.description.includes('Emergency Consultation')) || 
+              (payload.old && payload.old.description && payload.old.description.includes('Emergency Consultation'))) {
+            console.log('🚨 Emergency invoice detected, refetching...');
+            fetchEmergencyInvoices();
+          }
         }
       )
       .subscribe();
