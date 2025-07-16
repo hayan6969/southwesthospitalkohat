@@ -1,5 +1,5 @@
 import jsPDF from 'jspdf';
-import { formatPkrCurrency } from './currency';
+import { formatPkrAmount } from './currency';
 import { supabase } from '@/integrations/supabase/client';
 
 interface InvoiceItem {
@@ -210,11 +210,11 @@ export const generatePharmacyInvoicePDF = async (invoiceData: PharmacyInvoiceDat
     xPosition += colWidths[1];
     
     // Unit Price
-    pdf.text(formatPkrCurrency(item.unit_price), xPosition, yPosition);
+    pdf.text(formatPkrAmount(item.unit_price), xPosition, yPosition);
     xPosition += colWidths[2];
     
     // Total Price
-    pdf.text(formatPkrCurrency(item.total_price), xPosition, yPosition);
+    pdf.text(formatPkrAmount(item.total_price), xPosition, yPosition);
     
     yPosition += 8;
   });
@@ -238,12 +238,12 @@ export const generatePharmacyInvoicePDF = async (invoiceData: PharmacyInvoiceDat
   pdf.setFont('helvetica', 'normal');
   pdf.setTextColor(60, 60, 60);
   pdf.text('Subtotal:', totalsX - 25, yPosition);
-  pdf.text(formatPkrCurrency(invoiceData.total_amount), totalsX, yPosition);
+  pdf.text(formatPkrAmount(invoiceData.total_amount), totalsX, yPosition);
   yPosition += 8;
   
   if (invoiceData.discount_amount && invoiceData.discount_amount > 0) {
     pdf.text('Discount:', totalsX - 25, yPosition);
-    pdf.text(`-${formatPkrCurrency(invoiceData.discount_amount)}`, totalsX, yPosition);
+    pdf.text(`-${formatPkrAmount(invoiceData.discount_amount)}`, totalsX, yPosition);
     yPosition += 8;
   }
   
@@ -255,7 +255,7 @@ export const generatePharmacyInvoicePDF = async (invoiceData: PharmacyInvoiceDat
   pdf.setTextColor(40, 40, 40);
   pdf.rect(finalTotalX, yPosition - 5, 80, 18); // Wider box for better fit
   pdf.text('Total Amount:', finalTotalX + 5, yPosition + 4); // Text starts inside box
-  pdf.text(formatPkrCurrency(invoiceData.final_amount), finalTotalX + 5, yPosition + 12); // Amount below label
+  pdf.text(formatPkrAmount(invoiceData.final_amount), finalTotalX + 5, yPosition + 12); // Amount below label
   
   yPosition += 25;
   
