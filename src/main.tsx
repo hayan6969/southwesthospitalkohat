@@ -61,8 +61,4 @@ if ('serviceWorker' in navigator) {
 // Update favicon on app load
 updateFavicon();
 
-createRoot(document.getElementById("root")!).render(
-  <React.StrictMode>
-    <App />
-  </React.StrictMode>
-);
+createRoot(document.getElementById("root")!).render(<App />);
