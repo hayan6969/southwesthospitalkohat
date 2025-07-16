@@ -1,18 +1,25 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { Calendar, RefreshCw, Building, AlertTriangle, TestTube, Activity, Pill, TrendingUp, TrendingDown, DollarSign, Receipt } from "lucide-react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { Calendar, RefreshCw, Building, AlertTriangle, TestTube, Activity, Pill, TrendingUp, TrendingDown, DollarSign, Receipt, FileText, Upload, Download, Clock, CheckCircle } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { formatPkrAmount } from "@/utils/currency";
 import { StatsCard } from "@/components/StatsCard";
+import { toast } from "sonner";
 
 export default function FinanceDaily() {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [showClosingDialog, setShowClosingDialog] = useState(false);
+  const [showLastClosingDialog, setShowLastClosingDialog] = useState(false);
+  const queryClient = useQueryClient();
 
   // Format date for queries
   const formatDateForQuery = (date: Date) => {
@@ -204,8 +211,155 @@ export default function FinanceDaily() {
     refetchInterval: 30000, // Refresh every 30 seconds
   });
 
+  // Fetch detailed transactions for closing
+  const { data: detailedData } = useQuery({
+    queryKey: ['daily-detailed', targetDate],
+    queryFn: async () => {
+      // Fetch all detailed transaction data
+      const [
+        hospitalInvoicesRes,
+        pharmacyInvoicesRes,
+        labReportsRes,
+        otSchedulesRes,
+        emergencyAppointmentsRes,
+        expensesRes,
+        refundsRes
+      ] = await Promise.all([
+        supabase
+          .from('invoices')
+          .select('*, patients(id, profiles(first_name, last_name))')
+          .eq('status', 'paid')
+          .gte('created_at', `${targetDate}T00:00:00`)
+          .lt('created_at', `${targetDate}T23:59:59`),
+        
+        supabase
+          .from('pharmacy_invoices')
+          .select(`
+            *,
+            pharmacy_invoice_items(
+              quantity,
+              unit_price,
+              total_price,
+              medicine_id,
+              medicines(name, purchase_price, selling_price)
+            )
+          `)
+          .gte('created_at', `${targetDate}T00:00:00`)
+          .lt('created_at', `${targetDate}T23:59:59`),
+        
+        supabase
+          .from('lab_reports')
+          .select('*, patients(id, profiles(first_name, last_name))')
+          .eq('status', 'completed')
+          .gte('created_at', `${targetDate}T00:00:00`)
+          .lt('created_at', `${targetDate}T23:59:59`),
+        
+        supabase
+          .from('ot_schedules')
+          .select('*, patients(id, profiles(first_name, last_name)), ot_operations(operation_name)')
+          .eq('status', 'completed')
+          .eq('operation_date', targetDate),
+        
+        supabase
+          .from('appointments')
+          .select('*, patients(id, profiles(first_name, last_name)), doctors(id, profiles(first_name, last_name))')
+          .ilike('type', 'emergency')
+          .eq('status', 'completed')
+          .gte('appointment_date', `${targetDate}T00:00:00`)
+          .lt('appointment_date', `${targetDate}T23:59:59`),
+        
+        supabase
+          .from('expenses')
+          .select('*')
+          .eq('expense_date', targetDate),
+        
+        supabase
+          .from('refunds')
+          .select('*')
+          .gte('created_at', `${targetDate}T00:00:00`)
+          .lt('created_at', `${targetDate}T23:59:59`)
+      ]);
+
+      return {
+        hospitalInvoices: hospitalInvoicesRes.data || [],
+        pharmacyInvoices: pharmacyInvoicesRes.data || [],
+        labReports: labReportsRes.data || [],
+        otSchedules: otSchedulesRes.data || [],
+        emergencyAppointments: emergencyAppointmentsRes.data || [],
+        expenses: expensesRes.data || [],
+        refunds: refundsRes.data || []
+      };
+    },
+    enabled: showClosingDialog
+  });
+
+  // Fetch last closing report
+  const { data: lastClosingData } = useQuery({
+    queryKey: ['last-daily-closing'],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('daily_closings')
+        .select('*')
+        .order('closing_date', { ascending: false })
+        .limit(1);
+      
+      return data?.[0] || null;
+    },
+    enabled: showLastClosingDialog
+  });
+
+  // Create daily closing mutation
+  const createClosingMutation = useMutation({
+    mutationFn: async () => {
+      if (!detailedData || !dailyData) throw new Error('No data available');
+
+      const closingData = {
+        closing_date: targetDate,
+        closing_time: new Date().toISOString(),
+        day_name: format(selectedDate, 'EEEE'),
+        hospital_revenue: dailyData.totalHospitalRevenue,
+        pharmacy_revenue: dailyData.pharmacyRevenue,
+        pharmacy_profit: dailyData.pharmacyProfit,
+        total_expenses: dailyData.totalExpenses,
+        total_refunds: dailyData.totalRefunds,
+        net_profit: (dailyData.totalHospitalRevenue + dailyData.pharmacyProfit) - dailyData.totalExpenses - dailyData.totalRefunds,
+        transactions_data: {
+          hospitalInvoices: detailedData.hospitalInvoices,
+          pharmacyInvoices: detailedData.pharmacyInvoices,
+          labReports: detailedData.labReports,
+          otSchedules: detailedData.otSchedules,
+          emergencyAppointments: detailedData.emergencyAppointments,
+          expenses: detailedData.expenses,
+          refunds: detailedData.refunds
+        }
+      };
+
+      const { error } = await supabase
+        .from('daily_closings')
+        .insert([closingData]);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success('Daily closing completed successfully!');
+      setShowClosingDialog(false);
+      queryClient.invalidateQueries({ queryKey: ['last-daily-closing'] });
+    },
+    onError: (error) => {
+      toast.error('Failed to create daily closing: ' + error.message);
+    }
+  });
+
   const handleRefresh = () => {
     refetch();
+  };
+
+  const handleDailyClosing = () => {
+    setShowClosingDialog(true);
+  };
+
+  const confirmClosing = () => {
+    createClosingMutation.mutate();
   };
 
   return (
@@ -219,6 +373,21 @@ export default function FinanceDaily() {
           </p>
         </div>
         <div className="flex gap-2">
+          <Button
+            onClick={() => setShowLastClosingDialog(true)}
+            variant="outline"
+            className="flex items-center gap-2"
+          >
+            <Upload className="h-4 w-4" />
+            Last Closing
+          </Button>
+          <Button
+            onClick={handleDailyClosing}
+            className="flex items-center gap-2 bg-green-600 hover:bg-green-700"
+          >
+            <FileText className="h-4 w-4" />
+            Daily Closing
+          </Button>
           <Popover>
             <PopoverTrigger asChild>
               <Button
@@ -358,6 +527,337 @@ export default function FinanceDaily() {
           </CardContent>
         </Card>
       )}
+
+      {/* Daily Closing Dialog */}
+      <Dialog open={showClosingDialog} onOpenChange={setShowClosingDialog}>
+        <DialogContent className="max-w-6xl max-h-[90vh]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-2xl">
+              <FileText className="h-6 w-6" />
+              Daily Financial Closing Report
+            </DialogTitle>
+          </DialogHeader>
+          
+          <ScrollArea className="max-h-[70vh]">
+            <div className="space-y-6 p-4">
+              {/* Header Info */}
+              <div className="text-center border-b pb-4">
+                <h2 className="text-2xl font-bold">Daily Financial Closing</h2>
+                <div className="flex justify-center gap-4 mt-2 text-muted-foreground">
+                  <span className="flex items-center gap-1">
+                    <Calendar className="h-4 w-4" />
+                    {format(selectedDate, 'EEEE, MMMM d, yyyy')}
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <Clock className="h-4 w-4" />
+                    {format(new Date(), 'HH:mm:ss')}
+                  </span>
+                </div>
+              </div>
+
+              {/* Summary Section */}
+              <div>
+                <h3 className="text-xl font-semibold mb-4 flex items-center gap-2">
+                  <TrendingUp className="h-5 w-5" />
+                  Financial Summary
+                </h3>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <Card>
+                    <CardContent className="p-4">
+                      <div className="text-sm text-muted-foreground">Total Revenue</div>
+                      <div className="text-xl font-bold text-green-600">
+                        {formatPkrAmount((dailyData?.totalHospitalRevenue || 0) + (dailyData?.pharmacyRevenue || 0))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardContent className="p-4">
+                      <div className="text-sm text-muted-foreground">Total Profit</div>
+                      <div className="text-xl font-bold text-blue-600">
+                        {formatPkrAmount((dailyData?.totalHospitalRevenue || 0) + (dailyData?.pharmacyProfit || 0))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardContent className="p-4">
+                      <div className="text-sm text-muted-foreground">Total Expenses</div>
+                      <div className="text-xl font-bold text-red-600">
+                        {formatPkrAmount(dailyData?.totalExpenses || 0)}
+                      </div>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardContent className="p-4">
+                      <div className="text-sm text-muted-foreground">Net Profit</div>
+                      <div className="text-xl font-bold text-purple-600">
+                        {formatPkrAmount(((dailyData?.totalHospitalRevenue || 0) + (dailyData?.pharmacyProfit || 0)) - (dailyData?.totalExpenses || 0) - (dailyData?.totalRefunds || 0))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              </div>
+
+              {/* Pharmacy Section */}
+              <div>
+                <h3 className="text-xl font-semibold mb-4 flex items-center gap-2">
+                  <Pill className="h-5 w-5 text-blue-600" />
+                  Pharmacy Department
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                  <Card>
+                    <CardContent className="p-4">
+                      <div className="text-sm text-muted-foreground">Revenue</div>
+                      <div className="text-lg font-bold">{formatPkrAmount(dailyData?.pharmacyRevenue || 0)}</div>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardContent className="p-4">
+                      <div className="text-sm text-muted-foreground">Profit</div>
+                      <div className="text-lg font-bold text-green-600">{formatPkrAmount(dailyData?.pharmacyProfit || 0)}</div>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardContent className="p-4">
+                      <div className="text-sm text-muted-foreground">Returns</div>
+                      <div className="text-lg font-bold text-red-600">{formatPkrAmount(dailyData?.pharmacyRefunds || 0)}</div>
+                    </CardContent>
+                  </Card>
+                </div>
+                
+                {detailedData?.pharmacyInvoices && detailedData.pharmacyInvoices.length > 0 && (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-lg">Pharmacy Transactions ({detailedData.pharmacyInvoices.length})</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-2 max-h-40 overflow-y-auto">
+                        {detailedData.pharmacyInvoices.map((invoice, idx) => (
+                          <div key={idx} className="flex justify-between items-center p-2 bg-gray-50 rounded">
+                            <div>
+                              <span className="font-medium">{invoice.invoice_number}</span>
+                              <span className="text-sm text-muted-foreground ml-2">
+                                {invoice.customer_name || 'Walk-in Customer'}
+                              </span>
+                            </div>
+                            <Badge variant={invoice.final_amount >= 0 ? "default" : "destructive"}>
+                              {formatPkrAmount(invoice.final_amount)}
+                            </Badge>
+                          </div>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+              </div>
+
+              {/* Hospital Section */}
+              <div>
+                <h3 className="text-xl font-semibold mb-4 flex items-center gap-2">
+                  <Building className="h-5 w-5 text-green-600" />
+                  Hospital Department
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+                  <Card>
+                    <CardContent className="p-4">
+                      <div className="text-sm text-muted-foreground">Emergency</div>
+                      <div className="text-lg font-bold">{formatPkrAmount(dailyData?.emergencyRevenue || 0)}</div>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardContent className="p-4">
+                      <div className="text-sm text-muted-foreground">Lab Revenue</div>
+                      <div className="text-lg font-bold">{formatPkrAmount(dailyData?.labRevenue || 0)}</div>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardContent className="p-4">
+                      <div className="text-sm text-muted-foreground">OT Revenue</div>
+                      <div className="text-lg font-bold">{formatPkrAmount(dailyData?.otRevenue || 0)}</div>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardContent className="p-4">
+                      <div className="text-sm text-muted-foreground">Total Revenue</div>
+                      <div className="text-lg font-bold text-green-600">{formatPkrAmount(dailyData?.totalHospitalRevenue || 0)}</div>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                {/* Detailed transactions */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {detailedData?.emergencyAppointments && detailedData.emergencyAppointments.length > 0 && (
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="text-lg">Emergency Consultations ({detailedData.emergencyAppointments.length})</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="space-y-2 max-h-32 overflow-y-auto">
+                          {detailedData.emergencyAppointments.map((apt, idx) => (
+                            <div key={idx} className="flex justify-between p-2 bg-gray-50 rounded">
+                              <span className="text-sm">{apt.patients?.profiles?.first_name} {apt.patients?.profiles?.last_name}</span>
+                              <Badge>{formatPkrAmount(apt.consultation_fee_at_time || 0)}</Badge>
+                            </div>
+                          ))}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+
+                  {detailedData?.labReports && detailedData.labReports.length > 0 && (
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="text-lg">Lab Reports ({detailedData.labReports.length})</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="space-y-2 max-h-32 overflow-y-auto">
+                          {detailedData.labReports.map((lab, idx) => (
+                            <div key={idx} className="flex justify-between p-2 bg-gray-50 rounded">
+                              <span className="text-sm">{lab.test_name}</span>
+                              <Badge>{formatPkrAmount(lab.price || 0)}</Badge>
+                            </div>
+                          ))}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+                </div>
+              </div>
+
+              {/* Expenses Section */}
+              {detailedData?.expenses && detailedData.expenses.length > 0 && (
+                <div>
+                  <h3 className="text-xl font-semibold mb-4 flex items-center gap-2">
+                    <Receipt className="h-5 w-5 text-orange-600" />
+                    Daily Expenses ({detailedData.expenses.length})
+                  </h3>
+                  <Card>
+                    <CardContent className="p-4">
+                      <div className="space-y-2 max-h-40 overflow-y-auto">
+                        {detailedData.expenses.map((expense, idx) => (
+                          <div key={idx} className="flex justify-between items-center p-2 bg-gray-50 rounded">
+                            <div>
+                              <span className="font-medium">{expense.category}</span>
+                              <span className="text-sm text-muted-foreground block">{expense.description}</span>
+                            </div>
+                            <Badge variant="destructive">{formatPkrAmount(expense.amount)}</Badge>
+                          </div>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              )}
+
+              {/* Refunds Section */}
+              {detailedData?.refunds && detailedData.refunds.length > 0 && (
+                <div>
+                  <h3 className="text-xl font-semibold mb-4 flex items-center gap-2">
+                    <TrendingDown className="h-5 w-5 text-red-600" />
+                    Refunds & Returns ({detailedData.refunds.length})
+                  </h3>
+                  <Card>
+                    <CardContent className="p-4">
+                      <div className="space-y-2 max-h-40 overflow-y-auto">
+                        {detailedData.refunds.map((refund, idx) => (
+                          <div key={idx} className="flex justify-between items-center p-2 bg-gray-50 rounded">
+                            <div>
+                              <span className="font-medium">{refund.refund_type}</span>
+                              <span className="text-sm text-muted-foreground block">{refund.description}</span>
+                            </div>
+                            <Badge variant="destructive">{formatPkrAmount(refund.amount)}</Badge>
+                          </div>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              )}
+
+              {/* Confirmation */}
+              <div className="flex justify-end gap-4 pt-4 border-t">
+                <Button variant="outline" onClick={() => setShowClosingDialog(false)}>
+                  Cancel
+                </Button>
+                <Button 
+                  onClick={confirmClosing} 
+                  disabled={createClosingMutation.isPending}
+                  className="bg-green-600 hover:bg-green-700"
+                >
+                  {createClosingMutation.isPending ? (
+                    <div className="flex items-center gap-2">
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      Processing...
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <CheckCircle className="h-4 w-4" />
+                      Confirm Daily Closing
+                    </div>
+                  )}
+                </Button>
+              </div>
+            </div>
+          </ScrollArea>
+        </DialogContent>
+      </Dialog>
+
+      {/* Last Closing Dialog */}
+      <Dialog open={showLastClosingDialog} onOpenChange={setShowLastClosingDialog}>
+        <DialogContent className="max-w-4xl max-h-[90vh]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Download className="h-5 w-5" />
+              Last Daily Closing Report
+            </DialogTitle>
+          </DialogHeader>
+          
+          <ScrollArea className="max-h-[70vh]">
+            {lastClosingData ? (
+              <div className="space-y-4 p-4">
+                <div className="text-center border-b pb-4">
+                  <h3 className="text-xl font-bold">
+                    {format(new Date(lastClosingData.closing_date), 'EEEE, MMMM d, yyyy')}
+                  </h3>
+                  <p className="text-muted-foreground">
+                    Closed at: {format(new Date(lastClosingData.closing_time), 'HH:mm:ss')}
+                  </p>
+                </div>
+                
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <Card>
+                    <CardContent className="p-4">
+                      <div className="text-sm text-muted-foreground">Hospital Revenue</div>
+                      <div className="text-lg font-bold">{formatPkrAmount(lastClosingData.hospital_revenue)}</div>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardContent className="p-4">
+                      <div className="text-sm text-muted-foreground">Pharmacy Revenue</div>
+                      <div className="text-lg font-bold">{formatPkrAmount(lastClosingData.pharmacy_revenue)}</div>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardContent className="p-4">
+                      <div className="text-sm text-muted-foreground">Total Expenses</div>
+                      <div className="text-lg font-bold text-red-600">{formatPkrAmount(lastClosingData.total_expenses)}</div>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardContent className="p-4">
+                      <div className="text-sm text-muted-foreground">Net Profit</div>
+                      <div className="text-lg font-bold text-green-600">{formatPkrAmount(lastClosingData.net_profit)}</div>
+                    </CardContent>
+                  </Card>
+                </div>
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <p className="text-muted-foreground">No previous closing reports found.</p>
+              </div>
+            )}
+          </ScrollArea>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
