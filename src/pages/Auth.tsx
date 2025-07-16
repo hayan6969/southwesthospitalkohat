@@ -46,8 +46,8 @@ export default function Auth() {
       
       if (isPatientLogin) {
         // Use phone as email and CNIC as password for patient login
-        const cleanPhone = patientLoginData.phone.replace(/\D/g, ''); // Remove non-digits
-        email = `patient${cleanPhone}@hims.app`;
+        // Match the format used in patient registration: {phone}@patient.local
+        email = `${patientLoginData.phone}@patient.local`;
         password = patientLoginData.cnic;
       } else {
         // Regular email/password login for staff, doctors, admins
@@ -107,9 +107,8 @@ export default function Auth() {
 
     try {
       // Use phone as email and CNIC as password for patient signup
-      // Format phone number to create a valid email
-      const cleanPhone = signupData.phone.replace(/\D/g, ''); // Remove non-digits
-      const email = `patient${cleanPhone}@hims.app`;
+      // Match the format used in patient registration: {phone}@patient.local
+      const email = `${signupData.phone}@patient.local`;
       const { error } = await signUp(email, signupData.cnic, {
         first_name: signupData.first_name,
         last_name: signupData.last_name,

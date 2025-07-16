@@ -90,29 +90,30 @@ export const useDataCaching = () => {
     ]);
   }, [cacheDoctorsData, cacheLabTestsData, cacheOTOperationsData]);
 
-  useEffect(() => {
-    // Cache data on mount
-    initializeDataCaching();
+  // Temporarily disabled to fix hook call error
+  // useEffect(() => {
+  //   // Cache data on mount
+  //   initializeDataCaching();
 
-    // Set up periodic caching
-    const interval = setInterval(() => {
-      if (navigator.onLine) {
-        initializeDataCaching();
-      }
-    }, 30 * 60 * 1000); // Cache every 30 minutes
+  //   // Set up periodic caching
+  //   const interval = setInterval(() => {
+  //     if (navigator.onLine) {
+  //       initializeDataCaching();
+  //     }
+  //   }, 30 * 60 * 1000); // Cache every 30 minutes
 
-    // Listen for online events to cache data
-    const handleOnline = () => {
-      setTimeout(initializeDataCaching, 1000); // Small delay to ensure connection is stable
-    };
+  //   // Listen for online events to cache data
+  //   const handleOnline = () => {
+  //     setTimeout(initializeDataCaching, 1000); // Small delay to ensure connection is stable
+  //   };
 
-    window.addEventListener('online', handleOnline);
+  //   window.addEventListener('online', handleOnline);
 
-    return () => {
-      clearInterval(interval);
-      window.removeEventListener('online', handleOnline);
-    };
-  }, [initializeDataCaching]);
+  //   return () => {
+  //     clearInterval(interval);
+  //     window.removeEventListener('online', handleOnline);
+  //   };
+  // }, [initializeDataCaching]);
 
   return {
     cacheDoctorsData,
