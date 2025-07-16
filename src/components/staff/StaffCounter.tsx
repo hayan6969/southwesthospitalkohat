@@ -205,6 +205,32 @@ export function StaffCounter() {
     );
   }, [filteredAppointments, searchTerm, patientNames, doctorNames]);
 
+  // Get emergency invoices for selected date
+  const [emergencyInvoices, setEmergencyInvoices] = useState<any[]>([]);
+  
+  useEffect(() => {
+    const fetchEmergencyInvoices = async () => {
+      if (!selectedDate) return;
+      
+      const startOfDay = new Date(selectedDate);
+      startOfDay.setHours(0, 0, 0, 0);
+      const endOfDay = new Date(selectedDate);
+      endOfDay.setHours(23, 59, 59, 999);
+      
+      const { data: invoices } = await supabase
+        .from('invoices')
+        .select('*')
+        .ilike('description', '%Emergency Consultation%')
+        .gte('created_at', startOfDay.toISOString())
+        .lte('created_at', endOfDay.toISOString())
+        .order('created_at', { ascending: false });
+      
+      setEmergencyInvoices(invoices || []);
+    };
+    
+    fetchEmergencyInvoices();
+  }, [selectedDate]);
+
   const handleGenerateInvoice = async (appointment: any) => {
     setProcessingInvoice(appointment.id);
     try {
@@ -479,7 +505,7 @@ export function StaffCounter() {
           </TabsTrigger>
           <TabsTrigger value="emergency" className="flex items-center gap-2">
             <AlertTriangle className="w-4 h-4" />
-            Emergency (0)
+            Emergency ({emergencyInvoices.length})
           </TabsTrigger>
           <TabsTrigger value="past" className="flex items-center gap-2">
             <Calendar className="w-4 h-4" />
@@ -627,25 +653,71 @@ export function StaffCounter() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-red-600">
                 <AlertTriangle className="w-5 h-5" />
-                Emergency Consultations - {format(selectedDate, "PPP")}
+                Emergency Consultations - {format(selectedDate, "PPP")} ({emergencyInvoices.length} consultations)
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-center py-12">
-                <AlertTriangle className="w-16 h-16 text-red-300 mx-auto mb-4" />
-                <h3 className="text-lg font-semibold text-gray-800 mb-2">Emergency Consultation System</h3>
-                <p className="text-gray-600 mb-6">
-                  Use the Emergency button above to quickly register emergency patients and generate invoices
-                </p>
-                <div className="flex justify-center">
-                  <EmergencyConsultationDialog />
+              {emergencyInvoices.length > 0 ? (
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Time</TableHead>
+                        <TableHead>Invoice Number</TableHead>
+                        <TableHead>Patient Name</TableHead>
+                        <TableHead>Amount</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {emergencyInvoices.map((invoice) => (
+                        <TableRow key={invoice.id}>
+                          <TableCell className="font-medium">
+                            {format(new Date(invoice.created_at), 'h:mm a')}
+                          </TableCell>
+                          <TableCell className="font-mono text-sm">
+                            {invoice.invoice_number}
+                          </TableCell>
+                          <TableCell>
+                            {invoice.description.replace('Emergency Consultation - ', '')}
+                          </TableCell>
+                          <TableCell className="font-medium">
+                            Rs. {invoice.amount.toLocaleString('en-PK', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant="default" className="bg-green-600">
+                              {invoice.status}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <Button size="sm" variant="outline">
+                              <Printer className="w-3 h-3 mr-1" />
+                              Reprint
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
                 </div>
-                <div className="mt-6 p-4 bg-red-50 border border-red-200 rounded-lg">
-                  <p className="text-sm text-red-800">
-                    <strong>Note:</strong> Emergency consultations are processed immediately with payment and added to hospital revenue.
+              ) : (
+                <div className="text-center py-12">
+                  <AlertTriangle className="w-16 h-16 text-red-300 mx-auto mb-4" />
+                  <h3 className="text-lg font-semibold text-gray-800 mb-2">No Emergency Consultations</h3>
+                  <p className="text-gray-600 mb-6">
+                    No emergency consultations found for {format(selectedDate, "PPP")}
                   </p>
+                  <div className="flex justify-center">
+                    <EmergencyConsultationDialog />
+                  </div>
+                  <div className="mt-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+                    <p className="text-sm text-red-800">
+                      <strong>Note:</strong> Emergency consultations are processed immediately with payment and added to hospital revenue.
+                    </p>
+                  </div>
                 </div>
-              </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>

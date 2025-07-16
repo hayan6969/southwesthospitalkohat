@@ -1,9 +1,9 @@
-import { useEffect } from 'react';
+import { useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
 export const useDataCaching = () => {
   
-  const cacheDoctorsData = async () => {
+  const cacheDoctorsData = useCallback(async () => {
     try {
       if (!navigator.onLine) return;
       
@@ -37,9 +37,9 @@ export const useDataCaching = () => {
     } catch (error) {
       console.error('Error caching doctors data:', error);
     }
-  };
+  }, []);
 
-  const cacheLabTestsData = async () => {
+  const cacheLabTestsData = useCallback(async () => {
     try {
       if (!navigator.onLine) return;
       
@@ -56,9 +56,9 @@ export const useDataCaching = () => {
     } catch (error) {
       console.error('Error caching lab tests data:', error);
     }
-  };
+  }, []);
 
-  const cacheOTOperationsData = async () => {
+  const cacheOTOperationsData = useCallback(async () => {
     try {
       if (!navigator.onLine) return;
       
@@ -75,9 +75,9 @@ export const useDataCaching = () => {
     } catch (error) {
       console.error('Error caching OT operations data:', error);
     }
-  };
+  }, []);
 
-  const initializeDataCaching = async () => {
+  const initializeDataCaching = useCallback(async () => {
     if (!navigator.onLine) {
       console.log('📱 Offline - skipping data caching');
       return;
@@ -88,7 +88,7 @@ export const useDataCaching = () => {
       cacheLabTestsData(),
       cacheOTOperationsData()
     ]);
-  };
+  }, [cacheDoctorsData, cacheLabTestsData, cacheOTOperationsData]);
 
   useEffect(() => {
     // Cache data on mount
@@ -112,7 +112,7 @@ export const useDataCaching = () => {
       clearInterval(interval);
       window.removeEventListener('online', handleOnline);
     };
-  }, []);
+  }, [initializeDataCaching]);
 
   return {
     cacheDoctorsData,

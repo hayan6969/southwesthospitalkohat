@@ -34,8 +34,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
-  
-  // Data caching functionality removed to prevent automatic syncing
 
   const fetchUserProfile = async (userId: string) => {
     try {

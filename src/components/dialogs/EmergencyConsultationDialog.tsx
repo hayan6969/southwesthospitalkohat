@@ -8,7 +8,7 @@ import { toast } from "sonner";
 import { AlertTriangle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { generateInvoicePDF } from "@/utils/pdfGenerator";
-import { formatPkrCurrency } from "@/utils/currency";
+import { formatPkrAmount } from "@/utils/currency";
 
 export function EmergencyConsultationDialog() {
   const [open, setOpen] = useState(false);
@@ -78,7 +78,7 @@ export function EmergencyConsultationDialog() {
 
       await generateInvoicePDF(invoiceForPDF);
       
-      toast.success(`Emergency consultation invoice generated for ${formatPkrCurrency(emergencyFee)}`);
+      toast.success(`Emergency consultation invoice generated for ${formatPkrAmount(emergencyFee)}`);
       
       setOpen(false);
       
@@ -111,7 +111,7 @@ export function EmergencyConsultationDialog() {
         </DialogHeader>
         <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
           <p className="text-sm text-red-800">
-            <strong>Emergency Fee:</strong> {formatPkrCurrency(emergencyFee)}
+            <strong>Emergency Fee:</strong> {formatPkrAmount(emergencyFee)}
           </p>
           <p className="text-xs text-red-600 mt-1">
             This amount will be added to hospital revenue immediately.
@@ -159,7 +159,7 @@ export function EmergencyConsultationDialog() {
               Cancel
             </Button>
             <Button type="submit" disabled={isProcessing} variant="destructive">
-              {isProcessing ? "Processing..." : `Generate Invoice (${formatPkrCurrency(emergencyFee)})`}
+              {isProcessing ? "Processing..." : `Generate Invoice (${formatPkrAmount(emergencyFee)})`}
             </Button>
           </div>
         </form>
