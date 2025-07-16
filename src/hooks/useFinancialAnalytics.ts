@@ -190,6 +190,6 @@ export function useFinancialAnalytics() {
         recentActivities
       };
     },
-    refetchInterval: 30000, // Refetch every 30 seconds
+    refetchInterval: 10000, // Refetch every 10 seconds for real-time updates
   });
 }

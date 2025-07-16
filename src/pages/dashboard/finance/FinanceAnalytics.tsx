@@ -37,12 +37,30 @@ export default function FinanceAnalytics() {
   // Set up real-time subscriptions for all financial tables
   useEffect(() => {
     const channels = [
-      supabase.channel('invoices-changes').on('postgres_changes', { event: '*', schema: 'public', table: 'invoices' }, () => refetch()),
-      supabase.channel('pharmacy-invoices-changes').on('postgres_changes', { event: '*', schema: 'public', table: 'pharmacy_invoices' }, () => refetch()),
-      supabase.channel('lab-reports-changes').on('postgres_changes', { event: '*', schema: 'public', table: 'lab_reports' }, () => refetch()),
-      supabase.channel('ot-schedules-changes').on('postgres_changes', { event: '*', schema: 'public', table: 'ot_schedules' }, () => refetch()),
-      supabase.channel('expenses-changes').on('postgres_changes', { event: '*', schema: 'public', table: 'expenses' }, () => refetch()),
-      supabase.channel('refunds-changes').on('postgres_changes', { event: '*', schema: 'public', table: 'refunds' }, () => refetch())
+      supabase.channel('invoices-changes').on('postgres_changes', { event: '*', schema: 'public', table: 'invoices' }, () => {
+        console.log('Invoices changed, refetching...');
+        refetch();
+      }),
+      supabase.channel('pharmacy-invoices-changes').on('postgres_changes', { event: '*', schema: 'public', table: 'pharmacy_invoices' }, () => {
+        console.log('Pharmacy invoices changed, refetching...');
+        refetch();
+      }),
+      supabase.channel('lab-reports-changes').on('postgres_changes', { event: '*', schema: 'public', table: 'lab_reports' }, () => {
+        console.log('Lab reports changed, refetching...');
+        refetch();
+      }),
+      supabase.channel('ot-schedules-changes').on('postgres_changes', { event: '*', schema: 'public', table: 'ot_schedules' }, () => {
+        console.log('OT schedules changed, refetching...');
+        refetch();
+      }),
+      supabase.channel('expenses-changes').on('postgres_changes', { event: '*', schema: 'public', table: 'expenses' }, () => {
+        console.log('Expenses changed, refetching...');
+        refetch();
+      }),
+      supabase.channel('refunds-changes').on('postgres_changes', { event: '*', schema: 'public', table: 'refunds' }, () => {
+        console.log('Refunds changed, refetching...');
+        refetch();
+      })
     ];
 
     channels.forEach(channel => channel.subscribe());
