@@ -242,46 +242,46 @@ export function PharmacyAccountDialog({ open, onOpenChange }: PharmacyAccountDia
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[900px] max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-[1200px] max-h-[95vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-xl">
-            <Calculator className="w-6 h-6" />
+          <DialogTitle className="flex items-center gap-3 text-2xl">
+            <Calculator className="w-7 h-7" />
             Pharmacy Account Breakdown
           </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-8">
+        <div className="space-y-10">
           {/* Starting Balance Input */}
           <Card className="border-2">
             <CardHeader>
-              <CardTitle className="text-xl flex items-center gap-2">
-                <Wallet className="w-6 h-6 text-blue-600" />
+              <CardTitle className="text-2xl flex items-center gap-3">
+                <Wallet className="w-7 h-7 text-blue-600" />
                 Starting Investment Balance
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-end gap-4">
+            <CardContent className="space-y-6">
+              <div className="flex items-end gap-6">
                 <div className="flex-1">
-                  <Label htmlFor="starting-balance" className="text-base font-medium">Investment Amount (PKR)</Label>
+                  <Label htmlFor="starting-balance" className="text-lg font-medium">Investment Amount (PKR)</Label>
                   <Input
                     id="starting-balance"
                     type="number"
                     value={startingBalance}
                     onChange={(e) => setStartingBalance(Number(e.target.value) || 0)}
                     placeholder="Enter starting investment"
-                    className="mt-2 h-12 text-lg"
+                    className="mt-3 h-14 text-xl"
                   />
                 </div>
                 <Button 
                   onClick={handleSaveStartingBalance}
                   disabled={isSaving}
-                  className="h-12 px-6"
+                  className="h-14 px-8 text-lg"
                   size="lg"
                 >
                   {isSaving ? "Saving..." : "Update"}
                 </Button>
               </div>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-base text-muted-foreground">
                 This is the initial investment/capital put into the pharmacy business.
               </p>
             </CardContent>
@@ -290,46 +290,46 @@ export function PharmacyAccountDialog({ open, onOpenChange }: PharmacyAccountDia
           {/* Add Expense Section */}
           <Card className="border-2 border-orange-200 bg-orange-50/50">
             <CardHeader>
-              <CardTitle className="text-xl flex items-center gap-2">
-                <Minus className="w-6 h-6 text-orange-600" />
+              <CardTitle className="text-2xl flex items-center gap-3">
+                <Minus className="w-7 h-7 text-orange-600" />
                 Add Pharmacy Expense
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <CardContent className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                  <Label htmlFor="expense-amount" className="text-base font-medium">Expense Amount (PKR)</Label>
+                  <Label htmlFor="expense-amount" className="text-lg font-medium">Expense Amount (PKR)</Label>
                   <Input
                     id="expense-amount"
                     type="number"
                     value={expenseAmount}
                     onChange={(e) => setExpenseAmount(Number(e.target.value) || 0)}
                     placeholder="Enter expense amount"
-                    className="mt-2 h-12 text-lg"
+                    className="mt-3 h-14 text-xl"
                   />
                 </div>
                 <div>
-                  <Label htmlFor="expense-description" className="text-base font-medium">Description (Optional)</Label>
+                  <Label htmlFor="expense-description" className="text-lg font-medium">Description (Optional)</Label>
                   <Textarea
                     id="expense-description"
                     value={expenseDescription}
                     onChange={(e) => setExpenseDescription(e.target.value)}
                     placeholder="e.g., Daily profit withdrawal"
-                    className="mt-2 h-12 resize-none"
+                    className="mt-3 h-14 resize-none text-lg"
                   />
                 </div>
               </div>
               <div className="flex justify-between items-center">
-                <p className="text-sm text-muted-foreground">
+                <p className="text-base text-muted-foreground">
                   Track profit withdrawals and other pharmacy-related expenses.
                 </p>
                 <Button 
                   onClick={handleAddExpense}
                   disabled={isAddingExpense || expenseAmount <= 0}
-                  className="bg-orange-600 hover:bg-orange-700 h-12 px-6"
+                  className="bg-orange-600 hover:bg-orange-700 h-14 px-8 text-lg"
                   size="lg"
                 >
-                  <Receipt className="w-4 h-4 mr-2" />
+                  <Receipt className="w-5 h-5 mr-2" />
                   {isAddingExpense ? "Adding..." : "Add Expense"}
                 </Button>
               </div>
@@ -339,70 +339,70 @@ export function PharmacyAccountDialog({ open, onOpenChange }: PharmacyAccountDia
           <Separator />
 
           {/* Financial Breakdown */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <Card className="border-2">
-              <CardHeader className="pb-4">
-                <CardTitle className="text-lg font-medium flex items-center gap-2">
-                  <TrendingUp className="w-5 h-5 text-green-600" />
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-8">
+            <Card className="border-2 hover:shadow-lg transition-shadow">
+              <CardHeader className="pb-6">
+                <CardTitle className="text-xl font-semibold flex items-center gap-3">
+                  <TrendingUp className="w-6 h-6 text-green-600" />
                   Total Revenue
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-3xl font-bold text-green-600">
+                <div className="text-4xl font-bold text-green-600 mb-3">
                   {formatPkrAmount(pharmacyStats.totalRevenue)}
                 </div>
-                <p className="text-sm text-muted-foreground mt-2">
+                <p className="text-base text-muted-foreground">
                   All pharmacy sales revenue
                 </p>
               </CardContent>
             </Card>
 
-            <Card className="border-2">
-              <CardHeader className="pb-4">
-                <CardTitle className="text-lg font-medium flex items-center gap-2">
-                  <DollarSign className="w-5 h-5 text-purple-600" />
+            <Card className="border-2 hover:shadow-lg transition-shadow">
+              <CardHeader className="pb-6">
+                <CardTitle className="text-xl font-semibold flex items-center gap-3">
+                  <DollarSign className="w-6 h-6 text-purple-600" />
                   Total Profit
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-3xl font-bold text-purple-600">
+                <div className="text-4xl font-bold text-purple-600 mb-3">
                   {formatPkrAmount(pharmacyStats.totalProfit)}
                 </div>
-                <p className="text-sm text-muted-foreground mt-2">
+                <p className="text-base text-muted-foreground">
                   Selling price - buying price
                 </p>
               </CardContent>
             </Card>
 
-            <Card className="border-2">
-              <CardHeader className="pb-4">
-                <CardTitle className="text-lg font-medium flex items-center gap-2">
-                  <Minus className="w-5 h-5 text-red-600" />
+            <Card className="border-2 hover:shadow-lg transition-shadow">
+              <CardHeader className="pb-6">
+                <CardTitle className="text-xl font-semibold flex items-center gap-3">
+                  <Minus className="w-6 h-6 text-red-600" />
                   Total Expenses
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-3xl font-bold text-red-600">
+                <div className="text-4xl font-bold text-red-600 mb-3">
                   {formatPkrAmount(pharmacyStats.totalExpenses)}
                 </div>
-                <p className="text-sm text-muted-foreground mt-2">
+                <p className="text-base text-muted-foreground">
                   Profit withdrawals & expenses
                 </p>
               </CardContent>
             </Card>
 
-            <Card className="border-2">
-              <CardHeader className="pb-4">
-                <CardTitle className="text-lg font-medium flex items-center gap-2">
-                  <Wallet className="w-5 h-5 text-blue-600" />
+            <Card className="border-2 hover:shadow-lg transition-shadow bg-blue-50/50">
+              <CardHeader className="pb-6">
+                <CardTitle className="text-xl font-semibold flex items-center gap-3">
+                  <Wallet className="w-6 h-6 text-blue-600" />
                   Net Balance
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-3xl font-bold text-blue-600">
+                <div className="text-4xl font-bold text-blue-600 mb-3">
                   {formatPkrAmount(pharmacyStats.netBalance)}
                 </div>
-                <p className="text-sm text-muted-foreground mt-2">
+                <p className="text-base text-muted-foreground">
                   Current available balance
                 </p>
               </CardContent>
@@ -412,39 +412,49 @@ export function PharmacyAccountDialog({ open, onOpenChange }: PharmacyAccountDia
           {/* Summary Card */}
           <Card className="bg-gradient-to-r from-blue-50 to-purple-50 border-2 border-blue-200">
             <CardHeader>
-              <CardTitle className="text-xl">Account Summary</CardTitle>
+              <CardTitle className="text-2xl">Detailed Account Summary</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex justify-between items-center text-lg">
-                <span className="font-medium">Starting Investment:</span>
-                <span className="font-bold text-blue-600">{formatPkrAmount(startingBalance)}</span>
-              </div>
-              <div className="flex justify-between items-center text-lg">
-                <span className="font-medium">Revenue Generated:</span>
-                <span className="font-bold text-green-600">+ {formatPkrAmount(pharmacyStats.totalRevenue)}</span>
-              </div>
-              <div className="flex justify-between items-center text-lg">
-                <span className="font-medium">Total Expenses:</span>
-                <span className="font-bold text-red-600">- {formatPkrAmount(pharmacyStats.totalExpenses)}</span>
+            <CardContent className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center text-xl">
+                    <span className="font-semibold">Starting Investment:</span>
+                    <span className="font-bold text-blue-600">{formatPkrAmount(startingBalance)}</span>
+                  </div>
+                  <div className="flex justify-between items-center text-xl">
+                    <span className="font-semibold">Revenue Generated:</span>
+                    <span className="font-bold text-green-600">+ {formatPkrAmount(pharmacyStats.totalRevenue)}</span>
+                  </div>
+                  <div className="flex justify-between items-center text-xl">
+                    <span className="font-semibold">Total Expenses:</span>
+                    <span className="font-bold text-red-600">- {formatPkrAmount(pharmacyStats.totalExpenses)}</span>
+                  </div>
+                </div>
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center text-xl">
+                    <span className="font-semibold">Total Investment + Revenue:</span>
+                    <span className="font-bold text-gray-700">{formatPkrAmount(pharmacyStats.totalInvestment)}</span>
+                  </div>
+                  <div className="flex justify-between items-center text-xl">
+                    <span className="font-semibold">Net Profit Earned:</span>
+                    <span className="font-bold text-purple-600">{formatPkrAmount(pharmacyStats.totalProfit)}</span>
+                  </div>
+                </div>
               </div>
               <Separator />
-              <div className="flex justify-between items-center text-xl">
-                <span className="font-bold">Net Available Balance:</span>
-                <span className="font-bold text-blue-700">{formatPkrAmount(pharmacyStats.netBalance)}</span>
-              </div>
-              <div className="flex justify-between items-center text-lg">
-                <span className="font-medium">Total Investment + Revenue:</span>
-                <span className="font-bold text-gray-600">{formatPkrAmount(pharmacyStats.totalInvestment)}</span>
-              </div>
-              <div className="flex justify-between items-center text-lg">
-                <span className="font-medium">Net Profit Earned:</span>
-                <span className="font-bold text-purple-600">{formatPkrAmount(pharmacyStats.totalProfit)}</span>
+              <div className="flex justify-center">
+                <div className="bg-white p-6 rounded-lg border-2 border-blue-300 shadow-sm">
+                  <div className="flex justify-between items-center text-2xl">
+                    <span className="font-bold">Net Available Balance:</span>
+                    <span className="font-bold text-blue-700 ml-8">{formatPkrAmount(pharmacyStats.netBalance)}</span>
+                  </div>
+                </div>
               </div>
             </CardContent>
           </Card>
 
-          <div className="flex justify-end">
-            <Button variant="outline" onClick={() => onOpenChange(false)} size="lg" className="px-8">
+          <div className="flex justify-end pt-4">
+            <Button variant="outline" onClick={() => onOpenChange(false)} size="lg" className="px-12 py-3 text-lg">
               Close
             </Button>
           </div>
