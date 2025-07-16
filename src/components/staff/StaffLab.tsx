@@ -438,7 +438,7 @@ export function StaffLab() {
                         <TableCell>
                           <div>
                             <div className="text-xs text-gray-500 mb-1">
-                              {report.patient_id.substring(0, 8)}...
+                              {report.patient?.patient_number || 'No ID'}
                             </div>
                             <div className="font-medium">
                               {getPatientName(report.patient_id, patientNames || [])}
@@ -494,7 +494,7 @@ export function StaffLab() {
                 <div key={report.id} className="flex items-center justify-between p-3 bg-green-50 rounded-lg border border-green-200">
                   <div>
                     <div className="text-xs text-gray-500 mb-1">
-                      {report.patient_id.substring(0, 8)}...
+                      {report.patient?.patient_number || 'No ID'}
                     </div>
                     <p className="font-medium">
                       {getPatientName(report.patient_id, patientNames || [])}

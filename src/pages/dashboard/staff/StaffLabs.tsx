@@ -85,7 +85,7 @@ export default function StaffLabs() {
                           <User className="w-4 h-4 text-gray-400" />
                           <div>
                             <div className="text-xs text-gray-500 mb-1">
-                              {lab.patient_id.substring(0, 8)}...
+                              {lab.patient?.patient_number || 'No ID'}
                             </div>
                             <div className="font-medium">
                               {getPatientName(lab.patient_id, patientNames || [])}
