@@ -1484,6 +1484,21 @@ export type Database = {
           total_earnings: number
         }[]
       }
+      create_daily_closing: {
+        Args: {
+          p_closing_date: string
+          p_closing_time: string
+          p_day_name: string
+          p_hospital_revenue: number
+          p_pharmacy_revenue: number
+          p_pharmacy_profit: number
+          p_total_expenses: number
+          p_total_refunds: number
+          p_net_profit: number
+          p_transactions_data: Json
+        }
+        Returns: string
+      }
       create_user_account: {
         Args: {
           p_email: string
@@ -1513,6 +1528,24 @@ export type Database = {
       generate_patient_number: {
         Args: Record<PropertyKey, never>
         Returns: string
+      }
+      get_last_daily_closing: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          id: string
+          closing_date: string
+          closing_time: string
+          day_name: string
+          hospital_revenue: number
+          pharmacy_revenue: number
+          pharmacy_profit: number
+          total_expenses: number
+          total_refunds: number
+          net_profit: number
+          transactions_data: Json
+          created_at: string
+          updated_at: string
+        }[]
       }
       get_next_ot_queue_position: {
         Args: { room_uuid: string; operation_date_param: string }

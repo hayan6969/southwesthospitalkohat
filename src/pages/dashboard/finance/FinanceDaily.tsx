@@ -297,15 +297,7 @@ export default function FinanceDaily() {
   const { data: lastClosingData } = useQuery({
     queryKey: ['last-daily-closing'],
     queryFn: async () => {
-      const { data } = await supabase
-        .rpc('sql', { 
-          query: `
-            SELECT * FROM daily_closings 
-            ORDER BY closing_date DESC 
-            LIMIT 1
-          ` 
-        });
-      
+      const { data } = await supabase.rpc('get_last_daily_closing');
       return data?.[0] || null;
     },
     enabled: showLastClosingDialog
@@ -316,17 +308,17 @@ export default function FinanceDaily() {
     mutationFn: async () => {
       if (!detailedData || !dailyData) throw new Error('No data available');
 
-      const closingData = {
-        closing_date: targetDate,
-        closing_time: new Date().toISOString(),
-        day_name: format(selectedDate, 'EEEE'),
-        hospital_revenue: dailyData.totalHospitalRevenue,
-        pharmacy_revenue: dailyData.pharmacyRevenue,
-        pharmacy_profit: dailyData.pharmacyProfit,
-        total_expenses: dailyData.totalExpenses,
-        total_refunds: dailyData.totalRefunds,
-        net_profit: (dailyData.totalHospitalRevenue + dailyData.pharmacyProfit) - dailyData.totalExpenses - dailyData.totalRefunds,
-        transactions_data: {
+      const { error } = await supabase.rpc('create_daily_closing', {
+        p_closing_date: targetDate,
+        p_closing_time: new Date().toISOString(),
+        p_day_name: format(selectedDate, 'EEEE'),
+        p_hospital_revenue: dailyData.totalHospitalRevenue,
+        p_pharmacy_revenue: dailyData.pharmacyRevenue,
+        p_pharmacy_profit: dailyData.pharmacyProfit,
+        p_total_expenses: dailyData.totalExpenses,
+        p_total_refunds: dailyData.totalRefunds,
+        p_net_profit: (dailyData.totalHospitalRevenue + dailyData.pharmacyProfit) - dailyData.totalExpenses - dailyData.totalRefunds,
+        p_transactions_data: {
           hospitalInvoices: detailedData.hospitalInvoices,
           pharmacyInvoices: detailedData.pharmacyInvoices,
           labReports: detailedData.labReports,
@@ -335,27 +327,6 @@ export default function FinanceDaily() {
           expenses: detailedData.expenses,
           refunds: detailedData.refunds
         }
-      };
-
-      const { error } = await supabase.rpc('sql', {
-        query: `
-          INSERT INTO daily_closings (
-            closing_date, closing_time, day_name, hospital_revenue, 
-            pharmacy_revenue, pharmacy_profit, total_expenses, 
-            total_refunds, net_profit, transactions_data
-          ) VALUES (
-            '${closingData.closing_date}', 
-            '${closingData.closing_time}', 
-            '${closingData.day_name}', 
-            ${closingData.hospital_revenue}, 
-            ${closingData.pharmacy_revenue}, 
-            ${closingData.pharmacy_profit}, 
-            ${closingData.total_expenses}, 
-            ${closingData.total_refunds}, 
-            ${closingData.net_profit}, 
-            '${JSON.stringify(closingData.transactions_data)}'::jsonb
-          )
-        `
       });
 
       if (error) throw error;
