@@ -1,6 +1,6 @@
 
 import { NavLink } from "react-router-dom";
-import { User, Users, Calendar, FileText, Inbox, Info, Activity, Building2, Shield, Pill, Clock, TestTube, CreditCard, Calculator, Receipt, Settings, ChartBar, UserPlus, Stethoscope, Upload, CheckCircle } from "lucide-react";
+import { User, Users, Calendar, FileText, Inbox, Info, Activity, Building2, Shield, Pill, Clock, TestTube, CreditCard, Calculator, Receipt, Settings, ChartBar, UserPlus, Stethoscope, Upload, CheckCircle, RotateCcw } from "lucide-react";
 
 type SidebarNavProps = {
   role: string;
@@ -40,6 +40,7 @@ const navsByRole: Record<string, { label: string; to: string; icon: React.Elemen
     { label: "Dashboard", to: "/dashboard/pharmacy", icon: Info },
     { label: "Medicines", to: "/dashboard/pharmacy/medicines", icon: Pill },
     { label: "Sell Medicine", to: "/dashboard/pharmacy/sell", icon: CreditCard },
+    { label: "Returns", to: "/dashboard/pharmacy/returns", icon: RotateCcw },
     { label: "Stock Tracking", to: "/dashboard/pharmacy/stock", icon: CheckCircle },
     { label: "Expiry Tracker", to: "/dashboard/pharmacy/expiry", icon: Calendar },
     { label: "Analytics", to: "/dashboard/pharmacy/analytics", icon: Activity },
