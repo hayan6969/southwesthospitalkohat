@@ -74,15 +74,16 @@ const RealTimeProvider = ({ children }: { children: React.ReactNode }) => {
   return <>{children}</>;
 };
 
-const App = () => {
+const App: React.FC = () => {
   return (
-    <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <TooltipProvider>
-          <RealTimeProvider>
-            <Toaster />
-            <Sonner />
-            <BrowserRouter>
+    <React.Fragment>
+      <QueryClientProvider client={queryClient}>
+        <AuthProvider>
+          <TooltipProvider>
+            <RealTimeProvider>
+              <Toaster />
+              <Sonner />
+              <BrowserRouter>
             <Routes>
               <Route path="/auth" element={<Auth />} />
               <Route path="/offline-mode" element={<OfflineMode />} />
@@ -251,6 +252,7 @@ const App = () => {
         </TooltipProvider>
       </AuthProvider>
     </QueryClientProvider>
+    </React.Fragment>
   );
 };
 
