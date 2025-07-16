@@ -452,6 +452,36 @@ export type Database = {
         }
         Relationships: []
       }
+      hospital_closing_balance: {
+        Row: {
+          closing_balance: number
+          closing_date: string
+          created_at: string
+          created_by: string | null
+          id: string
+          notes: string | null
+          updated_at: string
+        }
+        Insert: {
+          closing_balance?: number
+          closing_date: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          notes?: string | null
+          updated_at?: string
+        }
+        Update: {
+          closing_balance?: number
+          closing_date?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          notes?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       hospital_settings: {
         Row: {
           booking_lead_time_hours: number

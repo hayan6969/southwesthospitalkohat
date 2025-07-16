@@ -553,14 +553,52 @@ export const generateDailyClosingPDF = async (data: {
   netProfit: number;
   transactionsData: any;
 }) => {
-  const doc = new jsPDF();
-  const pageWidth = doc.internal.pageSize.width;
+  const doc = new jsPDF({
+    orientation: 'portrait',
+    unit: 'mm',
+    format: 'a4'
+  });
+
+  const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.height;
-  let yPosition = 30;
+  let yPosition = 20;
+
+  // ===========================================
+  // CLOSING BALANCE SECTION (AT TOP)
+  // ===========================================
+  
+  // Fetch previous day's closing balance
+  let previousClosingBalance = 0;
+  try {
+    const { data: closingBalanceData } = await supabase
+      .from('hospital_closing_balance')
+      .select('closing_balance')
+      .eq('closing_date', data.closingDate)
+      .single();
+
+    if (closingBalanceData) {
+      previousClosingBalance = closingBalanceData.closing_balance || 0;
+    }
+  } catch (error) {
+    console.log('No closing balance found for this date');
+  }
 
   // Add header
   await addHospitalHeader(doc, 'Daily Financial Closing Report');
   yPosition += 60;
+
+  // Display opening balance
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(16);
+  doc.setTextColor(0, 100, 150);
+  doc.text('OPENING BALANCE', pageWidth / 2, yPosition, { align: 'center' });
+  yPosition += 15;
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(14);
+  doc.setTextColor(80, 80, 80);
+  doc.text(`Previous Day's Closing Balance: ${formatPkrAmount(previousClosingBalance)}`, pageWidth / 2, yPosition, { align: 'center' });
+  yPosition += 25;
 
   // Date and Day information with proper formatting
   doc.setFont('helvetica', 'bold');
@@ -945,23 +983,87 @@ export const generateDailyClosingPDF = async (data: {
 
   drawTable(summaryHeaders, summaryRows, summaryColWidths);
 
-  // Net Profit - Special formatting
-  yPosition += 10;
-  const netProfitY = yPosition;
+  // ===========================================
+  // HOSPITAL CLOSING BALANCE CALCULATION
+  // ===========================================
+  checkNewPage(120);
   
-  // Draw highlighted box for net profit
-  doc.setFillColor(220, 255, 220);
+  drawSectionHeader('HOSPITAL CLOSING BALANCE CALCULATION');
+
+  // Calculate hospital net profit (excluding pharmacy)
+  const hospitalNetProfit = data.hospitalRevenue - data.totalExpenses - data.totalRefunds;
+  const newClosingBalance = previousClosingBalance + hospitalNetProfit;
+
+  // Hospital Balance Summary
+  const balanceHeaders = ['Description', 'Amount'];
+  const balanceColWidths = [120, 50];
+  const balanceRows = [
+    ['Opening Balance (Previous Day)', formatPkrAmount(previousClosingBalance)],
+    ['Today\'s Hospital Revenue', formatPkrAmount(data.hospitalRevenue)],
+    ['Today\'s Hospital Expenses', `(${formatPkrAmount(data.totalExpenses)})`],
+    ['Today\'s Refunds', `(${formatPkrAmount(data.totalRefunds)})`],
+    ['Today\'s Hospital Net Profit/Loss', formatPkrAmount(hospitalNetProfit)]
+  ];
+
+  drawTable(balanceHeaders, balanceRows, balanceColWidths);
+
+  // New Closing Balance - Special formatting
+  yPosition += 15;
+  const newClosingBalanceY = yPosition;
+  
+  // Draw highlighted box for new closing balance
+  doc.setFillColor(240, 255, 240);
   doc.setDrawColor(100, 200, 100);
   doc.setLineWidth(2);
-  doc.rect(20, netProfitY - 5, pageWidth - 40, 20, 'FD');
+  doc.rect(20, newClosingBalanceY - 5, pageWidth - 40, 20, 'FD');
   
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(16);
   doc.setTextColor(0, 100, 0);
-  doc.text('NET PROFIT:', 30, netProfitY + 8);
-  doc.text(formatPkrAmount(data.netProfit), pageWidth - 30, netProfitY + 8, { align: 'right' });
+  doc.text('NEW CLOSING BALANCE:', 30, newClosingBalanceY + 8);
+  doc.text(formatPkrAmount(newClosingBalance), pageWidth - 30, newClosingBalanceY + 8, { align: 'right' });
 
   yPosition += 35;
+
+  // Save the new closing balance to database
+  try {
+    const { supabase } = await import('@/integrations/supabase/client');
+    
+    // Calculate next day's date
+    const nextDay = new Date(data.closingDate);
+    nextDay.setDate(nextDay.getDate() + 1);
+    const nextDayString = nextDay.toISOString().split('T')[0];
+    
+    // Check if record exists for next day
+    const { data: existingRecord } = await supabase
+      .from('hospital_closing_balance')
+      .select('id')
+      .eq('closing_date', nextDayString)
+      .single();
+
+    if (existingRecord) {
+      // Update existing record
+      await supabase
+        .from('hospital_closing_balance')
+        .update({ 
+          closing_balance: newClosingBalance,
+          notes: `Auto-updated from daily closing on ${data.closingDate}`,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', existingRecord.id);
+    } else {
+      // Create new record for next day
+      await supabase
+        .from('hospital_closing_balance')
+        .insert({ 
+          closing_date: nextDayString,
+          closing_balance: newClosingBalance,
+          notes: `Auto-generated from daily closing on ${data.closingDate}`
+        });
+    }
+  } catch (error) {
+    console.error('Error updating closing balance:', error);
+  }
 
   // ===========================================
   // FOOTER
@@ -971,6 +1073,8 @@ export const generateDailyClosingPDF = async (data: {
   doc.setFontSize(10);
   doc.setTextColor(100, 100, 100);
   doc.text('Note: Doctor consultation fees are excluded as they belong to individual doctor finances.', pageWidth / 2, yPosition, { align: 'center' });
+  yPosition += 8;
+  doc.text('Hospital closing balance includes only hospital revenue, expenses, and refunds.', pageWidth / 2, yPosition, { align: 'center' });
   yPosition += 8;
   
   doc.setFont('helvetica', 'italic');

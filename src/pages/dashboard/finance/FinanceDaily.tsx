@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Calendar, RefreshCw, Building, AlertTriangle, TestTube, Activity, Pill, TrendingUp, TrendingDown, DollarSign, Receipt, FileText, Upload, Download, Clock, CheckCircle } from "lucide-react";
+import { Calendar, RefreshCw, Building, AlertTriangle, TestTube, Activity, Pill, TrendingUp, TrendingDown, DollarSign, Receipt, FileText, Upload, Download, Clock, CheckCircle, Calculator } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
@@ -15,11 +15,13 @@ import { formatPkrAmount } from "@/utils/currency";
 import { generateDailyClosingPDF } from "@/utils/pdfGenerator";
 import { StatsCard } from "@/components/StatsCard";
 import { toast } from "sonner";
+import { HospitalClosingBalanceDialog } from "@/components/dialogs/HospitalClosingBalanceDialog";
 
 export default function FinanceDaily() {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [showClosingDialog, setShowClosingDialog] = useState(false);
   const [showLastClosingDialog, setShowLastClosingDialog] = useState(false);
+  const [showClosingBalanceDialog, setShowClosingBalanceDialog] = useState(false);
   const queryClient = useQueryClient();
 
   // Format date for queries
@@ -383,6 +385,14 @@ export default function FinanceDaily() {
           </p>
         </div>
         <div className="flex gap-2">
+          <Button
+            onClick={() => setShowClosingBalanceDialog(true)}
+            variant="outline"
+            className="flex items-center gap-2 border-blue-200 text-blue-600 hover:bg-blue-50"
+          >
+            <Calculator className="h-4 w-4" />
+            Closing Balance
+          </Button>
           <Button
             onClick={() => setShowLastClosingDialog(true)}
             variant="outline"
@@ -868,6 +878,13 @@ export default function FinanceDaily() {
           </ScrollArea>
         </DialogContent>
       </Dialog>
+
+      {/* Hospital Closing Balance Dialog */}
+      <HospitalClosingBalanceDialog
+        open={showClosingBalanceDialog}
+        onOpenChange={setShowClosingBalanceDialog}
+        selectedDate={selectedDate}
+      />
     </div>
   );
 }
