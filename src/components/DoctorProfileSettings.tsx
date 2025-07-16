@@ -234,14 +234,6 @@ export const DoctorProfileSettings = () => {
     );
   }
 
-  // Working hours states
-  const [workingHours, setWorkingHours] = useState<{[key: number]: {start_time: string, end_time: string, is_working: boolean}}>({});
-  const [specificSchedules, setSpecificSchedules] = useState<any[]>([]);
-  const [newSpecificDate, setNewSpecificDate] = useState<string>('');
-  const [newSpecificStartTime, setNewSpecificStartTime] = useState<string>('09:00');
-  const [newSpecificEndTime, setNewSpecificEndTime] = useState<string>('17:00');
-  const [newSpecificIsWorking, setNewSpecificIsWorking] = useState<boolean>(true);
-
   // Days of week mapping
   const daysOfWeek = [
     { value: 0, label: 'Sunday' },
@@ -252,6 +244,27 @@ export const DoctorProfileSettings = () => {
     { value: 5, label: 'Friday' },
     { value: 6, label: 'Saturday' }
   ];
+
+  // Initialize working hours with default values
+  const getDefaultWorkingHours = () => {
+    const defaultHours: {[key: number]: {start_time: string, end_time: string, is_working: boolean}} = {};
+    daysOfWeek.forEach(day => {
+      defaultHours[day.value] = {
+        start_time: '09:00',
+        end_time: '17:00',
+        is_working: true
+      };
+    });
+    return defaultHours;
+  };
+
+  // Working hours states
+  const [workingHours, setWorkingHours] = useState<{[key: number]: {start_time: string, end_time: string, is_working: boolean}}>(getDefaultWorkingHours());
+  const [specificSchedules, setSpecificSchedules] = useState<any[]>([]);
+  const [newSpecificDate, setNewSpecificDate] = useState<string>('');
+  const [newSpecificStartTime, setNewSpecificStartTime] = useState<string>('09:00');
+  const [newSpecificEndTime, setNewSpecificEndTime] = useState<string>('17:00');
+  const [newSpecificIsWorking, setNewSpecificIsWorking] = useState<boolean>(true);
 
   // Fetch working hours and specific schedules
   useEffect(() => {
