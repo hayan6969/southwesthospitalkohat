@@ -1237,6 +1237,16 @@ export type Database = {
           total_earnings: number
         }[]
       }
+      create_user_account: {
+        Args: {
+          p_email: string
+          p_password: string
+          p_first_name: string
+          p_last_name: string
+          p_role: string
+        }
+        Returns: string
+      }
       delete_user_safely: {
         Args: { user_uuid: string }
         Returns: boolean
