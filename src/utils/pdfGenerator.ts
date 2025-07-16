@@ -379,9 +379,10 @@ export const generateOTPDF = async (data: {
   totalAmount: number;
   items: Array<{
     description: string;
-    quantity: number;
-    unitPrice: number;
-    totalPrice: number;
+    quantity: number | string;
+    unitPrice: number | string;
+    totalPrice: number | string;
+    isHeader?: boolean;
   }>;
 }) => {
   const doc = new jsPDF();
@@ -474,21 +475,30 @@ export const generateOTPDF = async (data: {
   data.items.forEach((item) => {
     xPosition = 20;
     
-    // Description
-    const description = item.description.length > 35 ? item.description.substring(0, 32) + '...' : item.description;
-    doc.text(description, xPosition, yPosition);
-    xPosition += colWidths[0];
-    
-    // Quantity
-    doc.text(item.quantity.toString(), xPosition, yPosition);
-    xPosition += colWidths[1];
-    
-    // Unit Price
-    doc.text(formatPkrAmount(item.unitPrice), xPosition, yPosition);
-    xPosition += colWidths[2];
-    
-    // Total Price
-    doc.text(formatPkrAmount(item.totalPrice), xPosition, yPosition);
+    if (item.isHeader) {
+      // Header styling
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(40, 40, 40);
+      doc.text(item.description, xPosition, yPosition);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(60, 60, 60);
+    } else {
+      // Description
+      const description = item.description.length > 35 ? item.description.substring(0, 32) + '...' : item.description;
+      doc.text(description, xPosition, yPosition);
+      xPosition += colWidths[0];
+      
+      // Quantity
+      doc.text(item.quantity.toString(), xPosition, yPosition);
+      xPosition += colWidths[1];
+      
+      // Unit Price
+      doc.text(formatPkrAmount(Number(item.unitPrice)), xPosition, yPosition);
+      xPosition += colWidths[2];
+      
+      // Total Price
+      doc.text(formatPkrAmount(Number(item.totalPrice)), xPosition, yPosition);
+    }
     
     yPosition += 8;
   });

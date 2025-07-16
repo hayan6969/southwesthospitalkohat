@@ -230,14 +230,34 @@ export function StaffOT() {
         (patientData?.profiles?.email ? patientData.profiles.email.split('@')[0].replace(/[^0-9]/g, '') : 'N/A');
 
       // Build items array with detailed breakdown
-      const items = [
-        {
-          description: `Doctor Charges (${scheduleItem.doctor_name || 'Unknown'})`,
+      const items = [];
+      
+      // Doctor Charges Section
+      const doctorCharges = scheduleItem.doctor_expense || 0;
+      if (doctorCharges > 0) {
+        items.push({
+          description: `--- DOCTOR CHARGES ---`,
+          quantity: '',
+          unitPrice: '',
+          totalPrice: '',
+          isHeader: true
+        });
+        items.push({
+          description: `Doctor Fee (${scheduleItem.doctor_name || 'Unknown'})`,
           quantity: 1,
-          unitPrice: scheduleItem.doctor_expense || 0,
-          totalPrice: scheduleItem.doctor_expense || 0
-        }
-      ];
+          unitPrice: doctorCharges,
+          totalPrice: doctorCharges
+        });
+      }
+      
+      // Hospital Charges Section
+      items.push({
+        description: `--- HOSPITAL CHARGES ---`,
+        quantity: '',
+        unitPrice: '',
+        totalPrice: '',
+        isHeader: true
+      });
 
       // Add OT expenses if available
       if (expensesData && expensesData.length > 0) {
