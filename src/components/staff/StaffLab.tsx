@@ -436,9 +436,25 @@ export function StaffLab() {
                     filteredReports.map((report) => (
                       <TableRow key={report.id}>
                         <TableCell>
-                          {getPatientName(report.patient_id, patientNames || [])}
+                          <div>
+                            <div className="text-xs text-gray-500 mb-1">
+                              {report.patient_id.substring(0, 8)}...
+                            </div>
+                            <div className="font-medium">
+                              {getPatientName(report.patient_id, patientNames || [])}
+                            </div>
+                          </div>
                         </TableCell>
-                        <TableCell>{report.test_name}</TableCell>
+                        <TableCell>
+                          <div className="max-w-xs">
+                            {/* Group reports by patient and show comma-separated tests */}
+                            {filteredReports
+                              .filter(r => r.patient_id === report.patient_id)
+                              .map(r => r.test_name)
+                              .filter((value, index, array) => array.indexOf(value) === index)
+                              .join(', ')}
+                          </div>
+                        </TableCell>
                         <TableCell>
                           {getDoctorName(report.doctor_id, doctorNames || [])}
                         </TableCell>
@@ -477,10 +493,20 @@ export function StaffLab() {
               {completedReports.slice(0, 5).map((report) => (
                 <div key={report.id} className="flex items-center justify-between p-3 bg-green-50 rounded-lg border border-green-200">
                   <div>
+                    <div className="text-xs text-gray-500 mb-1">
+                      {report.patient_id.substring(0, 8)}...
+                    </div>
                     <p className="font-medium">
                       {getPatientName(report.patient_id, patientNames || [])}
                     </p>
-                    <p className="text-sm text-gray-600">{report.test_name}</p>
+                    <p className="text-sm text-gray-600">
+                      {/* Show comma-separated tests for this patient */}
+                      {completedReports
+                        .filter(r => r.patient_id === report.patient_id)
+                        .map(r => r.test_name)
+                        .filter((value, index, array) => array.indexOf(value) === index)
+                        .join(', ')}
+                    </p>
                   </div>
                   <div className="text-right">
                     <p className="text-sm font-medium text-green-600">Completed</p>

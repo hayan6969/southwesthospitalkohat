@@ -84,11 +84,11 @@ export default function StaffLabs() {
                         <div className="flex items-center gap-2">
                           <User className="w-4 h-4 text-gray-400" />
                           <div>
+                            <div className="text-xs text-gray-500 mb-1">
+                              {lab.patient_id.substring(0, 8)}...
+                            </div>
                             <div className="font-medium">
                               {getPatientName(lab.patient_id, patientNames || [])}
-                            </div>
-                            <div className="text-sm text-gray-500">
-                              Patient ID: {lab.patient_id}
                             </div>
                           </div>
                         </div>

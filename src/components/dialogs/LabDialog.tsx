@@ -1,6 +1,8 @@
 
 import { useState } from "react";
 import { useCreateLabReport, usePatients, useDoctors } from "@/hooks/useDatabase";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import { usePatientNames, useDoctorNames, getPatientName, getDoctorName } from "@/hooks/useDisplayHelpers";
 import { useAuditLogger } from "@/hooks/useAuditLogger";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -9,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { Plus } from "lucide-react";
 
@@ -16,7 +19,7 @@ export function LabDialog() {
   const [open, setOpen] = useState(false);
   const [patientId, setPatientId] = useState("");
   const [doctorId, setDoctorId] = useState("");
-  const [testName, setTestName] = useState("");
+  const [selectedTests, setSelectedTests] = useState<string[]>([]);
   const [testDate, setTestDate] = useState("");
   const [notes, setNotes] = useState("");
 
@@ -27,11 +30,25 @@ export function LabDialog() {
   const { data: doctorNames } = useDoctorNames();
   const { logCreate } = useAuditLogger();
 
+  // Fetch lab tests
+  const { data: labTests } = useQuery({
+    queryKey: ['lab-tests'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('lab_tests')
+        .select('*')
+        .order('name');
+      
+      if (error) throw error;
+      return data;
+    }
+  });
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!patientId || !doctorId || !testName.trim()) {
-      toast.error("Please fill in all required fields");
+    if (!patientId || !doctorId || selectedTests.length === 0) {
+      toast.error("Please fill in all required fields and select at least one test");
       return;
     }
 
@@ -39,28 +56,38 @@ export function LabDialog() {
       const patient = patients?.find(p => p.id === patientId);
       const doctor = doctors?.find(d => d.id === doctorId);
       
-      await createLabReport.mutateAsync({
-        patient_id: patientId,
-        doctor_id: doctorId,
-        test_name: testName.trim(),
-        test_date: testDate ? new Date(testDate).toISOString() : new Date().toISOString(),
-        status: 'pending',
-        notes: notes.trim() || undefined
-      });
+      // Create lab reports for each selected test
+      for (const testId of selectedTests) {
+        const test = labTests?.find(t => t.id === testId);
+        await createLabReport.mutateAsync({
+          patient_id: patientId,
+          doctor_id: doctorId,
+          test_id: testId,
+          test_name: test?.name || '',
+          test_date: testDate ? new Date(testDate).toISOString() : new Date().toISOString(),
+          status: 'pending',
+          notes: notes.trim() || undefined,
+          price: test?.price || 0
+        });
+      }
       
       // Log the audit event
+      const testNames = selectedTests.map(testId => 
+        labTests?.find(t => t.id === testId)?.name || ''
+      ).join(', ');
+      
       await logCreate(
         "Lab Order",
-        `${testName.trim()} ordered for ${getPatientName(patientId, patientNames || [])} by ${getDoctorName(doctorId, doctorNames || [])}`
+        `${testNames} ordered for ${getPatientName(patientId, patientNames || [])} by ${getDoctorName(doctorId, doctorNames || [])}`
       );
       
-      toast.success("Lab order created successfully");
+      toast.success(`${selectedTests.length} lab test(s) ordered successfully`);
       setOpen(false);
       
       // Reset form
       setPatientId("");
       setDoctorId("");
-      setTestName("");
+      setSelectedTests([]);
       setTestDate("");
       setNotes("");
     } catch (error) {
@@ -115,14 +142,43 @@ export function LabDialog() {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="testName">Test Name</Label>
-            <Input
-              id="testName"
-              value={testName}
-              onChange={(e) => setTestName(e.target.value)}
-              placeholder="e.g., Complete Blood Count (CBC)"
-              required
-            />
+            <Label>Select Tests</Label>
+            <div className="border rounded-md p-3 max-h-48 overflow-y-auto space-y-2">
+              {labTests?.map((test) => (
+                <div key={test.id} className="flex items-start space-x-2">
+                  <Checkbox
+                    id={test.id}
+                    checked={selectedTests.includes(test.id)}
+                    onCheckedChange={(checked) => {
+                      if (checked) {
+                        setSelectedTests([...selectedTests, test.id]);
+                      } else {
+                        setSelectedTests(selectedTests.filter(id => id !== test.id));
+                      }
+                    }}
+                  />
+                  <div className="flex-1">
+                    <label htmlFor={test.id} className="text-sm font-medium cursor-pointer">
+                      {test.name}
+                    </label>
+                    {test.description && (
+                      <p className="text-xs text-gray-500">{test.description}</p>
+                    )}
+                    <p className="text-xs text-green-600 font-medium">
+                      PKR {test.price.toLocaleString()}
+                    </p>
+                  </div>
+                </div>
+              ))}
+              {!labTests || labTests.length === 0 && (
+                <p className="text-sm text-gray-500">No lab tests available</p>
+              )}
+            </div>
+            {selectedTests.length > 0 && (
+              <p className="text-sm text-blue-600">
+                {selectedTests.length} test(s) selected
+              </p>
+            )}
           </div>
 
           <div className="space-y-2">
