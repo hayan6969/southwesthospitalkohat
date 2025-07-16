@@ -6,12 +6,12 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { Plus } from "lucide-react";
 import { convertUsdToPkr } from "@/utils/currency";
 import { generateInvoicePDF } from "@/utils/pdfGenerator";
+import { SearchablePatientSelect } from "@/components/SearchablePatientSelect";
 
 export function InvoiceDialog() {
   const [open, setOpen] = useState(false);
@@ -109,18 +109,13 @@ export function InvoiceDialog() {
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="patient">Patient</Label>
-            <Select value={patientId} onValueChange={setPatientId} required>
-              <SelectTrigger>
-                <SelectValue placeholder="Select a patient" />
-              </SelectTrigger>
-              <SelectContent>
-                {patients?.map((patient) => (
-                  <SelectItem key={patient.id} value={patient.id}>
-                    {getPatientName(patient.id, patientNames || [])}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <SearchablePatientSelect
+              patients={patients}
+              patientNames={patientNames}
+              value={patientId}
+              onValueChange={setPatientId}
+              placeholder="Search patient by ID or name..."
+            />
           </div>
 
           <div className="space-y-2">
