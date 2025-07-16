@@ -1,5 +1,4 @@
-
-import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import * as React from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -27,15 +26,15 @@ type AuthContextType = {
   createUserAccount: (userData: { email: string; password: string; first_name: string; last_name: string; role: string; phone?: string; department_id?: string }) => Promise<{ error: any }>;
 };
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+const AuthContext = React.createContext<AuthContextType | undefined>(undefined);
 
-export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(null);
-  const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [session, setSession] = useState<Session | null>(null);
-  const [loading, setLoading] = useState(true);
+export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [user, setUser] = React.useState<User | null>(null);
+  const [profile, setProfile] = React.useState<UserProfile | null>(null);
+  const [session, setSession] = React.useState<Session | null>(null);
+  const [loading, setLoading] = React.useState(true);
 
-  const fetchUserProfile = async (userId: string) => {
+  const fetchUserProfile = React.useCallback(async (userId: string): Promise<UserProfile | null> => {
     try {
       console.log('Fetching profile for user:', userId);
       
@@ -44,8 +43,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         const cachedProfile = localStorage.getItem(`profile_${userId}`);
         if (cachedProfile) {
           console.log('🔄 Using cached profile for offline access');
-          const parsed = JSON.parse(cachedProfile);
-          return parsed;
+          return JSON.parse(cachedProfile);
         }
         console.log('❌ No cached profile found for offline user');
         return null;
@@ -63,8 +61,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         const cachedProfile = localStorage.getItem(`profile_${userId}`);
         if (cachedProfile) {
           console.log('🔄 Using cached profile after error');
-          const parsed = JSON.parse(cachedProfile);
-          return parsed;
+          return JSON.parse(cachedProfile);
         }
         // If profile doesn't exist, return null but don't throw
         if (error.code === 'PGRST116') {
@@ -97,14 +94,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       const cachedProfile = localStorage.getItem(`profile_${userId}`);
       if (cachedProfile) {
         console.log('🔄 Using cached profile after catch error');
-        const parsed = JSON.parse(cachedProfile);
-        return parsed;
+        return JSON.parse(cachedProfile);
       }
       return null;
     }
-  };
+  }, []);
 
-  useEffect(() => {
+  React.useEffect(() => {
     let mounted = true;
 
     // Set up auth state listener
@@ -287,9 +283,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       mounted = false;
       subscription.unsubscribe();
     };
-  }, []);
+  }, [fetchUserProfile]);
 
-  const signIn = async (email: string, password: string) => {
+  const signIn = React.useCallback(async (email: string, password: string) => {
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
@@ -321,9 +317,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     } catch (error) {
       return { error };
     }
-  };
+  }, [fetchUserProfile]);
 
-  const signUp = async (email: string, password: string, userData: { first_name: string; last_name: string; role?: string }) => {
+  const signUp = React.useCallback(async (email: string, password: string, userData: { first_name: string; last_name: string; role?: string }) => {
     try {
       const redirectUrl = `${window.location.origin}/`;
       
@@ -344,9 +340,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     } catch (error) {
       return { error };
     }
-  };
+  }, []);
 
-  const createUserAccount = async (userData: { 
+  const createUserAccount = React.useCallback(async (userData: { 
     email: string; 
     password: string; 
     first_name: string; 
@@ -395,9 +391,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     } catch (error) {
       return { error };
     }
-  };
+  }, []);
 
-  const cleanupAuthState = () => {
+  const cleanupAuthState = React.useCallback(() => {
     // Remove cached session and profiles
     localStorage.removeItem('cached_session');
     Object.keys(localStorage).forEach((key) => {
@@ -420,9 +416,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         sessionStorage.removeItem(key);
       }
     });
-  };
+  }, []);
 
-  const signOut = async () => {
+  const signOut = React.useCallback(async () => {
     try {
       if (user) {
         console.log('User signed out:', user.email);
@@ -449,9 +445,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       // Even if there's an error, force logout
       window.location.href = '/auth';
     }
-  };
+  }, [user, cleanupAuthState]);
 
-  const value = {
+  const value = React.useMemo(() => ({
     user,
     profile,
     session,
@@ -460,13 +456,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     signUp,
     signOut,
     createUserAccount,
-  };
+  }), [user, profile, session, loading, signIn, signUp, signOut, createUserAccount]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
 
 export const useAuth = () => {
-  const context = useContext(AuthContext);
+  const context = React.useContext(AuthContext);
   if (context === undefined) {
     console.error('useAuth called outside of AuthProvider context');
     throw new Error('useAuth must be used within an AuthProvider');
