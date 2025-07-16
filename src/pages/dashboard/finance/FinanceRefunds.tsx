@@ -70,7 +70,8 @@ export default function FinanceRefunds() {
   // Create refund mutation
   const createRefundMutation = useMutation({
     mutationFn: async (refundData: RefundFormData) => {
-      const { data, error } = await supabase
+      // First, create the refund record
+      const { data: refund, error: refundError } = await supabase
         .from('refunds')
         .insert({
           amount: parseFloat(refundData.amount),
@@ -82,12 +83,29 @@ export default function FinanceRefunds() {
         .select()
         .single();
 
-      if (error) throw error;
-      return data;
+      if (refundError) throw refundError;
+
+      // If it's a hospital-related refund, also create an expense record
+      if (['ot_simple', 'lab', 'pharmacy', 'other'].includes(refundData.refundType)) {
+        const { error: expenseError } = await supabase
+          .from('expenses')
+          .insert({
+            amount: parseFloat(refundData.amount),
+            category: 'Refund',
+            description: `${getRefundTypeLabel(refundData.refundType)} refund: ${refundData.description}`,
+            expense_date: new Date().toISOString().split('T')[0],
+            created_by: profile?.id
+          });
+
+        if (expenseError) throw expenseError;
+      }
+
+      return refund;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['refunds'] });
       queryClient.invalidateQueries({ queryKey: ['financial-analytics'] });
+      queryClient.invalidateQueries({ queryKey: ['expenses'] }); // Also invalidate expenses
       setFormData({ amount: "", refundType: "", description: "", doctorId: "" });
       setShowConfirmDialog(false);
       toast.success("Refund processed successfully");

@@ -39,7 +39,7 @@ const getRefundTypeLabel = (type: string) => {
 
 export function useFinancialAnalytics() {
   return useQuery({
-    queryKey: ['financial-analytics', Date.now()], // Add timestamp to prevent caching issues
+    queryKey: ['financial-analytics'],
     queryFn: async (): Promise<FinancialMetrics> => {
       const now = new Date();
       const sixMonthsAgo = subMonths(now, 6);
@@ -61,18 +61,7 @@ export function useFinancialAnalytics() {
         supabase.from('refunds').select('*').gte('created_at', sixMonthsAgo.toISOString())
       ]);
 
-      // Calculate refunds by category
-      // Doctor-related refunds (consultation, ot_doctor) - these reduce doctor earnings
-      const doctorRefunds = (refunds || [])
-        .filter(refund => ['consultation', 'ot_doctor'].includes(refund.refund_type))
-        .reduce((sum, refund) => sum + Number(refund.amount), 0);
-
-      // Hospital-related refunds (ot_simple, lab, pharmacy, other) - these become expenses
-      const hospitalRefunds = (refunds || [])
-        .filter(refund => ['ot_simple', 'lab', 'pharmacy', 'other'].includes(refund.refund_type))
-        .reduce((sum, refund) => sum + Number(refund.amount), 0);
-
-      // Calculate revenue by source (no refund deductions - refunds become expenses)
+      // Calculate revenue by source (no refund deductions - hospital refunds become expense records)
       const hospitalRevenue = (invoices || [])
         .filter(inv => inv.status === 'paid')
         .reduce((sum, inv) => sum + Number(inv.amount), 0);
@@ -91,9 +80,9 @@ export function useFinancialAnalytics() {
 
       const totalRevenue = hospitalRevenue + pharmacyRevenue + labRevenue + otRevenue;
       
-      // Total expenses = regular expenses + hospital-related refunds
+      // Total expenses = regular expenses (including refund expense records)
       const totalExpenses = (expenses || [])
-        .reduce((sum, exp) => sum + Number(exp.amount), 0) + hospitalRefunds;
+        .reduce((sum, exp) => sum + Number(exp.amount), 0);
 
       const netProfit = totalRevenue - totalExpenses;
       const profitMargin = totalRevenue > 0 ? (netProfit / totalRevenue) * 100 : 0;
@@ -128,19 +117,7 @@ export function useFinancialAnalytics() {
           }
         });
 
-      // Add hospital-related refunds to monthly expenses
-      (refunds || []).forEach(refund => {
-        if (!refund.created_at) return;
-        // Add hospital-related refunds as expenses
-        if (['ot_simple', 'lab', 'pharmacy', 'other'].includes(refund.refund_type)) {
-          const month = format(new Date(refund.created_at), 'MMM yyyy');
-          if (expenseData.has(month)) {
-            expenseData.set(month, expenseData.get(month) + Number(refund.amount));
-          }
-        }
-      });
-
-      // Aggregate expenses by month
+      // Aggregate expenses by month (expense records already include refunds)
       (expenses || []).forEach(expense => {
         if (!expense.created_at) return;
         const month = format(new Date(expense.created_at), 'MMM yyyy');
