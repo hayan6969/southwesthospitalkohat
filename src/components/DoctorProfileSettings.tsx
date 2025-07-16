@@ -325,10 +325,17 @@ export const DoctorProfileSettings = () => {
   };
 
   const handleWorkingHoursUpdate = async (dayOfWeek: number, field: string, value: any) => {
+    // Ensure the day exists in working hours with default values
+    const currentDayHours = workingHours[dayOfWeek] || {
+      start_time: '09:00',
+      end_time: '17:00',
+      is_working: true
+    };
+
     const updatedHours = {
       ...workingHours,
       [dayOfWeek]: {
-        ...workingHours[dayOfWeek],
+        ...currentDayHours,
         [field]: value
       }
     };
