@@ -6,6 +6,7 @@ export const useRealTimeUpdates = () => {
   const queryClient = useQueryClient();
 
   useEffect(() => {
+    console.log('🚀 Setting up real-time updates...');
     // Create a single channel for all real-time updates
     const channel = supabase
       .channel('dashboard-updates')
@@ -178,10 +179,13 @@ export const useRealTimeUpdates = () => {
           queryClient.invalidateQueries({ queryKey: ['patient-names'] });
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log('📡 Real-time channel status:', status);
+      });
 
     // Cleanup function to unsubscribe when component unmounts
     return () => {
+      console.log('🔌 Cleaning up real-time channel...');
       supabase.removeChannel(channel);
     };
   }, []); // Remove queryClient dependency to prevent re-subscriptions
