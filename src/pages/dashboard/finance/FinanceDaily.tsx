@@ -298,10 +298,13 @@ export default function FinanceDaily() {
     queryKey: ['last-daily-closing'],
     queryFn: async () => {
       const { data } = await supabase
-        .from('daily_closings')
-        .select('*')
-        .order('closing_date', { ascending: false })
-        .limit(1);
+        .rpc('sql', { 
+          query: `
+            SELECT * FROM daily_closings 
+            ORDER BY closing_date DESC 
+            LIMIT 1
+          ` 
+        });
       
       return data?.[0] || null;
     },
@@ -334,9 +337,26 @@ export default function FinanceDaily() {
         }
       };
 
-      const { error } = await supabase
-        .from('daily_closings')
-        .insert([closingData]);
+      const { error } = await supabase.rpc('sql', {
+        query: `
+          INSERT INTO daily_closings (
+            closing_date, closing_time, day_name, hospital_revenue, 
+            pharmacy_revenue, pharmacy_profit, total_expenses, 
+            total_refunds, net_profit, transactions_data
+          ) VALUES (
+            '${closingData.closing_date}', 
+            '${closingData.closing_time}', 
+            '${closingData.day_name}', 
+            ${closingData.hospital_revenue}, 
+            ${closingData.pharmacy_revenue}, 
+            ${closingData.pharmacy_profit}, 
+            ${closingData.total_expenses}, 
+            ${closingData.total_refunds}, 
+            ${closingData.net_profit}, 
+            '${JSON.stringify(closingData.transactions_data)}'::jsonb
+          )
+        `
+      });
 
       if (error) throw error;
     },
@@ -827,25 +847,25 @@ export default function FinanceDaily() {
                   <Card>
                     <CardContent className="p-4">
                       <div className="text-sm text-muted-foreground">Hospital Revenue</div>
-                      <div className="text-lg font-bold">{formatPkrAmount(lastClosingData.hospital_revenue)}</div>
+                      <div className="text-lg font-bold">{formatPkrAmount(lastClosingData.hospital_revenue || 0)}</div>
                     </CardContent>
                   </Card>
                   <Card>
                     <CardContent className="p-4">
                       <div className="text-sm text-muted-foreground">Pharmacy Revenue</div>
-                      <div className="text-lg font-bold">{formatPkrAmount(lastClosingData.pharmacy_revenue)}</div>
+                      <div className="text-lg font-bold">{formatPkrAmount(lastClosingData.pharmacy_revenue || 0)}</div>
                     </CardContent>
                   </Card>
                   <Card>
                     <CardContent className="p-4">
                       <div className="text-sm text-muted-foreground">Total Expenses</div>
-                      <div className="text-lg font-bold text-red-600">{formatPkrAmount(lastClosingData.total_expenses)}</div>
+                      <div className="text-lg font-bold text-red-600">{formatPkrAmount(lastClosingData.total_expenses || 0)}</div>
                     </CardContent>
                   </Card>
                   <Card>
                     <CardContent className="p-4">
                       <div className="text-sm text-muted-foreground">Net Profit</div>
-                      <div className="text-lg font-bold text-green-600">{formatPkrAmount(lastClosingData.net_profit)}</div>
+                      <div className="text-lg font-bold text-green-600">{formatPkrAmount(lastClosingData.net_profit || 0)}</div>
                     </CardContent>
                   </Card>
                 </div>

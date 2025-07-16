@@ -107,6 +107,54 @@ export type Database = {
         }
         Relationships: []
       }
+      daily_closings: {
+        Row: {
+          closing_date: string
+          closing_time: string
+          created_at: string
+          day_name: string
+          hospital_revenue: number
+          id: string
+          net_profit: number
+          pharmacy_profit: number
+          pharmacy_revenue: number
+          total_expenses: number
+          total_refunds: number
+          transactions_data: Json | null
+          updated_at: string
+        }
+        Insert: {
+          closing_date: string
+          closing_time: string
+          created_at?: string
+          day_name: string
+          hospital_revenue?: number
+          id?: string
+          net_profit?: number
+          pharmacy_profit?: number
+          pharmacy_revenue?: number
+          total_expenses?: number
+          total_refunds?: number
+          transactions_data?: Json | null
+          updated_at?: string
+        }
+        Update: {
+          closing_date?: string
+          closing_time?: string
+          created_at?: string
+          day_name?: string
+          hospital_revenue?: number
+          id?: string
+          net_profit?: number
+          pharmacy_profit?: number
+          pharmacy_revenue?: number
+          total_expenses?: number
+          total_refunds?: number
+          transactions_data?: Json | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       departments: {
         Row: {
           created_at: string | null
