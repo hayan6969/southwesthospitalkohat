@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useCreateAppointment, useDoctors, usePatients } from "@/hooks/useDatabase";
 import { usePatientNames, useDoctorNames, getPatientName, getDoctorName } from "@/hooks/useDisplayHelpers";
 import { useDoctorAvailability, useCheckDoctorAvailability } from "@/hooks/useDoctorAvailability";
@@ -15,6 +15,16 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { toast } from "sonner";
 import { Plus, Check, ChevronsUpDown } from "lucide-react";
 import { cn } from "@/lib/utils";
+
+const appointmentTypes = [
+  "Consultation",
+  "Follow-up",
+  "Check-up",
+  "Emergency",
+  "Routine Visit",
+  "Specialist Referral",
+  "Preventive Care"
+];
 
 export function AppointmentDialog() {
   const [open, setOpen] = useState(false);
@@ -34,6 +44,17 @@ export function AppointmentDialog() {
   const { logAction } = useAuditLogger();
   const { checkAvailability } = useCheckDoctorAvailability();
   const { data: availability } = useDoctorAvailability(doctorId, appointmentDate);
+
+  // Set current date and time when dialog opens
+  useEffect(() => {
+    if (open) {
+      const now = new Date();
+      const currentDate = now.toISOString().split('T')[0];
+      const currentTime = now.toTimeString().slice(0, 5);
+      setAppointmentDate(currentDate);
+      setAppointmentTime(currentTime);
+    }
+  }, [open]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -174,45 +195,28 @@ export function AppointmentDialog() {
             </Popover>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="date">Date</Label>
-              <Input
-                id="date"
-                type="date"
-                value={appointmentDate}
-                onChange={(e) => setAppointmentDate(e.target.value)}
-                required
-              />
-              {appointmentDate && availability && !availability.canBook && (
-                <div className="text-sm text-red-600 mt-1">
-                  {!availability.isAvailable && "Doctor is not available on this date"}
-                  {availability.isAvailable && !availability.isAcceptingAppointments && "Doctor is not accepting appointments on this date"}
-                </div>
-              )}
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="time">Time</Label>
-              <Input
-                id="time"
-                type="time"
-                value={appointmentTime}
-                onChange={(e) => setAppointmentTime(e.target.value)}
-                required
-              />
-            </div>
-          </div>
-
           <div className="space-y-2">
             <Label htmlFor="type">Appointment Type</Label>
-            <Input
-              id="type"
-              value={type}
-              onChange={(e) => setType(e.target.value)}
-              placeholder="e.g., Consultation, Check-up, Follow-up"
-              required
-            />
+            <Select value={type} onValueChange={setType} required>
+              <SelectTrigger>
+                <SelectValue placeholder="Select appointment type" />
+              </SelectTrigger>
+              <SelectContent>
+                {appointmentTypes.map((appointmentType) => (
+                  <SelectItem key={appointmentType} value={appointmentType}>
+                    {appointmentType}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2 bg-muted/30 p-3 rounded-lg">
+            <Label className="text-sm font-medium">Scheduled for:</Label>
+            <div className="text-sm text-muted-foreground">
+              <div>{appointmentDate ? new Date(appointmentDate).toLocaleDateString() : 'No date selected'} at {appointmentTime || 'No time selected'}</div>
+              <div className="text-xs mt-1">Using current date and time as default</div>
+            </div>
           </div>
 
           <div className="space-y-2">
