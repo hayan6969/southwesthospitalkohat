@@ -1,6 +1,7 @@
 import jsPDF from 'jspdf';
 import { formatPkrAmount } from './currency';
 import { supabase } from '@/integrations/supabase/client';
+import { generateThermalReceipt } from './thermalPrinterGenerator';
 
 interface InvoiceItem {
   medicine_name: string;
@@ -85,6 +86,13 @@ const addThermalHeader = async (pdf: jsPDF, title: string) => {
 };
 
 export const generatePharmacyInvoicePDF = async (invoiceData: PharmacyInvoiceData): Promise<void> => {
+  // Check if user wants thermal printing (you can add a setting for this)
+  const useThermalPrinter = true; // Set this based on user preference
+  
+  if (useThermalPrinter) {
+    await generateThermalReceipt(invoiceData);
+    return;
+  }
   // Create PDF with thermal receipt dimensions (80mm width)
   const pdf = new jsPDF({
     unit: 'mm',
