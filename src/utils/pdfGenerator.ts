@@ -555,41 +555,85 @@ export const generateDailyClosingPDF = async (data: {
 }) => {
   const doc = new jsPDF();
   const pageWidth = doc.internal.pageSize.width;
+  const pageHeight = doc.internal.pageSize.height;
   let yPosition = 30;
 
   // Add header
   await addHospitalHeader(doc, 'Daily Financial Closing Report');
   yPosition += 60;
 
-  // Date and Day information
+  // Date and Day information with proper formatting
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(16);
+  doc.setFontSize(18);
   doc.setTextColor(40, 40, 40);
   doc.text(`${data.dayName}, ${new Date(data.closingDate).toLocaleDateString()}`, pageWidth / 2, yPosition, { align: 'center' });
-  yPosition += 10;
+  yPosition += 12;
   
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(10);
+  doc.setFontSize(11);
   doc.setTextColor(100, 100, 100);
   doc.text(`Closing Time: ${new Date(data.closingTime).toLocaleString()}`, pageWidth / 2, yPosition, { align: 'center' });
   yPosition += 25;
 
-  // Helper function to draw tables
-  const drawTable = (headers: string[], rows: string[][], startY: number, colWidths: number[]) => {
-    let tableY = startY;
-    const tableHeight = 8;
-    const headerHeight = 10;
+  // Helper function to check if new page is needed
+  const checkNewPage = (requiredSpace: number = 30) => {
+    if (yPosition + requiredSpace > pageHeight - 20) {
+      doc.addPage();
+      yPosition = 30;
+      return true;
+    }
+    return false;
+  };
+
+  // Helper function to draw section header
+  const drawSectionHeader = (title: string) => {
+    checkNewPage(35);
     
-    // Draw header
+    // Draw background for section header
     doc.setFillColor(240, 240, 240);
-    doc.rect(20, tableY, pageWidth - 40, headerHeight, 'F');
+    doc.rect(15, yPosition - 5, pageWidth - 30, 18, 'F');
+    doc.setDrawColor(200, 200, 200);
+    doc.rect(15, yPosition - 5, pageWidth - 30, 18);
+    
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(14);
+    doc.setTextColor(40, 40, 40);
+    doc.text(title, pageWidth / 2, yPosition + 6, { align: 'center' });
+    yPosition += 25;
+  };
+
+  // Helper function to draw subsection header
+  const drawSubHeader = (title: string) => {
+    checkNewPage(20);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(12);
+    doc.setTextColor(60, 60, 60);
+    doc.text(title, 20, yPosition);
+    yPosition += 15;
+  };
+
+  // Helper function to draw professional tables
+  const drawTable = (headers: string[], rows: string[][], colWidths: number[], startX: number = 20) => {
+    const tableWidth = colWidths.reduce((sum, width) => sum + width, 0);
+    const headerHeight = 12;
+    const rowHeight = 10;
+    let tableY = yPosition;
+    
+    checkNewPage(headerHeight + (rows.length * rowHeight) + 10);
+    tableY = yPosition;
+    
+    // Draw header background
+    doc.setFillColor(50, 50, 50);
+    doc.rect(startX, tableY, tableWidth, headerHeight, 'F');
+    
+    // Draw header text
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(10);
-    doc.setTextColor(40, 40, 40);
+    doc.setTextColor(255, 255, 255);
     
-    let xPos = 25;
+    let xPos = startX + 3;
     headers.forEach((header, i) => {
-      doc.text(header, xPos, tableY + 7);
+      doc.text(header, xPos, tableY + 8);
       xPos += colWidths[i];
     });
     
@@ -598,80 +642,82 @@ export const generateDailyClosingPDF = async (data: {
     // Draw rows
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(9);
+    doc.setTextColor(40, 40, 40);
+    
     rows.forEach((row, rowIndex) => {
-      if (tableY > 250) {
-        doc.addPage();
-        tableY = 30;
-      }
-      
+      // Alternate row colors
       if (rowIndex % 2 === 0) {
-        doc.setFillColor(250, 250, 250);
-        doc.rect(20, tableY, pageWidth - 40, tableHeight, 'F');
+        doc.setFillColor(248, 248, 248);
+        doc.rect(startX, tableY, tableWidth, rowHeight, 'F');
       }
       
-      xPos = 25;
+      xPos = startX + 3;
       row.forEach((cell, colIndex) => {
-        doc.text(cell, xPos, tableY + 6);
+        // Right align numeric values (amounts)
+        if (cell.includes('Rs.') || cell.includes('(') || !isNaN(parseFloat(cell))) {
+          doc.text(cell, xPos + colWidths[colIndex] - 6, tableY + 7, { align: 'right' });
+        } else {
+          doc.text(cell, xPos, tableY + 7);
+        }
         xPos += colWidths[colIndex];
       });
       
-      tableY += tableHeight;
+      tableY += rowHeight;
     });
     
     // Draw table border
-    doc.setDrawColor(200, 200, 200);
-    doc.rect(20, startY, pageWidth - 40, tableY - startY);
+    doc.setDrawColor(150, 150, 150);
+    doc.setLineWidth(0.5);
+    doc.rect(startX, yPosition, tableWidth, tableY - yPosition);
     
     // Draw column lines
-    xPos = 20;
+    xPos = startX;
     for (let i = 0; i < colWidths.length - 1; i++) {
       xPos += colWidths[i];
-      doc.line(xPos, startY, xPos, tableY);
+      doc.line(xPos, yPosition, xPos, tableY);
     }
     
-    return tableY + 15;
+    // Draw horizontal lines
+    for (let i = 0; i <= rows.length; i++) {
+      const lineY = yPosition + headerHeight + (i * rowHeight);
+      doc.line(startX, lineY, startX + tableWidth, lineY);
+    }
+    
+    yPosition = tableY + 20;
+    return yPosition;
   };
 
-  // Pharmacy Section
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(14);
-  doc.setTextColor(40, 40, 40);
-  doc.text('PHARMACY TRANSACTIONS', 20, yPosition);
-  yPosition += 15;
+  // ===========================================
+  // PHARMACY SECTION
+  // ===========================================
+  drawSectionHeader('PHARMACY TRANSACTIONS');
 
-  // Pharmacy Invoices Table
+  // Pharmacy Sales Table
   if (data.transactionsData?.pharmacyInvoices?.length > 0) {
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(12);
-    doc.text('Sales Transactions:', 25, yPosition);
-    yPosition += 10;
+    drawSubHeader('Sales Transactions');
 
-    const pharmacyHeaders = ['Invoice #', 'Customer', 'Items', 'Total Amount'];
-    const pharmacyColWidths = [35, 50, 60, 35];
+    const pharmacyHeaders = ['Invoice No.', 'Customer Name', 'Items Count', 'Total Amount'];
+    const pharmacyColWidths = [40, 60, 30, 40];
     const pharmacyRows: string[][] = [];
 
     data.transactionsData.pharmacyInvoices.forEach((invoice: any) => {
       const customerName = invoice.customer_name || 'Walk-in Customer';
       const itemsCount = invoice.pharmacy_invoice_items?.length || 0;
-      const itemsText = `${itemsCount} item${itemsCount !== 1 ? 's' : ''}`;
       
       pharmacyRows.push([
         invoice.invoice_number,
         customerName,
-        itemsText,
+        `${itemsCount} items`,
         formatPkrAmount(invoice.final_amount)
       ]);
     });
 
-    yPosition = drawTable(pharmacyHeaders, pharmacyRows, yPosition, pharmacyColWidths);
+    drawTable(pharmacyHeaders, pharmacyRows, pharmacyColWidths);
     
-    // Pharmacy Items Detail Table
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(12);
-    doc.text('Medicine Sales Detail:', 25, yPosition);
-    yPosition += 10;
+    // Medicine Details Table
+    drawSubHeader('Medicine Sales Detail');
 
-    const itemHeaders = ['Medicine Name', 'Quantity', 'Unit Price', 'Total'];
+    const itemHeaders = ['Medicine Name', 'Quantity', 'Unit Price', 'Total Price'];
     const itemColWidths = [80, 25, 30, 35];
     const itemRows: string[][] = [];
 
@@ -690,26 +736,27 @@ export const generateDailyClosingPDF = async (data: {
     });
 
     if (itemRows.length > 0) {
-      yPosition = drawTable(itemHeaders, itemRows, yPosition, itemColWidths);
+      drawTable(itemHeaders, itemRows, itemColWidths);
     }
+  } else {
+    doc.setFont('helvetica', 'italic');
+    doc.setFontSize(10);
+    doc.setTextColor(150, 150, 150);
+    doc.text('No pharmacy transactions recorded for this date.', pageWidth / 2, yPosition, { align: 'center' });
+    yPosition += 25;
   }
 
-  // Hospital Section (excluding consultations)
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(14);
-  doc.setTextColor(40, 40, 40);
-  doc.text('HOSPITAL SERVICES', 20, yPosition);
-  yPosition += 15;
+  // ===========================================
+  // HOSPITAL SERVICES SECTION
+  // ===========================================
+  drawSectionHeader('HOSPITAL SERVICES');
 
   // Lab Reports Table
   if (data.transactionsData?.labReports?.length > 0) {
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(12);
-    doc.text('Laboratory Tests:', 25, yPosition);
-    yPosition += 10;
+    drawSubHeader('Laboratory Tests');
 
     const labHeaders = ['Test Name', 'Patient Name', 'Status', 'Amount'];
-    const labColWidths = [60, 50, 30, 40];
+    const labColWidths = [60, 50, 30, 30];
     const labRows: string[][] = [];
 
     data.transactionsData.labReports.forEach((lab: any) => {
@@ -725,18 +772,15 @@ export const generateDailyClosingPDF = async (data: {
       ]);
     });
 
-    yPosition = drawTable(labHeaders, labRows, yPosition, labColWidths);
+    drawTable(labHeaders, labRows, labColWidths);
   }
 
   // OT Schedules Table
   if (data.transactionsData?.otSchedules?.length > 0) {
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(12);
-    doc.text('Operation Theater Services:', 25, yPosition);
-    yPosition += 10;
+    drawSubHeader('Operation Theater Services');
 
     const otHeaders = ['Operation', 'Patient', 'Total Cost', 'Doctor Fee', 'Hospital Revenue'];
-    const otColWidths = [40, 40, 30, 30, 40];
+    const otColWidths = [40, 40, 30, 30, 30];
     const otRows: string[][] = [];
 
     data.transactionsData.otSchedules.forEach((ot: any) => {
@@ -755,55 +799,52 @@ export const generateDailyClosingPDF = async (data: {
       ]);
     });
 
-    yPosition = drawTable(otHeaders, otRows, yPosition, otColWidths);
+    drawTable(otHeaders, otRows, otColWidths);
   }
 
-  // Emergency Services Table (if any - these might be hospital revenue if they're facility fees)
+  // Emergency Services (if any)
   if (data.transactionsData?.emergencyAppointments?.length > 0) {
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(12);
-    doc.text('Emergency Services (Facility Fees):', 25, yPosition);
-    yPosition += 10;
+    drawSubHeader('Emergency Services');
 
-    const emergencyHeaders = ['Patient Name', 'Doctor', 'Service Fee', 'Time'];
-    const emergencyColWidths = [45, 45, 35, 35];
+    const emergencyHeaders = ['Patient Name', 'Service Time', 'Facility Fee'];
+    const emergencyColWidths = [60, 50, 40];
     const emergencyRows: string[][] = [];
 
     data.transactionsData.emergencyAppointments.forEach((emergency: any) => {
       const patientName = emergency.patients?.profiles?.first_name && emergency.patients?.profiles?.last_name 
         ? `${emergency.patients.profiles.first_name} ${emergency.patients.profiles.last_name}`
         : 'Unknown Patient';
-      const doctorName = emergency.doctors?.profiles?.first_name && emergency.doctors?.profiles?.last_name 
-        ? `Dr. ${emergency.doctors.profiles.first_name} ${emergency.doctors.profiles.last_name}`
-        : 'Unknown Doctor';
       const appointmentTime = new Date(emergency.appointment_date).toLocaleTimeString();
       
       emergencyRows.push([
         patientName,
-        doctorName,
-        formatPkrAmount(emergency.consultation_fee_at_time || 0),
-        appointmentTime
+        appointmentTime,
+        formatPkrAmount(emergency.consultation_fee_at_time || 0)
       ]);
     });
 
-    yPosition = drawTable(emergencyHeaders, emergencyRows, yPosition, emergencyColWidths);
+    drawTable(emergencyHeaders, emergencyRows, emergencyColWidths);
   }
 
-  // Expenses Table
-  if (data.transactionsData?.expenses?.length > 0) {
-    if (yPosition > 200) {
-      doc.addPage();
-      yPosition = 30;
-    }
+  // Check if no hospital services
+  if ((!data.transactionsData?.labReports?.length) && 
+      (!data.transactionsData?.otSchedules?.length) && 
+      (!data.transactionsData?.emergencyAppointments?.length)) {
+    doc.setFont('helvetica', 'italic');
+    doc.setFontSize(10);
+    doc.setTextColor(150, 150, 150);
+    doc.text('No hospital services recorded for this date.', pageWidth / 2, yPosition, { align: 'center' });
+    yPosition += 25;
+  }
 
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(14);
-    doc.setTextColor(40, 40, 40);
-    doc.text('DAILY EXPENSES', 20, yPosition);
-    yPosition += 15;
+  // ===========================================
+  // EXPENSES SECTION
+  // ===========================================
+  if (data.transactionsData?.expenses?.length > 0) {
+    drawSectionHeader('DAILY EXPENSES');
 
     const expenseHeaders = ['Category', 'Description', 'Amount', 'Date'];
-    const expenseColWidths = [40, 70, 35, 35];
+    const expenseColWidths = [40, 70, 30, 30];
     const expenseRows: string[][] = [];
 
     data.transactionsData.expenses.forEach((expense: any) => {
@@ -815,24 +856,17 @@ export const generateDailyClosingPDF = async (data: {
       ]);
     });
 
-    yPosition = drawTable(expenseHeaders, expenseRows, yPosition, expenseColWidths);
+    drawTable(expenseHeaders, expenseRows, expenseColWidths);
   }
 
-  // Refunds Table (if any)
+  // ===========================================
+  // REFUNDS SECTION
+  // ===========================================
   if (data.transactionsData?.refunds?.length > 0) {
-    if (yPosition > 200) {
-      doc.addPage();
-      yPosition = 30;
-    }
-
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(14);
-    doc.setTextColor(40, 40, 40);
-    doc.text('REFUNDS & RETURNS', 20, yPosition);
-    yPosition += 15;
+    drawSectionHeader('REFUNDS & RETURNS');
 
     const refundHeaders = ['Type', 'Description', 'Amount', 'Date'];
-    const refundColWidths = [40, 70, 35, 35];
+    const refundColWidths = [40, 70, 30, 30];
     const refundRows: string[][] = [];
 
     data.transactionsData.refunds.forEach((refund: any) => {
@@ -844,47 +878,62 @@ export const generateDailyClosingPDF = async (data: {
       ]);
     });
 
-    yPosition = drawTable(refundHeaders, refundRows, yPosition, refundColWidths);
+    drawTable(refundHeaders, refundRows, refundColWidths);
   }
 
-  // Summary Section
-  if (yPosition > 150) {
-    doc.addPage();
-    yPosition = 30;
-  }
+  // ===========================================
+  // FINANCIAL SUMMARY SECTION
+  // ===========================================
+  checkNewPage(100);
+  
+  drawSectionHeader('FINANCIAL SUMMARY');
 
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(16);
-  doc.setTextColor(40, 40, 40);
-  doc.text('FINANCIAL SUMMARY', pageWidth / 2, yPosition, { align: 'center' });
-  yPosition += 20;
-
-  // Summary table
+  // Summary table with better formatting
   const summaryHeaders = ['Description', 'Amount'];
   const summaryColWidths = [120, 50];
   const summaryRows = [
-    ['Hospital Services Revenue (Lab + OT + Emergency)', formatPkrAmount(data.hospitalRevenue)],
+    ['Hospital Services Revenue', formatPkrAmount(data.hospitalRevenue)],
     ['Pharmacy Revenue', formatPkrAmount(data.pharmacyRevenue)],
     ['Pharmacy Profit', formatPkrAmount(data.pharmacyProfit)],
     ['Total Daily Expenses', `(${formatPkrAmount(data.totalExpenses)})`],
-    ['Total Refunds', `(${formatPkrAmount(data.totalRefunds)})`],
-    ['NET PROFIT', formatPkrAmount(data.netProfit)]
+    ['Total Refunds & Returns', `(${formatPkrAmount(data.totalRefunds)})`]
   ];
 
-  yPosition = drawTable(summaryHeaders, summaryRows, yPosition, summaryColWidths);
+  drawTable(summaryHeaders, summaryRows, summaryColWidths);
 
-  // Highlight net profit row
+  // Net Profit - Special formatting
+  yPosition += 10;
+  const netProfitY = yPosition;
+  
+  // Draw highlighted box for net profit
   doc.setFillColor(220, 255, 220);
-  doc.rect(20, yPosition - 23, pageWidth - 40, 8, 'F');
+  doc.setDrawColor(100, 200, 100);
+  doc.setLineWidth(2);
+  doc.rect(20, netProfitY - 5, pageWidth - 40, 20, 'FD');
+  
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(16);
+  doc.setTextColor(0, 100, 0);
+  doc.text('NET PROFIT:', 30, netProfitY + 8);
+  doc.text(formatPkrAmount(data.netProfit), pageWidth - 30, netProfitY + 8, { align: 'right' });
 
-  // Footer
-  yPosition += 20;
-  doc.setFontSize(9);
-  doc.setFont('helvetica', 'italic');
+  yPosition += 35;
+
+  // ===========================================
+  // FOOTER
+  // ===========================================
+  yPosition += 15;
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(10);
   doc.setTextColor(100, 100, 100);
-  doc.text('This report excludes doctor consultation fees as they belong to individual doctor finances.', pageWidth / 2, yPosition, { align: 'center' });
-  doc.text('This report was generated automatically by the hospital management system.', pageWidth / 2, yPosition + 8, { align: 'center' });
-  doc.text(`Generated on: ${new Date().toLocaleString()}`, pageWidth / 2, yPosition + 16, { align: 'center' });
+  doc.text('Note: Doctor consultation fees are excluded as they belong to individual doctor finances.', pageWidth / 2, yPosition, { align: 'center' });
+  yPosition += 8;
+  
+  doc.setFont('helvetica', 'italic');
+  doc.setFontSize(9);
+  doc.text('This report was generated automatically by the hospital management system.', pageWidth / 2, yPosition, { align: 'center' });
+  yPosition += 8;
+  doc.text(`Generated on: ${new Date().toLocaleString()}`, pageWidth / 2, yPosition, { align: 'center' });
 
   // Open PDF in new tab
   const pdfBlob = doc.output('blob');
