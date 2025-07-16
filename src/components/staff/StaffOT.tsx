@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Building2, Calendar, CreditCard, Clock, Users, Activity, Plus, Edit, Banknote, Search, Check, X, Download } from "lucide-react";
+import { Building2, Calendar, CreditCard, Clock, Users, Activity, Plus, Edit, Banknote, Search, Check, Download } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -211,6 +211,9 @@ export function StaffOT() {
       setCompleteDialog(false);
       setCompletionNotes("");
       setSelectedScheduleItem(null);
+      
+      // Manually refresh the table to ensure immediate update
+      fetchOTSchedules();
     } catch (error) {
       console.error("Error completing OT:", error);
       toast({
@@ -221,28 +224,6 @@ export function StaffOT() {
     }
   };
 
-  const handleCancelOT = async (scheduleId: string) => {
-    try {
-      const { error } = await supabase
-        .from("ot_schedules")
-        .update({ status: 'cancelled' })
-        .eq("id", scheduleId);
-
-      if (error) throw error;
-
-      toast({
-        title: "OT Cancelled",
-        description: "Operation cancelled successfully",
-      });
-    } catch (error) {
-      console.error("Error cancelling OT:", error);
-      toast({
-        title: "Error",
-        description: "Failed to cancel operation",
-        variant: "destructive",
-      });
-    }
-  };
 
   const handleDownloadInvoice = async (scheduleItem: OTScheduleItem) => {
     setDownloadingInvoice(scheduleItem.id);
@@ -487,35 +468,6 @@ export function StaffOT() {
                                 <Check className="w-3 h-3 mr-1" />
                                 Complete
                               </Button>
-                            )}
-                            
-                            {ot.status !== 'completed' && ot.status !== 'cancelled' && (
-                              <AlertDialog>
-                                <AlertDialogTrigger asChild>
-                                  <Button 
-                                    size="sm" 
-                                    variant="outline"
-                                    className="text-red-600 hover:text-red-700"
-                                  >
-                                    <X className="w-3 h-3 mr-1" />
-                                    Cancel
-                                  </Button>
-                                </AlertDialogTrigger>
-                                <AlertDialogContent>
-                                  <AlertDialogHeader>
-                                    <AlertDialogTitle>Cancel OT Operation</AlertDialogTitle>
-                                    <AlertDialogDescription>
-                                      Are you sure you want to cancel this OT operation? This action cannot be undone.
-                                    </AlertDialogDescription>
-                                  </AlertDialogHeader>
-                                  <AlertDialogFooter>
-                                    <AlertDialogCancel>No, Keep</AlertDialogCancel>
-                                    <AlertDialogAction onClick={() => handleCancelOT(ot.id)}>
-                                      Yes, Cancel
-                                    </AlertDialogAction>
-                                  </AlertDialogFooter>
-                                </AlertDialogContent>
-                              </AlertDialog>
                             )}
                             
                             <Button 
