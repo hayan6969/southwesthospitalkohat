@@ -37,31 +37,54 @@ export function useFinancialAnalytics() {
         { data: pharmacyInvoices },
         { data: labReports },
         { data: otSchedules },
-        { data: expenses }
+        { data: expenses },
+        { data: refunds }
       ] = await Promise.all([
         supabase.from('invoices').select('*').gte('created_at', sixMonthsAgo.toISOString()),
         supabase.from('pharmacy_invoices').select('*').gte('created_at', sixMonthsAgo.toISOString()),
         supabase.from('lab_reports').select('*').gte('created_at', sixMonthsAgo.toISOString()),
         supabase.from('ot_schedules').select('*').gte('created_at', sixMonthsAgo.toISOString()),
-        supabase.from('expenses').select('*').gte('created_at', sixMonthsAgo.toISOString())
+        supabase.from('expenses').select('*').gte('created_at', sixMonthsAgo.toISOString()),
+        supabase.from('refunds').select('*').gte('created_at', sixMonthsAgo.toISOString())
       ]);
 
-      // Calculate revenue by source
+      // Calculate refunds by type
+      const consultationRefunds = (refunds || [])
+        .filter(refund => refund.refund_type === 'consultation')
+        .reduce((sum, refund) => sum + Number(refund.amount), 0);
+
+      const otRefunds = (refunds || [])
+        .filter(refund => refund.refund_type === 'ot')
+        .reduce((sum, refund) => sum + Number(refund.amount), 0);
+
+      const labRefunds = (refunds || [])
+        .filter(refund => refund.refund_type === 'lab')
+        .reduce((sum, refund) => sum + Number(refund.amount), 0);
+
+      const pharmacyRefunds = (refunds || [])
+        .filter(refund => refund.refund_type === 'pharmacy')
+        .reduce((sum, refund) => sum + Number(refund.amount), 0);
+
+      const otherRefunds = (refunds || [])
+        .filter(refund => !['consultation', 'ot', 'lab', 'pharmacy'].includes(refund.refund_type))
+        .reduce((sum, refund) => sum + Number(refund.amount), 0);
+
+      // Calculate revenue by source (subtract refunds)
       const hospitalRevenue = (invoices || [])
         .filter(inv => inv.status === 'paid')
-        .reduce((sum, inv) => sum + Number(inv.amount), 0);
+        .reduce((sum, inv) => sum + Number(inv.amount), 0) - consultationRefunds - otherRefunds;
 
       const pharmacyRevenue = (pharmacyInvoices || [])
-        .reduce((sum, inv) => sum + Number(inv.final_amount), 0);
+        .reduce((sum, inv) => sum + Number(inv.final_amount), 0) - pharmacyRefunds;
 
       const labRevenue = (labReports || [])
         .filter(report => report.price)
-        .reduce((sum, report) => sum + Number(report.price), 0);
+        .reduce((sum, report) => sum + Number(report.price), 0) - labRefunds;
 
-      // Calculate OT revenue (hospital portion only, excluding doctor expenses)
+      // Calculate OT revenue (hospital portion only, excluding doctor expenses, minus refunds)
       const otRevenue = (otSchedules || [])
         .filter(schedule => schedule.total_cost && schedule.doctor_expense)
-        .reduce((sum, schedule) => sum + (Number(schedule.total_cost) - Number(schedule.doctor_expense)), 0);
+        .reduce((sum, schedule) => sum + (Number(schedule.total_cost) - Number(schedule.doctor_expense)), 0) - otRefunds;
 
       const totalRevenue = hospitalRevenue + pharmacyRevenue + labRevenue + otRevenue;
       const totalExpenses = (expenses || [])
@@ -100,6 +123,15 @@ export function useFinancialAnalytics() {
           }
         });
 
+      // Subtract refunds from monthly revenue
+      (refunds || []).forEach(refund => {
+        if (!refund.created_at) return;
+        const month = format(new Date(refund.created_at), 'MMM yyyy');
+        if (monthlyData.has(month)) {
+          monthlyData.set(month, monthlyData.get(month) - Number(refund.amount));
+        }
+      });
+
       // Aggregate expenses by month
       (expenses || []).forEach(expense => {
         if (!expense.created_at) return;
@@ -124,6 +156,13 @@ export function useFinancialAnalytics() {
           amount: -Number(exp.amount),
           description: exp.description,
           date: exp.created_at || ''
+        })),
+        ...(refunds || []).slice(-5).map(refund => ({
+          id: refund.id,
+          type: 'Refund',
+          amount: -Number(refund.amount),
+          description: `${refund.refund_type} refund: ${refund.description}`,
+          date: refund.created_at || ''
         }))
       ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 10);
 
