@@ -354,7 +354,7 @@ export default function DashboardAdmin() {
                 </div>
                 <div className="p-4 lg:p-6">
                   <AuditLog events={filteredLogs.slice(0, 8).map(log => ({
-                    who: log.user_id || 'System',
+                    who: log.user_profile ? `${log.user_profile.first_name} ${log.user_profile.last_name} (${log.user_profile.email})` : (log.user_id ? `User ID: ${log.user_id}` : 'System'),
                     when: format(new Date(log.created_at || ''), 'yyyy-MM-dd HH:mm'),
                     what: log.action,
                     details: log.details || ''

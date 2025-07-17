@@ -2,6 +2,7 @@
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuditLogger } from '@/hooks/useAuditLogger';
 
 type UserProfile = {
   id: string;
@@ -34,6 +35,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const { logLogin, logLogout } = useAuditLogger();
 
   const fetchUserProfile = async (userId: string) => {
     try {
@@ -172,6 +174,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           return { error: { message: "Your account has been temporarily blocked. Please contact the administrator." } };
         }
         
+        // Log successful login
+        if (profileData) {
+          logLogin(data.user.id, data.user.email || '');
+        }
+        
         // Redirect based on user role
         if (profileData?.role) {
           console.log('Redirecting to dashboard for role:', profileData.role);
@@ -290,6 +297,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     try {
       if (user) {
         console.log('User signed out:', user.email);
+        // Log logout before signing out
+        logLogout(user.id, user.email || '');
       }
       
       // Clean up auth state first

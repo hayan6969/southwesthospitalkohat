@@ -48,10 +48,10 @@ export default function AdminAuditLogs() {
       return false;
     }
 
-    // User email filter - removed as audit_logs don't have user join
-    // if (filters.userEmail && log.user?.email && !log.user.email.toLowerCase().includes(filters.userEmail.toLowerCase())) {
-    //   return false;
-    // }
+    // User email filter
+    if (filters.userEmail && log.user_profile?.email && !log.user_profile.email.toLowerCase().includes(filters.userEmail.toLowerCase())) {
+      return false;
+    }
 
     // IP address filter
     if (filters.ipAddress && log.ip_address && !log.ip_address.includes(filters.ipAddress)) {
@@ -215,10 +215,14 @@ export default function AdminAuditLogs() {
                           <User className="w-4 h-4 text-gray-400" />
                           <div>
                             <div className="font-medium">
-                              User ID: {log.user_id}
+                              {log.user_profile ? (
+                                `${log.user_profile.first_name} ${log.user_profile.last_name}`
+                              ) : (
+                                log.user_id ? `User ID: ${log.user_id}` : 'System'
+                              )}
                             </div>
                             <div className="text-sm text-gray-500">
-                              Audit Log
+                              {log.user_profile?.email || 'System Action'}
                             </div>
                           </div>
                         </div>
