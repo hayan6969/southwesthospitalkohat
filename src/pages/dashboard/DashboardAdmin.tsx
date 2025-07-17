@@ -77,6 +77,8 @@ export default function DashboardAdmin() {
   // System logs filters
   const [actionFilter, setActionFilter] = useState("all");
   const [logSearchTerm, setLogSearchTerm] = useState("");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
 
   // Filter users based on role and search term
   const filteredUsers = users?.filter(user => {
@@ -93,7 +95,13 @@ export default function DashboardAdmin() {
     const matchesSearch = logSearchTerm === "" || 
       log.action.toLowerCase().includes(logSearchTerm.toLowerCase()) ||
       (log.details && log.details.toLowerCase().includes(logSearchTerm.toLowerCase()));
-    return matchesAction && matchesSearch;
+    
+    // Date filtering
+    const logDate = new Date(log.created_at || '');
+    const matchesDateFrom = dateFrom === "" || logDate >= new Date(dateFrom);
+    const matchesDateTo = dateTo === "" || logDate <= new Date(dateTo + 'T23:59:59');
+    
+    return matchesAction && matchesSearch && matchesDateFrom && matchesDateTo;
   }) || [];
 
   const handleEditUser = (user: any) => {
@@ -614,28 +622,64 @@ export default function DashboardAdmin() {
                 </div>
 
                 <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
-                  <div className="flex flex-col sm:flex-row gap-4 mb-6">
-                    <div className="flex-1">
-                      <Input
-                        placeholder="Search logs..."
-                        value={logSearchTerm}
-                        onChange={(e) => setLogSearchTerm(e.target.value)}
-                        className="w-full"
-                      />
+                  <div className="space-y-4 mb-6">
+                    <div className="flex flex-col sm:flex-row gap-4">
+                      <div className="flex-1">
+                        <Input
+                          placeholder="Search logs..."
+                          value={logSearchTerm}
+                          onChange={(e) => setLogSearchTerm(e.target.value)}
+                          className="w-full"
+                        />
+                      </div>
+                      <Select value={actionFilter} onValueChange={setActionFilter}>
+                        <SelectTrigger className="w-48">
+                          <SelectValue placeholder="Filter by action" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All Actions</SelectItem>
+                          <SelectItem value="login">Login</SelectItem>
+                          <SelectItem value="logout">Logout</SelectItem>
+                          <SelectItem value="create">Create</SelectItem>
+                          <SelectItem value="update">Update</SelectItem>
+                          <SelectItem value="delete">Delete</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
-                    <Select value={actionFilter} onValueChange={setActionFilter}>
-                      <SelectTrigger className="w-48">
-                        <SelectValue placeholder="Filter by action" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All Actions</SelectItem>
-                        <SelectItem value="login">Login</SelectItem>
-                        <SelectItem value="logout">Logout</SelectItem>
-                        <SelectItem value="create">Create</SelectItem>
-                        <SelectItem value="update">Update</SelectItem>
-                        <SelectItem value="delete">Delete</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    
+                    <div className="flex flex-col sm:flex-row gap-4">
+                      <div className="flex items-center gap-2">
+                        <label className="text-sm font-medium text-gray-700 whitespace-nowrap">From Date:</label>
+                        <Input
+                          type="date"
+                          value={dateFrom}
+                          onChange={(e) => setDateFrom(e.target.value)}
+                          className="w-40"
+                        />
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <label className="text-sm font-medium text-gray-700 whitespace-nowrap">To Date:</label>
+                        <Input
+                          type="date"
+                          value={dateTo}
+                          onChange={(e) => setDateTo(e.target.value)}
+                          className="w-40"
+                        />
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setDateFrom("");
+                          setDateTo("");
+                          setLogSearchTerm("");
+                          setActionFilter("all");
+                        }}
+                        className="whitespace-nowrap"
+                      >
+                        Clear Filters
+                      </Button>
+                    </div>
                   </div>
 
                   <div className="overflow-x-auto">
