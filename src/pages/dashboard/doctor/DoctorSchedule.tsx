@@ -493,25 +493,24 @@ export default function DoctorSchedule() { // Fixed ordering syntax
                             <X className="w-3 h-3 mr-1" />
                             {cancellingAppointment === appointment.id ? 'Cancelling...' : 'Cancel'}
                           </Button>
-                          {/* Free button - only show after payment is made and not already free */}
+                          {/* Free button - only show after payment is made */}
                           {(appointment.payment_status === 'paid' || appointment.booking_type === 'counter') && (
-                            appointment.invoice?.amount === 0 || appointment.invoice?.description?.includes('Free') ? (
-                              <Badge className="bg-yellow-100 text-yellow-700 text-xs">
-                                <Gift className="w-3 h-3 mr-1" />
-                                Marked as Free
-                              </Badge>
-                            ) : (
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => handleMarkFreeClick(appointment.id, appointment)}
-                                disabled={markAppointmentFree.isPending}
-                                className="bg-yellow-50 border-yellow-200 text-yellow-700 hover:bg-yellow-100"
-                              >
-                                <Gift className="w-3 h-3 mr-1" />
-                                Mark Free
-                              </Button>
-                            )
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleMarkFreeClick(appointment.id, appointment)}
+                              disabled={markAppointmentFree.isPending || appointment.invoice?.amount === 0 || appointment.invoice?.description?.includes('Free')}
+                              className={
+                                appointment.invoice?.amount === 0 || appointment.invoice?.description?.includes('Free')
+                                  ? "bg-yellow-100 border-yellow-300 text-yellow-700 cursor-not-allowed"
+                                  : "bg-yellow-50 border-yellow-200 text-yellow-700 hover:bg-yellow-100"
+                              }
+                            >
+                              <Gift className="w-3 h-3 mr-1" />
+                              {appointment.invoice?.amount === 0 || appointment.invoice?.description?.includes('Free')
+                                ? 'Marked as Free'
+                                : 'Mark Free'}
+                            </Button>
                           )}
                         </>
                       )}
