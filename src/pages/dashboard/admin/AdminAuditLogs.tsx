@@ -215,14 +215,10 @@ export default function AdminAuditLogs() {
                           <User className="w-4 h-4 text-gray-400" />
                           <div>
                             <div className="font-medium">
-                              {log.user_profile ? (
-                                `${log.user_profile.first_name} ${log.user_profile.last_name}`
-                              ) : (
-                                log.user_id ? `User ID: ${log.user_id}` : 'System'
-                              )}
+                              {log.user_profile?.email || (log.user_id ? `User ID: ${log.user_id}` : 'System')}
                             </div>
                             <div className="text-sm text-gray-500">
-                              {log.user_profile?.email || 'System Action'}
+                              {log.user_profile ? `${log.user_profile.first_name} ${log.user_profile.last_name} (${log.user_profile.role})` : 'System Action'}
                             </div>
                           </div>
                         </div>
