@@ -84,21 +84,22 @@ export function DoctorPaymentStatus({ dateRange: propDateRange }: DoctorPaymentS
 
       const consultationFee = doctorData?.consultation_fee || 0;
 
-      // Get all payment records to exclude already processed periods
+      // Get all PAID payment records to exclude already processed periods
       const { data: allPayments } = await supabase
         .from('doctor_payments')
         .select('period_start, period_end, payment_status')
-        .eq('doctor_id', profile.id);
+        .eq('doctor_id', profile.id)
+        .eq('payment_status', 'paid'); // Only get PAID payments
 
-      const processedPeriods = allPayments || [];
+      const paidPeriods = allPayments || [];
 
-      // Function to check if a date falls within any processed payment period
-      const isInProcessedPeriod = (date: string) => {
-        const isProcessed = processedPeriods.some(payment => 
+      // Function to check if a date falls within any PAID payment period
+      const isInPaidPeriod = (date: string) => {
+        const isPaid = paidPeriods.some(payment => 
           date >= payment.period_start && date <= payment.period_end
         );
-        console.log('🔍 Checking date:', date, 'against periods:', processedPeriods, 'result:', isProcessed);
-        return isProcessed;
+        console.log('🔍 Checking date:', date, 'against PAID periods:', paidPeriods, 'result:', isPaid);
+        return isPaid;
       };
 
       // Get completed appointments that haven't been included in any payment record
@@ -115,12 +116,12 @@ export function DoctorPaymentStatus({ dateRange: propDateRange }: DoctorPaymentS
         startDate,
         endDate,
         appointments,
-        processedPeriods
+        paidPeriods
       });
 
-      // Filter out appointments that are already in processed payment periods
+      // Filter out appointments that are already in PAID payment periods
       const unprocessedAppointments = appointments?.filter(apt => 
-        !isInProcessedPeriod(apt.appointment_date.split('T')[0])
+        !isInPaidPeriod(apt.appointment_date.split('T')[0])
       ) || [];
 
       console.log('📊 Unprocessed appointments:', unprocessedAppointments);
@@ -134,9 +135,9 @@ export function DoctorPaymentStatus({ dateRange: propDateRange }: DoctorPaymentS
         .gte('operation_date', startDate)
         .lte('operation_date', endDate);
 
-      // Filter out OT operations that are already in processed payment periods
+      // Filter out OT operations that are already in PAID payment periods
       const unprocessedOtOperations = otOperations?.filter(op => 
-        !isInProcessedPeriod(op.operation_date)
+        !isInPaidPeriod(op.operation_date)
       ) || [];
 
       const appointmentCount = unprocessedAppointments.length;
