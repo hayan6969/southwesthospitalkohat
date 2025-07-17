@@ -12,6 +12,7 @@ import { Plus } from "lucide-react";
 import { convertUsdToPkr } from "@/utils/currency";
 import { generateInvoicePDF } from "@/utils/pdfGenerator";
 import { SearchablePatientSelect } from "@/components/SearchablePatientSelect";
+import { supabase } from "@/integrations/supabase/client";
 
 export function InvoiceDialog() {
   const [open, setOpen] = useState(false);
@@ -59,9 +60,19 @@ export function InvoiceDialog() {
       
       toast.success("Invoice created successfully");
       
-      // Generate and open PDF invoice
-      const selectedPatient = patients?.find(p => p.id === patientId);
-      const patientName = getPatientName(patientId, patientNames || []);
+      // Get complete patient data with patient_number for PDF
+      const { data: patientData } = await supabase
+        .from('patients')
+        .select(`
+          patient_number,
+          profiles!patients_id_fkey(first_name, last_name, email, phone)
+        `)
+        .eq('id', patientId)
+        .single();
+      
+      const patientName = patientData?.profiles
+        ? `${patientData.profiles.first_name} ${patientData.profiles.last_name}`
+        : getPatientName(patientId, patientNames || []);
       
       const invoiceData = {
         invoice_number: invoiceNumber,
@@ -71,10 +82,12 @@ export function InvoiceDialog() {
         due_date: dueDate,
         status: 'pending',
         patient: {
+          patient_number: patientData?.patient_number || 'N/A',
           users: {
-            first_name: patientName.split(' ')[0] || '',
-            last_name: patientName.split(' ').slice(1).join(' ') || '',
-            email: ''
+            first_name: patientData?.profiles?.first_name || patientName.split(' ')[0] || '',
+            last_name: patientData?.profiles?.last_name || patientName.split(' ').slice(1).join(' ') || '',
+            email: patientData?.profiles?.email || '',
+            phone: patientData?.profiles?.phone || ''
           }
         }
       };
