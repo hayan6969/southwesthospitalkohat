@@ -656,7 +656,7 @@ export default function DashboardAdmin() {
                               {format(new Date(log.created_at || ''), 'MMM dd, yyyy HH:mm:ss')}
                             </TableCell>
                             <TableCell>
-                              {log.user_id || 'System'}
+                              {log.user_profile ? `${log.user_profile.first_name} ${log.user_profile.last_name} (${log.user_profile.email})` : (log.user_id ? `User ID: ${log.user_id}` : 'System')}
                             </TableCell>
                             <TableCell>
                               <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded text-sm font-medium">
