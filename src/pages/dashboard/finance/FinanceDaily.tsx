@@ -133,7 +133,8 @@ export default function FinanceDaily() {
       console.log('All refunds in system:', allRefunds?.length, allRefunds);
 
       // Calculate totals
-      const hospitalRevenue = hospitalInvoices?.reduce((sum, inv) => sum + (inv.amount || 0), 0) || 0;
+      // Note: Regular consultation invoices are not included in hospital revenue
+      const hospitalRevenue = 0; // Consultations are paid directly to doctors, not hospital revenue
       
       // Calculate pharmacy revenue and profit correctly
       let pharmacyRevenue = 0;
