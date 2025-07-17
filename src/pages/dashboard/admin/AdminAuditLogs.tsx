@@ -91,6 +91,46 @@ export default function AdminAuditLogs() {
           </Button>
         </div>
 
+        {/* Quick date filter at top */}
+        <Card className="border-primary/20">
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-4 flex-wrap">
+              <div>
+                <Label htmlFor="quickDateFrom" className="text-sm font-medium">From Date</Label>
+                <Input
+                  id="quickDateFrom"
+                  type="date"
+                  value={filters.dateFrom}
+                  onChange={(e) => setFilters({ ...filters, dateFrom: e.target.value })}
+                  className="w-auto"
+                />
+              </div>
+              <div>
+                <Label htmlFor="quickDateTo" className="text-sm font-medium">To Date</Label>
+                <Input
+                  id="quickDateTo"
+                  type="date"
+                  value={filters.dateTo}
+                  onChange={(e) => setFilters({ ...filters, dateTo: e.target.value })}
+                  className="w-auto"
+                />
+              </div>
+              <div className="flex items-end">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={clearFilters}
+                  className="flex items-center gap-1"
+                  disabled={!hasActiveFilters}
+                >
+                  <X className="w-4 h-4" />
+                  Clear
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
         {showFilters && (
           <Card>
             <CardHeader>
