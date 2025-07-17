@@ -341,6 +341,12 @@ export function StaffCounter() {
         }
       };
 
+      console.log('Patient data for PDF:', { 
+        patientData, 
+        patient_number: patientData?.patient_number,
+        invoiceForPDF: invoiceForPDF.patient 
+      });
+
       // Generate and open PDF
       await generateInvoicePDF(invoiceForPDF);
       
