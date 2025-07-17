@@ -54,8 +54,7 @@ export function CheckFreeDialog({ children }: CheckFreeDialogProps) {
         .from('appointments')
         .select(`
           *,
-          patients!inner(patient_number),
-          profiles!inner(first_name, last_name)
+          patients!inner(patient_number, profiles!inner(first_name, last_name))
         `)
         .eq('patient_id', invoice.patient_id)
         .order('created_at', { ascending: false })
@@ -190,7 +189,7 @@ export function CheckFreeDialog({ children }: CheckFreeDialogProps) {
                 <div className="grid grid-cols-2 gap-2 text-sm">
                   <div>
                     <span className="font-medium">Patient:</span>
-                    <div>{appointmentData.profiles.first_name} {appointmentData.profiles.last_name}</div>
+                    <div>{appointmentData.patients.profiles.first_name} {appointmentData.patients.profiles.last_name}</div>
                   </div>
                   <div>
                     <span className="font-medium">Patient #:</span>
