@@ -365,6 +365,24 @@ export function StaffCounter() {
         }
       };
 
+      // Override any patient data that might have been set by the database response
+      invoiceForPDF.patient = {
+        patient_number: patientData?.patient_number || 'N/A',
+        cnic: patientData?.cnic || '',
+        address: patientData?.address || '',
+        date_of_birth: patientData?.date_of_birth || '',
+        blood_type: patientData?.blood_type || '',
+        allergies: patientData?.allergies || '',
+        emergency_contact_name: patientData?.emergency_contact_name || '',
+        emergency_contact_phone: patientData?.emergency_contact_phone || '',
+        users: {
+          first_name: patientData?.profiles?.first_name || patientName.split(' ')[0] || '',
+          last_name: patientData?.profiles?.last_name || patientName.split(' ').slice(1).join(' ') || '',
+          email: patientData?.profiles?.email || '',
+          phone: patientData?.profiles?.phone || ''
+        }
+      };
+
       console.log('Patient data for PDF:', { 
         patientData, 
         patient_number: patientData?.patient_number,
