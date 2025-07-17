@@ -92,6 +92,10 @@ export const usePharmacyAnalytics = () => {
       const returnExpenses = expensesResult.data || [];
       const lastClosing = lastClosingResult.data?.[0];
 
+      console.log('=== PHARMACY ANALYTICS DEBUG ===');
+      console.log('Total invoices found:', allInvoices.length);
+      console.log('Last closing:', lastClosing);
+      
       // Flatten invoice items for easier processing
       const allInvoiceItems: any[] = [];
       allInvoices.forEach(invoice => {
@@ -105,6 +109,9 @@ export const usePharmacyAnalytics = () => {
           });
         }
       });
+      
+      console.log('Total invoice items found:', allInvoiceItems.length);
+      console.log('Sample invoice item:', allInvoiceItems[0]);
 
       // Separate sales and returns based on amount (negative amounts are returns)
       const salesInvoices = allInvoices.filter(inv => inv.final_amount >= 0);
@@ -289,10 +296,30 @@ export const usePharmacyAnalytics = () => {
       // If no closing exists, start from beginning of time (include all transactions)
       const lastClosingTime = lastClosing ? toPakistanTime(new Date(lastClosing.closing_time)) : new Date(0);
       
+      console.log('=== HOSPITAL PAYMENT CALCULATION ===');
+      console.log('Last closing time:', lastClosingTime);
+      console.log('Pakistan today:', pakistanToday);
+      
       const sinceClosingInvoiceItems = allInvoiceItems.filter(item => {
         const invoiceDate = toPakistanTime(new Date(item.created_at));
-        return invoiceDate > lastClosingTime && item.unit_price > 0 && item.medicines?.purchase_price !== undefined;
+        const isAfterClosing = invoiceDate > lastClosingTime;
+        const hasPositivePrice = item.unit_price > 0;
+        const hasMedicineData = item.medicines?.purchase_price !== undefined;
+        
+        if (isAfterClosing && hasPositivePrice) {
+          console.log('Valid item for hospital payment:', {
+            invoiceDate: invoiceDate.toISOString(),
+            unitPrice: item.unit_price,
+            purchasePrice: item.medicines?.purchase_price,
+            quantity: item.quantity,
+            medicineName: item.medicines?.name
+          });
+        }
+        
+        return isAfterClosing && hasPositivePrice && hasMedicineData;
       });
+      
+      console.log('Items since closing:', sinceClosingInvoiceItems.length);
       
       const sinceClosingReturns = returnInvoices.filter(inv => {
         const invDate = toPakistanTime(new Date(inv.created_at));
@@ -303,10 +330,24 @@ export const usePharmacyAnalytics = () => {
         return expDate > lastClosingTime;
       }).reduce((sum, exp) => sum + exp.amount, 0);
       
-      const payHospitalAmount = Math.max(0, sinceClosingInvoiceItems.reduce((sum, item) => {
+      console.log('Returns since closing:', sinceClosingReturns);
+      
+      const hospitalProfit = sinceClosingInvoiceItems.reduce((sum, item) => {
         const profit = (item.unit_price - (item.medicines?.purchase_price || 0)) * item.quantity;
+        console.log('Profit calculation:', {
+          unitPrice: item.unit_price,
+          purchasePrice: item.medicines?.purchase_price,
+          quantity: item.quantity,
+          profit: profit
+        });
         return sum + profit;
-      }, 0) - sinceClosingReturns);
+      }, 0);
+      
+      console.log('Total hospital profit before returns:', hospitalProfit);
+      
+      const payHospitalAmount = Math.max(0, hospitalProfit - sinceClosingReturns);
+      
+      console.log('Final pay hospital amount:', payHospitalAmount);
 
       return {
         todayRevenue,
