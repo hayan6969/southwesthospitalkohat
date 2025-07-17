@@ -435,10 +435,15 @@ export default function DoctorSchedule() { // Fixed ordering syntax
                     </Badge>
                   </TableCell>
                   
-                  {/* Payment Status */}
+                   {/* Payment Status */}
                   <TableCell>
                     <div className="flex items-center gap-2">
-                      {appointment.booking_type === 'counter' ? (
+                      {appointment.cleared_at ? (
+                        <Badge variant="default" className="bg-purple-100 text-purple-700">
+                          <Gift className="w-3 h-3 mr-1" />
+                          Free Appointment
+                        </Badge>
+                      ) : appointment.booking_type === 'counter' ? (
                         <Badge variant="default" className="bg-green-100 text-green-700">
                           <CreditCard className="w-3 h-3 mr-1" />
                           Paid (Counter)
@@ -457,16 +462,22 @@ export default function DoctorSchedule() { // Fixed ordering syntax
                     </div>
                   </TableCell>
                   
-                  {/* Status */}
+                   {/* Status */}
                   <TableCell>
-                    <Badge className={
-                      appointment.status === 'completed' ? 'bg-green-100 text-green-700' :
-                      appointment.status === 'scheduled' ? 'bg-blue-100 text-blue-700' :
-                      appointment.status === 'cancelled' ? 'bg-red-100 text-red-700' :
-                      'bg-gray-100 text-gray-700'
-                    }>
-                      {appointment.status}
-                    </Badge>
+                    {appointment.status === 'completed' && appointment.cleared_at ? (
+                      <Badge className="bg-purple-100 text-purple-700">
+                        Completed (Free)
+                      </Badge>
+                    ) : (
+                      <Badge className={
+                        appointment.status === 'completed' ? 'bg-green-100 text-green-700' :
+                        appointment.status === 'scheduled' ? 'bg-blue-100 text-blue-700' :
+                        appointment.status === 'cancelled' ? 'bg-red-100 text-red-700' :
+                        'bg-gray-100 text-gray-700'
+                      }>
+                        {appointment.status}
+                      </Badge>
+                    )}
                   </TableCell>
                   
                   {/* Actions */}
@@ -493,24 +504,25 @@ export default function DoctorSchedule() { // Fixed ordering syntax
                             <X className="w-3 h-3 mr-1" />
                             {cancellingAppointment === appointment.id ? 'Cancelling...' : 'Cancel'}
                           </Button>
-                          {/* Free button - only show after payment is made */}
-                          {(appointment.payment_status === 'paid' || appointment.booking_type === 'counter') && (
+                           {/* Free button - only show after payment is made and not already marked as free */}
+                          {(appointment.payment_status === 'paid' || appointment.booking_type === 'counter') && !appointment.cleared_at && (
                             <Button
                               size="sm"
                               variant="outline"
                               onClick={() => handleMarkFreeClick(appointment.id, appointment)}
-                              disabled={markAppointmentFree.isPending || (appointment.invoice?.amount === 0 && appointment.invoice?.description?.includes('Free'))}
-                              className={
-                                (appointment.invoice?.amount === 0 && appointment.invoice?.description?.includes('Free'))
-                                  ? "bg-green-100 border-green-300 text-green-700 cursor-not-allowed"
-                                  : "bg-yellow-50 border-yellow-200 text-yellow-700 hover:bg-yellow-100"
-                              }
+                              disabled={markAppointmentFree.isPending}
+                              className="bg-yellow-50 border-yellow-200 text-yellow-700 hover:bg-yellow-100"
                             >
                               <Gift className="w-3 h-3 mr-1" />
-                              {(appointment.invoice?.amount === 0 && appointment.invoice?.description?.includes('Free'))
-                                ? 'Marked as Free'
-                                : 'Mark Free'}
+                              Mark Free
                             </Button>
+                          )}
+                          {/* Show "Marked as Free" if already marked */}
+                          {appointment.cleared_at && (
+                            <Badge className="bg-purple-100 text-purple-700">
+                              <Gift className="w-3 h-3 mr-1" />
+                              Marked as Free
+                            </Badge>
                           )}
                         </>
                       )}
