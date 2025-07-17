@@ -74,7 +74,7 @@ export const usePharmacyAnalytics = () => {
         supabase.from('medicines').select('*'),
         supabase
           .from('pharmacy_invoices')
-          .select('*, pharmacy_invoice_items(quantity, unit_price, total_price, medicine_id, medicines(purchase_price, selling_price))')
+          .select('*, pharmacy_invoice_items(quantity, unit_price, total_price, medicine_id, medicines(purchase_price, selling_price, name))')
           .order('created_at', { ascending: false }),
         supabase
           .from('pharmacy_expenses')
@@ -286,11 +286,14 @@ export const usePharmacyAnalytics = () => {
       const monthlyProfitMargin = monthlyRevenue > 0 ? (monthlyProfit / monthlyRevenue) * 100 : 0;
 
       // Calculate amount to pay hospital (profit since last closing)
+      // If no closing exists, start from beginning of time (include all transactions)
       const lastClosingTime = lastClosing ? toPakistanTime(new Date(lastClosing.closing_time)) : new Date(0);
+      
       const sinceClosingInvoiceItems = allInvoiceItems.filter(item => {
         const invoiceDate = toPakistanTime(new Date(item.created_at));
-        return invoiceDate > lastClosingTime && item.unit_price > 0;
+        return invoiceDate > lastClosingTime && item.unit_price > 0 && item.medicines?.purchase_price !== undefined;
       });
+      
       const sinceClosingReturns = returnInvoices.filter(inv => {
         const invDate = toPakistanTime(new Date(inv.created_at));
         return invDate > lastClosingTime;
