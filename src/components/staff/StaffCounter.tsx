@@ -36,6 +36,7 @@ export function StaffCounter() {
   const [appointments, setAppointments] = useState<any[]>([]);
   const [activeTab, setActiveTab] = useState("upcoming");
   const [selectedDoctorForSchedule, setSelectedDoctorForSchedule] = useState<{id: string, name: string} | null>(null);
+  const [doctorSearchTerm, setDoctorSearchTerm] = useState("");
   
   // Fetch appointments with invoice data to check for free status
   useEffect(() => {
@@ -396,15 +397,6 @@ export function StaffCounter() {
           <CardContent>
             <div className="text-2xl font-bold">{doctors?.length || 0}</div>
             <p className="text-xs text-muted-foreground">On duty today</p>
-            <Button
-              variant="outline"
-              size="sm"
-              className="mt-2 w-full"
-              onClick={() => setSelectedDoctorForSchedule({id: '', name: ''})}
-            >
-              <Eye className="w-4 h-4 mr-2" />
-              View Schedules
-            </Button>
           </CardContent>
         </Card>
 
@@ -782,45 +774,87 @@ export function StaffCounter() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-3">
-              {doctorsLoading ? (
-                <div className="animate-pulse space-y-2">
-                  {Array.from({ length: 3 }).map((_, i) => (
-                    <div key={i} className="h-16 bg-gray-100 rounded"></div>
-                  ))}
-                </div>
-              ) : doctors && doctors.length > 0 ? (
-                doctors.map((doctor) => (
-                  <div key={doctor.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                    <div>
-                      <p className="font-medium">
-                        {getDoctorName(doctor.id, doctorNames || [])}
-                      </p>
-                      <p className="text-sm text-gray-600">{doctor.specialization}</p>
-                    </div>
-                     <div className="flex items-center gap-2">
-                       <div className="text-right">
-                         <p className="text-sm font-medium text-green-600">Available</p>
-                         <p className="text-xs text-gray-500">
-                           {filteredAppointments.filter(apt => apt.doctor_id === doctor.id).length} appointments
-                         </p>
-                       </div>
-                       <Button
-                         size="sm"
-                         variant="outline"
-                         onClick={() => setSelectedDoctorForSchedule({
-                           id: doctor.id, 
-                           name: getDoctorName(doctor.id, doctorNames || [])
-                         })}
-                       >
-                         <Eye className="w-4 h-4" />
-                       </Button>
-                     </div>
+            <div className="space-y-4">
+              {/* Doctor Search */}
+              <div className="flex items-center gap-2">
+                <Search className="w-4 h-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search doctors by name or specialization..."
+                  value={doctorSearchTerm}
+                  onChange={(e) => setDoctorSearchTerm(e.target.value)}
+                  className="flex-1"
+                />
+                {doctorSearchTerm && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setDoctorSearchTerm("")}
+                  >
+                    <X className="w-4 h-4" />
+                  </Button>
+                )}
+              </div>
+
+              {/* Doctors List */}
+              <div className="space-y-3">
+                {doctorsLoading ? (
+                  <div className="animate-pulse space-y-2">
+                    {Array.from({ length: 3 }).map((_, i) => (
+                      <div key={i} className="h-16 bg-gray-100 rounded"></div>
+                    ))}
                   </div>
-                ))
-              ) : (
-                <p className="text-gray-500 text-center py-4">No doctors available</p>
-              )}
+                ) : (() => {
+                  // Filter doctors based on search term
+                  const filteredDoctors = doctors?.filter(doctor => {
+                    if (!doctorSearchTerm) return true;
+                    const doctorName = getDoctorName(doctor.id, doctorNames || []).toLowerCase();
+                    const specialization = (doctor.specialization || '').toLowerCase();
+                    const search = doctorSearchTerm.toLowerCase();
+                    return doctorName.includes(search) || specialization.includes(search);
+                  }) || [];
+
+                  return filteredDoctors.length > 0 ? (
+                    filteredDoctors.map((doctor) => (
+                      <div key={doctor.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer" onClick={() => setSelectedDoctorForSchedule({
+                        id: doctor.id, 
+                        name: getDoctorName(doctor.id, doctorNames || [])
+                      })}>
+                        <div>
+                          <p className="font-medium">
+                            {getDoctorName(doctor.id, doctorNames || [])}
+                          </p>
+                          <p className="text-sm text-gray-600">{doctor.specialization}</p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <div className="text-right">
+                            <p className="text-sm font-medium text-green-600">Available</p>
+                            <p className="text-xs text-gray-500">
+                              {filteredAppointments.filter(apt => apt.doctor_id === doctor.id).length} appointments
+                            </p>
+                          </div>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedDoctorForSchedule({
+                                id: doctor.id, 
+                                name: getDoctorName(doctor.id, doctorNames || [])
+                              });
+                            }}
+                          >
+                            <Eye className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-gray-500 text-center py-4">
+                      {doctorSearchTerm ? `No doctors found matching "${doctorSearchTerm}"` : "No doctors available"}
+                    </p>
+                  );
+                })()}
+              </div>
             </div>
           </CardContent>
         </Card>
