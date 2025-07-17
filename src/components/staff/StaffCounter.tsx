@@ -345,8 +345,11 @@ export function StaffCounter() {
       const doctorName = getDoctorName(appointment.doctor_id, doctorNames || []);
       
       // Create invoice object for PDF generation with complete patient information
+      // We need to exclude the patient field from invoiceData to avoid conflicts
+      const { patient: dbPatient, ...invoiceDataWithoutPatient } = invoiceData;
+      
       const invoiceForPDF = {
-        ...invoiceData,
+        ...invoiceDataWithoutPatient,
         patient: {
           patient_number: patientData?.patient_number || 'N/A',
           cnic: patientData?.cnic || '',
@@ -362,24 +365,6 @@ export function StaffCounter() {
             email: patientData?.profiles?.email || '',
             phone: patientData?.profiles?.phone || ''
           }
-        }
-      };
-
-      // Override any patient data that might have been set by the database response
-      invoiceForPDF.patient = {
-        patient_number: patientData?.patient_number || 'N/A',
-        cnic: patientData?.cnic || '',
-        address: patientData?.address || '',
-        date_of_birth: patientData?.date_of_birth || '',
-        blood_type: patientData?.blood_type || '',
-        allergies: patientData?.allergies || '',
-        emergency_contact_name: patientData?.emergency_contact_name || '',
-        emergency_contact_phone: patientData?.emergency_contact_phone || '',
-        users: {
-          first_name: patientData?.profiles?.first_name || patientName.split(' ')[0] || '',
-          last_name: patientData?.profiles?.last_name || patientName.split(' ').slice(1).join(' ') || '',
-          email: patientData?.profiles?.email || '',
-          phone: patientData?.profiles?.phone || ''
         }
       };
 
