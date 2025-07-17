@@ -250,6 +250,8 @@ export function EnhancedLabDialog() {
           invoiceNumber: invoice.invoice_number,
           patientName: `${selectedPatient?.profile?.first_name} ${selectedPatient?.profile?.last_name}`,
           patientEmail: selectedPatient?.profile?.email || '',
+          patientId: selectedPatient?.patient_number || 'N/A',
+          patientPhone: selectedPatient?.profile?.phone || '',
           tests: selectedLabTests.map(test => ({
             name: test.name,
             price: test.price,
