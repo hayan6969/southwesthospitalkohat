@@ -416,51 +416,6 @@ export function DoctorAnalytics() {
           </Card>
         </div>
 
-        {/* Payment Status */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Received</p>
-                  <p className="text-xl font-bold text-green-600">
-                    {formatPkrAmount(analytics?.receivedEarnings || 0)}
-                  </p>
-                </div>
-                <Badge className="bg-green-100 text-green-700">Paid</Badge>
-              </div>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Pending</p>
-                  <p className="text-xl font-bold text-orange-600">
-                    {formatPkrAmount(analytics?.pendingEarnings || 0)}
-                  </p>
-                </div>
-                <Badge className="bg-orange-100 text-orange-700">Pending</Badge>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Collection Rate</p>
-                  <p className="text-xl font-bold text-blue-600">
-                    {analytics?.totalEarnings ? 
-                      Math.round((analytics.receivedEarnings / analytics.totalEarnings) * 100) : 0}%
-                  </p>
-                </div>
-                <TrendingUp className="h-6 w-6 text-blue-600" />
-              </div>
-            </CardContent>
-          </Card>
-        </div>
 
         {/* Charts */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
