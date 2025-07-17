@@ -17,6 +17,7 @@ import { toast } from "sonner";
 import { Plus, Search, UserPlus, Check, ChevronsUpDown } from "lucide-react";
 import { formatCurrency } from "@/utils/currency";
 import { generateInvoicePDF } from "@/utils/pdfGenerator";
+import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 
 const appointmentTypes = [
@@ -193,9 +194,29 @@ export function EnhancedAppointmentDialog() {
       
       toast.success("Appointment created successfully with invoice");
       
+      // Get patient info for PDF - for new patients, we need to fetch the patient_number
+      let patientForPdf = selectedPatient;
+      if (activeTab === "register") {
+        // For newly registered patients, fetch the patient data to get the patient_number
+        const { data: newPatientData } = await supabase
+          .from('patients')
+          .select('patient_number')
+          .eq('id', patientId)
+          .single();
+        
+        patientForPdf = {
+          patient_number: newPatientData?.patient_number || 'N/A',
+          profile: {
+            first_name: newPatient.first_name,
+            last_name: newPatient.last_name,
+            email: `patient${newPatient.phone}@hims.app` // Default email format
+          }
+        };
+      }
+      
       // Generate and open PDF invoice
-      const patientName = selectedPatient 
-        ? `${selectedPatient.profile?.first_name} ${selectedPatient.profile?.last_name}`
+      const patientName = patientForPdf 
+        ? `${patientForPdf.profile?.first_name} ${patientForPdf.profile?.last_name}`
         : `${newPatient.first_name} ${newPatient.last_name}`;
       
       const invoiceData = {
@@ -206,10 +227,11 @@ export function EnhancedAppointmentDialog() {
         due_date: result.invoice.due_date,
         status: result.invoice.status,
         patient: {
+          patient_number: patientForPdf?.patient_number || 'N/A',
           users: {
             first_name: patientName.split(' ')[0],
             last_name: patientName.split(' ').slice(1).join(' '),
-            email: selectedPatient?.profile?.email || ''
+            email: patientForPdf?.profile?.email || ''
           }
         }
       };
