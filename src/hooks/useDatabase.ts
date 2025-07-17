@@ -958,10 +958,10 @@ export const useMarkAppointmentFree = () => {
   
   return useMutation({
     mutationFn: async (appointmentId: string) => {
-      // First get the appointment to find the associated invoice
+      // First get the appointment to find the associated invoice and doctor info
       const { data: appointment, error: appointmentError } = await supabase
         .from('appointments')
-        .select('patient_id, invoice_generated_at')
+        .select('patient_id, invoice_generated_at, doctor_id, consultation_fee_at_time')
         .eq('id', appointmentId)
         .single();
 
@@ -992,11 +992,20 @@ export const useMarkAppointmentFree = () => {
         }
       }
 
+      // Mark the appointment as cleared for tracking
+      const { error: clearError } = await supabase
+        .from('appointments')
+        .update({ cleared_at: new Date().toISOString() })
+        .eq('id', appointmentId);
+
+      if (clearError) throw clearError;
+
       return { success: true };
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['appointments'] });
       queryClient.invalidateQueries({ queryKey: ['invoices'] });
+      queryClient.invalidateQueries({ queryKey: ['doctor-analytics'] });
     },
   });
 };

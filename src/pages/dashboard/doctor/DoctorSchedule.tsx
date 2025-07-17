@@ -499,15 +499,15 @@ export default function DoctorSchedule() { // Fixed ordering syntax
                               size="sm"
                               variant="outline"
                               onClick={() => handleMarkFreeClick(appointment.id, appointment)}
-                              disabled={markAppointmentFree.isPending || appointment.invoice?.amount === 0 || appointment.invoice?.description?.includes('Free')}
+                              disabled={markAppointmentFree.isPending || (appointment.invoice?.amount === 0 && appointment.invoice?.description?.includes('Free'))}
                               className={
-                                appointment.invoice?.amount === 0 || appointment.invoice?.description?.includes('Free')
-                                  ? "bg-yellow-100 border-yellow-300 text-yellow-700 cursor-not-allowed"
+                                (appointment.invoice?.amount === 0 && appointment.invoice?.description?.includes('Free'))
+                                  ? "bg-green-100 border-green-300 text-green-700 cursor-not-allowed"
                                   : "bg-yellow-50 border-yellow-200 text-yellow-700 hover:bg-yellow-100"
                               }
                             >
                               <Gift className="w-3 h-3 mr-1" />
-                              {appointment.invoice?.amount === 0 || appointment.invoice?.description?.includes('Free')
+                              {(appointment.invoice?.amount === 0 && appointment.invoice?.description?.includes('Free'))
                                 ? 'Marked as Free'
                                 : 'Mark Free'}
                             </Button>

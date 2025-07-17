@@ -41,7 +41,8 @@ export function DoctorAnalytics() {
           type,
           patient_id,
           created_at,
-          consultation_fee_at_time
+          consultation_fee_at_time,
+          cleared_at
         `)
         .eq('doctor_id', profile.id)
         .gte('appointment_date', fromDate)
@@ -110,12 +111,16 @@ export function DoctorAnalytics() {
     const completedOtOperations = otOperations.filter(op => op.status === 'completed');
     const totalOtEarnings = completedOtOperations.reduce((sum, op) => sum + (op.doctor_expense || 0), 0);
     
-    // Use historical consultation fees for accurate calculations
+    // Doctor earns consultation fee for all completed appointments (including free ones)
+    // The hospital pays the doctor even when patient doesn't pay (free appointments)
     const consultationEarnings = completedAppointments.reduce((sum, apt) => sum + (apt.consultation_fee_at_time || 0), 0);
     const totalEarnings = consultationEarnings + totalOtEarnings;
     
+    // Received earnings = paid appointments + free appointments (marked as cleared)
+    const freeAppointments = appointments.filter(apt => apt.status === 'completed' && apt.cleared_at);
     const receivedConsultationEarnings = paidAppointments.reduce((sum, apt) => sum + (apt.consultation_fee_at_time || 0), 0);
-    const receivedEarnings = receivedConsultationEarnings; // OT payments handled separately in payment status
+    const freeConsultationEarnings = freeAppointments.reduce((sum, apt) => sum + (apt.consultation_fee_at_time || 0), 0);
+    const receivedEarnings = receivedConsultationEarnings + freeConsultationEarnings;
     const pendingEarnings = totalEarnings - receivedEarnings;
 
     // This month's earnings using historical consultation fees
