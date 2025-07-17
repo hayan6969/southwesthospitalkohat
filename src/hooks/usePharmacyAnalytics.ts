@@ -321,16 +321,14 @@ export const usePharmacyAnalytics = () => {
       
       console.log('Items since closing:', sinceClosingInvoiceItems.length);
       
-      const sinceClosingReturns = returnInvoices.filter(inv => {
-        const invDate = toPakistanTime(new Date(inv.created_at));
-        return invDate > lastClosingTime;
-      }).reduce((sum, inv) => sum + Math.abs(inv.final_amount), 0) + 
-      returnExpenses.filter(exp => {
+      // Only count return invoices (with negative final_amount), not return expenses
+      // because return items in invoice_items already have negative quantities
+      const sinceClosingReturns = returnExpenses.filter(exp => {
         const expDate = toPakistanTime(new Date(exp.expense_date));
         return expDate > lastClosingTime;
       }).reduce((sum, exp) => sum + exp.amount, 0);
       
-      console.log('Returns since closing:', sinceClosingReturns);
+      console.log('Returns since closing (expenses only):', sinceClosingReturns);
       
       const hospitalProfit = sinceClosingInvoiceItems.reduce((sum, item) => {
         const profit = (item.unit_price - (item.medicines?.purchase_price || 0)) * item.quantity;
