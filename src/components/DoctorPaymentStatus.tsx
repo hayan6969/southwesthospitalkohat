@@ -94,9 +94,11 @@ export function DoctorPaymentStatus({ dateRange: propDateRange }: DoctorPaymentS
 
       // Function to check if a date falls within any processed payment period
       const isInProcessedPeriod = (date: string) => {
-        return processedPeriods.some(payment => 
+        const isProcessed = processedPeriods.some(payment => 
           date >= payment.period_start && date <= payment.period_end
         );
+        console.log('🔍 Checking date:', date, 'against periods:', processedPeriods, 'result:', isProcessed);
+        return isProcessed;
       };
 
       // Get completed appointments that haven't been included in any payment record
