@@ -17,6 +17,10 @@ export default function AdminAuditLogs() {
   const { data: auditLogs, isLoading } = useAuditLogs();
   const queryClient = useQueryClient();
 
+  // Debug logs
+  console.log("Audit logs data:", auditLogs);
+  console.log("Sample log:", auditLogs?.[0]);
+
   // Filter state
   const [showFilters, setShowFilters] = useState(false);
   const [filters, setFilters] = useState({
