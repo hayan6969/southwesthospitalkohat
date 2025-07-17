@@ -16,6 +16,7 @@ import { generateDailyClosingPDF } from "@/utils/pdfGenerator";
 import { StatsCard } from "@/components/StatsCard";
 import { toast } from "sonner";
 import { HospitalClosingBalanceDialog } from "@/components/dialogs/HospitalClosingBalanceDialog";
+import { getCurrentPakistanTime } from "@/utils/timezone";
 
 export default function FinanceDaily() {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
@@ -337,9 +338,10 @@ export default function FinanceDaily() {
     mutationFn: async () => {
       if (!detailedData || !dailyData) throw new Error('No data available');
 
+      const pakistanNow = getCurrentPakistanTime();
       const closingData = {
         closingDate: targetDate,
-        closingTime: new Date().toISOString(),
+        closingTime: pakistanNow.toISOString(),
         dayName: format(selectedDate, 'EEEE'),
         hospitalRevenue: dailyData.totalHospitalRevenue,
         pharmacyRevenue: dailyData.pharmacyRevenue,
