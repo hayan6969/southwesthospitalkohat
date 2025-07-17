@@ -20,6 +20,7 @@ export default function AdminAuditLogs() {
   // Debug logs
   console.log("Audit logs data:", auditLogs);
   console.log("Sample log:", auditLogs?.[0]);
+  console.log("Sample user_profile:", auditLogs?.[0]?.user_profile);
 
   // Filter state
   const [showFilters, setShowFilters] = useState(false);
