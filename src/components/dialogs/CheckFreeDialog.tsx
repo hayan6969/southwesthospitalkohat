@@ -210,12 +210,7 @@ export function CheckFreeDialog({ children }: CheckFreeDialogProps) {
                 </div>
 
                 <div className="flex flex-col gap-2">
-                  {isCleared ? (
-                    <Badge className="bg-green-100 text-green-700 w-fit">
-                      <CheckCircle className="w-3 h-3 mr-1" />
-                      Cleared
-                    </Badge>
-                  ) : isMarkedFree ? (
+                  {isMarkedFree ? (
                     <div className="space-y-2">
                       <Badge className="bg-yellow-100 text-yellow-700 w-fit">
                         <Gift className="w-3 h-3 mr-1" />
