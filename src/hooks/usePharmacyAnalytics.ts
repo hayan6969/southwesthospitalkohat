@@ -66,18 +66,13 @@ export const usePharmacyAnalytics = () => {
       const [
         medicinesResult,
         invoicesResult,
-        invoiceItemsResult,
         expensesResult,
         lastClosingResult
       ] = await Promise.all([
         supabase.from('medicines').select('*'),
         supabase
           .from('pharmacy_invoices')
-          .select('*')
-          .order('created_at', { ascending: false }),
-        supabase
-          .from('pharmacy_invoice_items')
-          .select('*, medicines!inner(*)')
+          .select('*, pharmacy_invoice_items(quantity, unit_price, total_price, medicine_id, medicines(purchase_price, selling_price))')
           .order('created_at', { ascending: false }),
         supabase
           .from('pharmacy_expenses')
@@ -92,9 +87,22 @@ export const usePharmacyAnalytics = () => {
 
       const medicines = medicinesResult.data || [];
       const allInvoices = invoicesResult.data || [];
-      const allInvoiceItems = invoiceItemsResult.data || [];
       const returnExpenses = expensesResult.data || [];
       const lastClosing = lastClosingResult.data?.[0];
+
+      // Flatten invoice items for easier processing
+      const allInvoiceItems: any[] = [];
+      allInvoices.forEach(invoice => {
+        if (invoice.pharmacy_invoice_items) {
+          invoice.pharmacy_invoice_items.forEach((item: any) => {
+            allInvoiceItems.push({
+              ...item,
+              created_at: invoice.created_at,
+              invoice_id: invoice.id
+            });
+          });
+        }
+      });
 
       // Separate sales and returns based on amount (negative amounts are returns)
       const salesInvoices = allInvoices.filter(inv => inv.final_amount >= 0);

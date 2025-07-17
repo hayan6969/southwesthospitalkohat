@@ -163,7 +163,7 @@ export default function PharmacyAnalytics() {
               <CardContent>
                 <div className="text-2xl font-bold text-orange-600">{formatPkrAmount(analytics?.payHospitalAmount || 0)}</div>
                 <p className="text-xs text-gray-600 mt-1">Profit amount due to hospital</p>
-                <p className="text-xs text-gray-500 mt-2">Resets after daily closing at 8 PM</p>
+                <p className="text-xs text-gray-500 mt-2">Resets after daily closing button is pressed</p>
               </CardContent>
             </Card>
             
@@ -176,7 +176,7 @@ export default function PharmacyAnalytics() {
                   <p>• This amount represents the pharmacy's profit share that must be paid to the hospital</p>
                   <p>• Calculated as: (Selling Price - Purchase Price) × Quantity sold, minus returns</p>
                   <p>• Amount accumulates from the last daily closing until the next closing</p>
-                  <p>• Finance team performs daily closing at 8 PM, which resets this amount to zero</p>
+                  <p>• Finance team manually performs daily closing using the closing button, which resets this amount to zero</p>
                 </div>
               </CardContent>
             </Card>
