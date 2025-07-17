@@ -265,7 +265,7 @@ export function StaffCounter() {
     setProcessingInvoice(appointment.id);
     try {
       // Get complete patient data with patient_number and profile information
-      const { data: patientData } = await supabase
+      const { data: patientData, error: patientError } = await supabase
         .from('patients')
         .select(`
           patient_number,
@@ -280,6 +280,12 @@ export function StaffCounter() {
         `)
         .eq('id', appointment.patient_id)
         .single();
+
+      console.log('Patient query result:', { patientData, patientError, patient_id: appointment.patient_id });
+      
+      if (patientError) {
+        console.error('Error fetching patient data:', patientError);
+      }
 
       // First, check if invoice already exists
       const { data: existingInvoice } = await supabase
