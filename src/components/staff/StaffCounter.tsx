@@ -345,8 +345,12 @@ export function StaffCounter() {
       const doctorName = getDoctorName(appointment.doctor_id, doctorNames || []);
       
       // Create invoice object for PDF generation with complete patient information
+      console.log('invoiceData from database:', JSON.stringify(invoiceData, null, 2));
+      
       // We need to exclude the patient field from invoiceData to avoid conflicts
       const { patient: dbPatient, ...invoiceDataWithoutPatient } = invoiceData;
+      console.log('dbPatient from database:', dbPatient);
+      console.log('invoiceDataWithoutPatient:', invoiceDataWithoutPatient);
       
       const invoiceForPDF = {
         ...invoiceDataWithoutPatient,
