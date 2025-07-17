@@ -375,7 +375,14 @@ export function StaffCounter() {
       console.log('Patient data for PDF:', { 
         patientData, 
         patient_number: patientData?.patient_number,
+        profiles: patientData?.profiles,
         invoiceForPDF: invoiceForPDF.patient 
+      });
+      
+      console.log('Final patient object being passed to PDF:', {
+        patient_number: invoiceForPDF.patient.patient_number,
+        users: invoiceForPDF.patient.users,
+        emergency_contact_phone: invoiceForPDF.patient.emergency_contact_phone
       });
 
       // Generate and open PDF
