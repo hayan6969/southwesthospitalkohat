@@ -15,6 +15,9 @@ export interface PharmacyAnalytics {
   monthlyReturns: number;
   monthlySales: number;
   
+  // Hospital payment
+  payHospitalAmount: number;
+  
   // Detailed analytics
   dailyData: Array<{
     date: string;
@@ -64,7 +67,8 @@ export const usePharmacyAnalytics = () => {
         medicinesResult,
         invoicesResult,
         invoiceItemsResult,
-        expensesResult
+        expensesResult,
+        lastClosingResult
       ] = await Promise.all([
         supabase.from('medicines').select('*'),
         supabase
@@ -78,13 +82,19 @@ export const usePharmacyAnalytics = () => {
         supabase
           .from('pharmacy_expenses')
           .select('*')
-          .eq('expense_type', 'return')
+          .eq('expense_type', 'return'),
+        supabase
+          .from('daily_closings')
+          .select('closing_date, closing_time')
+          .order('closing_date', { ascending: false })
+          .limit(1)
       ]);
 
       const medicines = medicinesResult.data || [];
       const allInvoices = invoicesResult.data || [];
       const allInvoiceItems = invoiceItemsResult.data || [];
       const returnExpenses = expensesResult.data || [];
+      const lastClosing = lastClosingResult.data?.[0];
 
       // Separate sales and returns based on amount (negative amounts are returns)
       const salesInvoices = allInvoices.filter(inv => inv.final_amount >= 0);
@@ -256,6 +266,24 @@ export const usePharmacyAnalytics = () => {
       const overallProfitMargin = totalRevenue > 0 ? (totalProfit / totalRevenue) * 100 : 0;
       const monthlyProfitMargin = monthlyRevenue > 0 ? (monthlyProfit / monthlyRevenue) * 100 : 0;
 
+      // Calculate amount to pay hospital (profit since last closing)
+      const lastClosingTime = lastClosing ? new Date(lastClosing.closing_time) : new Date(0);
+      const sinceClosingInvoiceItems = allInvoiceItems.filter(item => {
+        const invoiceDate = new Date(item.created_at);
+        return invoiceDate > lastClosingTime && item.unit_price > 0;
+      });
+      const sinceClosingReturns = returnInvoices.filter(inv => 
+        new Date(inv.created_at) > lastClosingTime
+      ).reduce((sum, inv) => sum + Math.abs(inv.final_amount), 0) + 
+      returnExpenses.filter(exp => 
+        new Date(exp.expense_date) > lastClosingTime
+      ).reduce((sum, exp) => sum + exp.amount, 0);
+      
+      const payHospitalAmount = Math.max(0, sinceClosingInvoiceItems.reduce((sum, item) => {
+        const profit = (item.unit_price - (item.medicines?.purchase_price || 0)) * item.quantity;
+        return sum + profit;
+      }, 0) - sinceClosingReturns);
+
       return {
         todayRevenue,
         todayProfit,
@@ -265,6 +293,7 @@ export const usePharmacyAnalytics = () => {
         monthlyProfit,
         monthlyReturns,
         monthlySales,
+        payHospitalAmount,
         dailyData,
         topMedicines,
         recentActivity,

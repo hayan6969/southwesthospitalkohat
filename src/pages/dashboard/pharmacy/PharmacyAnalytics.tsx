@@ -7,7 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell, Area, AreaChart } from "recharts";
-import { TrendingUp, TrendingDown, Banknote, Package, ShoppingCart, AlertTriangle, RotateCcw, Calendar, Activity, Percent } from "lucide-react";
+import { TrendingUp, TrendingDown, Banknote, Package, ShoppingCart, AlertTriangle, RotateCcw, Calendar, Activity, Percent, Building2 } from "lucide-react";
 import { formatPkrAmount } from "@/utils/currency";
 
 export default function PharmacyAnalytics() {
@@ -146,6 +146,38 @@ export default function PharmacyAnalytics() {
               <CardContent>
                 <div className="text-2xl font-bold text-purple-600">{analytics?.monthlySales || 0}</div>
                 <p className="text-xs text-gray-600 mt-1">Transactions this month</p>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+
+        {/* Pay Hospital Section */}
+        <div className="space-y-4">
+          <h2 className="text-xl font-semibold text-gray-800">Payment Due</h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <Card className="md:col-span-1">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Pay Hospital</CardTitle>
+                <Building2 className="h-4 w-4 text-orange-600" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-orange-600">{formatPkrAmount(analytics?.payHospitalAmount || 0)}</div>
+                <p className="text-xs text-gray-600 mt-1">Profit amount due to hospital</p>
+                <p className="text-xs text-gray-500 mt-2">Resets after daily closing at 8 PM</p>
+              </CardContent>
+            </Card>
+            
+            <Card className="md:col-span-2">
+              <CardHeader>
+                <CardTitle className="text-lg">About Hospital Payment</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2 text-sm text-gray-600">
+                  <p>• This amount represents the pharmacy's profit share that must be paid to the hospital</p>
+                  <p>• Calculated as: (Selling Price - Purchase Price) × Quantity sold, minus returns</p>
+                  <p>• Amount accumulates from the last daily closing until the next closing</p>
+                  <p>• Finance team performs daily closing at 8 PM, which resets this amount to zero</p>
+                </div>
               </CardContent>
             </Card>
           </div>
