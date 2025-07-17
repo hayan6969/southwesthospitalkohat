@@ -103,11 +103,13 @@ export function DoctorPaymentStatus({ dateRange: propDateRange }: DoctorPaymentS
       };
 
       // Get completed appointments that haven't been included in any payment record
+      // Exclude free appointments (cleared_at is not null means it's a free appointment)
       const { data: appointments } = await supabase
         .from('appointments')
-        .select('id, appointment_date, consultation_fee_at_time')
+        .select('id, appointment_date, consultation_fee_at_time, cleared_at')
         .eq('doctor_id', profile.id)
         .eq('status', 'completed')
+        .is('cleared_at', null) // Only include appointments that are NOT marked as free
         .gte('appointment_date', startDate)
         .lte('appointment_date', endDate);
 

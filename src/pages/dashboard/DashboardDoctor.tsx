@@ -244,15 +244,21 @@ export default function DashboardDoctor() {
                                  {getPatientName(appointment.patient_id, patientNames || [])}
                                </TableCell>
                                <TableCell className="max-w-[100px] truncate">{appointment.type}</TableCell>
-                               <TableCell>
-                                 <span className={`px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap ${
-                                   appointment.status === 'completed' ? 'bg-green-100 text-green-700' :
-                                   appointment.status === 'scheduled' ? 'bg-blue-100 text-blue-700' :
-                                   'bg-gray-100 text-gray-700'
-                                 }`}>
-                                   {appointment.status}
-                                 </span>
-                               </TableCell>
+                                <TableCell>
+                                  {appointment.status === 'completed' && appointment.cleared_at ? (
+                                    <span className="px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap bg-purple-100 text-purple-700">
+                                      Completed (Free)
+                                    </span>
+                                  ) : (
+                                    <span className={`px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap ${
+                                      appointment.status === 'completed' ? 'bg-green-100 text-green-700' :
+                                      appointment.status === 'scheduled' ? 'bg-blue-100 text-blue-700' :
+                                      'bg-gray-100 text-gray-700'
+                                    }`}>
+                                      {appointment.status}
+                                    </span>
+                                  )}
+                                </TableCell>
                              </TableRow>
                            ))
                         ) : (
