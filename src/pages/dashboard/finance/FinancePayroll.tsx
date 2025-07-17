@@ -11,6 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { formatPkrAmount } from "@/utils/currency";
+import { getCurrentPakistanTime } from "@/utils/timezone";
 import { Users, Banknote, Calendar, Plus, Download, Check, CheckCircle, CalendarIcon, Settings, RefreshCw, UserPlus, Edit, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
@@ -243,7 +244,7 @@ export default function FinancePayroll() {
           category: 'Payroll',
           description: `Salary payment for ${record.employee_name} (${record.pay_period})`,
           amount: record.net_salary,
-          expense_date: new Date().toISOString().split('T')[0],
+          expense_date: getCurrentPakistanTime().toISOString().split('T')[0],
           created_by: userData.user?.id
         }]);
 
@@ -293,7 +294,7 @@ export default function FinancePayroll() {
         category: 'Payroll',
         description: `Salary payment for ${record.employee_name} (${record.pay_period})`,
         amount: record.net_salary,
-        expense_date: new Date().toISOString().split('T')[0],
+        expense_date: getCurrentPakistanTime().toISOString().split('T')[0],
         created_by: userData.user?.id
       }));
 

@@ -14,6 +14,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { formatPkrAmount } from "@/utils/currency";
+import { getCurrentPakistanTime } from "@/utils/timezone";
 import { RefreshCw, Plus } from "lucide-react";
 
 interface RefundFormData {
@@ -93,7 +94,7 @@ export default function FinanceRefunds() {
             amount: parseFloat(refundData.amount),
             category: 'Refund',
             description: `${getRefundTypeLabel(refundData.refundType)} refund: ${refundData.description}`,
-            expense_date: new Date().toISOString().split('T')[0],
+            expense_date: getCurrentPakistanTime().toISOString().split('T')[0],
             created_by: profile?.id
           });
 

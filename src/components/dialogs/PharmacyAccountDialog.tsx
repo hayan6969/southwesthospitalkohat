@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { formatPkrAmount } from "@/utils/currency";
+import { getCurrentPakistanTime } from "@/utils/timezone";
 import { Calculator, TrendingUp, DollarSign, Wallet, Minus, Plus, Receipt } from "lucide-react";
 
 interface PharmacyAccountDialogProps {
@@ -195,7 +196,7 @@ export function PharmacyAccountDialog({ open, onOpenChange }: PharmacyAccountDia
           amount: expenseAmount,
           expense_type: expenseType,
           description: expenseType === 'hospital_profit_withdrawal' ? 'Hospital profit withdrawal' : 'Bill payment',
-          expense_date: new Date().toISOString().split('T')[0]
+          expense_date: getCurrentPakistanTime().toISOString().split('T')[0]
         });
 
       if (error) throw error;

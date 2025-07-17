@@ -9,6 +9,7 @@ import { Separator } from "@/components/ui/separator";
 import { useMedicines, useCreatePharmacyInvoice } from "@/hooks/useDatabase";
 import { formatPkrAmount } from "@/utils/currency";
 import { generatePharmacyInvoicePDF } from "@/utils/pharmacyPdfGenerator";
+import { getCurrentPakistanTime } from "@/utils/timezone";
 import { toast } from "sonner";
 import { ShoppingCart, Plus, Trash2 } from "lucide-react";
 
@@ -144,7 +145,7 @@ export default function PharmacySell() {
         total_amount: subtotal,
         discount_amount: discountAmount,
         final_amount: total,
-        created_at: new Date().toISOString(),
+        created_at: getCurrentPakistanTime().toISOString(),
         items: cart.map(item => ({
           medicine_name: item.name,
           quantity: item.quantity,
