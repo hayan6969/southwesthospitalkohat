@@ -11,10 +11,11 @@ import { PatientDialog } from "@/components/dialogs/PatientDialog";
 import { InvoiceDialog } from "@/components/dialogs/InvoiceDialog";
 import { EmergencyConsultationDialog } from "@/components/dialogs/EmergencyConsultationDialog";
 import { DoctorScheduleDialog } from "@/components/dialogs/DoctorScheduleDialog";
+import { CheckFreeDialog } from "@/components/dialogs/CheckFreeDialog";
 import { useAppointments, usePatients, useDoctors } from "@/hooks/useDatabase";
 import { usePatientNames, useDoctorNames, getPatientName, getDoctorName } from "@/hooks/useDisplayHelpers";
 import { supabase } from "@/integrations/supabase/client";
-import { Calendar, UserPlus, Receipt, Users, Clock, CreditCard, Printer, Search, FileText, Download, CalendarIcon, X, RotateCcw, Gift, AlertTriangle, Eye } from "lucide-react";
+import { Calendar, UserPlus, Receipt, Users, Clock, CreditCard, Search, FileText, Download, CalendarIcon, X, RotateCcw, Gift, AlertTriangle, Eye, Printer } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
@@ -419,10 +420,7 @@ export function StaffCounter() {
         <PatientDialog />
         <InvoiceDialog />
         <EmergencyConsultationDialog />
-        <Button variant="outline">
-          <Printer className="w-4 h-4 mr-2" />
-          Print Patient Card
-        </Button>
+        <CheckFreeDialog />
       </div>
 
       {/* Search and Filter Bar */}
