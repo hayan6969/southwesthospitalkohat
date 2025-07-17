@@ -372,6 +372,8 @@ export function StaffCounter() {
       });
 
       // Generate and open PDF
+      console.log('About to call generateInvoicePDF with:', JSON.stringify(invoiceForPDF, null, 2));
+      console.log('Specifically patient.patient_number:', invoiceForPDF.patient?.patient_number);
       await generateInvoicePDF(invoiceForPDF);
       
       toast({

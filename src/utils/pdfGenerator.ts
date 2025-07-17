@@ -232,6 +232,10 @@ export const generateLabInvoicePDF = async (data: {
 };
 
 export const generateInvoicePDF = async (invoice: any) => {
+  console.log('generateInvoicePDF called with:', JSON.stringify(invoice, null, 2));
+  console.log('invoice.patient structure:', invoice.patient);
+  console.log('invoice.patient?.patient_number:', invoice.patient?.patient_number);
+  
   const doc = new jsPDF();
   const pageWidth = doc.internal.pageSize.width;
 
