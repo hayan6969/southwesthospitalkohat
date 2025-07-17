@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { startOfDay, endOfDay, startOfMonth, endOfMonth, format, subDays } from "date-fns";
+import { getCurrentPakistanTime, toPakistanTime } from "@/utils/timezone";
 
 export interface PharmacyAnalytics {
   // Today's data
@@ -56,11 +57,12 @@ export const usePharmacyAnalytics = () => {
   return useQuery({
     queryKey: ['pharmacy-analytics'],
     queryFn: async (): Promise<PharmacyAnalytics> => {
-      const today = new Date();
-      const startOfToday = startOfDay(today);
-      const endOfToday = endOfDay(today);
-      const startOfThisMonth = startOfMonth(today);
-      const endOfThisMonth = endOfMonth(today);
+      // Use Pakistan timezone for all date calculations
+      const pakistanToday = getCurrentPakistanTime();
+      const startOfToday = startOfDay(pakistanToday);
+      const endOfToday = endOfDay(pakistanToday);
+      const startOfThisMonth = startOfMonth(pakistanToday);
+      const endOfThisMonth = endOfMonth(pakistanToday);
 
       // Fetch all data in parallel
       const [
@@ -108,16 +110,19 @@ export const usePharmacyAnalytics = () => {
       const salesInvoices = allInvoices.filter(inv => inv.final_amount >= 0);
       const returnInvoices = allInvoices.filter(inv => inv.final_amount < 0);
 
-      // Today's calculations
-      const todaySalesInvoices = salesInvoices.filter(inv => 
-        new Date(inv.created_at) >= startOfToday && new Date(inv.created_at) <= endOfToday
-      );
-      const todayReturnInvoices = returnInvoices.filter(inv => 
-        new Date(inv.created_at) >= startOfToday && new Date(inv.created_at) <= endOfToday
-      );
-      const todayReturnExpenses = returnExpenses.filter(exp => 
-        new Date(exp.expense_date) >= startOfToday && new Date(exp.expense_date) <= endOfToday
-      );
+      // Today's calculations (using Pakistan timezone)
+      const todaySalesInvoices = salesInvoices.filter(inv => {
+        const invDate = toPakistanTime(new Date(inv.created_at));
+        return invDate >= startOfToday && invDate <= endOfToday;
+      });
+      const todayReturnInvoices = returnInvoices.filter(inv => {
+        const invDate = toPakistanTime(new Date(inv.created_at));
+        return invDate >= startOfToday && invDate <= endOfToday;
+      });
+      const todayReturnExpenses = returnExpenses.filter(exp => {
+        const expDate = toPakistanTime(new Date(exp.expense_date));
+        return expDate >= startOfToday && expDate <= endOfToday;
+      });
 
       const todayRevenue = todaySalesInvoices.reduce((sum, inv) => sum + inv.final_amount, 0);
       const todayReturns = Math.abs(todayReturnInvoices.reduce((sum, inv) => sum + inv.final_amount, 0)) + 
@@ -126,7 +131,7 @@ export const usePharmacyAnalytics = () => {
 
       // Calculate today's profit
       const todayInvoiceItems = allInvoiceItems.filter(item => {
-        const invoiceDate = new Date(item.created_at);
+        const invoiceDate = toPakistanTime(new Date(item.created_at));
         return invoiceDate >= startOfToday && invoiceDate <= endOfToday && item.unit_price > 0;
       });
       const todayProfit = todayInvoiceItems.reduce((sum, item) => {
@@ -134,16 +139,19 @@ export const usePharmacyAnalytics = () => {
         return sum + profit;
       }, 0) - todayReturns;
 
-      // Monthly calculations
-      const monthlySalesInvoices = salesInvoices.filter(inv => 
-        new Date(inv.created_at) >= startOfThisMonth && new Date(inv.created_at) <= endOfThisMonth
-      );
-      const monthlyReturnInvoices = returnInvoices.filter(inv => 
-        new Date(inv.created_at) >= startOfThisMonth && new Date(inv.created_at) <= endOfThisMonth
-      );
-      const monthlyReturnExpenses = returnExpenses.filter(exp => 
-        new Date(exp.expense_date) >= startOfThisMonth && new Date(exp.expense_date) <= endOfThisMonth
-      );
+      // Monthly calculations (current calendar month using Pakistan timezone)
+      const monthlySalesInvoices = salesInvoices.filter(inv => {
+        const invDate = toPakistanTime(new Date(inv.created_at));
+        return invDate >= startOfThisMonth && invDate <= endOfThisMonth;
+      });
+      const monthlyReturnInvoices = returnInvoices.filter(inv => {
+        const invDate = toPakistanTime(new Date(inv.created_at));
+        return invDate >= startOfThisMonth && invDate <= endOfThisMonth;
+      });
+      const monthlyReturnExpenses = returnExpenses.filter(exp => {
+        const expDate = toPakistanTime(new Date(exp.expense_date));
+        return expDate >= startOfThisMonth && expDate <= endOfThisMonth;
+      });
 
       const monthlyRevenue = monthlySalesInvoices.reduce((sum, inv) => sum + inv.final_amount, 0);
       const monthlyReturns = Math.abs(monthlyReturnInvoices.reduce((sum, inv) => sum + inv.final_amount, 0)) + 
@@ -152,7 +160,7 @@ export const usePharmacyAnalytics = () => {
 
       // Calculate monthly profit
       const monthlyInvoiceItems = allInvoiceItems.filter(item => {
-        const invoiceDate = new Date(item.created_at);
+        const invoiceDate = toPakistanTime(new Date(item.created_at));
         return invoiceDate >= startOfThisMonth && invoiceDate <= endOfThisMonth && item.unit_price > 0;
       });
       const monthlyProfit = monthlyInvoiceItems.reduce((sum, item) => {
@@ -163,19 +171,22 @@ export const usePharmacyAnalytics = () => {
       // Daily data for charts (last 30 days)
       const dailyData = [];
       for (let i = 29; i >= 0; i--) {
-        const date = subDays(today, i);
+        const date = subDays(pakistanToday, i);
         const dayStart = startOfDay(date);
         const dayEnd = endOfDay(date);
         
-        const daySalesInvoices = salesInvoices.filter(inv => 
-          new Date(inv.created_at) >= dayStart && new Date(inv.created_at) <= dayEnd
-        );
-        const dayReturnInvoices = returnInvoices.filter(inv => 
-          new Date(inv.created_at) >= dayStart && new Date(inv.created_at) <= dayEnd
-        );
-        const dayReturnExpenses = returnExpenses.filter(exp => 
-          new Date(exp.expense_date) >= dayStart && new Date(exp.expense_date) <= dayEnd
-        );
+        const daySalesInvoices = salesInvoices.filter(inv => {
+          const invDate = toPakistanTime(new Date(inv.created_at));
+          return invDate >= dayStart && invDate <= dayEnd;
+        });
+        const dayReturnInvoices = returnInvoices.filter(inv => {
+          const invDate = toPakistanTime(new Date(inv.created_at));
+          return invDate >= dayStart && invDate <= dayEnd;
+        });
+        const dayReturnExpenses = returnExpenses.filter(exp => {
+          const expDate = toPakistanTime(new Date(exp.expense_date));
+          return expDate >= dayStart && expDate <= dayEnd;
+        });
         
         const dayRevenue = daySalesInvoices.reduce((sum, inv) => sum + inv.final_amount, 0);
         const dayReturns = Math.abs(dayReturnInvoices.reduce((sum, inv) => sum + inv.final_amount, 0)) + 
@@ -183,7 +194,7 @@ export const usePharmacyAnalytics = () => {
         const daySales = daySalesInvoices.length;
         
         const dayInvoiceItems = allInvoiceItems.filter(item => {
-          const invoiceDate = new Date(item.created_at);
+          const invoiceDate = toPakistanTime(new Date(item.created_at));
           return invoiceDate >= dayStart && invoiceDate <= dayEnd && item.unit_price > 0;
         });
         const dayProfit = dayInvoiceItems.reduce((sum, item) => {
@@ -275,17 +286,19 @@ export const usePharmacyAnalytics = () => {
       const monthlyProfitMargin = monthlyRevenue > 0 ? (monthlyProfit / monthlyRevenue) * 100 : 0;
 
       // Calculate amount to pay hospital (profit since last closing)
-      const lastClosingTime = lastClosing ? new Date(lastClosing.closing_time) : new Date(0);
+      const lastClosingTime = lastClosing ? toPakistanTime(new Date(lastClosing.closing_time)) : new Date(0);
       const sinceClosingInvoiceItems = allInvoiceItems.filter(item => {
-        const invoiceDate = new Date(item.created_at);
+        const invoiceDate = toPakistanTime(new Date(item.created_at));
         return invoiceDate > lastClosingTime && item.unit_price > 0;
       });
-      const sinceClosingReturns = returnInvoices.filter(inv => 
-        new Date(inv.created_at) > lastClosingTime
-      ).reduce((sum, inv) => sum + Math.abs(inv.final_amount), 0) + 
-      returnExpenses.filter(exp => 
-        new Date(exp.expense_date) > lastClosingTime
-      ).reduce((sum, exp) => sum + exp.amount, 0);
+      const sinceClosingReturns = returnInvoices.filter(inv => {
+        const invDate = toPakistanTime(new Date(inv.created_at));
+        return invDate > lastClosingTime;
+      }).reduce((sum, inv) => sum + Math.abs(inv.final_amount), 0) + 
+      returnExpenses.filter(exp => {
+        const expDate = toPakistanTime(new Date(exp.expense_date));
+        return expDate > lastClosingTime;
+      }).reduce((sum, exp) => sum + exp.amount, 0);
       
       const payHospitalAmount = Math.max(0, sinceClosingInvoiceItems.reduce((sum, item) => {
         const profit = (item.unit_price - (item.medicines?.purchase_price || 0)) * item.quantity;
