@@ -56,36 +56,19 @@ export const useAuditLogs = () => {
   return useQuery({
     queryKey: ['audit-logs'],
     queryFn: async () => {
-      // Get audit logs first
+      // Get audit logs with profile data using the foreign key relationship
       const { data: logs, error: logsError } = await supabase
         .from('audit_logs')
-        .select('*')
+        .select(`
+          *,
+          user_profile:profiles!audit_logs_user_id_fkey(id, first_name, last_name, email, role)
+        `)
         .order('created_at', { ascending: false })
         .limit(500);
 
       if (logsError) throw logsError;
 
-      // Get user profiles for the user IDs in the logs
-      const userIds = logs?.map(log => log.user_id).filter(Boolean) || [];
-      
-      let profiles = [];
-      if (userIds.length > 0) {
-        const { data: profilesData, error: profilesError } = await supabase
-          .from('profiles')
-          .select('id, first_name, last_name, email, role')
-          .in('id', userIds);
-
-        if (profilesError) throw profilesError;
-        profiles = profilesData || [];
-      }
-
-      // Join the data manually
-      const logsWithProfiles = logs?.map(log => ({
-        ...log,
-        user_profile: profiles.find(profile => profile.id === log.user_id) || null
-      })) || [];
-
-      return logsWithProfiles;
+      return logs || [];
     }
   });
 };
