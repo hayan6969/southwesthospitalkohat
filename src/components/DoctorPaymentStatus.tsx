@@ -102,7 +102,7 @@ export function DoctorPaymentStatus({ dateRange: propDateRange }: DoctorPaymentS
       // Get completed appointments that haven't been included in any payment record
       const { data: appointments } = await supabase
         .from('appointments')
-        .select('id, appointment_date')
+        .select('id, appointment_date, consultation_fee_at_time')
         .eq('doctor_id', profile.id)
         .eq('status', 'completed')
         .gte('appointment_date', startDate)
@@ -129,7 +129,9 @@ export function DoctorPaymentStatus({ dateRange: propDateRange }: DoctorPaymentS
 
       const appointmentCount = unprocessedAppointments.length;
       const otCount = unprocessedOtOperations.length;
-      const consultationEarnings = appointmentCount * consultationFee;
+      // Calculate consultation earnings based on actual fees recorded at appointment time
+      const consultationEarnings = unprocessedAppointments.reduce((sum, apt) => 
+        sum + (apt.consultation_fee_at_time || 0), 0);
       const otEarnings = unprocessedOtOperations.reduce((sum, op) => sum + (op.doctor_expense || 0), 0);
       const totalEarnings = consultationEarnings + otEarnings;
 
