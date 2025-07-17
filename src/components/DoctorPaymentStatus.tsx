@@ -108,10 +108,20 @@ export function DoctorPaymentStatus({ dateRange: propDateRange }: DoctorPaymentS
         .gte('appointment_date', startDate)
         .lte('appointment_date', endDate);
 
+      console.log('🔍 Debugging appointment data:', {
+        doctorId: profile.id,
+        startDate,
+        endDate,
+        appointments,
+        processedPeriods
+      });
+
       // Filter out appointments that are already in processed payment periods
       const unprocessedAppointments = appointments?.filter(apt => 
         !isInProcessedPeriod(apt.appointment_date.split('T')[0])
       ) || [];
+
+      console.log('📊 Unprocessed appointments:', unprocessedAppointments);
 
       // Get completed OT operations that haven't been included in any payment record
       const { data: otOperations } = await supabase
