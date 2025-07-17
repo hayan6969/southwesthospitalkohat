@@ -264,10 +264,20 @@ export function StaffCounter() {
   const handleGenerateInvoice = async (appointment: any) => {
     setProcessingInvoice(appointment.id);
     try {
-      // Get patient data with patient_number
+      // Get complete patient data with patient_number and profile information
       const { data: patientData } = await supabase
         .from('patients')
-        .select('patient_number')
+        .select(`
+          patient_number,
+          cnic,
+          address,
+          date_of_birth,
+          blood_type,
+          allergies,
+          emergency_contact_name,
+          emergency_contact_phone,
+          profiles!patients_id_fkey(first_name, last_name, email, phone)
+        `)
         .eq('id', appointment.patient_id)
         .single();
 
@@ -305,7 +315,7 @@ export function StaffCounter() {
             status: 'paid',
             paid_at: new Date().toISOString(),
             invoice_number: `INV-${Date.now()}`,
-            description: `Consultation with ${getDoctorName(appointment.doctor_id, doctorNames || [])}`,
+            description: `Consultation with ${getDoctorName(appointment.doctor_id, doctorNames || [])} - Patient: ${patientData?.patient_number || 'N/A'}`,
             due_date: new Date().toISOString().split('T')[0]
           })
           .select()
@@ -328,15 +338,23 @@ export function StaffCounter() {
       const patientName = getPatientName(appointment.patient_id, patientNames || []);
       const doctorName = getDoctorName(appointment.doctor_id, doctorNames || []);
       
-      // Create invoice object for PDF generation with patient_number
+      // Create invoice object for PDF generation with complete patient information
       const invoiceForPDF = {
         ...invoiceData,
         patient: {
           patient_number: patientData?.patient_number || 'N/A',
+          cnic: patientData?.cnic || '',
+          address: patientData?.address || '',
+          date_of_birth: patientData?.date_of_birth || '',
+          blood_type: patientData?.blood_type || '',
+          allergies: patientData?.allergies || '',
+          emergency_contact_name: patientData?.emergency_contact_name || '',
+          emergency_contact_phone: patientData?.emergency_contact_phone || '',
           users: {
-            first_name: patientName.split(' ')[0] || '',
-            last_name: patientName.split(' ').slice(1).join(' ') || '',
-            email: ''
+            first_name: patientData?.profiles?.first_name || patientName.split(' ')[0] || '',
+            last_name: patientData?.profiles?.last_name || patientName.split(' ').slice(1).join(' ') || '',
+            email: patientData?.profiles?.email || '',
+            phone: patientData?.profiles?.phone || ''
           }
         }
       };

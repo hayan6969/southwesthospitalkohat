@@ -360,7 +360,7 @@ export const useCreateAppointmentWithInvoice = () => {
             id: tempInvoiceId,
             patient_id: appointmentData.appointment.patient_id,
             amount: appointmentData.consultationFee,
-            description: `Consultation with Dr. ${appointmentData.doctorName}`,
+            description: `Consultation with Dr. ${appointmentData.doctorName} - Patient: ${appointmentData.patientNumber || 'N/A'}`,
             invoice_number: `INV-TEMP-${Date.now()}`,
             status: 'paid',
             paid_at: new Date().toISOString(),
@@ -401,13 +401,19 @@ export const useCreateAppointmentWithInvoice = () => {
 
       if (appointmentError) throw appointmentError;
 
-      // Create invoice
+      // Create invoice with proper description including patient ID
+      const { data: patientInfo } = await supabase
+        .from('patients')
+        .select('patient_number')
+        .eq('id', appointmentData.appointment.patient_id)
+        .single();
+
       const { data: invoice, error: invoiceError } = await supabase
         .from('invoices')
         .insert([{
           patient_id: appointmentData.appointment.patient_id,
           amount: appointmentData.consultationFee,
-          description: `Consultation with Dr. ${appointmentData.doctorName}`,
+          description: `Consultation with Dr. ${appointmentData.doctorName} - Patient: ${patientInfo?.patient_number || 'N/A'}`,
           invoice_number: `INV-${Date.now()}`,
           status: 'paid', // Staff appointments are paid at counter
           paid_at: new Date().toISOString()
