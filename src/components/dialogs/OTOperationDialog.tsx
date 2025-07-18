@@ -193,7 +193,7 @@ export function OTOperationDialog({ onOperationAdded, editingOperation, onEditCo
 
   return (
     <>
-      <Dialog open={open} onOpenChange={handleClose}>
+      <Dialog open={editingOperation ? open : undefined} onOpenChange={editingOperation ? handleClose : setOpen}>
         <DialogTrigger asChild>
           <Button>
             <Plus className="w-4 h-4 mr-2" />
