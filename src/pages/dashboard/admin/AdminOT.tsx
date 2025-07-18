@@ -37,6 +37,7 @@ export function AdminOT() {
   const [isLoading, setIsLoading] = useState(true);
   const [roomDialogOpen, setRoomDialogOpen] = useState(false);
   const [newRoomName, setNewRoomName] = useState("");
+  const [editingRoom, setEditingRoom] = useState<OTRoom | null>(null);
   const [editingOperation, setEditingOperation] = useState<OTOperation | null>(null);
   const { toast } = useToast();
 
@@ -104,28 +105,95 @@ export function AdminOT() {
     }
 
     try {
+      if (editingRoom) {
+        // Update existing room
+        const { error } = await supabase
+          .from("ot_rooms")
+          .update({ room_name: newRoomName.trim() })
+          .eq("id", editingRoom.id);
+
+        if (error) throw error;
+
+        toast({
+          title: "Success",
+          description: "OT room updated successfully",
+        });
+      } else {
+        // Create new room
+        const { error } = await supabase
+          .from("ot_rooms")
+          .insert({
+            room_name: newRoomName.trim(),
+            is_available: true
+          });
+
+        if (error) throw error;
+
+        toast({
+          title: "Success",
+          description: "OT room added successfully",
+        });
+      }
+
+      setNewRoomName("");
+      setEditingRoom(null);
+      setRoomDialogOpen(false);
+      fetchRooms();
+    } catch (error) {
+      console.error("Error with OT room:", error);
+      toast({
+        title: "Error",
+        description: `Failed to ${editingRoom ? 'update' : 'add'} OT room`,
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleEditRoom = (room: OTRoom) => {
+    setEditingRoom(room);
+    setNewRoomName(room.room_name);
+    setRoomDialogOpen(true);
+  };
+
+  const handleDeleteRoom = async (roomId: string) => {
+    try {
+      // First check if this room is referenced in any schedules
+      const { data: schedules, error: scheduleError } = await supabase
+        .from("ot_schedules")
+        .select("id")
+        .eq("room_id", roomId)
+        .limit(1);
+
+      if (scheduleError) throw scheduleError;
+
+      if (schedules && schedules.length > 0) {
+        toast({
+          title: "Cannot Delete Room",
+          description: "This room is currently assigned to OT schedules and cannot be deleted.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // If no schedules reference this room, proceed with deletion
       const { error } = await supabase
         .from("ot_rooms")
-        .insert({
-          room_name: newRoomName.trim(),
-          is_available: true
-        });
+        .delete()
+        .eq("id", roomId);
 
       if (error) throw error;
 
       toast({
         title: "Success",
-        description: "OT room added successfully",
+        description: "OT room deleted successfully",
       });
 
-      setNewRoomName("");
-      setRoomDialogOpen(false);
       fetchRooms();
     } catch (error) {
-      console.error("Error adding room:", error);
+      console.error("Error deleting room:", error);
       toast({
         title: "Error",
-        description: "Failed to add OT room",
+        description: "Failed to delete OT room",
         variant: "destructive",
       });
     }
@@ -257,7 +325,7 @@ export function AdminOT() {
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>Add New OT Room</DialogTitle>
+                <DialogTitle>{editingRoom ? 'Edit OT Room' : 'Add New OT Room'}</DialogTitle>
               </DialogHeader>
               <div className="space-y-4">
                 <div className="space-y-2">
@@ -270,11 +338,15 @@ export function AdminOT() {
                   />
                 </div>
                 <div className="flex justify-end gap-2">
-                  <Button variant="outline" onClick={() => setRoomDialogOpen(false)}>
+                  <Button variant="outline" onClick={() => {
+                    setRoomDialogOpen(false);
+                    setEditingRoom(null);
+                    setNewRoomName("");
+                  }}>
                     Cancel
                   </Button>
                   <Button onClick={handleAddRoom}>
-                    Add Room
+                    {editingRoom ? 'Update Room' : 'Add Room'}
                   </Button>
                 </div>
               </div>
@@ -479,13 +551,53 @@ export function AdminOT() {
                           </Badge>
                         </TableCell>
                         <TableCell>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => toggleRoomAvailability(room.id, room.is_available)}
-                          >
-                            {room.is_available ? "Deactivate" : "Activate"}
-                          </Button>
+                          <div className="flex gap-2">
+                            <Button 
+                              size="sm" 
+                              variant="outline"
+                              onClick={() => handleEditRoom(room)}
+                            >
+                              <Edit className="w-3 h-3 mr-1" />
+                              Edit
+                            </Button>
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button 
+                                  size="sm" 
+                                  variant="outline"
+                                  className="text-red-600 hover:text-red-700"
+                                >
+                                  <Trash2 className="w-3 h-3 mr-1" />
+                                  Delete
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Delete Room</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    Are you sure you want to delete "{room.room_name}"? 
+                                    This action cannot be undone.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                  <AlertDialogAction
+                                    onClick={() => handleDeleteRoom(room.id)}
+                                    className="bg-red-600 hover:bg-red-700"
+                                  >
+                                    Delete
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => toggleRoomAvailability(room.id, room.is_available)}
+                            >
+                              {room.is_available ? "Deactivate" : "Activate"}
+                            </Button>
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))}
