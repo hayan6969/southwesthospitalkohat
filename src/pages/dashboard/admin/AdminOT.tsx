@@ -282,22 +282,12 @@ export function AdminOT() {
           </Dialog>
           <OTOperationDialog 
             onOperationAdded={fetchOperations} 
-            editingOperation={null}
+            editingOperation={editingOperation}
             onEditComplete={() => {
               setEditingOperation(null);
               fetchOperations();
             }}
           />
-          {editingOperation && (
-            <OTOperationDialog 
-              onOperationAdded={fetchOperations} 
-              editingOperation={editingOperation}
-              onEditComplete={() => {
-                setEditingOperation(null);
-                fetchOperations();
-              }}
-            />
-          )}
         </div>
       </div>
 

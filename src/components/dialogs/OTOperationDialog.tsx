@@ -192,15 +192,14 @@ export function OTOperationDialog({ onOperationAdded, editingOperation, onEditCo
     .reduce((sum, exp) => sum + Number(exp.cost), 0);
 
   return (
-    <Dialog open={open} onOpenChange={handleClose}>
-      {!editingOperation && (
+    <>
+      <Dialog open={open} onOpenChange={handleClose}>
         <DialogTrigger asChild>
           <Button>
             <Plus className="w-4 h-4 mr-2" />
             Add OT Operation
           </Button>
         </DialogTrigger>
-      )}
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{editingOperation ? 'Edit OT Operation' : 'Add New OT Operation'}</DialogTitle>
@@ -290,5 +289,6 @@ export function OTOperationDialog({ onOperationAdded, editingOperation, onEditCo
         </form>
       </DialogContent>
     </Dialog>
+    </>
   );
 }
