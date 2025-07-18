@@ -10,7 +10,7 @@ const updateFavicon = async () => {
     const { data: hospitalSettings } = await supabase
       .from('hospital_settings')
       .select('logo_url')
-      .single();
+      .maybeSingle();
 
     const favicon = document.getElementById('favicon') as HTMLLinkElement;
     

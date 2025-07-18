@@ -29,7 +29,7 @@ export const useHospitalSettings = () => {
         .from('hospital_settings')
         .select('*')
         .limit(1)
-        .single();
+        .maybeSingle();
 
       if (error) throw error;
       setSettings(data);
