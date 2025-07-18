@@ -23,6 +23,31 @@ export const useStats = () => {
 };
 
 export const useUsers = () => {
+  const queryClient = useQueryClient();
+  
+  // Set up real-time subscription
+  useEffect(() => {
+    const channel = supabase
+      .channel('profiles-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*', // Listen to all changes (INSERT, UPDATE, DELETE)
+          schema: 'public',
+          table: 'profiles'
+        },
+        () => {
+          // Invalidate and refetch the users query when profiles table changes
+          queryClient.invalidateQueries({ queryKey: ['users'] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [queryClient]);
+
   return useQuery({
     queryKey: ['users'],
     queryFn: async () => {
