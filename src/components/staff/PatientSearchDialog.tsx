@@ -35,16 +35,19 @@ export function PatientSearchDialog() {
 
     setIsSearching(true);
     try {
+      // Search by email pattern since patients are stored as {phone}@patient.local
+      const patientEmail = `${searchPhone}@patient.local`;
+      
       const { data, error } = await supabase
         .from("profiles")
         .select(`
           id,
-          phone,
+          email,
           first_name,
           last_name,
           patients!inner(patient_number, date_of_birth, cnic)
         `)
-        .eq("phone", searchPhone)
+        .eq("email", patientEmail)
         .eq("role", "patient")
         .maybeSingle();
 
@@ -70,7 +73,7 @@ export function PatientSearchDialog() {
 
       const patientData = {
         id: data.id,
-        phone: data.phone || "",
+        phone: searchPhone, // Use the searched phone number
         first_name: data.first_name,
         last_name: data.last_name,
         patient_number: data.patients.patient_number || "",
