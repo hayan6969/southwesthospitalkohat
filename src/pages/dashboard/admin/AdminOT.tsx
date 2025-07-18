@@ -351,14 +351,7 @@ export function AdminOT() {
                 <Building2 className="w-12 h-12 text-gray-400 mx-auto mb-4" />
                 <h3 className="text-lg font-medium text-gray-900 mb-2">No OT operations configured</h3>
                 <p className="text-gray-500 mb-4">Get started by adding your first OT operation and its associated expenses.</p>
-                <OTOperationDialog 
-                  onOperationAdded={fetchOperations} 
-                  editingOperation={editingOperation}
-                  onEditComplete={() => {
-                    setEditingOperation(null);
-                    fetchOperations();
-                  }}
-                />
+                <p className="text-sm text-muted-foreground">Use the "Add OT Operation" button in the top-right corner to create your first operation.</p>
               </div>
             ) : (
               <div className="overflow-x-auto">
