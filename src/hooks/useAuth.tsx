@@ -227,41 +227,49 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     department_id?: string 
   }) => {
     try {
-      // Use regular sign up instead of admin API
-      const tempPassword = userData.password || `TempPass${Math.random().toString(36).slice(-8)}!`;
-      
-      const { data, error } = await supabase.auth.signUp({
-        email: userData.email,
-        password: tempPassword,
-        options: {
-          data: {
-            first_name: userData.first_name,
-            last_name: userData.last_name,
-            role: userData.role
-          }
-        }
+      // Use server-side function to create user without auto-signin
+      const { data, error } = await supabase.rpc('create_user_account', {
+        p_email: userData.email,
+        p_password: userData.password,
+        p_first_name: userData.first_name,
+        p_last_name: userData.last_name,
+        p_role: userData.role
       });
 
       if (error) return { error };
 
-      // Update the profile with additional data
-      if (data.user && data.user.id) {
+      // Update the profile with additional data if provided
+      if (data && (userData.phone || userData.department_id)) {
         const { error: profileError } = await supabase
           .from('profiles')
           .update({
             phone: userData.phone,
             department_id: userData.department_id
           })
-          .eq('id', data.user.id);
+          .eq('id', data);
 
         if (profileError) {
           console.error('Error updating profile:', profileError);
         }
-
-        // Audit logging can be added later via a separate hook
-        console.log('User account created:', userData.email);
       }
 
+      // Create doctor record if role is doctor
+      if (userData.role === 'doctor' && data) {
+        const { error: doctorError } = await supabase
+          .from('doctors')
+          .insert({
+            id: data,
+            specialization: 'General Medicine',
+            experience_years: 0,
+            consultation_fee: 0
+          });
+
+        if (doctorError) {
+          console.error('Error creating doctor record:', doctorError);
+        }
+      }
+
+      console.log('User account created:', userData.email);
       return { error: null };
     } catch (error) {
       return { error };
