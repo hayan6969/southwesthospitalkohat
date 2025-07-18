@@ -12,7 +12,7 @@ import { formatPkrAmount } from "@/utils/currency";
 import AppLayout from "@/layouts/AppLayout";
 
 export default function AdminSettings() {
-  const { settings, loading, refetch } = useHospitalSettings();
+  const { settings, loading, updateSettings, refetch } = useHospitalSettings();
   const [formData, setFormData] = useState({
     hospital_name: "",
     contact_number: "",
@@ -65,29 +65,15 @@ export default function AdminSettings() {
         booking_lead_time_hours: parseInt(formData.booking_lead_time_hours),
         emergency_slots_percentage: parseInt(formData.emergency_slots_percentage),
         payroll_payment_date: parseInt(formData.payroll_payment_date),
-        updated_at: new Date().toISOString(),
       };
 
-      const { error } = await supabase
-        .from('hospital_settings')
-        .update(updateData)
-        .eq('id', settings?.id);
-
-      if (error) throw error;
-
-      toast({
-        title: "Settings Updated",
-        description: "Hospital settings have been saved successfully.",
-      });
+      const success = await updateSettings(updateData);
       
-      refetch();
+      if (success) {
+        refetch();
+      }
     } catch (error) {
       console.error('Error updating settings:', error);
-      toast({
-        title: "Error",
-        description: "Failed to update settings. Please try again.",
-        variant: "destructive",
-      });
     } finally {
       setSaving(false);
     }

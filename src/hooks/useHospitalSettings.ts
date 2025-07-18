@@ -46,17 +46,45 @@ export const useHospitalSettings = () => {
   };
 
   const updateSettings = async (updates: Partial<HospitalSettings>) => {
-    if (!settings) return false;
-
     try {
-      const { error } = await supabase
-        .from('hospital_settings')
-        .update(updates)
-        .eq('id', settings.id);
+      if (settings?.id) {
+        // Update existing settings
+        const { error } = await supabase
+          .from('hospital_settings')
+          .update(updates)
+          .eq('id', settings.id);
 
-      if (error) throw error;
+        if (error) throw error;
 
-      setSettings({ ...settings, ...updates });
+        setSettings({ ...settings, ...updates });
+      } else {
+        // Insert new settings record with defaults
+        const newSettings = {
+          hospital_name: 'City General Hospital',
+          contact_number: '+92-XXX-XXXXXXX',
+          hospital_address: '123 Main Street, City Center',
+          opening_time: '08:00:00',
+          closing_time: '20:00:00',
+          working_days: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
+          max_appointments_per_doctor: 50,
+          booking_lead_time_hours: 2,
+          emergency_slots_percentage: 20,
+          payroll_payment_date: 1,
+          emergency_consultation_fee: 10000,
+          ...updates
+        };
+
+        const { data, error } = await supabase
+          .from('hospital_settings')
+          .insert(newSettings)
+          .select()
+          .single();
+
+        if (error) throw error;
+
+        setSettings(data);
+      }
+
       toast({
         title: "Success",
         description: "Hospital settings updated successfully",
