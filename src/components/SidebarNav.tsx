@@ -36,7 +36,7 @@ const navsByRole: Record<string, { label: string; to: string; icon: React.Elemen
     { label: "Account Management", to: "/dashboard/admin/accounts", icon: Users },
     { label: "System Settings", to: "/dashboard/admin/settings", icon: Settings },
   ],
-  pharmacy: [
+  head_pharmacist: [
     { label: "Dashboard", to: "/dashboard/pharmacy", icon: Info },
     { label: "Medicines", to: "/dashboard/pharmacy/medicines", icon: Pill },
     { label: "Sell Medicine", to: "/dashboard/pharmacy/sell", icon: CreditCard },
@@ -44,6 +44,19 @@ const navsByRole: Record<string, { label: string; to: string; icon: React.Elemen
     { label: "Stock Tracking", to: "/dashboard/pharmacy/stock", icon: CheckCircle },
     { label: "Expiry Tracker", to: "/dashboard/pharmacy/expiry", icon: Calendar },
     { label: "Analytics", to: "/dashboard/pharmacy/analytics", icon: Activity },
+  ],
+  assistant_pharmacist: [
+    { label: "Dashboard", to: "/dashboard/pharmacy", icon: Info },
+    { label: "Medicines", to: "/dashboard/pharmacy/medicines", icon: Pill },
+    { label: "Sell Medicine", to: "/dashboard/pharmacy/sell", icon: CreditCard },
+    { label: "Returns", to: "/dashboard/pharmacy/returns", icon: RotateCcw },
+    { label: "Stock Tracking", to: "/dashboard/pharmacy/stock", icon: CheckCircle },
+    { label: "Expiry Tracker", to: "/dashboard/pharmacy/expiry", icon: Calendar },
+    { label: "Analytics", to: "/dashboard/pharmacy/analytics", icon: Activity },
+  ],
+  salesman_pharmacist: [
+    { label: "Dashboard", to: "/dashboard/pharmacy", icon: Info },
+    { label: "Sell Medicine", to: "/dashboard/pharmacy/sell", icon: CreditCard },
   ],
   finance: [
     { label: "Dashboard", to: "/dashboard/finance", icon: Info },

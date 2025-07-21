@@ -131,7 +131,9 @@ export function AccountManagementDialog() {
               <SelectContent>
                 <SelectItem value="doctor">Doctor</SelectItem>
                 <SelectItem value="staff">Staff</SelectItem>
-                <SelectItem value="pharmacy">Pharmacy</SelectItem>
+                <SelectItem value="head_pharmacist">Head Pharmacist</SelectItem>
+                <SelectItem value="assistant_pharmacist">Assistant Pharmacist</SelectItem>
+                <SelectItem value="salesman_pharmacist">Salesman Pharmacist</SelectItem>
                 <SelectItem value="finance">Finance</SelectItem>
               </SelectContent>
             </Select>

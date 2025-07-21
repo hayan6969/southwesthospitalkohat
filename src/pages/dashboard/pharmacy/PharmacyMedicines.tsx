@@ -1,6 +1,7 @@
 import { useState } from "react";
 import AppLayout from "@/layouts/AppLayout";
 import { useMedicines, useCreateMedicine, useUpdateMedicine, useDeleteMedicine } from "@/hooks/useDatabase";
+import { usePharmacyPermissions } from "@/hooks/usePharmacyPermissions";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -32,6 +33,17 @@ export default function PharmacyMedicines() {
   const updateMedicine = useUpdateMedicine();
   const deleteMedicine = useDeleteMedicine();
   const { toast } = useToast();
+  const { canManageMedicines, canViewMedicines } = usePharmacyPermissions();
+
+  if (!canViewMedicines) {
+    return (
+      <AppLayout>
+        <div className="text-center py-8">
+          <p className="text-red-600">You don't have permission to view this page.</p>
+        </div>
+      </AppLayout>
+    );
+  }
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingMedicine, setEditingMedicine] = useState<Medicine | null>(null);
@@ -137,16 +149,17 @@ export default function PharmacyMedicines() {
             <p className="text-gray-600 mt-1">Add, edit, and manage medicine inventory</p>
           </div>
           
-          <Dialog open={isDialogOpen} onOpenChange={(open) => {
-            setIsDialogOpen(open);
-            if (!open) resetForm();
-          }}>
-            <DialogTrigger asChild>
-              <Button className="flex items-center gap-2">
-                <Plus className="w-4 h-4" />
-                Add Medicine
-              </Button>
-            </DialogTrigger>
+          {canManageMedicines && (
+            <Dialog open={isDialogOpen} onOpenChange={(open) => {
+              setIsDialogOpen(open);
+              if (!open) resetForm();
+            }}>
+              <DialogTrigger asChild>
+                <Button className="flex items-center gap-2">
+                  <Plus className="w-4 h-4" />
+                  Add Medicine
+                </Button>
+              </DialogTrigger>
             <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>
@@ -289,7 +302,8 @@ export default function PharmacyMedicines() {
                 </div>
               </form>
             </DialogContent>
-          </Dialog>
+            </Dialog>
+          )}
         </div>
 
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
@@ -372,21 +386,28 @@ export default function PharmacyMedicines() {
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleEdit(medicine)}
-                          >
-                            <Edit className="w-4 h-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleDelete(medicine.id)}
-                            className="text-red-600 hover:text-red-700"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
+                          {canManageMedicines && (
+                            <>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleEdit(medicine)}
+                              >
+                                <Edit className="w-4 h-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleDelete(medicine.id)}
+                                className="text-red-600 hover:text-red-700"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </>
+                          )}
+                          {!canManageMedicines && (
+                            <span className="text-gray-500 text-sm">View Only</span>
+                          )}
                         </div>
                       </TableCell>
                     </TableRow>

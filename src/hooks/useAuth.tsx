@@ -10,7 +10,7 @@ type UserProfile = {
   first_name: string;
   last_name: string;
   phone?: string;
-  role: 'admin' | 'doctor' | 'staff' | 'pharmacy' | 'patient' | 'finance';
+  role: 'admin' | 'doctor' | 'staff' | 'head_pharmacist' | 'assistant_pharmacist' | 'salesman_pharmacist' | 'patient' | 'finance';
   department_id?: string;
   is_active: boolean;
   created_at: string;
@@ -62,7 +62,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         // Cast the role to the proper type
         const profile: UserProfile = {
           ...data,
-          role: data.role as 'admin' | 'doctor' | 'staff' | 'pharmacy' | 'patient' | 'finance'
+          role: data.role as 'admin' | 'doctor' | 'staff' | 'head_pharmacist' | 'assistant_pharmacist' | 'salesman_pharmacist' | 'patient' | 'finance'
         };
         
         return profile;
@@ -182,8 +182,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         // Redirect based on user role
         if (profileData?.role) {
           console.log('Redirecting to dashboard for role:', profileData.role);
+          const dashboardRole = profileData.role.includes('pharmacist') ? 'pharmacy' : profileData.role;
           setTimeout(() => {
-            window.location.href = `/dashboard/${profileData.role}`;
+            window.location.href = `/dashboard/${dashboardRole}`;
           }, 100); // Small delay to ensure state is updated
         }
       }
@@ -266,6 +267,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
         if (doctorError) {
           console.error('Error creating doctor record:', doctorError);
+        }
+      }
+
+      // Create patient record if role is patient
+      if (userData.role === 'patient' && data) {
+        const { error: patientError } = await supabase
+          .from('patients')
+          .insert({
+            id: data
+          });
+
+        if (patientError) {
+          console.error('Error creating patient record:', patientError);
         }
       }
 

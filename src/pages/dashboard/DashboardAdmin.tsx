@@ -206,7 +206,9 @@ export default function DashboardAdmin() {
       case 'admin': return 'bg-purple-100 text-purple-700';
       case 'doctor': return 'bg-green-100 text-green-700';
       case 'staff': return 'bg-blue-100 text-blue-700';
-      case 'pharmacy': return 'bg-orange-100 text-orange-700';
+      case 'head_pharmacist': return 'bg-orange-100 text-orange-700';
+      case 'assistant_pharmacist': return 'bg-orange-50 text-orange-600';
+      case 'salesman_pharmacist': return 'bg-orange-200 text-orange-800';
       case 'finance': return 'bg-teal-100 text-teal-700';
       case 'patient': return 'bg-gray-100 text-gray-700';
       default: return 'bg-gray-100 text-gray-700';
@@ -513,7 +515,9 @@ export default function DashboardAdmin() {
                         <SelectItem value="admin">Admin</SelectItem>
                         <SelectItem value="doctor">Doctor</SelectItem>
                         <SelectItem value="staff">Staff</SelectItem>
-                        <SelectItem value="pharmacy">Pharmacy</SelectItem>
+                        <SelectItem value="head_pharmacist">Head Pharmacist</SelectItem>
+                        <SelectItem value="assistant_pharmacist">Assistant Pharmacist</SelectItem>
+                        <SelectItem value="salesman_pharmacist">Salesman Pharmacist</SelectItem>
                         <SelectItem value="finance">Finance</SelectItem>
                         <SelectItem value="patient">Patient</SelectItem>
                       </SelectContent>
