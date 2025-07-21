@@ -168,11 +168,13 @@ export function EditUserDialog({ user, open, onOpenChange, onUserUpdated }: Edit
               <SelectTrigger>
                 <SelectValue placeholder="Select role" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="bg-white z-50">
                 <SelectItem value="admin">Admin</SelectItem>
                 <SelectItem value="doctor">Doctor</SelectItem>
                 <SelectItem value="staff">Staff</SelectItem>
-                <SelectItem value="pharmacy">Pharmacy</SelectItem>
+                <SelectItem value="head_pharmacist">Head Pharmacist</SelectItem>
+                <SelectItem value="assistant_pharmacist">Assistant Pharmacist</SelectItem>
+                <SelectItem value="salesman_pharmacist">Salesman Pharmacist</SelectItem>
                 <SelectItem value="finance">Finance</SelectItem>
                 <SelectItem value="patient">Patient</SelectItem>
               </SelectContent>
