@@ -209,22 +209,22 @@ const App = () => (
               </ProtectedRoute>
             } />
             <Route path="/dashboard/pharmacy/medicines" element={
-              <ProtectedRoute allowedRoles={['head_pharmacist', 'assistant_pharmacist', 'salesman_pharmacist']}>
+              <ProtectedRoute allowedRoles={['head_pharmacist', 'assistant_pharmacist']}>
                 <PharmacyMedicines />
               </ProtectedRoute>
             } />
             <Route path="/dashboard/pharmacy/invoices" element={
-              <ProtectedRoute allowedRoles={['head_pharmacist', 'assistant_pharmacist', 'salesman_pharmacist']}>
+              <ProtectedRoute allowedRoles={['head_pharmacist', 'assistant_pharmacist']}>
                 <PharmacyInvoices />
               </ProtectedRoute>
             } />
             <Route path="/dashboard/pharmacy/expiry" element={
-              <ProtectedRoute allowedRoles={['head_pharmacist', 'assistant_pharmacist', 'salesman_pharmacist']}>
+              <ProtectedRoute allowedRoles={['head_pharmacist', 'assistant_pharmacist']}>
                 <PharmacyExpiry />
               </ProtectedRoute>
             } />
             <Route path="/dashboard/pharmacy/analytics" element={
-              <ProtectedRoute allowedRoles={['head_pharmacist', 'assistant_pharmacist', 'salesman_pharmacist']}>
+              <ProtectedRoute allowedRoles={['head_pharmacist', 'assistant_pharmacist']}>
                 <PharmacyAnalytics />
               </ProtectedRoute>
             } />
@@ -234,12 +234,12 @@ const App = () => (
               </ProtectedRoute>
             } />
             <Route path="/dashboard/pharmacy/stock" element={
-              <ProtectedRoute allowedRoles={['head_pharmacist', 'assistant_pharmacist', 'salesman_pharmacist']}>
+              <ProtectedRoute allowedRoles={['head_pharmacist', 'assistant_pharmacist']}>
                 <PharmacyStock />
               </ProtectedRoute>
             } />
             <Route path="/dashboard/pharmacy/returns" element={
-              <ProtectedRoute allowedRoles={['head_pharmacist', 'assistant_pharmacist', 'salesman_pharmacist']}>
+              <ProtectedRoute allowedRoles={['head_pharmacist', 'assistant_pharmacist']}>
                 <PharmacyReturns />
               </ProtectedRoute>
             } />

@@ -14,6 +14,7 @@ import { PharmacyInvoiceDetailsDialog } from "@/components/dialogs/PharmacyInvoi
 import { useHospitalSettings } from "@/hooks/useHospitalSettings";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { usePharmacyPermissions } from "@/hooks/usePharmacyPermissions";
 
 export default function DashboardPharmacy() {
   const { data: stats, isLoading: statsLoading } = usePharmacyStats();
@@ -23,6 +24,7 @@ export default function DashboardPharmacy() {
   const [invoiceDialogOpen, setInvoiceDialogOpen] = useState(false);
   const { settings: hospitalSettings } = useHospitalSettings();
   const { toast } = useToast();
+  const permissions = usePharmacyPermissions();
 
   const urgentExpiring = expiringMedicines?.filter(med => med.daysLeft <= 7) || [];
 
@@ -189,34 +191,42 @@ export default function DashboardPharmacy() {
                   Quick Actions
                 </h2>
                 <div className="grid grid-cols-2 gap-4">
-                  <a
-                    href="/dashboard/pharmacy/medicines"
-                    className="p-4 bg-blue-50 rounded-lg border border-blue-200 hover:bg-blue-100 transition-colors text-center"
-                  >
-                    <Pill className="w-8 h-8 text-blue-600 mx-auto mb-2" />
-                    <p className="font-medium text-blue-900">Manage Medicines</p>
-                  </a>
-                  <a
-                    href="/dashboard/pharmacy/sell"
-                    className="p-4 bg-green-50 rounded-lg border border-green-200 hover:bg-green-100 transition-colors text-center"
-                  >
-                    <ShoppingCart className="w-8 h-8 text-green-600 mx-auto mb-2" />
-                    <p className="font-medium text-green-900">Sell Medicine</p>
-                  </a>
-                  <a
-                    href="/dashboard/pharmacy/expiry"
-                    className="p-4 bg-orange-50 rounded-lg border border-orange-200 hover:bg-orange-100 transition-colors text-center"
-                  >
-                    <AlertTriangle className="w-8 h-8 text-orange-600 mx-auto mb-2" />
-                    <p className="font-medium text-orange-900">Expiry Tracker</p>
-                  </a>
-                  <a
-                    href="/dashboard/pharmacy/analytics"
-                    className="p-4 bg-purple-50 rounded-lg border border-purple-200 hover:bg-purple-100 transition-colors text-center"
-                  >
-                    <TrendingUp className="w-8 h-8 text-purple-600 mx-auto mb-2" />
-                    <p className="font-medium text-purple-900">Analytics</p>
-                  </a>
+                  {permissions.canManageMedicines && (
+                    <a
+                      href="/dashboard/pharmacy/medicines"
+                      className="p-4 bg-blue-50 rounded-lg border border-blue-200 hover:bg-blue-100 transition-colors text-center"
+                    >
+                      <Pill className="w-8 h-8 text-blue-600 mx-auto mb-2" />
+                      <p className="font-medium text-blue-900">Manage Medicines</p>
+                    </a>
+                  )}
+                  {permissions.canSellMedicine && (
+                    <a
+                      href="/dashboard/pharmacy/sell"
+                      className="p-4 bg-green-50 rounded-lg border border-green-200 hover:bg-green-100 transition-colors text-center"
+                    >
+                      <ShoppingCart className="w-8 h-8 text-green-600 mx-auto mb-2" />
+                      <p className="font-medium text-green-900">Sell Medicine</p>
+                    </a>
+                  )}
+                  {permissions.canViewExpiry && (
+                    <a
+                      href="/dashboard/pharmacy/expiry"
+                      className="p-4 bg-orange-50 rounded-lg border border-orange-200 hover:bg-orange-100 transition-colors text-center"
+                    >
+                      <AlertTriangle className="w-8 h-8 text-orange-600 mx-auto mb-2" />
+                      <p className="font-medium text-orange-900">Expiry Tracker</p>
+                    </a>
+                  )}
+                  {permissions.canViewAnalytics && (
+                    <a
+                      href="/dashboard/pharmacy/analytics"
+                      className="p-4 bg-purple-50 rounded-lg border border-purple-200 hover:bg-purple-100 transition-colors text-center"
+                    >
+                      <TrendingUp className="w-8 h-8 text-purple-600 mx-auto mb-2" />
+                      <p className="font-medium text-purple-900">Analytics</p>
+                    </a>
+                  )}
                 </div>
               </div>
             </div>
