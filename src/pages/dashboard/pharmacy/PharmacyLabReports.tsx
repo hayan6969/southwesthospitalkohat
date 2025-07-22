@@ -8,10 +8,11 @@ import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Search, Download, FileText, Filter, Calendar, User } from "lucide-react";
+import { Search, Download, FileText, Filter, Calendar, User, Eye } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { formatPkrAmount } from "@/utils/currency";
+import { PdfViewerDialog } from "@/components/dialogs/PdfViewerDialog";
 
 interface Patient {
   id: string;
@@ -177,22 +178,13 @@ export default function PharmacyLabReports() {
     }
   };
 
-  // Download PDF report
-  const handleDownloadReport = async (report: LabReport) => {
+  // Handle viewing PDF report
+  const handleViewReport = (report: LabReport) => {
     if (!report.result_file_url) {
       toast.error("No PDF file available for this report");
-      return;
+      return false;
     }
-
-    try {
-      console.log('Opening PDF URL:', report.result_file_url);
-      
-      // Simply open the URL directly - Supabase storage URLs should work directly
-      window.open(report.result_file_url, '_blank');
-    } catch (error) {
-      console.error('Error opening PDF:', error);
-      toast.error("Failed to open PDF. Please try again.");
-    }
+    return true;
   };
 
   // Clear all filters
@@ -384,16 +376,32 @@ export default function PharmacyLabReports() {
                           {report.external_doctor_name || 'N/A'}
                         </TableCell>
                         <TableCell>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleDownloadReport(report)}
-                            disabled={!report.result_file_url}
-                            className="flex items-center gap-2"
-                          >
-                            <Download className="w-4 h-4" />
-                            {report.result_file_url ? 'Download PDF' : 'No PDF'}
-                          </Button>
+                          {report.result_file_url ? (
+                            <PdfViewerDialog
+                              pdfUrl={report.result_file_url}
+                              title={`${report.test_name} - ${new Date(report.test_date).toLocaleDateString()}`}
+                              trigger={
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="flex items-center gap-2"
+                                >
+                                  <Eye className="w-4 h-4" />
+                                  View PDF
+                                </Button>
+                              }
+                            />
+                          ) : (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              disabled
+                              className="flex items-center gap-2"
+                            >
+                              <FileText className="w-4 h-4" />
+                              No PDF
+                            </Button>
+                          )}
                         </TableCell>
                       </TableRow>
                     ))}
