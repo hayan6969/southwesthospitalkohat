@@ -391,6 +391,7 @@ export const generateOTPDF = async (data: {
 }) => {
   const doc = new jsPDF();
   const pageWidth = doc.internal.pageSize.width;
+  const pageHeight = doc.internal.pageSize.height;
 
   // Add hospital header
   let yPosition = await addHospitalHeader(doc, 'OT OPERATION INVOICE');
@@ -473,10 +474,37 @@ export const generateOTPDF = async (data: {
   
   yPosition += 15; // More spacing before first item
   
+  // Check for page overflow before adding items
+  const itemsPerPage = Math.floor((pageHeight - yPosition - 80) / 8); // Reserve 80px for total and footer
+  let itemsRendered = 0;
+  
   // Items
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(60, 60, 60);
   data.items.forEach((item) => {
+    // Check if we need a new page (keep some space for total at bottom)
+    if (yPosition > pageHeight - 80) {
+      doc.addPage();
+      yPosition = 20;
+      
+      // Re-add table header on new page
+      doc.setFillColor(240, 240, 240);
+      doc.rect(15, yPosition, pageWidth - 30, 10, 'F');
+      
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(10);
+      doc.setTextColor(40, 40, 40);
+      xPosition = 20;
+      headers.forEach((header, index) => {
+        doc.text(header, xPosition, yPosition + 7);
+        xPosition += colWidths[index];
+      });
+      
+      yPosition += 15;
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(60, 60, 60);
+    }
+    
     xPosition = 20;
     
     if (item.isHeader) {
@@ -505,6 +533,7 @@ export const generateOTPDF = async (data: {
     }
     
     yPosition += 8;
+    itemsRendered++;
   });
   
   // Draw table border
@@ -520,18 +549,37 @@ export const generateOTPDF = async (data: {
 
   yPosition += 15;
 
-  // Total section
+  // Check if we need a new page for the total section (need at least 60px)
+  if (yPosition > pageHeight - 60) {
+    doc.addPage();
+    yPosition = 30; // Start from top of new page with some margin
+  }
+
+  // Total section - ensure it's always visible
   yPosition += 15;
   const totalsX = pageWidth - 85; // Position box from right edge
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(12);
+  doc.setFontSize(14); // Slightly larger font for better visibility
   doc.setTextColor(40, 40, 40);
-  doc.rect(totalsX, yPosition - 5, 80, 18); // Wider box for better fit
-  doc.text('Total Amount:', totalsX + 5, yPosition + 4); // Text starts inside box
-  doc.text(formatPkrAmount(data.totalAmount), totalsX + 5, yPosition + 12); // Amount below label
+  
+  // Draw a more prominent total box
+  doc.setFillColor(245, 245, 245);
+  doc.rect(totalsX, yPosition - 5, 80, 25, 'FD'); // Fill and draw border, taller box
+  
+  doc.text('Total Amount:', totalsX + 5, yPosition + 6); // Text starts inside box
+  doc.setFontSize(16); // Even larger for the amount
+  doc.setTextColor(0, 100, 0); // Green color for total
+  doc.text(formatPkrAmount(data.totalAmount), totalsX + 5, yPosition + 18); // Amount below label
 
   // Footer
-  yPosition += 30;
+  yPosition += 40; // More space after total
+  
+  // Ensure footer doesn't go off page
+  if (yPosition > pageHeight - 30) {
+    doc.addPage();
+    yPosition = 30;
+  }
+  
   doc.setFontSize(9);
   doc.setFont('helvetica', 'italic');
   doc.setTextColor(100, 100, 100);
