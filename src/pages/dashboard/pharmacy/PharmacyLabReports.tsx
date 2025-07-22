@@ -188,13 +188,15 @@ export default function PharmacyLabReports() {
     }
     
     try {
-      // Remove bucket name from path if it exists
+      // The result_file_url should be in format "lab-results/filename.pdf"
+      // We need to remove the bucket prefix for createSignedUrl
       let filePath = result_file_url;
       if (filePath.startsWith('lab-results/')) {
-        filePath = filePath.replace('lab-results/', '');
+        filePath = filePath.substring('lab-results/'.length);
       }
       
-      console.log('Creating signed URL for file path:', filePath);
+      console.log('Original file URL:', result_file_url);
+      console.log('Processed file path for signed URL:', filePath);
       
       // Get signed URL for private bucket access
       const { data, error } = await supabase.storage
@@ -203,10 +205,17 @@ export default function PharmacyLabReports() {
       
       if (error) {
         console.error('Error creating signed URL:', error);
+        console.error('File path used:', filePath);
         return null;
       }
       
-      return data?.signedUrl || null;
+      if (!data?.signedUrl) {
+        console.error('No signed URL returned from Supabase');
+        return null;
+      }
+      
+      console.log('Successfully created signed URL');
+      return data.signedUrl;
     } catch (error) {
       console.error('Error getting PDF URL:', error);
       return null;
