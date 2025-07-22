@@ -67,10 +67,10 @@ export function PdfViewerDialog({ pdfUrl, title, trigger }: PdfViewerDialogProps
         <div className="flex-1 p-6 pt-0">
           <div className="w-full h-full border rounded-lg overflow-hidden bg-gray-50">
             <iframe
-              src={`${pdfUrl}#view=FitH`}
+              src={pdfUrl}
               className="w-full h-full border-0"
               title={title}
-              style={{ minHeight: '600px' }}
+              style={{ minHeight: "600px" }}
             />
           </div>
         </div>
