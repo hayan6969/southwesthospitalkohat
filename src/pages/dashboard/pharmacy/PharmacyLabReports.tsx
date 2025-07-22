@@ -178,8 +178,8 @@ export default function PharmacyLabReports() {
     }
   };
 
-  // Get full URL for PDF viewing
-  const getPdfUrl = (result_file_url: string) => {
+  // Get signed URL for PDF viewing from private bucket
+  const getPdfUrl = async (result_file_url: string): Promise<string | null> => {
     if (!result_file_url) return null;
     
     // If it's already a full URL, return as is
@@ -187,8 +187,22 @@ export default function PharmacyLabReports() {
       return result_file_url;
     }
     
-    // If it's a storage path, construct the full Supabase storage URL
-    return `https://notzlgtnuncyribdjzen.supabase.co/storage/v1/object/public/lab-results/${result_file_url}`;
+    try {
+      // Get signed URL for private bucket access
+      const { data, error } = await supabase.storage
+        .from('lab-results')
+        .createSignedUrl(result_file_url, 60 * 60); // 1 hour expiry
+      
+      if (error) {
+        console.error('Error creating signed URL:', error);
+        return null;
+      }
+      
+      return data?.signedUrl || null;
+    } catch (error) {
+      console.error('Error getting PDF URL:', error);
+      return null;
+    }
   };
 
   // Clear all filters
@@ -380,10 +394,11 @@ export default function PharmacyLabReports() {
                           {report.external_doctor_name || 'N/A'}
                         </TableCell>
                         <TableCell>
-                          {report.result_file_url && getPdfUrl(report.result_file_url) ? (
+                          {report.result_file_url ? (
                             <PdfViewerDialog
-                              pdfUrl={getPdfUrl(report.result_file_url) || ''}
+                              pdfUrl={null}
                               title={`${report.test_name} - ${new Date(report.test_date).toLocaleDateString()}`}
+                              onGetPdfUrl={() => getPdfUrl(report.result_file_url)}
                               trigger={
                                 <Button
                                   size="sm"
