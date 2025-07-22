@@ -19,6 +19,7 @@ export function usePharmacyPermissions() {
   const canViewStock = isPharmacyUser;
   const canViewAnalytics = isPharmacyUser;
   const canViewExpiry = isPharmacyUser;
+  const canViewLabReports = isHeadPharmacist || isAssistantPharmacist;
   
   return {
     role,
@@ -34,5 +35,6 @@ export function usePharmacyPermissions() {
     canViewStock,
     canViewAnalytics,
     canViewExpiry,
+    canViewLabReports,
   };
 }

@@ -55,6 +55,7 @@ import PharmacyAnalytics from "./pages/dashboard/pharmacy/PharmacyAnalytics";
 import PharmacySell from "./pages/dashboard/pharmacy/PharmacySell";
 import PharmacyStock from "./pages/dashboard/pharmacy/PharmacyStock";
 import PharmacyReturns from "./pages/dashboard/pharmacy/PharmacyReturns";
+import PharmacyLabReports from "./pages/dashboard/pharmacy/PharmacyLabReports";
 
 // Finance routes component
 import FinanceRoutes from "./pages/dashboard/FinanceRoutes";
@@ -241,6 +242,11 @@ const App = () => (
             <Route path="/dashboard/pharmacy/returns" element={
               <ProtectedRoute allowedRoles={['head_pharmacist', 'assistant_pharmacist']}>
                 <PharmacyReturns />
+              </ProtectedRoute>
+            } />
+            <Route path="/dashboard/pharmacy/lab-reports" element={
+              <ProtectedRoute allowedRoles={['head_pharmacist', 'assistant_pharmacist']}>
+                <PharmacyLabReports />
               </ProtectedRoute>
             } />
 
