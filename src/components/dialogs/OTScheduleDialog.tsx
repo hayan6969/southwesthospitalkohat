@@ -61,7 +61,8 @@ export function OTScheduleDialog() {
   const [doctorId, setDoctorId] = useState("");
   const [doctorExpense, setDoctorExpense] = useState<string>("");
   const [operationDate, setOperationDate] = useState(new Date().toISOString().split('T')[0]);
-  const [operationId, setOperationId] = useState("");
+  const [selectedOperations, setSelectedOperations] = useState<string[]>([]);
+  const [operationSearchQuery, setOperationSearchQuery] = useState("");
   const [roomId, setRoomId] = useState("");
   const [notes, setNotes] = useState("");
   
@@ -123,9 +124,22 @@ export function OTScheduleDialog() {
     }
   };
 
-  const selectedOperation = operations.find(op => op.id === operationId);
-  const operationCost = selectedOperation?.expenses.reduce((sum, exp) => sum + exp.cost, 0) || 0;
-  const totalCost = operationCost + (parseFloat(doctorExpense) || 0);
+  // Filter operations based on search
+  const filteredOperations = operations.filter(op =>
+    op.operation_name.toLowerCase().includes(operationSearchQuery.toLowerCase())
+  );
+
+  const getSelectedOperationsDetails = () => {
+    return operations.filter(op => selectedOperations.includes(op.id));
+  };
+
+  const getTotalOperationCost = () => {
+    return getSelectedOperationsDetails().reduce((total, op) => {
+      return total + op.expenses.reduce((sum, exp) => sum + exp.cost, 0);
+    }, 0);
+  };
+
+  const totalCost = getTotalOperationCost() + (parseFloat(doctorExpense) || 0);
 
   const resetForm = () => {
     setSearchTerm("");
@@ -143,10 +157,19 @@ export function OTScheduleDialog() {
     setDoctorId("");
     setDoctorExpense("");
     setOperationDate(new Date().toISOString().split('T')[0]);
-    setOperationId("");
+    setSelectedOperations([]);
+    setOperationSearchQuery("");
     setRoomId("");
     setNotes("");
     setActiveTab("search");
+  };
+
+  const toggleOperationSelection = (operationId: string) => {
+    setSelectedOperations(prev => 
+      prev.includes(operationId) 
+        ? prev.filter(id => id !== operationId)
+        : [...prev, operationId]
+    );
   };
 
   const handleDoctorChange = (selectedDoctorId: string) => {
@@ -179,8 +202,8 @@ export function OTScheduleDialog() {
     e.preventDefault();
     setSubmitting(true);
     
-    if (!operationId || !roomId || !doctorId) {
-      toast.error("Please select operation type, room, and doctor");
+    if (!selectedOperations.length || !roomId || !doctorId) {
+      toast.error("Please select at least one operation, room, and doctor");
       return;
     }
 
@@ -225,33 +248,46 @@ export function OTScheduleDialog() {
       // Get next queue position
       const queuePosition = await getNextQueuePosition(roomId, operationDate);
 
-      // Create OT schedule
-      const { data: scheduleData, error: scheduleError } = await supabase
-        .from("ot_schedules")
-        .insert({
-          patient_id: patientId,
-          doctor_id: doctorId,
-          doctor_name: (() => {
-            const doctorProfile = doctorNames?.find(d => d.id === doctorId);
-            return `Dr. ${doctorProfile?.first_name} ${doctorProfile?.last_name}`;
-          })(),
-          doctor_expense: parseFloat(doctorExpense) || 0,
-          operation_id: operationId,
-          room_id: roomId,
-          operation_date: operationDate,
-          queue_position: queuePosition,
-          notes: notes.trim() || null,
-          total_cost: totalCost,
-          status: 'scheduled'
-        })
-        .select()
-        .single();
+      // Create OT schedules for each selected operation
+      const schedulePromises = selectedOperations.map(async (operationId, index) => {
+        const operation = operations.find(op => op.id === operationId);
+        const operationCost = operation?.expenses.reduce((sum, exp) => sum + exp.cost, 0) || 0;
+        const queuePosition = await getNextQueuePosition(roomId, operationDate);
 
-      if (scheduleError) throw scheduleError;
+        return supabase
+          .from("ot_schedules")
+          .insert({
+            patient_id: patientId,
+            doctor_id: doctorId,
+            doctor_name: (() => {
+              const doctorProfile = doctorNames?.find(d => d.id === doctorId);
+              return `Dr. ${doctorProfile?.first_name} ${doctorProfile?.last_name}`;
+            })(),
+            doctor_expense: selectedOperations.length > 1 && index > 0 ? 0 : (parseFloat(doctorExpense) || 0), // Only charge doctor fee once
+            operation_id: operationId,
+            room_id: roomId,
+            operation_date: operationDate,
+            queue_position: queuePosition + index, // Sequential positions
+            notes: notes.trim() || null,
+            total_cost: operationCost + (selectedOperations.length > 1 && index > 0 ? 0 : (parseFloat(doctorExpense) || 0)),
+            status: 'scheduled'
+          })
+          .select()
+          .single();
+      });
 
-      // Generate invoice (hospital portion only)
+      const scheduleResults = await Promise.all(schedulePromises);
+      const scheduleErrors = scheduleResults.filter(result => result.error);
+      
+      if (scheduleErrors.length > 0) {
+        throw scheduleErrors[0].error;
+      }
+
+      const scheduleData = scheduleResults.map(result => result.data);
+
+      // Generate invoice for total hospital portion
       const invoiceNumber = `OT-${Date.now()}`;
-      const hospitalAmount = operationCost; // Only hospital portion for invoice
+      const hospitalAmount = getTotalOperationCost(); // Total hospital portion
       const { data: invoiceData, error: invoiceError } = await supabase
         .from("invoices")
         .insert({
@@ -260,7 +296,7 @@ export function OTScheduleDialog() {
           status: 'paid',
           paid_at: new Date().toISOString(),
           invoice_number: invoiceNumber,
-          description: `OT Operation: ${selectedOperation?.operation_name} - Dr. ${doctorNames?.find(d => d.id === doctorId)?.first_name} ${doctorNames?.find(d => d.id === doctorId)?.last_name}`,
+          description: `OT Operations: ${getSelectedOperationsDetails().map(op => op.operation_name).join(', ')} - Dr. ${doctorNames?.find(d => d.id === doctorId)?.first_name} ${doctorNames?.find(d => d.id === doctorId)?.last_name}`,
           due_date: new Date().toISOString().split('T')[0]
         })
         .select()
@@ -328,11 +364,16 @@ export function OTScheduleDialog() {
       const roomName = rooms.find(r => r.id === roomId)?.room_name || "Unknown Room";
       const doctorName = `Dr. ${doctorNames?.find(d => d.id === doctorId)?.first_name} ${doctorNames?.find(d => d.id === doctorId)?.last_name}`;
       
-      // Fetch detailed OT expenses for this operation
-      const { data: expensesData } = await supabase
-        .from('ot_expenses')
-        .select('expense_name, cost')
-        .eq('operation_id', operationId || '');
+      // Fetch detailed OT expenses for all selected operations
+      const expensesPromises = selectedOperations.map(opId => 
+        supabase
+          .from('ot_expenses')
+          .select('expense_name, cost, operation_id')
+          .eq('operation_id', opId)
+      );
+
+      const expensesResults = await Promise.all(expensesPromises);
+      const allExpensesData = expensesResults.flatMap(result => result.data || []);
 
       // Get patient data for contact info
       const { data: patientData } = await supabase
@@ -368,37 +409,40 @@ export function OTScheduleDialog() {
         });
       }
       
-      // Hospital Charges Section
-      items.push({
-        description: `--- HOSPITAL CHARGES ---`,
-        quantity: '',
-        unitPrice: '',
-        totalPrice: '',
-        isHeader: true
-      });
-
-      // Add OT expenses if available
-      if (expensesData && expensesData.length > 0) {
-        expensesData.forEach(expense => {
-          items.push({
-            description: expense.expense_name,
-            quantity: 1,
-            unitPrice: expense.cost,
-            totalPrice: expense.cost
-          });
+      // Hospital Charges Section - Group by operation
+      getSelectedOperationsDetails().forEach(operation => {
+        items.push({
+          description: `--- ${operation.operation_name.toUpperCase()} ---`,
+          quantity: '',
+          unitPrice: '',
+          totalPrice: '',
+          isHeader: true
         });
-      } else {
-        // Fallback to room charges
-        const roomCharges = operationCost;
-        if (roomCharges > 0) {
-          items.push({
-            description: `OT Room Charges (${roomName})`,
-            quantity: 1,
-            unitPrice: roomCharges,
-            totalPrice: roomCharges
+
+        // Add expenses for this operation
+        const operationExpenses = allExpensesData.filter(exp => exp.operation_id === operation.id);
+        if (operationExpenses.length > 0) {
+          operationExpenses.forEach(expense => {
+            items.push({
+              description: expense.expense_name,
+              quantity: 1,
+              unitPrice: expense.cost,
+              totalPrice: expense.cost
+            });
           });
+        } else {
+          // Fallback to operation total cost
+          const operationCost = operation.expenses.reduce((sum, exp) => sum + exp.cost, 0);
+          if (operationCost > 0) {
+            items.push({
+              description: `Operation Charges`,
+              quantity: 1,
+              unitPrice: operationCost,
+              totalPrice: operationCost
+            });
+          }
         }
-      }
+      });
       
       // Generate detailed OT PDF invoice
       const { generateOTPDF } = await import("@/utils/pdfGenerator");
@@ -408,7 +452,7 @@ export function OTScheduleDialog() {
         patientId: patientData?.patient_number || 'N/A',
         patientPhone: phoneNumber,
         doctorName: doctorName,
-        procedure: selectedOperation?.operation_name || 'Unknown',
+        procedure: getSelectedOperationsDetails().map(op => op.operation_name).join(', '),
         room: roomName,
         date: new Date(operationDate).toLocaleDateString(),
         totalAmount: totalCost,
@@ -421,11 +465,12 @@ export function OTScheduleDialog() {
       // Log the audit event
       const selectedDoctorName = `Dr. ${doctorNames?.find(d => d.id === doctorId)?.first_name} ${doctorNames?.find(d => d.id === doctorId)?.last_name}`;
       await logAction(
-        "Scheduled OT operation",
-        `OT scheduled for ${patientName} on ${operationDate} - ${selectedOperation?.operation_name} with ${selectedDoctorName} in ${roomName}. Total cost: ${formatPkrAmount(totalCost)}`
+        "Scheduled OT operations",
+        `${selectedOperations.length} OT operation(s) scheduled for ${patientName} on ${operationDate} - ${getSelectedOperationsDetails().map(op => op.operation_name).join(', ')} with ${selectedDoctorName} in ${roomName}. Total cost: ${formatPkrAmount(totalCost)}`
       );
       
-      toast.success(`OT operation scheduled successfully! Queue position: ${queuePosition}. Invoice generated: ${invoiceNumber}`);
+      const firstQueuePosition = await getNextQueuePosition(roomId, operationDate);
+      toast.success(`${selectedOperations.length} OT operation(s) scheduled successfully! Starting queue position: ${firstQueuePosition}. Invoice generated: ${invoiceNumber}`);
       
       // Trigger a refresh event to update the parent table
       window.dispatchEvent(new CustomEvent('otScheduleUpdate'));
@@ -735,60 +780,78 @@ export function OTScheduleDialog() {
                 </div>
               </div>
 
-              {/* Operation Selection */}
+              {/* Operation Selection - Multiple Selection */}
               <div className="space-y-2">
-                <Label htmlFor="operation">Operation Type *</Label>
-                <Popover open={operationOpen} onOpenChange={setOperationOpen}>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      role="combobox"
-                      aria-expanded={operationOpen}
-                      className="w-full justify-between"
-                    >
-                      {operationId
-                        ? selectedOperation?.operation_name
-                        : "Select operation type..."}
-                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-full p-0">
-                    <Command>
-                      <CommandInput placeholder="Search operations..." />
-                      <CommandList>
-                        <CommandEmpty>No operation found.</CommandEmpty>
-                        <CommandGroup>
-                          {operations.map((operation) => {
-                            const totalOperationCost = operation.expenses.reduce((sum, exp) => sum + exp.cost, 0);
-                            return (
-                              <CommandItem
-                                key={operation.id}
-                                value={operation.operation_name}
-                                onSelect={() => {
-                                  setOperationId(operation.id);
-                                  setOperationOpen(false);
-                                }}
-                              >
-                                <Check
-                                  className={cn(
-                                    "mr-2 h-4 w-4",
-                                    operationId === operation.id ? "opacity-100" : "opacity-0"
-                                  )}
-                                />
-                                <div className="flex flex-col">
-                                  <div className="font-medium">{operation.operation_name}</div>
-                                  <div className="text-sm text-gray-500">
-                                    Cost: {formatPkrAmount(totalOperationCost)}
-                                  </div>
+                <Label htmlFor="operations">Operation Types *</Label>
+                <div className="space-y-2">
+                  <div className="relative">
+                    <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Search operations..."
+                      value={operationSearchQuery}
+                      onChange={(e) => setOperationSearchQuery(e.target.value)}
+                      className="pl-8"
+                    />
+                  </div>
+                </div>
+                
+                <div className="max-h-64 overflow-y-auto border rounded-lg">
+                  {filteredOperations.length > 0 ? (
+                    filteredOperations.map((operation) => {
+                      const operationCost = operation.expenses.reduce((sum, exp) => sum + exp.cost, 0);
+                      return (
+                        <div
+                          key={operation.id}
+                          className={`p-3 border-b last:border-b-0 cursor-pointer transition-colors ${
+                            selectedOperations.includes(operation.id) 
+                              ? 'bg-blue-50 border-blue-200' 
+                              : 'hover:bg-gray-50'
+                          }`}
+                          onClick={() => toggleOperationSelection(operation.id)}
+                        >
+                          <div className="flex justify-between items-start">
+                            <div className="flex-1">
+                              <div className="font-medium">{operation.operation_name}</div>
+                              {operation.expenses.length > 0 && (
+                                <div className="text-sm text-gray-600 mt-1">
+                                  {operation.expenses.map(exp => exp.expense_name).join(', ')}
                                 </div>
-                              </CommandItem>
-                            );
-                          })}
-                        </CommandGroup>
-                      </CommandList>
-                    </Command>
-                  </PopoverContent>
-                </Popover>
+                              )}
+                            </div>
+                            <div className="text-right">
+                              <div className="font-semibold text-green-600">
+                                {formatPkrAmount(operationCost)}
+                              </div>
+                              <input
+                                type="checkbox"
+                                checked={selectedOperations.includes(operation.id)}
+                                onChange={() => toggleOperationSelection(operation.id)}
+                                className="mt-1"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })
+                  ) : (
+                    <div className="p-8 text-center text-gray-500">
+                      {operationSearchQuery ? "No operations found matching your search." : "No operations available. Please add operations in the admin panel."}
+                    </div>
+                  )}
+                </div>
+                
+                {selectedOperations.length > 0 && (
+                  <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                    <div className="flex justify-between items-center">
+                      <span className="font-medium">
+                        Selected Operations: {selectedOperations.length}
+                      </span>
+                      <span className="font-bold text-blue-600">
+                        Operations Total: {formatPkrAmount(getTotalOperationCost())}
+                      </span>
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div className="space-y-2">
@@ -802,7 +865,7 @@ export function OTScheduleDialog() {
               </div>
 
               {/* Cost Summary */}
-              {(operationId || (parseFloat(doctorExpense) || 0) > 0) && (
+              {(selectedOperations.length > 0 || (parseFloat(doctorExpense) || 0) > 0) && (
                 <Card className="bg-blue-50">
                   <CardHeader>
                     <CardTitle className="text-lg flex items-center gap-2">
@@ -811,20 +874,23 @@ export function OTScheduleDialog() {
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-2">
-                    {selectedOperation && (
-                      <>
-                        <div className="flex justify-between text-sm">
-                          <span>Operation: {selectedOperation.operation_name}</span>
-                          <span className="font-medium">{formatPkrAmount(operationCost)}</span>
-                        </div>
-                        {selectedOperation.expenses.map((expense) => (
-                          <div key={expense.id} className="flex justify-between text-xs text-gray-600 ml-4">
-                            <span>• {expense.expense_name}</span>
-                            <span>{formatPkrAmount(expense.cost)}</span>
+                    {getSelectedOperationsDetails().map((operation) => {
+                      const operationCost = operation.expenses.reduce((sum, exp) => sum + exp.cost, 0);
+                      return (
+                        <div key={operation.id} className="space-y-1">
+                          <div className="flex justify-between text-sm">
+                            <span>Operation: {operation.operation_name}</span>
+                            <span className="font-medium">{formatPkrAmount(operationCost)}</span>
                           </div>
-                        ))}
-                      </>
-                    )}
+                          {operation.expenses.map((expense) => (
+                            <div key={expense.id} className="flex justify-between text-xs text-gray-600 ml-4">
+                              <span>• {expense.expense_name}</span>
+                              <span>{formatPkrAmount(expense.cost)}</span>
+                            </div>
+                          ))}
+                        </div>
+                      );
+                    })}
                      {(parseFloat(doctorExpense) || 0) > 0 && (
                        <div className="flex justify-between text-sm">
                          <span>Doctor Expense: {(() => {
@@ -851,7 +917,7 @@ export function OTScheduleDialog() {
             <Button 
               type="button" 
               onClick={() => setConfirmationOpen(true)}
-              disabled={!operationId || !roomId || !doctorId || (!selectedPatient && activeTab === "search") || (activeTab === "register" && (!newPatient.first_name.trim() || !newPatient.last_name.trim() || !newPatient.phone.trim() || !newPatient.cnic.trim()))}
+              disabled={!selectedOperations.length || !roomId || !doctorId || (!selectedPatient && activeTab === "search") || (activeTab === "register" && (!newPatient.first_name.trim() || !newPatient.last_name.trim() || !newPatient.phone.trim() || !newPatient.cnic.trim()))}
             >
               Confirm & Schedule Operation
             </Button>
@@ -880,7 +946,7 @@ export function OTScheduleDialog() {
                   const selectedDoctor = doctorNames?.find(d => d.id === doctorId);
                   return `${selectedDoctor?.first_name} ${selectedDoctor?.last_name}`;
                 })()}</div>
-                <div><strong>Operation:</strong> {selectedOperation?.operation_name}</div>
+                <div><strong>Operations:</strong> {getSelectedOperationsDetails().map(op => op.operation_name).join(', ')}</div>
                 <div><strong>Date:</strong> {new Date(operationDate).toLocaleDateString()}</div>
                 <div><strong>Room:</strong> {rooms.find(r => r.id === roomId)?.room_name}</div>
                 {notes && <div><strong>Notes:</strong> {notes}</div>}
@@ -888,27 +954,41 @@ export function OTScheduleDialog() {
             </div>
 
             <div className="border rounded-lg p-4">
-              <h4 className="font-semibold mb-3">Cost Breakdown</h4>
-              <div className="space-y-2">
-                {selectedOperation && (
-                  <>
-                    <div className="flex justify-between items-center py-2 border-b">
+              <h4 className="font-semibold mb-3">Selected Operations ({selectedOperations.length})</h4>
+              <div className="space-y-2 max-h-40 overflow-y-auto">
+                {getSelectedOperationsDetails().map((operation) => {
+                  const operationCost = operation.expenses.reduce((sum, exp) => sum + exp.cost, 0);
+                  return (
+                    <div key={operation.id} className="flex justify-between items-center py-2 border-b last:border-b-0">
                       <div>
-                        <div className="font-medium">{selectedOperation.operation_name}</div>
-                        <div className="text-sm text-gray-600">Hospital charges</div>
+                        <div className="font-medium">{operation.operation_name}</div>
+                        {operation.expenses.length > 0 && (
+                          <div className="text-sm text-gray-600">
+                            {operation.expenses.map(exp => exp.expense_name).join(', ')}
+                          </div>
+                        )}
                       </div>
                       <div className="font-semibold text-green-600">
                         {formatPkrAmount(operationCost)}
                       </div>
                     </div>
-                    {selectedOperation.expenses.map((expense) => (
-                      <div key={expense.id} className="flex justify-between items-center py-1 text-sm text-gray-600 ml-4">
-                        <span>• {expense.expense_name}</span>
-                        <span>{formatPkrAmount(expense.cost)}</span>
-                      </div>
-                    ))}
-                  </>
-                )}
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="border rounded-lg p-4">
+              <h4 className="font-semibold mb-3">Cost Breakdown</h4>
+              <div className="space-y-2">
+                <div className="flex justify-between items-center py-2 border-b">
+                  <div>
+                    <div className="font-medium">Operations Total</div>
+                    <div className="text-sm text-gray-600">{selectedOperations.length} operation(s)</div>
+                  </div>
+                  <div className="font-semibold text-green-600">
+                    {formatPkrAmount(getTotalOperationCost())}
+                  </div>
+                </div>
                 {(parseFloat(doctorExpense) || 0) > 0 && (
                   <div className="flex justify-between items-center py-2 border-b">
                     <div>
