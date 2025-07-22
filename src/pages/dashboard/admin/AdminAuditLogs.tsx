@@ -233,7 +233,7 @@ export default function AdminAuditLogs() {
             </h2>
           </div>
           
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto" style={{ position: 'relative', zIndex: 1 }}>
             <Table>
               <TableHeader>
                 <TableRow>
@@ -244,7 +244,7 @@ export default function AdminAuditLogs() {
                   <TableHead>IP Address</TableHead>
                 </TableRow>
               </TableHeader>
-              <TableBody>
+              <TableBody style={{ position: 'relative', zIndex: 2 }}>
                 {isLoading ? (
                   Array.from({ length: 10 }).map((_, i) => (
                     <TableRow key={i}>
@@ -259,8 +259,12 @@ export default function AdminAuditLogs() {
                   filteredLogs.map((log) => (
                     <TableRow 
                       key={log.id} 
-                      className="cursor-pointer hover:bg-gray-50 transition-colors"
-                      style={{ cursor: 'pointer' }}
+                      className="cursor-pointer hover:bg-gray-50 transition-colors relative"
+                      style={{ 
+                        cursor: 'pointer',
+                        zIndex: 10,
+                        position: 'relative'
+                      }}
                       onClick={(e) => {
                         console.log("TableRow onClick triggered!");
                         e.stopPropagation();
@@ -270,7 +274,14 @@ export default function AdminAuditLogs() {
                       onMouseEnter={() => console.log("Mouse entered row")}
                       onMouseLeave={() => console.log("Mouse left row")}
                     >
-                      <TableCell>
+                      <TableCell 
+                        style={{ pointerEvents: 'auto', cursor: 'pointer' }}
+                        onClick={(e) => {
+                          console.log("TableCell clicked!");
+                          e.stopPropagation();
+                          handleLogClick(log);
+                        }}
+                      >
                         <div className="flex items-center gap-2">
                           <Calendar className="w-4 h-4 text-gray-400" />
                           <div>
