@@ -39,7 +39,7 @@ export function OTScheduleDialog() {
   const [activeTab, setActiveTab] = useState("search");
   const [doctorOpen, setDoctorOpen] = useState(false);
   const [operationOpen, setOperationOpen] = useState(false);
-  const [confirmationOpen, setConfirmationOpen] = useState(false);
+  
   
   // Search existing patient
   const [searchTerm, setSearchTerm] = useState("");
@@ -193,10 +193,6 @@ export function OTScheduleDialog() {
     }
   };
 
-  const handleConfirmSchedule = async () => {
-    setConfirmationOpen(false);
-    await handleSubmit(new Event('submit') as any);
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -915,113 +911,8 @@ export function OTScheduleDialog() {
               Cancel
             </Button>
             <Button 
-              type="button" 
-              onClick={() => setConfirmationOpen(true)}
-              disabled={!selectedOperations.length || !roomId || !doctorId || (!selectedPatient && activeTab === "search") || (activeTab === "register" && (!newPatient.first_name.trim() || !newPatient.last_name.trim() || !newPatient.phone.trim() || !newPatient.cnic.trim()))}
-            >
-              Confirm & Schedule Operation
-            </Button>
-          </div>
-        </form>
-      </DialogContent>
-
-      {/* Confirmation Dialog */}
-      <Dialog open={confirmationOpen} onOpenChange={setConfirmationOpen}>
-        <DialogContent className="sm:max-w-[500px] max-h-[80vh] overflow-y-auto animate-scale-in">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Check className="w-5 h-5 text-green-600" />
-              Confirm OT Operation
-            </DialogTitle>
-          </DialogHeader>
-          
-          <div className="space-y-4">
-            <div className="bg-blue-50 border border-blue-200 p-4 rounded-lg">
-              <h3 className="font-semibold text-lg mb-3">Operation Summary</h3>
-              
-              <div className="space-y-2 text-sm">
-                <div><strong>Patient:</strong> {selectedPatient ? `${selectedPatient.profile?.first_name} ${selectedPatient.profile?.last_name}` : `${newPatient.first_name} ${newPatient.last_name}`}</div>
-                <div><strong>Patient ID:</strong> {selectedPatient ? (selectedPatient.patient_number || 'Not assigned') : 'Will be assigned'}</div>
-                <div><strong>Doctor:</strong> Dr. {(() => {
-                  const selectedDoctor = doctorNames?.find(d => d.id === doctorId);
-                  return `${selectedDoctor?.first_name} ${selectedDoctor?.last_name}`;
-                })()}</div>
-                <div><strong>Operations:</strong> {getSelectedOperationsDetails().map(op => op.operation_name).join(', ')}</div>
-                <div><strong>Date:</strong> {new Date(operationDate).toLocaleDateString()}</div>
-                <div><strong>Room:</strong> {rooms.find(r => r.id === roomId)?.room_name}</div>
-                {notes && <div><strong>Notes:</strong> {notes}</div>}
-              </div>
-            </div>
-
-            <div className="border rounded-lg p-4 bg-gray-50">
-              <h4 className="font-semibold mb-3">Selected Operations ({selectedOperations.length})</h4>
-              <div className="space-y-2 max-h-32 overflow-y-auto bg-white rounded border p-2">
-                {getSelectedOperationsDetails().map((operation) => {
-                  const operationCost = operation.expenses.reduce((sum, exp) => sum + exp.cost, 0);
-                  return (
-                    <div key={operation.id} className="flex justify-between items-center py-2 border-b last:border-b-0">
-                      <div>
-                        <div className="font-medium">{operation.operation_name}</div>
-                        {operation.expenses.length > 0 && (
-                          <div className="text-sm text-gray-600">
-                            {operation.expenses.map(exp => exp.expense_name).join(', ')}
-                          </div>
-                        )}
-                      </div>
-                      <div className="font-semibold text-green-600">
-                        {formatPkrAmount(operationCost)}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-
-            <div className="border rounded-lg p-4">
-              <h4 className="font-semibold mb-3">Cost Breakdown</h4>
-              <div className="space-y-2">
-                <div className="flex justify-between items-center py-2 border-b">
-                  <div>
-                    <div className="font-medium">Operations Total</div>
-                    <div className="text-sm text-gray-600">{selectedOperations.length} operation(s)</div>
-                  </div>
-                  <div className="font-semibold text-green-600">
-                    {formatPkrAmount(getTotalOperationCost())}
-                  </div>
-                </div>
-                {(parseFloat(doctorExpense) || 0) > 0 && (
-                  <div className="flex justify-between items-center py-2 border-b">
-                    <div>
-                      <div className="font-medium">Doctor Fee</div>
-                      <div className="text-sm text-gray-600">Dr. {(() => {
-                        const selectedDoctor = doctorNames?.find(d => d.id === doctorId);
-                        return `${selectedDoctor?.first_name} ${selectedDoctor?.last_name}`;
-                      })()}</div>
-                    </div>
-                    <div className="font-semibold text-green-600">
-                      {formatPkrAmount(parseFloat(doctorExpense) || 0)}
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <div className="bg-green-50 border border-green-200 p-4 rounded-lg">
-              <div className="flex justify-between items-center text-lg font-bold">
-                <span>Total Amount:</span>
-                <span className="text-green-600">{formatPkrAmount(totalCost)}</span>
-              </div>
-            </div>
-          </div>
-
-          <div className="flex justify-end space-x-2 pt-4 border-t">
-            <Button variant="outline" onClick={() => setConfirmationOpen(false)}>
-              Cancel
-            </Button>
-            <Button
-              onClick={handleConfirmSchedule}
-              disabled={submitting}
-              className="bg-green-600 hover:bg-green-700"
+              type="submit" 
+              disabled={!selectedOperations.length || !roomId || !doctorId || (!selectedPatient && activeTab === "search") || (activeTab === "register" && (!newPatient.first_name.trim() || !newPatient.last_name.trim() || !newPatient.phone.trim() || !newPatient.cnic.trim())) || submitting}
             >
               {submitting ? (
                 <>
@@ -1033,8 +924,8 @@ export function OTScheduleDialog() {
               )}
             </Button>
           </div>
-        </DialogContent>
-      </Dialog>
+        </form>
+      </DialogContent>
     </Dialog>
   );
 }
