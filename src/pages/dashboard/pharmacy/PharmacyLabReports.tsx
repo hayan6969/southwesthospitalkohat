@@ -178,13 +178,17 @@ export default function PharmacyLabReports() {
     }
   };
 
-  // Handle viewing PDF report
-  const handleViewReport = (report: LabReport) => {
-    if (!report.result_file_url) {
-      toast.error("No PDF file available for this report");
-      return false;
+  // Get full URL for PDF viewing
+  const getPdfUrl = (result_file_url: string) => {
+    if (!result_file_url) return null;
+    
+    // If it's already a full URL, return as is
+    if (result_file_url.startsWith('http')) {
+      return result_file_url;
     }
-    return true;
+    
+    // If it's a storage path, construct the full Supabase storage URL
+    return `https://notzlgtnuncyribdjzen.supabase.co/storage/v1/object/public/lab-results/${result_file_url}`;
   };
 
   // Clear all filters
@@ -376,9 +380,9 @@ export default function PharmacyLabReports() {
                           {report.external_doctor_name || 'N/A'}
                         </TableCell>
                         <TableCell>
-                          {report.result_file_url ? (
+                          {report.result_file_url && getPdfUrl(report.result_file_url) ? (
                             <PdfViewerDialog
-                              pdfUrl={report.result_file_url}
+                              pdfUrl={getPdfUrl(report.result_file_url) || ''}
                               title={`${report.test_name} - ${new Date(report.test_date).toLocaleDateString()}`}
                               trigger={
                                 <Button
