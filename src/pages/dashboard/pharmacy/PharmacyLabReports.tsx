@@ -178,11 +178,39 @@ export default function PharmacyLabReports() {
   };
 
   // Download PDF report
-  const handleDownloadReport = (report: LabReport) => {
-    if (report.result_file_url) {
-      window.open(report.result_file_url, '_blank');
-    } else {
+  const handleDownloadReport = async (report: LabReport) => {
+    if (!report.result_file_url) {
       toast.error("No PDF file available for this report");
+      return;
+    }
+
+    try {
+      // If it's a Supabase storage URL, get a signed URL
+      if (report.result_file_url.includes('supabase')) {
+        // Extract bucket and file path from URL
+        const url = new URL(report.result_file_url);
+        const pathParts = url.pathname.split('/');
+        const bucket = pathParts[pathParts.indexOf('object') + 1];
+        const filePath = pathParts.slice(pathParts.indexOf('object') + 2).join('/');
+        
+        const { data, error } = await supabase.storage
+          .from(bucket)
+          .createSignedUrl(filePath, 60 * 60); // 1 hour expiry
+        
+        if (error) throw error;
+        
+        if (data?.signedUrl) {
+          window.open(data.signedUrl, '_blank');
+        } else {
+          throw new Error('Failed to generate signed URL');
+        }
+      } else {
+        // For direct URLs, open directly
+        window.open(report.result_file_url, '_blank');
+      }
+    } catch (error) {
+      console.error('Error opening PDF:', error);
+      toast.error("Failed to open PDF. Please try again.");
     }
   };
 
