@@ -56,6 +56,7 @@ export function EnhancedLabDialog() {
   const [notes, setNotes] = useState("");
   const [isExternalDoctor, setIsExternalDoctor] = useState(false);
   const [externalDoctorName, setExternalDoctorName] = useState("");
+  const [confirmationOpen, setConfirmationOpen] = useState(false);
   
   // New patient form
   const [newPatient, setNewPatient] = useState({
@@ -188,7 +189,7 @@ export function EnhancedLabDialog() {
         throw new Error("External doctor name is required");
       }
 
-      const selectedLabTests = filteredLabTests.filter(test => selectedTests.includes(test.id));
+      const selectedLabTests = labTests?.filter(test => selectedTests.includes(test.id)) || [];
       const totalAmount = selectedLabTests.reduce((sum, test) => sum + test.price, 0);
 
       // Create invoice first
@@ -211,7 +212,7 @@ export function EnhancedLabDialog() {
       // Create lab reports for each test
       const labReports = await Promise.all(
         selectedTests.map(async (testId) => {
-          const test = filteredLabTests.find(t => t.id === testId);
+          const test = labTests?.find(t => t.id === testId);
           const { data, error } = await supabase
             .from('lab_reports')
             .insert([{
@@ -310,8 +311,12 @@ export function EnhancedLabDialog() {
   };
 
   const getTotalAmount = () => {
-    const selectedLabTests = filteredLabTests.filter(test => selectedTests.includes(test.id));
+    const selectedLabTests = labTests?.filter(test => selectedTests.includes(test.id)) || [];
     return selectedLabTests.reduce((sum, test) => sum + test.price, 0);
+  };
+
+  const getSelectedTestsDetails = () => {
+    return labTests?.filter(test => selectedTests.includes(test.id)) || [];
   };
 
   const toggleTestSelection = (testId: string) => {
@@ -698,14 +703,81 @@ export function EnhancedLabDialog() {
               Cancel
             </Button>
             <Button
-              onClick={() => createLabOrderMutation.mutate()}
-              disabled={!selectedPatient || (!selectedDoctor && !isExternalDoctor) || selectedTests.length === 0 || createLabOrderMutation.isPending}
+              onClick={() => setConfirmationOpen(true)}
+              disabled={!selectedPatient || (!selectedDoctor && !isExternalDoctor) || selectedTests.length === 0}
             >
-              {createLabOrderMutation.isPending ? "Creating Order..." : "Create Lab Order & Generate Invoice"}
+              Confirm & Create Invoice
             </Button>
           </div>
         </div>
       </DialogContent>
+
+      {/* Confirmation Dialog */}
+      <Dialog open={confirmationOpen} onOpenChange={setConfirmationOpen}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Check className="w-5 h-5 text-green-600" />
+              Confirm Lab Order
+            </DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div className="bg-blue-50 border border-blue-200 p-4 rounded-lg">
+              <h3 className="font-semibold text-lg mb-3">Order Summary</h3>
+              
+              <div className="space-y-2 text-sm">
+                <div><strong>Patient:</strong> {selectedPatient?.profile?.first_name} {selectedPatient?.profile?.last_name}</div>
+                <div><strong>Patient ID:</strong> {selectedPatient?.patient_number || 'Not assigned'}</div>
+                <div><strong>Doctor:</strong> {isExternalDoctor ? externalDoctorName : getDoctorName(selectedDoctor, doctorNames || [])}</div>
+                {notes && <div><strong>Notes:</strong> {notes}</div>}
+              </div>
+            </div>
+
+            <div className="border rounded-lg p-4">
+              <h4 className="font-semibold mb-3">Selected Tests ({selectedTests.length})</h4>
+              <div className="space-y-2 max-h-40 overflow-y-auto">
+                {getSelectedTestsDetails().map((test) => (
+                  <div key={test.id} className="flex justify-between items-center py-2 border-b last:border-b-0">
+                    <div>
+                      <div className="font-medium">{test.name}</div>
+                      {test.description && (
+                        <div className="text-sm text-gray-600">{test.description}</div>
+                      )}
+                    </div>
+                    <div className="font-semibold text-green-600">
+                      {formatPkrAmount(test.price)}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="bg-green-50 border border-green-200 p-4 rounded-lg">
+              <div className="flex justify-between items-center text-lg font-bold">
+                <span>Total Amount:</span>
+                <span className="text-green-600">{formatPkrAmount(getTotalAmount())}</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex justify-end space-x-2 pt-4 border-t">
+            <Button variant="outline" onClick={() => setConfirmationOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={() => {
+                setConfirmationOpen(false);
+                createLabOrderMutation.mutate();
+              }}
+              disabled={createLabOrderMutation.isPending}
+              className="bg-green-600 hover:bg-green-700"
+            >
+              {createLabOrderMutation.isPending ? "Creating Order..." : "Confirm & Generate Invoice"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </Dialog>
   );
 }
