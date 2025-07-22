@@ -391,200 +391,172 @@ export const generateOTPDF = async (data: {
 }) => {
   const doc = new jsPDF();
   const pageWidth = doc.internal.pageSize.width;
-  const pageHeight = doc.internal.pageSize.height;
 
   // Add hospital header
   let yPosition = await addHospitalHeader(doc, 'OT OPERATION INVOICE');
-  yPosition += 10;
+  yPosition += 5; // Reduced spacing
 
-  // Invoice details in a comprehensive box
+  // Invoice details in a more compact box
   doc.setDrawColor(0, 0, 0);
-  doc.rect(15, yPosition - 5, pageWidth - 30, 65); // Even taller for OT details
+  doc.rect(15, yPosition, pageWidth - 30, 45); // Reduced height
   
-  doc.setFontSize(11);
+  doc.setFontSize(10); // Smaller font
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(40, 40, 40);
   
   // First row
-  doc.text('Invoice Number:', 20, yPosition + 5);
+  doc.text('Invoice #:', 20, yPosition + 8);
   doc.setFont('helvetica', 'normal');
-  doc.text(data.invoiceNumber, 70, yPosition + 5);
+  doc.text(data.invoiceNumber, 55, yPosition + 8);
   
   doc.setFont('helvetica', 'bold');
-  doc.text('Date:', 120, yPosition + 5);
+  doc.text('Date:', 120, yPosition + 8);
   doc.setFont('helvetica', 'normal');
-  doc.text(data.date, 135, yPosition + 5);
+  doc.text(data.date, 140, yPosition + 8);
   
   // Second row
   yPosition += 10;
   doc.setFont('helvetica', 'bold');
-  doc.text('Patient Name:', 20, yPosition + 5);
+  doc.text('Patient:', 20, yPosition + 8);
   doc.setFont('helvetica', 'normal');
-  doc.text(data.patientName, 70, yPosition + 5);
+  doc.text(data.patientName, 50, yPosition + 8);
   
   doc.setFont('helvetica', 'bold');
-  doc.text('Patient ID:', 120, yPosition + 5);
+  doc.text('ID:', 120, yPosition + 8);
   doc.setFont('helvetica', 'normal');
-  doc.text(data.patientId || 'N/A', 160, yPosition + 5);
+  doc.text(data.patientId || 'N/A', 135, yPosition + 8);
   
   // Third row
   yPosition += 10;
-  const otPhoneNumber = data.patientPhone || 'N/A';
   doc.setFont('helvetica', 'bold');
-  doc.text('Contact:', 20, yPosition + 5);
+  doc.text('Doctor:', 20, yPosition + 8);
   doc.setFont('helvetica', 'normal');
-  doc.text(otPhoneNumber, 60, yPosition + 5);
+  doc.text(data.doctorName, 50, yPosition + 8);
   
   doc.setFont('helvetica', 'bold');
-  doc.text('Doctor:', 120, yPosition + 5);
+  doc.text('Room:', 120, yPosition + 8);
   doc.setFont('helvetica', 'normal');
-  doc.text(data.doctorName, 155, yPosition + 5);
+  doc.text(data.room, 140, yPosition + 8);
   
   // Fourth row
   yPosition += 10;
   doc.setFont('helvetica', 'bold');
-  doc.text('Procedure:', 20, yPosition + 5);
+  doc.text('Procedure:', 20, yPosition + 8);
   doc.setFont('helvetica', 'normal');
-  doc.text(data.procedure, 60, yPosition + 5);
-  
-  doc.setFont('helvetica', 'bold');
-  doc.text('OT Room:', 120, yPosition + 5);
-  doc.setFont('helvetica', 'normal');
-  doc.text(data.room, 155, yPosition + 5);
+  doc.text(data.procedure.length > 50 ? data.procedure.substring(0, 47) + '...' : data.procedure, 60, yPosition + 8);
 
-  yPosition += 65;
+  yPosition += 50; // Move to table start
 
-  // Items table with detailed breakdown for OT
+  // Items table with better spacing
   const tableStartY = yPosition;
-  const colWidths = [60, 25, 40, 40];
+  const colWidths = [80, 25, 35, 35]; // Adjusted column widths
   const headers = ['Description', 'Qty', 'Unit Price', 'Total'];
   
-  // Table header
-  doc.setFillColor(240, 240, 240);
-  doc.rect(15, yPosition, pageWidth - 30, 10, 'F');
+  // Table header with better styling
+  doc.setFillColor(230, 230, 230);
+  doc.rect(15, yPosition, pageWidth - 30, 8, 'F');
+  doc.setDrawColor(0, 0, 0);
+  doc.rect(15, yPosition, pageWidth - 30, 8);
   
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(10);
+  doc.setFontSize(9);
   doc.setTextColor(40, 40, 40);
   let xPosition = 20;
   headers.forEach((header, index) => {
-    doc.text(header, xPosition, yPosition + 7);
+    doc.text(header, xPosition, yPosition + 6);
     xPosition += colWidths[index];
   });
   
-  yPosition += 15; // More spacing before first item
+  yPosition += 8;
   
-  // Check for page overflow before adding items
-  const itemsPerPage = Math.floor((pageHeight - yPosition - 80) / 8); // Reserve 80px for total and footer
-  let itemsRendered = 0;
-  
-  // Items
+  // Items with controlled spacing
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(60, 60, 60);
-  data.items.forEach((item) => {
-    // Check if we need a new page (keep some space for total at bottom)
-    if (yPosition > pageHeight - 80) {
-      doc.addPage();
-      yPosition = 20;
-      
-      // Re-add table header on new page
-      doc.setFillColor(240, 240, 240);
-      doc.rect(15, yPosition, pageWidth - 30, 10, 'F');
-      
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(10);
-      doc.setTextColor(40, 40, 40);
-      xPosition = 20;
-      headers.forEach((header, index) => {
-        doc.text(header, xPosition, yPosition + 7);
-        xPosition += colWidths[index];
-      });
-      
-      yPosition += 15;
-      doc.setFont('helvetica', 'normal');
-      doc.setTextColor(60, 60, 60);
-    }
+  doc.setFontSize(8);
+  
+  let itemsAdded = 0;
+  const maxItems = 20; // Limit items to ensure single page
+  
+  data.items.forEach((item, index) => {
+    if (itemsAdded >= maxItems) return; // Skip if too many items
     
     xPosition = 20;
     
     if (item.isHeader) {
-      // Header styling
+      // Header styling - more compact
       doc.setFont('helvetica', 'bold');
-      doc.setTextColor(40, 40, 40);
-      doc.text(item.description, xPosition, yPosition);
+      doc.setTextColor(20, 20, 20);
+      doc.setFontSize(8);
+      doc.text(item.description, xPosition, yPosition + 5);
       doc.setFont('helvetica', 'normal');
       doc.setTextColor(60, 60, 60);
     } else {
       // Description
-      const description = item.description.length > 35 ? item.description.substring(0, 32) + '...' : item.description;
-      doc.text(description, xPosition, yPosition);
+      const description = item.description.length > 45 ? item.description.substring(0, 42) + '...' : item.description;
+      doc.text(description, xPosition, yPosition + 5);
       xPosition += colWidths[0];
       
       // Quantity
-      doc.text(item.quantity.toString(), xPosition, yPosition);
+      doc.text(item.quantity.toString(), xPosition + 5, yPosition + 5);
       xPosition += colWidths[1];
       
       // Unit Price
-      doc.text(formatPkrAmount(Number(item.unitPrice)), xPosition, yPosition);
+      doc.text(formatPkrAmount(Number(item.unitPrice)), xPosition, yPosition + 5);
       xPosition += colWidths[2];
       
       // Total Price
-      doc.text(formatPkrAmount(Number(item.totalPrice)), xPosition, yPosition);
+      doc.text(formatPkrAmount(Number(item.totalPrice)), xPosition, yPosition + 5);
     }
     
-    yPosition += 8;
-    itemsRendered++;
+    yPosition += 6; // Reduced line height for more compact layout
+    itemsAdded++;
   });
   
-  // Draw table border
+  // Table border
+  const tableEndY = yPosition;
   doc.setDrawColor(0, 0, 0);
-  doc.rect(15, tableStartY, pageWidth - 30, yPosition - tableStartY);
+  doc.rect(15, tableStartY, pageWidth - 30, tableEndY - tableStartY);
   
-  // Vertical lines for table
+  // Vertical lines for table columns
   xPosition = 15;
   for (let i = 0; i < colWidths.length - 1; i++) {
     xPosition += colWidths[i];
-    doc.line(xPosition, tableStartY, xPosition, yPosition);
+    doc.line(xPosition, tableStartY, xPosition, tableEndY);
   }
+  
+  // Horizontal line after header
+  doc.line(15, tableStartY + 8, pageWidth - 15, tableStartY + 8);
 
-  yPosition += 15;
+  yPosition += 10;
 
-  // Check if we need a new page for the total section (need at least 60px)
-  if (yPosition > pageHeight - 60) {
-    doc.addPage();
-    yPosition = 30; // Start from top of new page with some margin
-  }
-
-  // Total section - ensure it's always visible
-  yPosition += 15;
-  const totalsX = pageWidth - 85; // Position box from right edge
+  // Total section - clean and prominent but compact
+  const totalBoxWidth = 70;
+  const totalBoxHeight = 15;
+  const totalsX = pageWidth - totalBoxWidth - 15;
+  
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(14); // Slightly larger font for better visibility
-  doc.setTextColor(40, 40, 40);
+  doc.setFontSize(12);
+  doc.setTextColor(0, 0, 0);
   
-  // Draw a more prominent total box
+  // Total box with border
   doc.setFillColor(245, 245, 245);
-  doc.rect(totalsX, yPosition - 5, 80, 25, 'FD'); // Fill and draw border, taller box
+  doc.setDrawColor(0, 0, 0);
+  doc.rect(totalsX, yPosition, totalBoxWidth, totalBoxHeight, 'FD');
   
-  doc.text('Total Amount:', totalsX + 5, yPosition + 6); // Text starts inside box
-  doc.setFontSize(16); // Even larger for the amount
-  doc.setTextColor(0, 100, 0); // Green color for total
-  doc.text(formatPkrAmount(data.totalAmount), totalsX + 5, yPosition + 18); // Amount below label
+  // Total text
+  doc.setFontSize(10);
+  doc.text('TOTAL AMOUNT:', totalsX + 3, yPosition + 6);
+  doc.setFontSize(12);
+  doc.setTextColor(0, 100, 0);
+  doc.text(formatPkrAmount(data.totalAmount), totalsX + 3, yPosition + 12);
 
-  // Footer
-  yPosition += 40; // More space after total
-  
-  // Ensure footer doesn't go off page
-  if (yPosition > pageHeight - 30) {
-    doc.addPage();
-    yPosition = 30;
-  }
-  
-  doc.setFontSize(9);
+  // Footer - compact
+  yPosition += 25;
+  doc.setFontSize(8);
   doc.setFont('helvetica', 'italic');
   doc.setTextColor(100, 100, 100);
   doc.text('Thank you for choosing our medical services!', pageWidth / 2, yPosition, { align: 'center' });
-  doc.text('This invoice serves as proof of completed operation.', pageWidth / 2, yPosition + 8, { align: 'center' });
+  doc.text('This invoice serves as proof of completed operation.', pageWidth / 2, yPosition + 6, { align: 'center' });
 
   // Open PDF in new tab
   const pdfBlob = doc.output('blob');
