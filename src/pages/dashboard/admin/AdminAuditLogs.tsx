@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { format } from "date-fns";
 import { useQueryClient } from "@tanstack/react-query";
+import { AuditLogDetailDialog } from "@/components/dialogs/AuditLogDetailDialog";
 
 export default function AdminAuditLogs() {
   const { data: auditLogs, isLoading } = useAuditLogs();
@@ -31,6 +32,10 @@ export default function AdminAuditLogs() {
     userEmail: "",
     ipAddress: ""
   });
+
+  // Dialog state
+  const [selectedLog, setSelectedLog] = useState<any>(null);
+  const [showLogDetail, setShowLogDetail] = useState(false);
 
   // Real-time updates are handled by the global useRealTimeUpdates hook
 
@@ -77,6 +82,11 @@ export default function AdminAuditLogs() {
   };
 
   const hasActiveFilters = Object.values(filters).some(value => value !== "");
+
+  const handleLogClick = (log: any) => {
+    setSelectedLog(log);
+    setShowLogDetail(true);
+  };
 
   return (
     <AppLayout>
@@ -241,7 +251,11 @@ export default function AdminAuditLogs() {
                   ))
                 ) : filteredLogs && filteredLogs.length > 0 ? (
                   filteredLogs.map((log) => (
-                    <TableRow key={log.id}>
+                    <TableRow 
+                      key={log.id} 
+                      className="cursor-pointer hover:bg-muted/50 transition-colors"
+                      onClick={() => handleLogClick(log)}
+                    >
                       <TableCell>
                         <div className="flex items-center gap-2">
                           <Calendar className="w-4 h-4 text-gray-400" />
@@ -297,6 +311,12 @@ export default function AdminAuditLogs() {
             </Table>
           </div>
         </div>
+
+        <AuditLogDetailDialog 
+          log={selectedLog}
+          open={showLogDetail}
+          onOpenChange={setShowLogDetail}
+        />
       </div>
     </AppLayout>
   );
