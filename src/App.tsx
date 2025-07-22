@@ -209,6 +209,10 @@ const App = () => (
                 <DashboardPharmacy />
               </ProtectedRoute>
             } />
+            {/* Legacy redirects for pharmacist roles */}
+            <Route path="/dashboard/head_pharmacist" element={<Navigate to="/dashboard/pharmacy" replace />} />
+            <Route path="/dashboard/assistant_pharmacist" element={<Navigate to="/dashboard/pharmacy" replace />} />
+            <Route path="/dashboard/salesman_pharmacist" element={<Navigate to="/dashboard/pharmacy" replace />} />
             <Route path="/dashboard/pharmacy/medicines" element={
               <ProtectedRoute allowedRoles={['head_pharmacist', 'assistant_pharmacist']}>
                 <PharmacyMedicines />

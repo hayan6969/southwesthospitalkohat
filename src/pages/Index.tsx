@@ -15,8 +15,9 @@ const Index = () => {
     console.log('Index.tsx - Profile role:', profile?.role);
     if (profile?.role) {
       console.log('Redirecting to dashboard for role:', profile.role);
-      console.log('Redirect URL:', `/dashboard/${profile.role}`);
-      window.location.href = `/dashboard/${profile.role}`;
+      const dashboardRole = profile.role.includes('pharmacist') ? 'pharmacy' : profile.role;
+      console.log('Redirect URL:', `/dashboard/${dashboardRole}`);
+      window.location.href = `/dashboard/${dashboardRole}`;
     } else {
       console.log('No profile role found, staying on Index');
     }
@@ -82,7 +83,10 @@ const Index = () => {
             <CardContent className="space-y-6">
               <div className="text-center">
                 <Button 
-                  onClick={() => window.location.href = `/dashboard/${profile.role}`}
+                  onClick={() => {
+                    const dashboardRole = profile.role.includes('pharmacist') ? 'pharmacy' : profile.role;
+                    window.location.href = `/dashboard/${dashboardRole}`;
+                  }}
                   className="text-lg px-8 py-3"
                 >
                   Go to My Dashboard
