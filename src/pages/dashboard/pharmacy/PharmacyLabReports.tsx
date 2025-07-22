@@ -188,10 +188,18 @@ export default function PharmacyLabReports() {
     }
     
     try {
+      // Remove bucket name from path if it exists
+      let filePath = result_file_url;
+      if (filePath.startsWith('lab-results/')) {
+        filePath = filePath.replace('lab-results/', '');
+      }
+      
+      console.log('Creating signed URL for file path:', filePath);
+      
       // Get signed URL for private bucket access
       const { data, error } = await supabase.storage
         .from('lab-results')
-        .createSignedUrl(result_file_url, 60 * 60); // 1 hour expiry
+        .createSignedUrl(filePath, 60 * 60); // 1 hour expiry
       
       if (error) {
         console.error('Error creating signed URL:', error);
