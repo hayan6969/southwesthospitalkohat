@@ -259,12 +259,16 @@ export default function AdminAuditLogs() {
                   filteredLogs.map((log) => (
                     <TableRow 
                       key={log.id} 
-                      className="cursor-pointer hover:bg-muted/50 transition-colors"
+                      className="cursor-pointer hover:bg-gray-50 transition-colors"
+                      style={{ cursor: 'pointer' }}
                       onClick={(e) => {
+                        console.log("TableRow onClick triggered!");
                         e.stopPropagation();
-                        console.log("Row clicked, log:", log);
+                        e.preventDefault();
                         handleLogClick(log);
                       }}
+                      onMouseEnter={() => console.log("Mouse entered row")}
+                      onMouseLeave={() => console.log("Mouse left row")}
                     >
                       <TableCell>
                         <div className="flex items-center gap-2">
