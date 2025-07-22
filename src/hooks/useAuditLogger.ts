@@ -1,6 +1,5 @@
 
 import { useCreateAuditLog } from "./useDatabase";
-import { useAuth } from "./useAuth";
 
 const getUserIP = async (): Promise<string> => {
   try {
@@ -45,21 +44,18 @@ const getUserIP = async (): Promise<string> => {
 
 export const useAuditLogger = () => {
   const createAuditLog = useCreateAuditLog();
-  const { user } = useAuth();
 
   const logAction = async (action: string, details?: string, userId?: string) => {
     try {
       const ipAddress = await getUserIP();
-      // Use provided userId or fallback to current authenticated user
-      const effectiveUserId = userId || user?.id;
       
       await createAuditLog.mutateAsync({
-        user_id: effectiveUserId,
+        user_id: userId,
         action,
         details,
         ip_address: ipAddress
       });
-      console.log(`Audit log: ${action}`, details, `User: ${effectiveUserId}, IP: ${ipAddress}`);
+      console.log(`Audit log: ${action}`, details, `User: ${userId}, IP: ${ipAddress}`);
     } catch (error) {
       console.error("Failed to log audit action:", error);
     }

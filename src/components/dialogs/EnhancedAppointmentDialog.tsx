@@ -3,6 +3,7 @@ import { useCreateAppointmentWithInvoice, useCreatePatientWithProfile, useDoctor
 import { useSearchPatientsWithNames, useDoctorNames } from "@/hooks/useDisplayHelpers";
 import { useDoctorAvailability, useCheckDoctorAvailability } from "@/hooks/useDoctorAvailability";
 import { useAuditLogger } from "@/hooks/useAuditLogger";
+import { useAuth } from "@/hooks/useAuth";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -64,6 +65,7 @@ export function EnhancedAppointmentDialog() {
   const { data: doctorNames } = useDoctorNames();
   const { data: searchResults } = useSearchPatientsWithNames(searchTerm);
   const { logAction } = useAuditLogger();
+  const { user } = useAuth();
   const { checkAvailability } = useCheckDoctorAvailability();
   const { data: availability } = useDoctorAvailability(doctorId, appointmentDate);
 
@@ -186,10 +188,11 @@ export function EnhancedAppointmentDialog() {
 
       const result = await createAppointmentWithInvoice.mutateAsync(appointmentData);
       
-      // Log the audit event
+      // Log the audit event with current user ID
       await logAction(
         "Created appointment with invoice",
-        `Appointment scheduled for ${appointmentDate} at ${appointmentTime} with consultation fee ${formatCurrency(consultationFee)}`
+        `Appointment scheduled for ${appointmentDate} at ${appointmentTime} with consultation fee ${formatCurrency(consultationFee)}`,
+        user?.id
       );
       
       toast.success("Appointment created successfully with invoice");

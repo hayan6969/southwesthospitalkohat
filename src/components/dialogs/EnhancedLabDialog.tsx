@@ -16,6 +16,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { usePatientNames, useDoctorNames, getPatientName, getDoctorName } from "@/hooks/useDisplayHelpers";
 import { useSearchPatientsWithNames } from "@/hooks/useDisplayHelpers";
 import { useAuditLogger } from "@/hooks/useAuditLogger";
+import { useAuth } from "@/hooks/useAuth";
 import { formatPkrAmount } from "@/utils/currency";
 import { generateLabInvoicePDF } from "@/utils/pdfGenerator";
 import { cn } from "@/lib/utils";
@@ -75,6 +76,7 @@ export function EnhancedLabDialog() {
   const { data: doctorNames } = useDoctorNames();
   const { data: searchResults } = useSearchPatientsWithNames(searchTerm);
   const { logCreate } = useAuditLogger();
+  const { user } = useAuth();
 
   // Fetch doctors
   const { data: doctors } = useQuery({
@@ -239,10 +241,11 @@ export function EnhancedLabDialog() {
     onSuccess: async ({ invoice, selectedLabTests }) => {
       queryClient.invalidateQueries({ queryKey: ['lab-reports'] });
       
-      // Log audit event
+      // Log audit event with current user ID
       await logCreate(
         "Lab Order Created",
-        `${selectedTests.length} lab tests ordered for ${selectedPatient?.profile?.first_name} ${selectedPatient?.profile?.last_name}`
+        `${selectedTests.length} lab tests ordered for ${selectedPatient?.profile?.first_name} ${selectedPatient?.profile?.last_name}`,
+        user?.id
       );
 
       // Generate and open PDF invoice

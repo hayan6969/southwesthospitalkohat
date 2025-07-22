@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { useCreateUser, useDepartments } from "@/hooks/useDatabase";
 import { useAuditLogger } from "@/hooks/useAuditLogger";
+import { useAuth } from "@/hooks/useAuth";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,6 +22,7 @@ export function StaffDialog() {
   const createUser = useCreateUser();
   const { data: departments } = useDepartments();
   const { logCreate } = useAuditLogger();
+  const { user } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -40,10 +42,11 @@ export function StaffDialog() {
         department_id: departmentId || undefined
       });
       
-      // Log the audit event
+      // Log the audit event with current user ID
       await logCreate(
         "Staff Member",
-        `${firstName.trim()} ${lastName.trim()} added to staff`
+        `${firstName.trim()} ${lastName.trim()} added to staff`,
+        user?.id
       );
       
       toast.success("Staff member created successfully");
