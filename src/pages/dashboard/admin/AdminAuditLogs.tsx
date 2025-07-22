@@ -84,6 +84,7 @@ export default function AdminAuditLogs() {
   const hasActiveFilters = Object.values(filters).some(value => value !== "");
 
   const handleLogClick = (log: any) => {
+    console.log("Log clicked:", log);
     setSelectedLog(log);
     setShowLogDetail(true);
   };
