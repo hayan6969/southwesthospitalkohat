@@ -39,6 +39,7 @@ export function OTScheduleDialog() {
   const [activeTab, setActiveTab] = useState("search");
   const [doctorOpen, setDoctorOpen] = useState(false);
   const [operationOpen, setOperationOpen] = useState(false);
+  const [confirmationOpen, setConfirmationOpen] = useState(false);
   
   // Search existing patient
   const [searchTerm, setSearchTerm] = useState("");
@@ -167,6 +168,11 @@ export function OTScheduleDialog() {
       console.error("Error getting queue position:", error);
       return 1;
     }
+  };
+
+  const handleConfirmSchedule = async () => {
+    setConfirmationOpen(false);
+    await handleSubmit(new Event('submit') as any);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -842,19 +848,113 @@ export function OTScheduleDialog() {
             <Button type="button" variant="outline" onClick={() => setOpen(false)}>
               Cancel
             </Button>
-            <Button type="submit" disabled={submitting}>
+            <Button 
+              type="button" 
+              onClick={() => setConfirmationOpen(true)}
+              disabled={!operationId || !roomId || !doctorId || (!selectedPatient && activeTab === "search") || (activeTab === "register" && (!newPatient.first_name.trim() || !newPatient.last_name.trim() || !newPatient.phone.trim() || !newPatient.cnic.trim()))}
+            >
+              Confirm & Schedule Operation
+            </Button>
+          </div>
+        </form>
+      </DialogContent>
+
+      {/* Confirmation Dialog */}
+      <Dialog open={confirmationOpen} onOpenChange={setConfirmationOpen}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Check className="w-5 h-5 text-green-600" />
+              Confirm OT Operation
+            </DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div className="bg-blue-50 border border-blue-200 p-4 rounded-lg">
+              <h3 className="font-semibold text-lg mb-3">Operation Summary</h3>
+              
+              <div className="space-y-2 text-sm">
+                <div><strong>Patient:</strong> {selectedPatient ? `${selectedPatient.profile?.first_name} ${selectedPatient.profile?.last_name}` : `${newPatient.first_name} ${newPatient.last_name}`}</div>
+                <div><strong>Patient ID:</strong> {selectedPatient ? (selectedPatient.patient_number || 'Not assigned') : 'Will be assigned'}</div>
+                <div><strong>Doctor:</strong> Dr. {(() => {
+                  const selectedDoctor = doctorNames?.find(d => d.id === doctorId);
+                  return `${selectedDoctor?.first_name} ${selectedDoctor?.last_name}`;
+                })()}</div>
+                <div><strong>Operation:</strong> {selectedOperation?.operation_name}</div>
+                <div><strong>Date:</strong> {new Date(operationDate).toLocaleDateString()}</div>
+                <div><strong>Room:</strong> {rooms.find(r => r.id === roomId)?.room_name}</div>
+                {notes && <div><strong>Notes:</strong> {notes}</div>}
+              </div>
+            </div>
+
+            <div className="border rounded-lg p-4">
+              <h4 className="font-semibold mb-3">Cost Breakdown</h4>
+              <div className="space-y-2">
+                {selectedOperation && (
+                  <>
+                    <div className="flex justify-between items-center py-2 border-b">
+                      <div>
+                        <div className="font-medium">{selectedOperation.operation_name}</div>
+                        <div className="text-sm text-gray-600">Hospital charges</div>
+                      </div>
+                      <div className="font-semibold text-green-600">
+                        {formatPkrAmount(operationCost)}
+                      </div>
+                    </div>
+                    {selectedOperation.expenses.map((expense) => (
+                      <div key={expense.id} className="flex justify-between items-center py-1 text-sm text-gray-600 ml-4">
+                        <span>• {expense.expense_name}</span>
+                        <span>{formatPkrAmount(expense.cost)}</span>
+                      </div>
+                    ))}
+                  </>
+                )}
+                {(parseFloat(doctorExpense) || 0) > 0 && (
+                  <div className="flex justify-between items-center py-2 border-b">
+                    <div>
+                      <div className="font-medium">Doctor Fee</div>
+                      <div className="text-sm text-gray-600">Dr. {(() => {
+                        const selectedDoctor = doctorNames?.find(d => d.id === doctorId);
+                        return `${selectedDoctor?.first_name} ${selectedDoctor?.last_name}`;
+                      })()}</div>
+                    </div>
+                    <div className="font-semibold text-green-600">
+                      {formatPkrAmount(parseFloat(doctorExpense) || 0)}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="bg-green-50 border border-green-200 p-4 rounded-lg">
+              <div className="flex justify-between items-center text-lg font-bold">
+                <span>Total Amount:</span>
+                <span className="text-green-600">{formatPkrAmount(totalCost)}</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex justify-end space-x-2 pt-4 border-t">
+            <Button variant="outline" onClick={() => setConfirmationOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={handleConfirmSchedule}
+              disabled={submitting}
+              className="bg-green-600 hover:bg-green-700"
+            >
               {submitting ? (
                 <>
                   <div className="w-4 h-4 mr-2 animate-spin rounded-full border-2 border-white border-t-transparent" />
                   Scheduling...
                 </>
               ) : (
-                "Schedule OT Operation"
+                "Confirm & Generate Invoice"
               )}
             </Button>
           </div>
-        </form>
-      </DialogContent>
+        </DialogContent>
+      </Dialog>
     </Dialog>
   );
 }
