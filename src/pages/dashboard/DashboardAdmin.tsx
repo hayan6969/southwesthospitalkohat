@@ -32,6 +32,7 @@ import { toast } from "sonner";
 import AdminLabs from "./admin/AdminLabs";
 import { AdminOT } from "./admin/AdminOT";
 import { AdminFinanceAnalytics } from "@/components/AdminFinanceAnalytics";
+import { AuditLogDetailDialog } from "@/components/dialogs/AuditLogDetailDialog";
 
 
 export default function DashboardAdmin() {
@@ -79,6 +80,10 @@ export default function DashboardAdmin() {
   const [logSearchTerm, setLogSearchTerm] = useState("");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
+
+  // System logs dialog state
+  const [selectedSystemLog, setSelectedSystemLog] = useState<any>(null);
+  const [showSystemLogDetail, setShowSystemLogDetail] = useState(false);
 
   // Filter users based on role and search term
   const filteredUsers = users?.filter(user => {
@@ -153,6 +158,12 @@ export default function DashboardAdmin() {
       console.error("Failed to delete user:", error);
       toast.error("Failed to delete user");
     }
+  };
+
+  const handleSystemLogClick = (log: any) => {
+    console.log("System log clicked:", log);
+    setSelectedSystemLog(log);
+    setShowSystemLogDetail(true);
   };
 
   // Initialize forms when hospital settings load
@@ -695,11 +706,16 @@ export default function DashboardAdmin() {
                           <TableHead>Action</TableHead>
                           <TableHead>Details</TableHead>
                           <TableHead>IP Address</TableHead>
+                          <TableHead>Actions</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
                         {filteredLogs.map((log) => (
-                          <TableRow key={log.id}>
+                          <TableRow 
+                            key={log.id}
+                            className="cursor-pointer hover:bg-gray-50 transition-colors"
+                            onClick={() => handleSystemLogClick(log)}
+                          >
                             <TableCell className="font-mono text-sm">
                               {format(new Date(log.created_at || ''), 'MMM dd, yyyy HH:mm:ss')}
                             </TableCell>
@@ -716,6 +732,18 @@ export default function DashboardAdmin() {
                             </TableCell>
                             <TableCell className="font-mono text-sm">
                               {log.ip_address || 'Unknown'}
+                            </TableCell>
+                            <TableCell>
+                              <Button 
+                                size="sm" 
+                                variant="outline"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleSystemLogClick(log);
+                                }}
+                              >
+                                View Details
+                              </Button>
                             </TableCell>
                           </TableRow>
                         ))}
@@ -1004,6 +1032,12 @@ export default function DashboardAdmin() {
                 </AlertDialogFooter>
               </AlertDialogContent>
             </AlertDialog>
+            
+            <AuditLogDetailDialog 
+              log={selectedSystemLog}
+              open={showSystemLogDetail}
+              onOpenChange={setShowSystemLogDetail}
+            />
           </div>
         </div>
       </div>
