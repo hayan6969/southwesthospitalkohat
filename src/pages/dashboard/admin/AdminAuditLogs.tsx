@@ -88,8 +88,10 @@ export default function AdminAuditLogs() {
   const handleLogClick = (log: any) => {
     console.log("Log clicked:", log);
     console.log("Setting selected log and opening dialog");
+    console.log("Current dialog state:", showLogDetail);
     setSelectedLog(log);
     setShowLogDetail(true);
+    console.log("Dialog should now be open");
   };
 
   return (
@@ -323,7 +325,10 @@ export default function AdminAuditLogs() {
         <AuditLogDetailDialog 
           log={selectedLog}
           open={showLogDetail}
-          onOpenChange={setShowLogDetail}
+          onOpenChange={(open) => {
+            console.log("Dialog onOpenChange called with:", open);
+            setShowLogDetail(open);
+          }}
         />
       </div>
     </AppLayout>
