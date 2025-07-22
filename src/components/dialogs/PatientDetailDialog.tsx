@@ -12,6 +12,8 @@ import { User, Calendar, FileText, Clock, Plus, Save, File, Eye } from "lucide-r
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { formatPatientInfo } from "@/utils/patientUtils";
+import { PdfViewerDialog } from "@/components/dialogs/PdfViewerDialog";
+import { supabase } from "@/integrations/supabase/client";
 
 interface PatientDetailDialogProps {
   isOpen: boolean;
@@ -98,6 +100,34 @@ export function PatientDetailDialog({ isOpen, onClose, patient }: PatientDetailD
     setActiveRecord(null);
     setRecordForm({ diagnosis: '', treatment: '', prescription: '', notes: '' });
     setIsCreatingRecord(true);
+  };
+
+  // Get public URL for PDF viewing from public bucket
+  const getPdfUrl = async (result_file_url: string): Promise<string | null> => {
+    if (!result_file_url) return null;
+    
+    // If it's already a full URL, return as is
+    if (result_file_url.startsWith('http')) {
+      return result_file_url;
+    }
+    
+    try {
+      // Since lab-results bucket is now public, we can use getPublicUrl directly
+      const { data } = supabase.storage
+        .from('lab-results')
+        .getPublicUrl(result_file_url);
+      
+      if (data?.publicUrl) {
+        console.log('Successfully got public URL for:', result_file_url);
+        return data.publicUrl;
+      }
+      
+      console.error('No public URL returned from Supabase');
+      return null;
+    } catch (error) {
+      console.error('Error getting PDF URL:', error);
+      return null;
+    }
   };
 
   if (!patient) return null;
@@ -292,14 +322,21 @@ export function PatientDetailDialog({ isOpen, onClose, patient }: PatientDetailD
                                 {report.results}
                               </div>
                             ) : report.result_file_url ? (
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => window.open(report.result_file_url, '_blank')}
-                              >
-                                <Eye className="w-4 h-4 mr-2" />
-                                View File
-                              </Button>
+                              <PdfViewerDialog
+                                pdfUrl={null}
+                                title={`${report.test_name} - ${format(new Date(report.test_date || new Date()), 'MMM d, yyyy')}`}
+                                onGetPdfUrl={() => getPdfUrl(report.result_file_url)}
+                                trigger={
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="flex items-center gap-2"
+                                  >
+                                    <Eye className="w-4 h-4" />
+                                    View PDF
+                                  </Button>
+                                }
+                              />
                             ) : (
                               <span className="text-muted-foreground">Results pending</span>
                             )}
