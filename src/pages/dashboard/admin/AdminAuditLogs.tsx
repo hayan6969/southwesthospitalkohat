@@ -242,6 +242,7 @@ export default function AdminAuditLogs() {
                   <TableHead>Action</TableHead>
                   <TableHead>Details</TableHead>
                   <TableHead>IP Address</TableHead>
+                  <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody style={{ position: 'relative', zIndex: 2 }}>
@@ -257,31 +258,8 @@ export default function AdminAuditLogs() {
                   ))
                 ) : filteredLogs && filteredLogs.length > 0 ? (
                   filteredLogs.map((log) => (
-                    <TableRow 
-                      key={log.id} 
-                      className="cursor-pointer hover:bg-gray-50 transition-colors relative"
-                      style={{ 
-                        cursor: 'pointer',
-                        zIndex: 10,
-                        position: 'relative'
-                      }}
-                      onClick={(e) => {
-                        console.log("TableRow onClick triggered!");
-                        e.stopPropagation();
-                        e.preventDefault();
-                        handleLogClick(log);
-                      }}
-                      onMouseEnter={() => console.log("Mouse entered row")}
-                      onMouseLeave={() => console.log("Mouse left row")}
-                    >
-                      <TableCell 
-                        style={{ pointerEvents: 'auto', cursor: 'pointer' }}
-                        onClick={(e) => {
-                          console.log("TableCell clicked!");
-                          e.stopPropagation();
-                          handleLogClick(log);
-                        }}
-                      >
+                    <TableRow key={log.id}>
+                      <TableCell>
                         <div className="flex items-center gap-2">
                           <Calendar className="w-4 h-4 text-gray-400" />
                           <div>
@@ -322,6 +300,19 @@ export default function AdminAuditLogs() {
                         <span className="text-sm font-mono text-gray-500">
                           {log.ip_address || 'Unknown'}
                         </span>
+                      </TableCell>
+                      <TableCell>
+                        <Button 
+                          size="sm" 
+                          variant="outline"
+                          onClick={(e) => {
+                            console.log("Button clicked for log:", log.id);
+                            e.stopPropagation();
+                            handleLogClick(log);
+                          }}
+                        >
+                          View Details
+                        </Button>
                       </TableCell>
                     </TableRow>
                   ))
