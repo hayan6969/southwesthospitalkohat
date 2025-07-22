@@ -87,6 +87,7 @@ export default function AdminAuditLogs() {
 
   const handleLogClick = (log: any) => {
     console.log("Log clicked:", log);
+    console.log("Setting selected log and opening dialog");
     setSelectedLog(log);
     setShowLogDetail(true);
   };
@@ -257,7 +258,11 @@ export default function AdminAuditLogs() {
                     <TableRow 
                       key={log.id} 
                       className="cursor-pointer hover:bg-muted/50 transition-colors"
-                      onClick={() => handleLogClick(log)}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        console.log("Row clicked, log:", log);
+                        handleLogClick(log);
+                      }}
                     >
                       <TableCell>
                         <div className="flex items-center gap-2">
