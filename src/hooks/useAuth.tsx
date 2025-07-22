@@ -95,6 +95,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             try {
               const profileData = await fetchUserProfile(session.user.id);
               if (mounted) {
+                // Check if user account is active
+                if (profileData && !profileData.is_active) {
+                  console.log('User account is inactive, signing out');
+                  await supabase.auth.signOut();
+                  return;
+                }
+                
                 console.log('📝 Setting profile data from auth state change:', profileData);
                 setProfile(profileData);
                 setLoading(false);
@@ -127,6 +134,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         } else if (onlineSession?.user) {
           console.log('✅ Found active online session for:', onlineSession.user.email);
           const currentProfile = await fetchUserProfile(onlineSession.user.id);
+          
+          // Check if user account is active during initialization
+          if (currentProfile && !currentProfile.is_active) {
+            console.log('User account is inactive during init, signing out');
+            await supabase.auth.signOut();
+            return;
+          }
           
           if (mounted) {
             setSession(onlineSession);

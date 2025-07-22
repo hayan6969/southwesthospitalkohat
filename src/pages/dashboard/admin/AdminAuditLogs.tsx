@@ -259,7 +259,7 @@ export default function AdminAuditLogs() {
                       key={log.id} 
                       className="cursor-pointer hover:bg-muted/50 transition-colors"
                       onClick={(e) => {
-                        e.preventDefault();
+                        e.stopPropagation();
                         console.log("Row clicked, log:", log);
                         handleLogClick(log);
                       }}
