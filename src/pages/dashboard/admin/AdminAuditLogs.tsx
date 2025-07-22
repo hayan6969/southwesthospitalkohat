@@ -18,11 +18,6 @@ export default function AdminAuditLogs() {
   const { data: auditLogs, isLoading } = useAuditLogs();
   const queryClient = useQueryClient();
 
-  // Debug logs
-  console.log("Audit logs data:", auditLogs);
-  console.log("Sample log:", auditLogs?.[0]);
-  console.log("Sample user_profile:", auditLogs?.[0]?.user_profile);
-
   // Filter state
   const [showFilters, setShowFilters] = useState(false);
   const [filters, setFilters] = useState({
@@ -70,6 +65,13 @@ export default function AdminAuditLogs() {
 
     return true;
   });
+
+  // Debug logs
+  console.log("Audit logs data:", auditLogs);
+  console.log("Audit logs isLoading:", isLoading);
+  console.log("Filtered logs length:", filteredLogs?.length);
+  console.log("Sample log:", auditLogs?.[0]);
+  console.log("Sample user_profile:", auditLogs?.[0]?.user_profile);
 
   const clearFilters = () => {
     setFilters({
