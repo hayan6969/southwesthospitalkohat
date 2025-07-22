@@ -714,7 +714,7 @@ export function EnhancedLabDialog() {
 
       {/* Confirmation Dialog */}
       <Dialog open={confirmationOpen} onOpenChange={setConfirmationOpen}>
-        <DialogContent className="sm:max-w-[600px]">
+        <DialogContent className="sm:max-w-[500px] max-h-[80vh] overflow-y-auto animate-scale-in">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Check className="w-5 h-5 text-green-600" />
@@ -734,9 +734,9 @@ export function EnhancedLabDialog() {
               </div>
             </div>
 
-            <div className="border rounded-lg p-4">
+            <div className="border rounded-lg p-4 bg-gray-50">
               <h4 className="font-semibold mb-3">Selected Tests ({selectedTests.length})</h4>
-              <div className="space-y-2 max-h-40 overflow-y-auto">
+              <div className="space-y-2 max-h-32 overflow-y-auto bg-white rounded border p-2">
                 {getSelectedTestsDetails().map((test) => (
                   <div key={test.id} className="flex justify-between items-center py-2 border-b last:border-b-0">
                     <div>

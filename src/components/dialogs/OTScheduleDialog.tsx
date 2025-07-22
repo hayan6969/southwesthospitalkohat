@@ -927,7 +927,7 @@ export function OTScheduleDialog() {
 
       {/* Confirmation Dialog */}
       <Dialog open={confirmationOpen} onOpenChange={setConfirmationOpen}>
-        <DialogContent className="sm:max-w-[600px]">
+        <DialogContent className="sm:max-w-[500px] max-h-[80vh] overflow-y-auto animate-scale-in">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Check className="w-5 h-5 text-green-600" />
@@ -953,9 +953,9 @@ export function OTScheduleDialog() {
               </div>
             </div>
 
-            <div className="border rounded-lg p-4">
+            <div className="border rounded-lg p-4 bg-gray-50">
               <h4 className="font-semibold mb-3">Selected Operations ({selectedOperations.length})</h4>
-              <div className="space-y-2 max-h-40 overflow-y-auto">
+              <div className="space-y-2 max-h-32 overflow-y-auto bg-white rounded border p-2">
                 {getSelectedOperationsDetails().map((operation) => {
                   const operationCost = operation.expenses.reduce((sum, exp) => sum + exp.cost, 0);
                   return (
