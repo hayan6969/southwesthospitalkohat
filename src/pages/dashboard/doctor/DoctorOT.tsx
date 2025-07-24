@@ -169,9 +169,7 @@ export default function DoctorOT() {
     }
   };
 
-  const upcomingOTs = otSchedules.filter(ot => 
-    new Date(ot.operation_date) >= new Date() && ot.status === 'scheduled'
-  );
+  const upcomingOTs = otSchedules.filter(ot => ot.status === 'scheduled');
 
   const completedOTs = otSchedules.filter(ot => ot.status === 'completed');
   const recentCompletedOTs = completedOTs.slice(0, 10);
