@@ -22,6 +22,7 @@ import DashboardStaff from "./pages/dashboard/DashboardStaff";
 import DashboardAdmin from "./pages/dashboard/DashboardAdmin";
 import DashboardPharmacy from "./pages/dashboard/DashboardPharmacy";
 import DashboardFinance from "./pages/dashboard/DashboardFinance";
+import DashboardOTA from "./pages/dashboard/DashboardOTA";
 
 // Doctor pages
 import DoctorSchedule from "./pages/dashboard/doctor/DoctorSchedule";
@@ -168,6 +169,13 @@ const App = () => (
             <Route path="/dashboard/staff/labs" element={
               <ProtectedRoute allowedRoles={['staff']}>
                 <StaffLabs />
+              </ProtectedRoute>
+            } />
+
+            {/* OTA dashboard routes */}
+            <Route path="/dashboard/ota" element={
+              <ProtectedRoute allowedRoles={['ota']}>
+                <DashboardOTA />
               </ProtectedRoute>
             } />
 
