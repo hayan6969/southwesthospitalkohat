@@ -15,7 +15,15 @@ const Index = () => {
     console.log('Index.tsx - Profile role:', profile?.role);
     if (profile?.role) {
       console.log('Redirecting to dashboard for role:', profile.role);
-      const dashboardRole = profile.role.includes('pharmacist') ? 'pharmacy' : profile.role;
+      
+      let dashboardRole;
+      // Handle special role mappings
+      if (profile.role.includes('pharmacist')) {
+        dashboardRole = 'pharmacy';
+      } else {
+        dashboardRole = profile.role;
+      }
+      
       console.log('Redirect URL:', `/dashboard/${dashboardRole}`);
       window.location.href = `/dashboard/${dashboardRole}`;
     } else {
@@ -84,7 +92,13 @@ const Index = () => {
               <div className="text-center">
                 <Button 
                   onClick={() => {
-                    const dashboardRole = profile.role.includes('pharmacist') ? 'pharmacy' : profile.role;
+                    let dashboardRole;
+                    // Handle special role mappings
+                    if (profile.role.includes('pharmacist')) {
+                      dashboardRole = 'pharmacy';
+                    } else {
+                      dashboardRole = profile.role;
+                    }
                     window.location.href = `/dashboard/${dashboardRole}`;
                   }}
                   className="text-lg px-8 py-3"

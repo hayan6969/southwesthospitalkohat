@@ -10,7 +10,7 @@ type UserProfile = {
   first_name: string;
   last_name: string;
   phone?: string;
-  role: 'admin' | 'doctor' | 'staff' | 'head_pharmacist' | 'assistant_pharmacist' | 'salesman_pharmacist' | 'patient' | 'finance';
+  role: 'admin' | 'doctor' | 'staff' | 'ota' | 'head_pharmacist' | 'assistant_pharmacist' | 'salesman_pharmacist' | 'patient' | 'finance';
   department_id?: string;
   is_active: boolean;
   created_at: string;
@@ -62,7 +62,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         // Cast the role to the proper type
         const profile: UserProfile = {
           ...data,
-          role: data.role as 'admin' | 'doctor' | 'staff' | 'head_pharmacist' | 'assistant_pharmacist' | 'salesman_pharmacist' | 'patient' | 'finance'
+          role: data.role as 'admin' | 'doctor' | 'staff' | 'ota' | 'head_pharmacist' | 'assistant_pharmacist' | 'salesman_pharmacist' | 'patient' | 'finance'
         };
         
         return profile;
@@ -171,19 +171,35 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const signIn = async (email: string, password: string) => {
     try {
+      // Clean up any existing auth state first
+      cleanupAuthState();
+      
+      // Attempt to sign out any existing session
+      try {
+        await supabase.auth.signOut({ scope: 'global' });
+      } catch (err) {
+        // Continue even if this fails
+        console.log('No existing session to sign out');
+      }
+
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
-      if (error) return { error };
+      if (error) {
+        console.error('Sign in error:', error);
+        return { error };
+      }
 
       if (data.user) {
+        console.log('✅ User signed in successfully:', data.user.email);
         const profileData = await fetchUserProfile(data.user.id);
-        console.log('User signed in:', data.user.email);
+        console.log('✅ Profile data fetched:', profileData);
         
         // Check if user account is active
         if (profileData && !profileData.is_active) {
+          console.log('❌ User account is inactive, signing out');
           await supabase.auth.signOut();
           return { error: { message: "Your account has been temporarily blocked. Please contact the administrator." } };
         }
@@ -195,16 +211,30 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         
         // Redirect based on user role
         if (profileData?.role) {
-          console.log('Redirecting to dashboard for role:', profileData.role);
-          const dashboardRole = profileData.role.includes('pharmacist') ? 'pharmacy' : profileData.role;
+          console.log('🔄 Redirecting to dashboard for role:', profileData.role);
+          
+          let dashboardRole;
+          // Handle special role mappings
+          if (profileData.role.includes('pharmacist')) {
+            dashboardRole = 'pharmacy';
+          } else {
+            dashboardRole = profileData.role;
+          }
+          
+          console.log('🎯 Final dashboard URL:', `/dashboard/${dashboardRole}`);
+          
+          // Force a clean redirect
           setTimeout(() => {
             window.location.href = `/dashboard/${dashboardRole}`;
-          }, 100); // Small delay to ensure state is updated
+          }, 200); // Slightly longer delay to ensure everything is set
+        } else {
+          console.error('❌ No role found in profile data');
         }
       }
 
       return { error: null };
     } catch (error) {
+      console.error('Exception in signIn:', error);
       return { error };
     }
   };
