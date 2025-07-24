@@ -46,15 +46,34 @@ export const generateDischargeSlipPDF = async (data: DischargeSlipData) => {
     // Header - Hospital Logo (if available)
     if (hospitalSettings?.logo_url) {
       try {
-        // Add logo placeholder - in a real implementation, you'd load the actual image
-        pdf.setFontSize(12);
-        pdf.setFont("helvetica", "bold");
-        addText("HOSPITAL LOGO", pageWidth / 2 - 20, yPosition);
-        yPosition += 15;
+        // Create a new image element to load the logo
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        
+        await new Promise((resolve, reject) => {
+          img.onload = () => {
+            // Add the actual logo image
+            const logoWidth = 40;
+            const logoHeight = 40;
+            const logoX = (pageWidth - logoWidth) / 2;
+            
+            pdf.addImage(img, 'JPEG', logoX, yPosition, logoWidth, logoHeight);
+            resolve(void 0);
+          };
+          img.onerror = () => {
+            console.warn('Could not load hospital logo');
+            resolve(void 0);
+          };
+          img.src = hospitalSettings.logo_url;
+        });
+        
+        yPosition += 45;
       } catch (error) {
         console.warn('Could not load hospital logo:', error);
         yPosition += 15;
       }
+    } else {
+      yPosition += 15;
     }
 
     // Hospital Name
@@ -171,26 +190,11 @@ export const generateDischargeSlipPDF = async (data: DischargeSlipData) => {
     pdf.setTextColor(0, 0, 0);
     yPosition += 10;
 
-    // Hospital treatment numbered lines
-    for (let i = 1; i <= 6; i++) {
-      pdf.text(`${i}.`, margin, yPosition);
-      pdf.line(margin + 10, yPosition + 1, pageWidth - margin, yPosition + 1);
-      yPosition += 12;
-    }
-
     // Add hospital treatment content if provided
     if (data.hospitalTreatment) {
-      const treatmentLines = pdf.splitTextToSize(data.hospitalTreatment, pageWidth - margin - 15);
-      let lineIndex = 0;
-      let currentY = yPosition - (6 * 12) + 5; // Start from first line
-      for (const line of treatmentLines) {
-        if (lineIndex < 6) {
-          pdf.text(line, margin + 12, currentY);
-          currentY += 12;
-          lineIndex++;
-        }
-      }
+      yPosition = addText(data.hospitalTreatment, margin, yPosition, pageWidth - margin * 2);
     }
+    yPosition += 15;
 
     // Home Treatment Section
     pdf.setFont("helvetica", "bold");
@@ -200,31 +204,19 @@ export const generateDischargeSlipPDF = async (data: DischargeSlipData) => {
     pdf.setTextColor(0, 0, 0);
     yPosition += 10;
 
-    // Home treatment numbered lines
-    for (let i = 1; i <= 6; i++) {
-      pdf.text(`${i}.`, margin, yPosition);
-      pdf.line(margin + 10, yPosition + 1, pageWidth - margin, yPosition + 1);
-      yPosition += 12;
-    }
-
     // Add home treatment content if provided
     if (data.homeTreatment) {
-      const homeLines = pdf.splitTextToSize(data.homeTreatment, pageWidth - margin - 15);
-      let lineIndex = 0;
-      let currentY = yPosition - (6 * 12) + 5; // Start from first line
-      for (const line of homeLines) {
-        if (lineIndex < 6) {
-          pdf.text(line, margin + 12, currentY);
-          currentY += 12;
-          lineIndex++;
-        }
-      }
+      yPosition = addText(data.homeTreatment, margin, yPosition, pageWidth - margin * 2);
     }
+    yPosition += 20;
 
     // Doctor's Sign - positioned at bottom right for manual signing
-    yPosition += 15;
-    pdf.text("Doctor's Sign", pageWidth - margin - 40, yPosition);
-    pdf.line(pageWidth - margin - 40 + 30, yPosition + 1, pageWidth - margin, yPosition + 1);
+    const signatureText = "Doctor's Sign";
+    const signatureWidth = pdf.getTextWidth(signatureText);
+    const signatureX = pageWidth - margin - signatureWidth - 30; // Leave space for signature line
+    
+    pdf.text(signatureText, signatureX, yPosition);
+    pdf.line(signatureX + signatureWidth + 5, yPosition + 1, pageWidth - margin, yPosition + 1);
 
     // Open PDF in new tab
     const pdfBlob = pdf.output('blob');
