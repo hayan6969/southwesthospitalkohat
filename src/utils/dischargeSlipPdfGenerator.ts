@@ -14,7 +14,6 @@ interface DischargeSlipData {
   operation: string;
   hospitalTreatment: string;
   homeTreatment: string;
-  doctorSign: string;
 }
 
 export const generateDischargeSlipPDF = async (data: DischargeSlipData) => {
@@ -222,13 +221,10 @@ export const generateDischargeSlipPDF = async (data: DischargeSlipData) => {
       }
     }
 
-    // Doctor's Sign
+    // Doctor's Sign - positioned at bottom right for manual signing
     yPosition += 15;
-    pdf.text("Doctor's Sign", margin, yPosition);
-    pdf.line(margin + 30, yPosition + 1, pageWidth - margin, yPosition + 1);
-    if (data.doctorSign) {
-      pdf.text(data.doctorSign, margin + 32, yPosition);
-    }
+    pdf.text("Doctor's Sign", pageWidth - margin - 40, yPosition);
+    pdf.line(pageWidth - margin - 40 + 30, yPosition + 1, pageWidth - margin, yPosition + 1);
 
     // Open PDF in new tab
     const pdfBlob = pdf.output('blob');

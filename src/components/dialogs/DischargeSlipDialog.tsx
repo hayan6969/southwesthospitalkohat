@@ -30,8 +30,7 @@ export function DischargeSlipDialog({ open, onOpenChange, otSchedule, onDischarg
     diagnosis: "",
     operation: "",
     hospitalTreatment: "",
-    homeTreatment: "",
-    doctorSign: ""
+    homeTreatment: ""
   });
 
   useEffect(() => {
@@ -39,20 +38,28 @@ export function DischargeSlipDialog({ open, onOpenChange, otSchedule, onDischarg
       const otNotes = otSchedule.ot_notes || {};
       const today = new Date().toISOString().split('T')[0];
       
+      // Calculate age from patient data if available
+      let ageSex = otNotes.ageSex || "";
+      if (!ageSex && otSchedule.patient?.date_of_birth) {
+        const birthDate = new Date(otSchedule.patient.date_of_birth);
+        const today = new Date();
+        const age = today.getFullYear() - birthDate.getFullYear();
+        ageSex = `${age} years`;
+      }
+      
       setFormData({
         name: otNotes.patientName || `${otSchedule.patient?.profile?.first_name || ''} ${otSchedule.patient?.profile?.last_name || ''}`.trim(),
-        ageSex: otNotes.ageSex || "",
+        ageSex: ageSex,
         address: "",
         roomNo: otSchedule.room?.room_name || "",
-        dateOfAdmission: otNotes.operationDate ? new Date(otNotes.operationDate).toISOString().split('T')[0] : "",
+        dateOfAdmission: otSchedule.created_at ? new Date(otSchedule.created_at).toISOString().split('T')[0] : "",
         dateOfOperation: otSchedule.operation_date || "",
         dateOfDischarge: today,
         consultant: otNotes.surgeon || otSchedule.doctor_name || "",
         diagnosis: otNotes.diagnosis || "",
         operation: otNotes.procedure || otSchedule.operation?.operation_name || "",
         hospitalTreatment: otNotes.postOpOrders || "",
-        homeTreatment: "",
-        doctorSign: ""
+        homeTreatment: ""
       });
     }
   }, [otSchedule, open]);
@@ -215,15 +222,6 @@ export function DischargeSlipDialog({ open, onOpenChange, otSchedule, onDischarg
               rows={6}
               value={formData.homeTreatment}
               onChange={(e) => handleInputChange("homeTreatment", e.target.value)}
-            />
-          </div>
-          
-          <div className="space-y-2">
-            <Label htmlFor="doctorSign">Doctor's Sign</Label>
-            <Input
-              id="doctorSign"
-              value={formData.doctorSign}
-              onChange={(e) => handleInputChange("doctorSign", e.target.value)}
             />
           </div>
         </div>
