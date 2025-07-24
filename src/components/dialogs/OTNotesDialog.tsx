@@ -98,7 +98,7 @@ export function OTNotesDialog({ open, onOpenChange, otSchedule, onSave }: OTNote
       const { error } = await supabase
         .from("ot_schedules")
         .update({ 
-          ot_notes: notesData
+          ot_notes: notesData as any
         })
         .eq("id", otSchedule.id);
 

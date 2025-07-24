@@ -892,6 +892,7 @@ export type Database = {
           notes: string | null
           operation_date: string
           operation_id: string | null
+          ot_notes: Json | null
           patient_id: string
           queue_position: number
           room_id: string | null
@@ -908,6 +909,7 @@ export type Database = {
           notes?: string | null
           operation_date: string
           operation_id?: string | null
+          ot_notes?: Json | null
           patient_id: string
           queue_position: number
           room_id?: string | null
@@ -924,6 +926,7 @@ export type Database = {
           notes?: string | null
           operation_date?: string
           operation_id?: string | null
+          ot_notes?: Json | null
           patient_id?: string
           queue_position?: number
           room_id?: string | null

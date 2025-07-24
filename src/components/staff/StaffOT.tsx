@@ -6,12 +6,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Building2, Calendar, CreditCard, Clock, Users, Activity, Plus, Edit, Banknote, Search, Check, Download } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Textarea } from "@/components/ui/textarea";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { formatPkrAmount } from "@/utils/currency";
@@ -56,9 +53,7 @@ export function StaffOT() {
   const [availableRoomsCount, setAvailableRoomsCount] = useState(0);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
-  const [completeDialog, setCompleteDialog] = useState(false);
-  const [completionNotes, setCompletionNotes] = useState("");
-  const [selectedScheduleItem, setSelectedScheduleItem] = useState<OTScheduleItem | null>(null);
+  // Removed OT completion functionality - moved to doctor dashboard
   const [downloadingInvoice, setDownloadingInvoice] = useState<string | null>(null);
   const { toast } = useToast();
   const { data: patientNames } = usePatientNames();
@@ -210,45 +205,7 @@ export function StaffOT() {
     }
   };
 
-  const handleCompleteOT = (scheduleItem: OTScheduleItem) => {
-    setSelectedScheduleItem(scheduleItem);
-    setCompleteDialog(true);
-  };
-
-  const completeOT = async () => {
-    if (!selectedScheduleItem) return;
-
-    try {
-      const { error } = await supabase
-        .from("ot_schedules")
-        .update({ 
-          status: 'completed',
-          notes: completionNotes 
-        })
-        .eq("id", selectedScheduleItem.id);
-
-      if (error) throw error;
-
-      toast({
-        title: "OT Completed",
-        description: "Operation completed successfully",
-      });
-
-      setCompleteDialog(false);
-      setCompletionNotes("");
-      setSelectedScheduleItem(null);
-      
-      // Manually refresh the table to ensure immediate update
-      fetchOTSchedules();
-    } catch (error) {
-      console.error("Error completing OT:", error);
-      toast({
-        title: "Error",
-        description: "Failed to complete operation",
-        variant: "destructive",
-      });
-    }
-  };
+  // OT completion functionality removed - moved to doctor dashboard
 
 
   const handleDownloadInvoice = async (scheduleItem: OTScheduleItem) => {
@@ -495,16 +452,6 @@ export function StaffOT() {
                                   <Button 
                                     size="sm" 
                                     variant="outline"
-                                    onClick={() => handleCompleteOT(ot)}
-                                    className="text-green-600 hover:text-green-700"
-                                  >
-                                    <Check className="w-3 h-3 mr-1" />
-                                    Complete
-                                  </Button>
-                                  
-                                  <Button 
-                                    size="sm" 
-                                    variant="outline"
                                     onClick={() => handleDownloadInvoice(ot)}
                                     disabled={downloadingInvoice === ot.id}
                                     className="text-blue-600 hover:text-blue-700"
@@ -645,46 +592,7 @@ export function StaffOT() {
         </CardContent>
       </Card>
 
-      {/* Complete OT Dialog */}
-      <Dialog open={completeDialog} onOpenChange={setCompleteDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Complete OT Operation</DialogTitle>
-          </DialogHeader>
-          {selectedScheduleItem && (
-            <div className="space-y-4">
-              <div className="p-4 bg-gray-50 rounded-lg">
-                <h4 className="font-semibold mb-2">Operation Details</h4>
-                <p><strong>Patient:</strong> {getPatientName(selectedScheduleItem.patient_id, patientNames || [])}</p>
-                <p><strong>Doctor:</strong> {selectedScheduleItem.doctor_name}</p>
-                <p><strong>Procedure:</strong> {selectedScheduleItem.operation?.operation_name || 'Unknown'}</p>
-                <p><strong>Room:</strong> {selectedScheduleItem.room?.room_name || 'Unknown'}</p>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="completion-notes">Completion Notes (Optional)</Label>
-                <Textarea
-                  id="completion-notes"
-                  placeholder="Add any notes about the operation completion..."
-                  value={completionNotes}
-                  onChange={(e) => setCompletionNotes(e.target.value)}
-                  rows={3}
-                />
-              </div>
-
-              <div className="flex justify-end gap-2 pt-4">
-                <Button variant="outline" onClick={() => setCompleteDialog(false)}>
-                  Cancel
-                </Button>
-                <Button onClick={completeOT} className="bg-green-600 hover:bg-green-700">
-                  <Check className="w-4 h-4 mr-2" />
-                  Complete Operation
-                </Button>
-              </div>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
+      {/* OT completion functionality moved to doctor dashboard */}
     </div>
   );
 }

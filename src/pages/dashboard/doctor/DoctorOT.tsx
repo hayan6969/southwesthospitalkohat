@@ -4,10 +4,13 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, User, Building2, Banknote, Clock, FileText } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Calendar, User, Building2, Banknote, Clock, FileText, Edit, UserCheck } from "lucide-react";
 import { format } from "date-fns";
 import { formatPkrAmount } from "@/utils/currency";
 import { toast } from "sonner";
+import { OTNotesDialog } from "@/components/dialogs/OTNotesDialog";
+import { useToast } from "@/hooks/use-toast";
 
 interface OTScheduleWithDetails {
   id: string;
@@ -18,6 +21,8 @@ interface OTScheduleWithDetails {
   notes: string;
   queue_position: number;
   doctor_name: string;
+  doctor_id: string;
+  patient_id: string;
   patient: {
     patient_number: string;
     profile: {
@@ -32,13 +37,19 @@ interface OTScheduleWithDetails {
   room: {
     room_name: string;
   };
+  ot_notes?: any;
 }
 
 export default function DoctorOT() {
   const { profile } = useAuth();
+  const { toast: useToastHook } = useToast();
   const [otSchedules, setOtSchedules] = useState<OTScheduleWithDetails[]>([]);
   const [loading, setLoading] = useState(true);
   const [totalEarnings, setTotalEarnings] = useState(0);
+  
+  // Dialog states
+  const [showOTNotesDialog, setShowOTNotesDialog] = useState(false);
+  const [selectedOT, setSelectedOT] = useState<OTScheduleWithDetails | null>(null);
 
   useEffect(() => {
     fetchDoctorOTSchedules();
@@ -61,6 +72,9 @@ export default function DoctorOT() {
           notes,
           queue_position,
           doctor_name,
+          doctor_id,
+          patient_id,
+          ot_notes,
           patient:patients (
             patient_number,
             profiles (
@@ -121,6 +135,36 @@ export default function DoctorOT() {
       case 'completed': return 'bg-green-100 text-green-700';
       case 'cancelled': return 'bg-red-100 text-red-700';
       default: return 'bg-gray-100 text-gray-700';
+    }
+  };
+
+  const handleOTNotes = (ot: OTScheduleWithDetails) => {
+    setSelectedOT(ot);
+    setShowOTNotesDialog(true);
+  };
+
+  const handleDischarge = async (ot: OTScheduleWithDetails) => {
+    try {
+      const { error } = await supabase
+        .from("ot_schedules")
+        .update({ status: 'completed' })
+        .eq("id", ot.id);
+
+      if (error) throw error;
+
+      useToastHook({
+        title: "Patient Discharged",
+        description: "OT operation completed successfully",
+      });
+
+      fetchDoctorOTSchedules();
+    } catch (error) {
+      console.error("Error discharging patient:", error);
+      useToastHook({
+        title: "Error",
+        description: "Failed to discharge patient",
+        variant: "destructive",
+      });
     }
   };
 
@@ -196,6 +240,7 @@ export default function DoctorOT() {
                     <TableHead>Position</TableHead>
                     <TableHead>Fee</TableHead>
                     <TableHead>Status</TableHead>
+                    <TableHead>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -248,6 +293,27 @@ export default function DoctorOT() {
                         <Badge className={getStatusColor(ot.status)}>
                           {ot.status}
                         </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex gap-2">
+                          <Button 
+                            size="sm" 
+                            variant="outline"
+                            onClick={() => handleOTNotes(ot)}
+                            className="flex items-center gap-1"
+                          >
+                            <Edit className="w-3 h-3" />
+                            OT Notes
+                          </Button>
+                          <Button 
+                            size="sm" 
+                            onClick={() => handleDischarge(ot)}
+                            className="flex items-center gap-1 bg-green-600 hover:bg-green-700"
+                          >
+                            <UserCheck className="w-3 h-3" />
+                            Discharge
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -357,6 +423,14 @@ export default function DoctorOT() {
           )}
         </CardContent>
       </Card>
+
+      {/* OT Notes Dialog */}
+      <OTNotesDialog 
+        open={showOTNotesDialog}
+        onOpenChange={setShowOTNotesDialog}
+        otSchedule={selectedOT}
+        onSave={fetchDoctorOTSchedules}
+      />
     </div>
   );
 }
