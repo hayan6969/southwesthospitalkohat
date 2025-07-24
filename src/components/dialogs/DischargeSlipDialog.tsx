@@ -40,8 +40,8 @@ export function DischargeSlipDialog({ open, onOpenChange, otSchedule, onDischarg
       console.log('OT Notes:', otNotes);
       const today = new Date().toISOString().split('T')[0];
       
-      // Calculate age from patient data if available
-      let ageSex = otNotes.ageSex || "";
+      // Calculate age from patient data if available, or use from OT notes
+      let ageSex = otNotes.age_sex || "";
       if (!ageSex && otSchedule.patient?.date_of_birth) {
         const birthDate = new Date(otSchedule.patient.date_of_birth);
         const today = new Date();
@@ -57,32 +57,32 @@ export function DischargeSlipDialog({ open, onOpenChange, otSchedule, onDischarg
       const admissionDate = otSchedule.created_at ? new Date(otSchedule.created_at).toISOString().split('T')[0] : "";
       
       setFormData({
-        name: otNotes.patientName || `${otSchedule.patient?.profile?.first_name || ''} ${otSchedule.patient?.profile?.last_name || ''}`.trim(),
+        name: otNotes.patient_name || `${otSchedule.patient?.profile?.first_name || ''} ${otSchedule.patient?.profile?.last_name || ''}`.trim(),
         ageSex: ageSex,
         address: otSchedule.patient?.address || "",
         roomNo: otSchedule.room?.room_name || "",
         dateOfAdmission: admissionDate,
         dateOfOperation: otSchedule.operation_date || "",
         dateOfDischarge: today,
-        consultant: otNotes.surgeon || otSchedule.doctor_name || "",
+        consultant: otNotes.surgeon_name || otSchedule.doctor_name || "",
         diagnosis: otNotes.diagnosis || "",
         operation: otNotes.procedure || otSchedule.operation?.operation_name || "",
-        hospitalTreatment: otNotes.postOpOrders || "",
+        hospitalTreatment: otNotes.post_op_orders || "",
         homeTreatment: ""
       });
       
       console.log('Form data set:', {
-        name: otNotes.patientName || `${otSchedule.patient?.profile?.first_name || ''} ${otSchedule.patient?.profile?.last_name || ''}`.trim(),
+        name: otNotes.patient_name || `${otSchedule.patient?.profile?.first_name || ''} ${otSchedule.patient?.profile?.last_name || ''}`.trim(),
         ageSex: ageSex,
         address: otSchedule.patient?.address || "",
         roomNo: otSchedule.room?.room_name || "",
         dateOfAdmission: admissionDate,
         dateOfOperation: otSchedule.operation_date || "",
         dateOfDischarge: today,
-        consultant: otNotes.surgeon || otSchedule.doctor_name || "",
+        consultant: otNotes.surgeon_name || otSchedule.doctor_name || "",
         diagnosis: otNotes.diagnosis || "",
         operation: otNotes.procedure || otSchedule.operation?.operation_name || "",
-        hospitalTreatment: otNotes.postOpOrders || "",
+        hospitalTreatment: otNotes.post_op_orders || "",
         homeTreatment: ""
       });
     }
