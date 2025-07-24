@@ -360,7 +360,6 @@ export default function DoctorOT() {
                     <TableHead>Room</TableHead>
                     <TableHead>Total Cost</TableHead>
                     <TableHead>Your Fee</TableHead>
-                    <TableHead>Notes</TableHead>
                     <TableHead>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -410,11 +409,6 @@ export default function DoctorOT() {
                       <TableCell>
                         <span className="font-bold text-green-600">
                           {formatPkrAmount(ot.doctor_expense)}
-                        </span>
-                      </TableCell>
-                      <TableCell>
-                        <span className="text-sm text-gray-600">
-                          {ot.notes || 'No notes'}
                         </span>
                       </TableCell>
                       <TableCell>
