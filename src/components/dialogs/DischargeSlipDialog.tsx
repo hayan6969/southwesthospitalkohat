@@ -41,8 +41,13 @@ export function DischargeSlipDialog({ open, onOpenChange, otSchedule, onDischarg
       const today = new Date().toISOString().split('T')[0];
       
       // Calculate age from patient data if available, or use from OT notes
-      let ageSex = otNotes.age_sex || "";
-      if (!ageSex && otSchedule.patient?.date_of_birth) {
+      let ageSex = "";
+      if (otNotes.age && otNotes.sex) {
+        ageSex = `${otNotes.age} ${otNotes.sex}`;
+      } else if (otNotes.age_sex) {
+        // Fallback for old format
+        ageSex = otNotes.age_sex;
+      } else if (otSchedule.patient?.date_of_birth) {
         const birthDate = new Date(otSchedule.patient.date_of_birth);
         const today = new Date();
         let age = today.getFullYear() - birthDate.getFullYear();

@@ -29,7 +29,8 @@ interface OTNotesDialogProps {
     doctor_name: string;
     ot_notes?: {
       patient_name: string;
-      age_sex: string;
+      age: string;
+      sex: string;
       operation_datetime: string;
       diagnosis: string;
       procedure: string;
@@ -47,7 +48,8 @@ export function OTNotesDialog({ open, onOpenChange, otSchedule, onSave }: OTNote
   
   // Form state
   const [patientName, setPatientName] = useState("");
-  const [ageSex, setAgeSex] = useState("");
+  const [age, setAge] = useState("");
+  const [sex, setSex] = useState("");
   const [operationDateTime, setOperationDateTime] = useState("");
   const [diagnosis, setDiagnosis] = useState("");
   const [procedure, setProcedure] = useState("");
@@ -72,7 +74,8 @@ export function OTNotesDialog({ open, onOpenChange, otSchedule, onSave }: OTNote
       setSurgeonName(otSchedule.ot_notes?.surgeon_name || otSchedule.doctor_name);
       
       // Load existing notes if available
-      setAgeSex(otSchedule.ot_notes?.age_sex || "");
+      setAge(otSchedule.ot_notes?.age || "");
+      setSex(otSchedule.ot_notes?.sex || "");
       setDiagnosis(otSchedule.ot_notes?.diagnosis || "");
       setAnesthetistName(otSchedule.ot_notes?.anesthetist_name || "");
       setPostOpOrders(otSchedule.ot_notes?.post_op_orders || "");
@@ -86,7 +89,8 @@ export function OTNotesDialog({ open, onOpenChange, otSchedule, onSave }: OTNote
     try {
       const notesData = {
         patient_name: patientName,
-        age_sex: ageSex,
+        age: age,
+        sex: sex,
         operation_datetime: operationDateTime,
         diagnosis,
         procedure,
@@ -144,12 +148,22 @@ export function OTNotesDialog({ open, onOpenChange, otSchedule, onSave }: OTNote
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="age_sex">Age/Sex</Label>
+            <Label htmlFor="age">Age</Label>
             <Input
-              id="age_sex"
-              value={ageSex}
-              onChange={(e) => setAgeSex(e.target.value)}
-              placeholder="e.g., 45/M"
+              id="age"
+              value={age}
+              onChange={(e) => setAge(e.target.value)}
+              placeholder="e.g., 45"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="sex">Sex</Label>
+            <Input
+              id="sex"
+              value={sex}
+              onChange={(e) => setSex(e.target.value)}
+              placeholder="e.g., M or F"
             />
           </div>
 
