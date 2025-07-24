@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Calendar, User, Building2, Banknote, Clock, FileText, Edit, UserCheck } from "lucide-react";
 import { format } from "date-fns";
@@ -219,120 +220,122 @@ export default function DoctorOT() {
         </Card>
       </div>
 
-      {/* Upcoming Operations */}
-      {upcomingOTs.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Clock className="w-5 h-5" />
-              Upcoming OT Operations
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Date</TableHead>
-                    <TableHead>Patient</TableHead>
-                    <TableHead>Operation</TableHead>
-                    <TableHead>Room</TableHead>
-                    <TableHead>Position</TableHead>
-                    <TableHead>Fee</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {upcomingOTs.map((ot) => (
-                    <TableRow key={ot.id}>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <Calendar className="w-4 h-4 text-gray-400" />
-                          <div>
-                            <div className="font-medium">
-                              {format(new Date(ot.operation_date), 'MMM d, yyyy')}
-                            </div>
-                            <div className="text-sm text-gray-500">
-                              {format(new Date(ot.operation_date), 'EEEE')}
-                            </div>
-                          </div>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <User className="w-4 h-4 text-gray-400" />
-                          <div>
-                            <div className="font-medium">
-                              {ot.patient.profile.first_name} {ot.patient.profile.last_name}
-                            </div>
-                            <div className="text-sm text-gray-500">
-                              {ot.patient.patient_number}
-                            </div>
-                          </div>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <span className="font-medium">{ot.operation.operation_name}</span>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <Building2 className="w-4 h-4 text-gray-400" />
-                          <span>{ot.room.room_name}</span>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="outline">#{ot.queue_position}</Badge>
-                      </TableCell>
-                      <TableCell>
-                        <span className="font-medium text-green-600">
-                          {formatPkrAmount(ot.doctor_expense)}
-                        </span>
-                      </TableCell>
-                      <TableCell>
-                        <Badge className={getStatusColor(ot.status)}>
-                          {ot.status}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex gap-2">
-                          <Button 
-                            size="sm" 
-                            variant="outline"
-                            onClick={() => handleOTNotes(ot)}
-                            className="flex items-center gap-1"
-                          >
-                            <Edit className="w-3 h-3" />
-                            OT Notes
-                          </Button>
-                          <Button 
-                            size="sm" 
-                            onClick={() => handleDischarge(ot)}
-                            className="flex items-center gap-1 bg-green-600 hover:bg-green-700"
-                          >
-                            <UserCheck className="w-3 h-3" />
-                            Discharge
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Recent Completed Operations */}
+      {/* OT Operations Tabs */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <FileText className="w-5 h-5" />
-            Recent Completed OT Operations
+            <Building2 className="w-5 h-5" />
+            OT Operations
           </CardTitle>
         </CardHeader>
         <CardContent>
+          <Tabs defaultValue="pending" className="w-full">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="pending">Pending Operations</TabsTrigger>
+              <TabsTrigger value="completed">Completed Operations</TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="pending" className="mt-4">
+              {upcomingOTs.length > 0 ? (
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Date</TableHead>
+                        <TableHead>Patient</TableHead>
+                        <TableHead>Operation</TableHead>
+                        <TableHead>Room</TableHead>
+                        <TableHead>Position</TableHead>
+                        <TableHead>Fee</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {upcomingOTs.map((ot) => (
+                        <TableRow key={ot.id}>
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              <Calendar className="w-4 h-4 text-gray-400" />
+                              <div>
+                                <div className="font-medium">
+                                  {format(new Date(ot.operation_date), 'MMM d, yyyy')}
+                                </div>
+                                <div className="text-sm text-gray-500">
+                                  {format(new Date(ot.operation_date), 'EEEE')}
+                                </div>
+                              </div>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              <User className="w-4 h-4 text-gray-400" />
+                              <div>
+                                <div className="font-medium">
+                                  {ot.patient.profile.first_name} {ot.patient.profile.last_name}
+                                </div>
+                                <div className="text-sm text-gray-500">
+                                  {ot.patient.patient_number}
+                                </div>
+                              </div>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <span className="font-medium">{ot.operation.operation_name}</span>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              <Building2 className="w-4 h-4 text-gray-400" />
+                              <span>{ot.room.room_name}</span>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant="outline">#{ot.queue_position}</Badge>
+                          </TableCell>
+                          <TableCell>
+                            <span className="font-medium text-green-600">
+                              {formatPkrAmount(ot.doctor_expense)}
+                            </span>
+                          </TableCell>
+                          <TableCell>
+                            <Badge className={getStatusColor(ot.status)}>
+                              {ot.status}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex gap-2">
+                              <Button 
+                                size="sm" 
+                                variant="outline"
+                                onClick={() => handleOTNotes(ot)}
+                                className="flex items-center gap-1"
+                              >
+                                <Edit className="w-3 h-3" />
+                                OT Notes
+                              </Button>
+                              <Button 
+                                size="sm" 
+                                onClick={() => handleDischarge(ot)}
+                                className="flex items-center gap-1 bg-green-600 hover:bg-green-700"
+                              >
+                                <UserCheck className="w-3 h-3" />
+                                Discharge
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              ) : (
+                <div className="text-center text-gray-500 py-8">
+                  No pending operations found
+                </div>
+              )}
+            </TabsContent>
+
+            <TabsContent value="completed" className="mt-4">
           {loading ? (
             <div className="space-y-3">
               {Array.from({ length: 5 }).map((_, i) => (
@@ -421,6 +424,8 @@ export default function DoctorOT() {
               No completed OT operations found
             </div>
           )}
+            </TabsContent>
+          </Tabs>
         </CardContent>
       </Card>
 
