@@ -81,12 +81,12 @@ export const useAuditLogs = () => {
   return useQuery({
     queryKey: ['audit-logs'],
     queryFn: async () => {
-      // Get audit logs with profile data using the foreign key relationship
+      // Get audit logs with profile data using a LEFT JOIN
       const { data: logs, error: logsError } = await supabase
         .from('audit_logs')
         .select(`
           *,
-          user_profile:profiles!audit_logs_user_id_fkey(id, first_name, last_name, email, role)
+          user_profile:profiles(id, first_name, last_name, email, role)
         `)
         .order('created_at', { ascending: false })
         .limit(500);

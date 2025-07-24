@@ -7,6 +7,8 @@ import { Label } from "@/components/ui/label";
 import { SearchableMedicineSelect } from "@/components/SearchableMedicineSelect";
 import { Separator } from "@/components/ui/separator";
 import { useMedicines, useCreatePharmacyInvoice } from "@/hooks/useDatabase";
+import { useAuditLogger } from "@/hooks/useAuditLogger";
+import { useAuth } from "@/hooks/useAuth";
 import { formatPkrAmount } from "@/utils/currency";
 import { generatePharmacyInvoicePDF } from "@/utils/pharmacyPdfGenerator";
 import { getCurrentPakistanTime } from "@/utils/timezone";
@@ -32,6 +34,8 @@ export default function PharmacySell() {
 
   const { data: medicines, isLoading } = useMedicines();
   const createInvoice = useCreatePharmacyInvoice();
+  const { logCreate } = useAuditLogger();
+  const { profile } = useAuth();
 
   const addToCart = () => {
     if (!selectedMedicineId || quantity <= 0) {
@@ -155,6 +159,14 @@ export default function PharmacySell() {
       };
       
       await generatePharmacyInvoicePDF(pdfData);
+      
+      // Log the audit event
+      const itemsList = cart.map(item => `${item.name} (${item.quantity})`).join(', ');
+      await logCreate(
+        "Pharmacy Sale", 
+        `Sale completed - Invoice: ${invoiceNumber}, Customer: ${customerName || "Walk-in Customer"}, Items: ${itemsList}, Total: ${formatPkrAmount(total)}`, 
+        profile?.id
+      );
       
       // Clear the form
       setCart([]);

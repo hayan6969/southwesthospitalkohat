@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useCreatePatientWithProfile, useDoctors } from "@/hooks/useDatabase";
 import { useSearchPatientsWithNames, useDoctorNames } from "@/hooks/useDisplayHelpers";
 import { useAuditLogger } from "@/hooks/useAuditLogger";
+import { useAuth } from "@/hooks/useAuth";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -76,6 +77,7 @@ export function OTScheduleDialog() {
   const { data: doctorNames } = useDoctorNames();
   const { data: searchResults } = useSearchPatientsWithNames(searchTerm);
   const { logAction } = useAuditLogger();
+  const { profile } = useAuth();
 
   useEffect(() => {
     fetchOperations();
@@ -462,7 +464,8 @@ export function OTScheduleDialog() {
       const selectedDoctorName = `Dr. ${doctorNames?.find(d => d.id === doctorId)?.first_name} ${doctorNames?.find(d => d.id === doctorId)?.last_name}`;
       await logAction(
         "Scheduled OT operations",
-        `${selectedOperations.length} OT operation(s) scheduled for ${patientName} on ${operationDate} - ${getSelectedOperationsDetails().map(op => op.operation_name).join(', ')} with ${selectedDoctorName} in ${roomName}. Total cost: ${formatPkrAmount(totalCost)}`
+        `${selectedOperations.length} OT operation(s) scheduled for ${patientName} on ${operationDate} - ${getSelectedOperationsDetails().map(op => op.operation_name).join(', ')} with ${selectedDoctorName} in ${roomName}. Total cost: ${formatPkrAmount(totalCost)}`,
+        profile?.id
       );
       
       const firstQueuePosition = await getNextQueuePosition(roomId, operationDate);

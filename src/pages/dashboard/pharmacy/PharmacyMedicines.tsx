@@ -2,6 +2,8 @@ import { useState } from "react";
 import AppLayout from "@/layouts/AppLayout";
 import { useMedicines, useCreateMedicine, useUpdateMedicine, useDeleteMedicine } from "@/hooks/useDatabase";
 import { usePharmacyPermissions } from "@/hooks/usePharmacyPermissions";
+import { useAuditLogger } from "@/hooks/useAuditLogger";
+import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -34,6 +36,8 @@ export default function PharmacyMedicines() {
   const deleteMedicine = useDeleteMedicine();
   const { toast } = useToast();
   const { canManageMedicines, canViewMedicines } = usePharmacyPermissions();
+  const { logCreate, logUpdate, logDelete } = useAuditLogger();
+  const { profile } = useAuth();
 
   if (!canViewMedicines) {
     return (
@@ -85,9 +89,11 @@ export default function PharmacyMedicines() {
     try {
       if (editingMedicine) {
         await updateMedicine.mutateAsync({ id: editingMedicine.id!, ...formData });
+        await logUpdate("Medicine", `Updated medicine: ${formData.name} - Stock: ${formData.stock_quantity}, Price: PKR ${formData.selling_price}`, profile?.id);
         toast({ title: "Medicine updated successfully" });
       } else {
         await createMedicine.mutateAsync(formData);
+        await logCreate("Medicine", `Added new medicine: ${formData.name} - Stock: ${formData.stock_quantity}, Price: PKR ${formData.selling_price}`, profile?.id);
         toast({ title: "Medicine added successfully" });
       }
       
@@ -120,10 +126,11 @@ export default function PharmacyMedicines() {
     setIsDialogOpen(true);
   };
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = async (id: string, medicine: any) => {
     if (window.confirm("Are you sure you want to delete this medicine?")) {
       try {
         await deleteMedicine.mutateAsync(id);
+        await logDelete("Medicine", `Deleted medicine: ${medicine.name}`, profile?.id);
         toast({ title: "Medicine deleted successfully" });
       } catch (error) {
         toast({ 
@@ -398,7 +405,7 @@ export default function PharmacyMedicines() {
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                onClick={() => handleDelete(medicine.id)}
+                                onClick={() => handleDelete(medicine.id, medicine)}
                                 className="text-red-600 hover:text-red-700"
                               >
                                 <Trash2 className="w-4 h-4" />

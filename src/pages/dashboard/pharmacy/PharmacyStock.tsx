@@ -8,6 +8,8 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useMedicines, useUpdateMedicine } from "@/hooks/useDatabase";
 import { usePharmacyPermissions } from "@/hooks/usePharmacyPermissions";
+import { useAuditLogger } from "@/hooks/useAuditLogger";
+import { useAuth } from "@/hooks/useAuth";
 import { formatPkrAmount } from "@/utils/currency";
 import { toast } from "sonner";
 import { AlertTriangle, TrendingDown, TrendingUp, Package, Search, Edit } from "lucide-react";
@@ -19,6 +21,8 @@ export default function PharmacyStock() {
   const { data: medicines, isLoading } = useMedicines();
   const updateMedicine = useUpdateMedicine();
   const { canEditStock, canViewStock } = usePharmacyPermissions();
+  const { logUpdate } = useAuditLogger();
+  const { profile } = useAuth();
 
   if (!canViewStock) {
     return (
@@ -54,10 +58,19 @@ export default function PharmacyStock() {
     }
 
     try {
+      const medicine = medicines?.find(m => m.id === medicineId);
+      const oldQuantity = medicine?.stock_quantity || 0;
+      
       await updateMedicine.mutateAsync({
         id: medicineId,
         stock_quantity: newQuantity
       });
+      
+      await logUpdate(
+        "Medicine Stock", 
+        `Updated stock for ${medicine?.name}: ${oldQuantity} → ${newQuantity}`, 
+        profile?.id
+      );
       
       setEditingStock(null);
       toast.success("Stock updated successfully");
