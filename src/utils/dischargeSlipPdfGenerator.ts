@@ -109,24 +109,40 @@ export const generateDischargeSlipPDF = async (data: DischargeSlipData) => {
     if (data.name) {
       pdf.text(data.name, margin + 17, yPosition);
     }
-    yPosition += 12;
+    yPosition += 8;
 
     // Age/Sex and Address on same line
+    // Parse age and sex from combined ageSex field
+    let age = "";
+    let sex = "";
+    if (data.ageSex) {
+      const parts = data.ageSex.trim().split(' ');
+      if (parts.length >= 2) {
+        age = parts[0];
+        sex = parts.slice(1).join(' ');
+      } else {
+        age = data.ageSex;
+      }
+    }
+
     pdf.text("Age:", margin, yPosition);
     pdf.line(margin + 12, yPosition + 1, margin + 45, yPosition + 1);
-    if (data.ageSex) {
-      pdf.text(data.ageSex, margin + 14, yPosition);
+    if (age) {
+      pdf.text(age, margin + 14, yPosition);
     }
 
     pdf.text("Sex:", margin + 50, yPosition);
     pdf.line(margin + 62, yPosition + 1, margin + 95, yPosition + 1);
+    if (sex) {
+      pdf.text(sex, margin + 64, yPosition);
+    }
 
     pdf.text("Address:", margin + 100, yPosition);
     pdf.line(margin + 120, yPosition + 1, pageWidth - margin, yPosition + 1);
     if (data.address) {
       pdf.text(data.address, margin + 122, yPosition);
     }
-    yPosition += 12;
+    yPosition += 8;
 
     // Room No and Date of Admission
     pdf.text("Room No", margin, yPosition);
@@ -140,7 +156,7 @@ export const generateDischargeSlipPDF = async (data: DischargeSlipData) => {
     if (data.dateOfAdmission) {
       pdf.text(new Date(data.dateOfAdmission).toLocaleDateString(), margin + 127, yPosition);
     }
-    yPosition += 12;
+    yPosition += 8;
 
     // Date of Operation and Date of Discharge
     pdf.text("Date of Operation", margin, yPosition);
@@ -154,7 +170,7 @@ export const generateDischargeSlipPDF = async (data: DischargeSlipData) => {
     if (data.dateOfDischarge) {
       pdf.text(new Date(data.dateOfDischarge).toLocaleDateString(), margin + 142, yPosition);
     }
-    yPosition += 12;
+    yPosition += 8;
 
     // Consultant
     pdf.text("Consultant", margin, yPosition);
@@ -162,7 +178,7 @@ export const generateDischargeSlipPDF = async (data: DischargeSlipData) => {
     if (data.consultant) {
       pdf.text(data.consultant, margin + 27, yPosition);
     }
-    yPosition += 12;
+    yPosition += 8;
 
     // Diagnosis
     pdf.text("Diagnosis", margin, yPosition);
@@ -170,7 +186,7 @@ export const generateDischargeSlipPDF = async (data: DischargeSlipData) => {
     if (data.diagnosis) {
       pdf.text(data.diagnosis, margin + 24, yPosition);
     }
-    yPosition += 12;
+    yPosition += 8;
 
     // Operation
     pdf.text("Operation", margin, yPosition);
@@ -180,7 +196,7 @@ export const generateDischargeSlipPDF = async (data: DischargeSlipData) => {
     } else {
       yPosition += lineHeight;
     }
-    yPosition += 5;
+    yPosition += 8;
 
     // Hospital Treatment Section
     pdf.setFont("helvetica", "bold");
@@ -213,10 +229,12 @@ export const generateDischargeSlipPDF = async (data: DischargeSlipData) => {
     // Doctor's Sign - positioned at bottom right for manual signing
     const signatureText = "Doctor's Sign";
     const signatureWidth = pdf.getTextWidth(signatureText);
-    const signatureX = pageWidth - margin - signatureWidth - 30; // Leave space for signature line
+    const signatureLineWidth = 50; // Width of signature line
+    const signatureX = pageWidth - margin - signatureLineWidth;
+    const signatureY = pageHeight - 30; // Fixed position from bottom
     
-    pdf.text(signatureText, signatureX, yPosition);
-    pdf.line(signatureX + signatureWidth + 5, yPosition + 1, pageWidth - margin, yPosition + 1);
+    pdf.text(signatureText, signatureX - signatureWidth - 5, signatureY);
+    pdf.line(signatureX, signatureY + 1, signatureX + signatureLineWidth, signatureY + 1);
 
     // Open PDF in new tab
     const pdfBlob = pdf.output('blob');
