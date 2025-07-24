@@ -336,6 +336,13 @@ export default function DashboardOTA() {
             </CardTitle>
           </CardHeader>
           <CardContent>
+            {otRooms.length === 0 ? (
+              <div className="text-center py-8">
+                <Building2 className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                <h3 className="text-lg font-medium text-gray-900 mb-2">No OT rooms found</h3>
+                <p className="text-gray-500">Please contact admin to add OT rooms.</p>
+              </div>
+            ) : (
             <Tabs value={selectedRoom} onValueChange={setSelectedRoom} className="w-full">
               <TabsList className="grid w-full" style={{gridTemplateColumns: `repeat(${otRooms.length}, 1fr)`}}>
                 {otRooms.map((room) => (
@@ -538,6 +545,7 @@ export default function DashboardOTA() {
                 </TabsContent>
               ))}
             </Tabs>
+            )}
           </CardContent>
         </Card>
 
