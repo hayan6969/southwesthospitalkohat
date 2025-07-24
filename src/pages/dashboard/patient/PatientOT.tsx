@@ -9,6 +9,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { formatPkrAmount } from "@/utils/currency";
 import { generateOTPDF } from "@/utils/pdfGenerator";
 import { useToast } from "@/hooks/use-toast";
+import { generateDischargeSlipPDF } from "@/utils/dischargeSlipPdfGenerator";
 
 interface OTSchedule {
   id: string;
@@ -21,6 +22,7 @@ interface OTSchedule {
   status: string;
   notes: string | null;
   total_cost: number;
+  ot_notes?: any;
   operation: {
     operation_name: string;
   } | null;
@@ -148,6 +150,28 @@ export default function PatientOT() {
       toast({
         title: "Error",
         description: "Failed to generate invoice PDF",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDischargeSlip = async (ot: OTSchedule) => {
+    try {
+      if (!ot.ot_notes?.dischargeSlip) {
+        toast({
+          title: "Error",
+          description: "No discharge slip data available for this operation",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      await generateDischargeSlipPDF(ot.ot_notes.dischargeSlip);
+    } catch (error) {
+      console.error('Error generating discharge slip:', error);
+      toast({
+        title: "Error",
+        description: "Failed to generate discharge slip",
         variant: "destructive",
       });
     }
@@ -290,15 +314,28 @@ export default function PatientOT() {
                         )}
                       </TableCell>
                       <TableCell>
-                        <Button 
-                          size="sm" 
-                          variant="outline"
-                          onClick={() => handleDownloadInvoice(ot)}
-                          className="text-blue-600 hover:text-blue-700"
-                        >
-                          <Download className="w-3 h-3 mr-1" />
-                          Invoice
-                        </Button>
+                        <div className="flex gap-2">
+                          <Button 
+                            size="sm" 
+                            variant="outline"
+                            onClick={() => handleDownloadInvoice(ot)}
+                            className="text-blue-600 hover:text-blue-700"
+                          >
+                            <Download className="w-3 h-3 mr-1" />
+                            Invoice
+                          </Button>
+                          {ot.status === 'completed' && ot.ot_notes?.dischargeSlip && (
+                            <Button 
+                              size="sm" 
+                              variant="outline"
+                              onClick={() => handleDischargeSlip(ot)}
+                              className="text-green-600 hover:text-green-700"
+                            >
+                              <FileText className="w-3 h-3 mr-1" />
+                              Discharge Slip
+                            </Button>
+                          )}
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}

@@ -13,6 +13,7 @@ import { toast } from "sonner";
 import { OTNotesDialog } from "@/components/dialogs/OTNotesDialog";
 import { DischargeSlipDialog } from "@/components/dialogs/DischargeSlipDialog";
 import { useToast } from "@/hooks/use-toast";
+import { generateDischargeSlipPDF } from "@/utils/dischargeSlipPdfGenerator";
 
 interface OTScheduleWithDetails {
   id: string;
@@ -156,6 +157,20 @@ export default function DoctorOT() {
   const handleDischarge = (ot: OTScheduleWithDetails) => {
     setSelectedOT(ot);
     setShowDischargeDialog(true);
+  };
+
+  const handleDischargeSlip = async (ot: OTScheduleWithDetails) => {
+    try {
+      if (!ot.ot_notes?.dischargeSlip) {
+        toast.error('No discharge slip data available');
+        return;
+      }
+
+      await generateDischargeSlipPDF(ot.ot_notes.dischargeSlip);
+    } catch (error) {
+      console.error('Error generating discharge slip:', error);
+      toast.error('Failed to generate discharge slip');
+    }
   };
 
   const upcomingOTs = otSchedules.filter(ot => ot.status === 'scheduled');
@@ -346,6 +361,7 @@ export default function DoctorOT() {
                     <TableHead>Total Cost</TableHead>
                     <TableHead>Your Fee</TableHead>
                     <TableHead>Notes</TableHead>
+                    <TableHead>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -400,6 +416,17 @@ export default function DoctorOT() {
                         <span className="text-sm text-gray-600">
                           {ot.notes || 'No notes'}
                         </span>
+                      </TableCell>
+                      <TableCell>
+                        <Button 
+                          size="sm" 
+                          variant="outline"
+                          onClick={() => handleDischargeSlip(ot)}
+                          className="flex items-center gap-1"
+                        >
+                          <FileText className="w-3 h-3" />
+                          Discharge Slip
+                        </Button>
                       </TableCell>
                     </TableRow>
                   ))}
