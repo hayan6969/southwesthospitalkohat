@@ -11,6 +11,7 @@ import { format } from "date-fns";
 import { formatPkrAmount } from "@/utils/currency";
 import { toast } from "sonner";
 import { OTNotesDialog } from "@/components/dialogs/OTNotesDialog";
+import { DischargeSlipDialog } from "@/components/dialogs/DischargeSlipDialog";
 import { useToast } from "@/hooks/use-toast";
 
 interface OTScheduleWithDetails {
@@ -50,6 +51,7 @@ export default function DoctorOT() {
   
   // Dialog states
   const [showOTNotesDialog, setShowOTNotesDialog] = useState(false);
+  const [showDischargeDialog, setShowDischargeDialog] = useState(false);
   const [selectedOT, setSelectedOT] = useState<OTScheduleWithDetails | null>(null);
 
   useEffect(() => {
@@ -144,29 +146,9 @@ export default function DoctorOT() {
     setShowOTNotesDialog(true);
   };
 
-  const handleDischarge = async (ot: OTScheduleWithDetails) => {
-    try {
-      const { error } = await supabase
-        .from("ot_schedules")
-        .update({ status: 'completed' })
-        .eq("id", ot.id);
-
-      if (error) throw error;
-
-      useToastHook({
-        title: "Patient Discharged",
-        description: "OT operation completed successfully",
-      });
-
-      fetchDoctorOTSchedules();
-    } catch (error) {
-      console.error("Error discharging patient:", error);
-      useToastHook({
-        title: "Error",
-        description: "Failed to discharge patient",
-        variant: "destructive",
-      });
-    }
+  const handleDischarge = (ot: OTScheduleWithDetails) => {
+    setSelectedOT(ot);
+    setShowDischargeDialog(true);
   };
 
   const upcomingOTs = otSchedules.filter(ot => ot.status === 'scheduled');
@@ -433,6 +415,14 @@ export default function DoctorOT() {
         onOpenChange={setShowOTNotesDialog}
         otSchedule={selectedOT}
         onSave={fetchDoctorOTSchedules}
+      />
+
+      {/* Discharge Slip Dialog */}
+      <DischargeSlipDialog 
+        open={showDischargeDialog}
+        onOpenChange={setShowDischargeDialog}
+        otSchedule={selectedOT}
+        onDischarge={fetchDoctorOTSchedules}
       />
     </div>
   );
