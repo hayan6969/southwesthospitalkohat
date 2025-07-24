@@ -35,7 +35,9 @@ export function DischargeSlipDialog({ open, onOpenChange, otSchedule, onDischarg
 
   useEffect(() => {
     if (otSchedule && open) {
+      console.log('OT Schedule data for discharge:', otSchedule);
       const otNotes = otSchedule.ot_notes || {};
+      console.log('OT Notes:', otNotes);
       const today = new Date().toISOString().split('T')[0];
       
       // Calculate age from patient data if available
@@ -43,16 +45,38 @@ export function DischargeSlipDialog({ open, onOpenChange, otSchedule, onDischarg
       if (!ageSex && otSchedule.patient?.date_of_birth) {
         const birthDate = new Date(otSchedule.patient.date_of_birth);
         const today = new Date();
-        const age = today.getFullYear() - birthDate.getFullYear();
+        let age = today.getFullYear() - birthDate.getFullYear();
+        const monthDiff = today.getMonth() - birthDate.getMonth();
+        if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+          age--;
+        }
         ageSex = `${age} years`;
       }
+      
+      // Use created_at as admission date (when OT was scheduled)
+      const admissionDate = otSchedule.created_at ? new Date(otSchedule.created_at).toISOString().split('T')[0] : "";
       
       setFormData({
         name: otNotes.patientName || `${otSchedule.patient?.profile?.first_name || ''} ${otSchedule.patient?.profile?.last_name || ''}`.trim(),
         ageSex: ageSex,
-        address: "",
+        address: otSchedule.patient?.address || "",
         roomNo: otSchedule.room?.room_name || "",
-        dateOfAdmission: otSchedule.created_at ? new Date(otSchedule.created_at).toISOString().split('T')[0] : "",
+        dateOfAdmission: admissionDate,
+        dateOfOperation: otSchedule.operation_date || "",
+        dateOfDischarge: today,
+        consultant: otNotes.surgeon || otSchedule.doctor_name || "",
+        diagnosis: otNotes.diagnosis || "",
+        operation: otNotes.procedure || otSchedule.operation?.operation_name || "",
+        hospitalTreatment: otNotes.postOpOrders || "",
+        homeTreatment: ""
+      });
+      
+      console.log('Form data set:', {
+        name: otNotes.patientName || `${otSchedule.patient?.profile?.first_name || ''} ${otSchedule.patient?.profile?.last_name || ''}`.trim(),
+        ageSex: ageSex,
+        address: otSchedule.patient?.address || "",
+        roomNo: otSchedule.room?.room_name || "",
+        dateOfAdmission: admissionDate,
         dateOfOperation: otSchedule.operation_date || "",
         dateOfDischarge: today,
         consultant: otNotes.surgeon || otSchedule.doctor_name || "",

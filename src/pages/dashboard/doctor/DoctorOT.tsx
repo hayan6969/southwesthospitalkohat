@@ -27,6 +27,8 @@ interface OTScheduleWithDetails {
   patient_id: string;
   patient: {
     patient_number: string;
+    date_of_birth?: string;
+    address?: string;
     profile: {
       first_name: string;
       last_name: string;
@@ -78,8 +80,11 @@ export default function DoctorOT() {
           doctor_id,
           patient_id,
           ot_notes,
+          created_at,
           patient:patients (
             patient_number,
+            date_of_birth,
+            address,
             profiles (
               first_name,
               last_name,
@@ -102,6 +107,8 @@ export default function DoctorOT() {
         ...schedule,
         patient: {
           patient_number: schedule.patient?.patient_number || '',
+          date_of_birth: schedule.patient?.date_of_birth || null,
+          address: schedule.patient?.address || '',
           profile: {
             first_name: schedule.patient?.profiles?.first_name || '',
             last_name: schedule.patient?.profiles?.last_name || '',
