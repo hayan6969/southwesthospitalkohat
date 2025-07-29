@@ -9,17 +9,17 @@ export const useMedicineCounts = () => {
       
       const [
         { count: totalMedicines },
-        { data: lowStockMedicines },
+        lowStockResponse,
         { data: outOfStockMedicines },
-        { data: normalStockMedicines }
+        normalStockResponse
       ] = await Promise.all([
         // Get total count
         supabase.from('medicines').select('*', { count: 'exact', head: true }),
         
-        // Get low stock medicines (including out of stock)
+        // Get low stock medicines (using proper filtering)
         supabase.from('medicines')
           .select('id, stock_quantity, minimum_stock_level')
-          .or('stock_quantity.eq.0,and(stock_quantity.lte.minimum_stock_level,minimum_stock_level.not.is.null),and(stock_quantity.lte.10,minimum_stock_level.is.null)'),
+          .or('stock_quantity.eq.0,stock_quantity.lte.10'),
         
         // Get out of stock medicines
         supabase.from('medicines')
@@ -29,21 +29,34 @@ export const useMedicineCounts = () => {
         // Get normal stock medicines  
         supabase.from('medicines')
           .select('id, stock_quantity, minimum_stock_level')
-          .or('and(stock_quantity.gt.minimum_stock_level,minimum_stock_level.not.is.null),and(stock_quantity.gt.10,minimum_stock_level.is.null)')
+          .gt('stock_quantity', 10)
       ]);
+
+      // Filter low stock medicines properly in JavaScript
+      const lowStockMedicines = lowStockResponse.data?.filter(medicine => {
+        if (medicine.stock_quantity === 0) return true; // Out of stock
+        const minLevel = medicine.minimum_stock_level || 10;
+        return medicine.stock_quantity <= minLevel;
+      }) || [];
+
+      // Filter normal stock medicines properly in JavaScript
+      const normalStockMedicines = normalStockResponse.data?.filter(medicine => {
+        const minLevel = medicine.minimum_stock_level || 10;
+        return medicine.stock_quantity > minLevel;
+      }) || [];
 
       const counts = {
         total: totalMedicines || 0,
-        lowStock: lowStockMedicines?.length || 0,
+        lowStock: lowStockMedicines.length,
         outOfStock: outOfStockMedicines?.length || 0,
-        normalStock: normalStockMedicines?.length || 0
+        normalStock: normalStockMedicines.length
       };
 
       console.log('📊 Medicine counts fetched:', counts);
       
       return counts;
     },
-    staleTime: 1000 * 60 * 5, // 5 minutes
-    refetchInterval: 1000 * 60 * 10, // Refetch every 10 minutes
+    staleTime: 1000 * 60 * 2, // 2 minutes
+    refetchInterval: 1000 * 60 * 5, // Refetch every 5 minutes
   });
 };
