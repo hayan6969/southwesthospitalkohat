@@ -15,6 +15,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { usePatientNames, useDoctorNames, getPatientName, getDoctorName } from "@/hooks/useDisplayHelpers";
 import { useSearchPatientsWithNames } from "@/hooks/useDisplayHelpers";
+import { useCreatePatientWithProfile } from "@/hooks/useDatabase";
 import { useAuditLogger } from "@/hooks/useAuditLogger";
 import { useAuth } from "@/hooks/useAuth";
 import { formatPkrAmount } from "@/utils/currency";
@@ -113,55 +114,40 @@ export function EnhancedLabDialog() {
     test.category?.toLowerCase().includes(testSearchQuery.toLowerCase())
   ) || [];
 
-  // Create patient mutation
-  const createPatientMutation = useMutation({
-    mutationFn: async (patientData: any) => {
-      // First create auth user with a temporary email if phone is provided
-      const email = patientData.email || `${patientData.phone}@temp.local`;
-      
-      const { data: authData, error: authError } = await supabase.auth.admin.createUser({
-        email: email,
-        password: 'temp123456', // Temporary password
-        email_confirm: true,
-        user_metadata: {
-          first_name: patientData.first_name,
-          last_name: patientData.last_name,
-          role: 'patient'
-        }
-      });
+  // Import the working patient creation hook
+  const createPatientWithProfile = useCreatePatientWithProfile();
 
-      if (authError) throw authError;
+  // Handle patient creation using the working hook
+  const handleCreatePatient = async () => {
+    if (!newPatient.first_name.trim() || !newPatient.last_name.trim() || !newPatient.phone.trim() || !newPatient.cnic.trim()) {
+      toast.error("Please fill in all required fields");
+      return;
+    }
 
-      // Then create patient record
-      const { data: patientRecord, error: patientError } = await supabase
-        .from('patients')
-        .insert([{
-          id: authData.user.id,
-          cnic: patientData.cnic,
-          date_of_birth: patientData.date_of_birth || null,
-          address: patientData.address || null,
-          blood_type: patientData.blood_type || null,
-          allergies: patientData.allergies || null
-        }])
-        .select()
-        .single();
-
-      if (patientError) throw patientError;
-
-      return {
-        id: authData.user.id,
-        profile: {
-          first_name: patientData.first_name,
-          last_name: patientData.last_name,
-          email: email,
-          phone: patientData.phone
-        },
-        patient_number: patientRecord.patient_number
+    try {
+      const patientData = {
+        first_name: newPatient.first_name,
+        last_name: newPatient.last_name,
+        phone: newPatient.phone,
+        cnic: newPatient.cnic
       };
-    },
-    onSuccess: (newPatient) => {
+      
+      const result = await createPatientWithProfile.mutateAsync(patientData);
+      
+      // Create the patient object in the format expected by the lab dialog
+      const createdPatient = {
+        id: result.patient.id,
+        profile: {
+          first_name: newPatient.first_name,
+          last_name: newPatient.last_name,
+          email: `${newPatient.phone}@patient.local`,
+          phone: newPatient.phone
+        },
+        patient_number: result.patient.patient_number
+      };
+      
       queryClient.invalidateQueries({ queryKey: ['patients-for-lab'] });
-      setSelectedPatient(newPatient);
+      setSelectedPatient(createdPatient);
       setActiveTab("search");
       setNewPatient({
         first_name: "",
@@ -174,11 +160,15 @@ export function EnhancedLabDialog() {
         allergies: ""
       });
       toast.success("Patient registered successfully");
-    },
-    onError: () => {
-      toast.error("Failed to register patient");
+    } catch (error: any) {
+      console.error("Error creating patient:", error);
+      if (error.message === 'DUPLICATE_PHONE') {
+        toast.error("A patient with this phone number already exists");
+      } else {
+        toast.error("Failed to register patient");
+      }
     }
-  });
+  };
 
   // Create lab order mutation
   const createLabOrderMutation = useMutation({
@@ -304,14 +294,6 @@ export function EnhancedLabDialog() {
     setOpen(false);
   };
 
-  const handleCreatePatient = () => {
-    if (!newPatient.first_name.trim() || !newPatient.last_name.trim() || !newPatient.phone.trim() || !newPatient.cnic.trim()) {
-      toast.error("Please fill in all required fields");
-      return;
-    }
-
-    createPatientMutation.mutate(newPatient);
-  };
 
   const getTotalAmount = () => {
     const selectedLabTests = labTests?.filter(test => selectedTests.includes(test.id)) || [];
@@ -517,10 +499,10 @@ export function EnhancedLabDialog() {
                   
                   <Button 
                     onClick={handleCreatePatient}
-                    disabled={createPatientMutation.isPending}
+                    disabled={createPatientWithProfile.isPending}
                     className="w-full"
                   >
-                    {createPatientMutation.isPending ? "Registering..." : "Register Patient"}
+                    {createPatientWithProfile.isPending ? "Registering..." : "Register Patient"}
                   </Button>
                 </TabsContent>
               </Tabs>
