@@ -120,12 +120,12 @@ export default function PharmacyStock() {
     }
   };
 
-  const StockTable = ({ medicines: medicinesList, title }: { medicines: any[], title: string }) => (
+  const StockTable = ({ medicines: medicinesList, title, totalCount }: { medicines: any[], title: string, totalCount?: number }) => (
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Package className="w-5 h-5" />
-          {title} ({medicinesList.length})
+          {title} ({totalCount !== undefined ? totalCount : medicinesList.length})
         </CardTitle>
       </CardHeader>
       <CardContent>
@@ -370,20 +370,33 @@ export default function PharmacyStock() {
           <TabsContent value="all">
             <StockTable 
               medicines={filteredMedicines || []} 
-              title="All Medicines" 
+              title="All Medicines"
+              totalCount={medicineCounts?.total}
             />
           </TabsContent>
 
           <TabsContent value="out-of-stock">
-            <StockTable medicines={outOfStockMedicines || []} title="Out of Stock Medicines" />
+            <StockTable 
+              medicines={outOfStockMedicines || []} 
+              title="Out of Stock Medicines"
+              totalCount={medicineCounts?.outOfStock} 
+            />
           </TabsContent>
 
           <TabsContent value="low-stock">
-            <StockTable medicines={lowStockMedicines || []} title="Low Stock Medicines" />
+            <StockTable 
+              medicines={lowStockMedicines || []} 
+              title="Low Stock Medicines"
+              totalCount={medicineCounts?.lowStock} 
+            />
           </TabsContent>
 
           <TabsContent value="normal-stock">
-            <StockTable medicines={normalStockMedicines || []} title="Normal Stock Medicines" />
+            <StockTable 
+              medicines={normalStockMedicines || []} 
+              title="Normal Stock Medicines"
+              totalCount={medicineCounts?.normalStock} 
+            />
           </TabsContent>
         </Tabs>
       </div>
