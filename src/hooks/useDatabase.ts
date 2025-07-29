@@ -217,13 +217,22 @@ export const useMedicines = () => {
   return useQuery({
     queryKey: ['medicines'],
     queryFn: async () => {
+      console.log('🔍 Fetching medicines from database...');
+      
       const { data, error } = await supabase
         .from('medicines')
         .select('*')
-        .order('name')
+        .order('created_at', { ascending: false }) // Show newest medicines first
         .limit(5000); // Set a high limit to ensure we get all medicines
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ Error fetching medicines:', error);
+        throw error;
+      }
+      
+      console.log('✅ Medicines fetched successfully:', data?.length, 'records');
+      console.log('📝 First few medicines:', data?.slice(0, 3).map(m => ({ name: m.name, created_at: m.created_at })));
+      
       return data;
     }
   });
