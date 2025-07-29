@@ -21,6 +21,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { formatPkrAmount } from "@/utils/currency";
 import { generateLabInvoicePDF } from "@/utils/pdfGenerator";
 import { cn } from "@/lib/utils";
+import { LabOrderConfirmationDialog } from "./LabOrderConfirmationDialog";
 
 interface Patient {
   id: string;
@@ -58,6 +59,8 @@ export function EnhancedLabDialog() {
   const [notes, setNotes] = useState("");
   const [isExternalDoctor, setIsExternalDoctor] = useState(false);
   const [externalDoctorName, setExternalDoctorName] = useState("");
+  const [showConfirmation, setShowConfirmation] = useState(false);
+  const [confirmationData, setConfirmationData] = useState<any>(null);
   
   // New patient form
   const [newPatient, setNewPatient] = useState({
@@ -115,20 +118,68 @@ export function EnhancedLabDialog() {
     test.category?.toLowerCase().includes(testSearchQuery.toLowerCase())
   ) || [];
 
-  // Create lab order with invoice - similar to appointments
+  // Show confirmation dialog before processing
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    let patientId = selectedPatient?.id;
-    let patientNumber = selectedPatient?.patient_number;
-    
-    // If registering new patient, create them first
+    // Validate form data first
     if (activeTab === "register") {
       if (!newPatient.first_name.trim() || !newPatient.last_name.trim() || !newPatient.phone.trim() || !newPatient.cnic.trim()) {
         toast.error("Please fill in all required patient fields");
         return;
       }
+    }
 
+    if (!selectedPatient && activeTab !== "register") {
+      toast.error("Please select a patient");
+      return;
+    }
+
+    if ((!selectedDoctor && !isExternalDoctor) || selectedTests.length === 0) {
+      toast.error("Please fill in all required fields");
+      return;
+    }
+
+    if (isExternalDoctor && !externalDoctorName.trim()) {
+      toast.error("External doctor name is required");
+      return;
+    }
+
+    // Prepare confirmation data
+    const selectedLabTests = labTests?.filter(test => selectedTests.includes(test.id)) || [];
+    const totalAmount = selectedLabTests.reduce((sum, test) => sum + test.price, 0);
+    
+    const patientName = activeTab === "register" 
+      ? `${newPatient.first_name} ${newPatient.last_name}`
+      : `${selectedPatient?.profile?.first_name} ${selectedPatient?.profile?.last_name}`;
+    
+    const doctorName = isExternalDoctor 
+      ? externalDoctorName 
+      : (doctorNames?.find(d => d.id === selectedDoctor)?.first_name + ' ' + 
+         doctorNames?.find(d => d.id === selectedDoctor)?.last_name) || 'Unknown Doctor';
+
+    const confirmData = {
+      patientName,
+      patientId: selectedPatient?.patient_number,
+      patientPhone: activeTab === "register" ? newPatient.phone : selectedPatient?.profile?.phone,
+      doctorName,
+      selectedTests: selectedLabTests,
+      totalAmount,
+      notes: notes.trim() || undefined,
+      isNewPatient: activeTab === "register"
+    };
+
+    setConfirmationData(confirmData);
+    setShowConfirmation(true);
+  };
+
+  // Process the actual lab order creation
+  const handleConfirmOrder = async () => {
+    let patientId = selectedPatient?.id;
+    let patientNumber = selectedPatient?.patient_number;
+    
+    // If registering new patient, create them first
+    if (activeTab === "register") {
       try {
         const patientData = {
           first_name: newPatient.first_name,
@@ -151,16 +202,6 @@ export function EnhancedLabDialog() {
         }
         return;
       }
-    }
-
-    if (!patientId || (!selectedDoctor && !isExternalDoctor) || selectedTests.length === 0) {
-      toast.error("Please fill in all required fields");
-      return;
-    }
-
-    if (isExternalDoctor && !externalDoctorName.trim()) {
-      toast.error("External doctor name is required");
-      return;
     }
 
     try {
@@ -216,9 +257,11 @@ export function EnhancedLabDialog() {
 
       await generateLabInvoicePDF(invoiceData);
 
-      // Reset form
+      // Reset form and close dialogs
       resetForm();
       setOpen(false);
+      setShowConfirmation(false);
+      setConfirmationData(null);
     } catch (error) {
       console.error("Error creating lab order:", error);
       toast.error("Failed to create lab order");
@@ -235,6 +278,8 @@ export function EnhancedLabDialog() {
     setNotes("");
     setIsExternalDoctor(false);
     setExternalDoctorName("");
+    setShowConfirmation(false);
+    setConfirmationData(null);
     setNewPatient({
       first_name: "",
       last_name: "",
@@ -261,13 +306,14 @@ export function EnhancedLabDialog() {
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button className="bg-blue-600 hover:bg-blue-700">
-          <Plus className="w-4 h-4 mr-2" />
-          New Lab Order
-        </Button>
-      </DialogTrigger>
+    <>
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogTrigger asChild>
+          <Button className="bg-blue-600 hover:bg-blue-700">
+            <Plus className="w-4 h-4 mr-2" />
+            New Lab Order
+          </Button>
+        </DialogTrigger>
       <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Create Lab Order</DialogTitle>
@@ -587,7 +633,7 @@ export function EnhancedLabDialog() {
                   Creating...
                 </>
               ) : (
-                `Create Lab Order (${formatPkrAmount(selectedTests.reduce((sum, testId) => {
+                `Review Lab Order (${formatPkrAmount(selectedTests.reduce((sum, testId) => {
                   const test = labTests?.find(t => t.id === testId);
                   return sum + (test?.price || 0);
                 }, 0))})`
@@ -597,5 +643,14 @@ export function EnhancedLabDialog() {
         </div>
       </DialogContent>
     </Dialog>
+
+    <LabOrderConfirmationDialog
+      open={showConfirmation}
+      onOpenChange={setShowConfirmation}
+      confirmationData={confirmationData}
+      onConfirm={handleConfirmOrder}
+      isProcessing={createLabOrderWithInvoice.isPending || createPatientWithProfile.isPending}
+    />
+    </>
   );
 }
