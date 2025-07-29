@@ -357,18 +357,21 @@ export default function PharmacyStock() {
           <TabsList>
             <TabsTrigger value="all">All Stock</TabsTrigger>
             <TabsTrigger value="out-of-stock" className="text-red-600">
-              Out of Stock ({outOfStockMedicines?.length || 0})
+              Out of Stock ({countsLoading ? "..." : (medicineCounts?.outOfStock || outOfStockMedicines?.length || 0)})
             </TabsTrigger>
             <TabsTrigger value="low-stock" className="text-orange-600">
-              Low Stock ({lowStockMedicines?.length || 0})
+              Low Stock ({countsLoading ? "..." : (medicineCounts?.lowStock || lowStockMedicines?.length || 0)})
             </TabsTrigger>
             <TabsTrigger value="normal-stock" className="text-green-600">
-              Normal Stock ({normalStockMedicines?.length || 0})
+              Normal Stock ({countsLoading ? "..." : (medicineCounts?.normalStock || normalStockMedicines?.length || 0)})
             </TabsTrigger>
           </TabsList>
 
           <TabsContent value="all">
-            <StockTable medicines={filteredMedicines || []} title="All Medicines" />
+            <StockTable 
+              medicines={filteredMedicines || []} 
+              title={`All Medicines (${countsLoading ? "..." : (medicineCounts?.total || filteredMedicines?.length || 0)})`} 
+            />
           </TabsContent>
 
           <TabsContent value="out-of-stock">
