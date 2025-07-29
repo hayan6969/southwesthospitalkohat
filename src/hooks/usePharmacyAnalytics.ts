@@ -71,7 +71,7 @@ export const usePharmacyAnalytics = () => {
         expensesResult,
         lastClosingResult
       ] = await Promise.all([
-        supabase.from('medicines').select('*'),
+        supabase.from('medicines').select('*').limit(5000),
         supabase
           .from('pharmacy_invoices')
           .select('*, pharmacy_invoice_items(quantity, unit_price, total_price, medicine_id, medicines(purchase_price, selling_price, name))')

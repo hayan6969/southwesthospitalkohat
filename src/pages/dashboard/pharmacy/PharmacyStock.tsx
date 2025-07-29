@@ -24,6 +24,9 @@ export default function PharmacyStock() {
   const { logUpdate } = useAuditLogger();
   const { profile } = useAuth();
 
+  // Debug: Log the actual medicine count
+  console.log('📊 Medicine count in PharmacyStock:', medicines?.length);
+
   if (!canViewStock) {
     return (
       <AppLayout>
