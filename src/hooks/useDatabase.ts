@@ -477,9 +477,121 @@ export const useCreateAppointmentWithInvoice = () => {
   });
 };
 
-export const useCreatePatientWithProfile = () => {
+export const useCreateLabOrderWithInvoice = () => {
   const queryClient = useQueryClient();
   
+  return useMutation({
+    mutationFn: async (labOrderData: any) => {
+      // If offline, store in offline storage
+      if (!navigator.onLine) {
+        const { addOfflineOperation } = await import('@/utils/offlineStorage');
+        
+        const tempInvoiceId = `offline_lab_invoice_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        
+        // Store invoice operation for lab
+        const invoiceOperation = {
+          type: 'invoice' as const,
+          table: 'invoices',
+          method: 'POST' as const,
+          data: {
+            id: tempInvoiceId,
+            patient_id: labOrderData.patient_id,
+            amount: labOrderData.totalAmount,
+            description: labOrderData.invoiceDescription,
+            invoice_number: `LAB-TEMP-${Date.now()}`,
+            status: 'paid',
+            paid_at: new Date().toISOString(),
+            created_at: new Date().toISOString(),
+            due_date: new Date().toISOString(),
+            created_offline: true
+          }
+        };
+        
+        // Store lab reports operations
+        const labReportOperations = labOrderData.selectedTests.map((test: any) => ({
+          type: 'lab_report' as const,
+          table: 'lab_reports',
+          method: 'POST' as const,
+          data: {
+            id: `offline_lab_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+            patient_id: labOrderData.patient_id,
+            doctor_id: labOrderData.doctor_id,
+            external_doctor_name: labOrderData.external_doctor_name,
+            test_name: test.name,
+            test_id: test.id,
+            price: test.price,
+            invoice_id: tempInvoiceId,
+            notes: labOrderData.notes,
+            status: 'pending',
+            created_offline: true
+          }
+        }));
+        
+        await addOfflineOperation({
+          ...invoiceOperation,
+          action: 'insert'
+        });
+        
+        for (const labOp of labReportOperations) {
+          await addOfflineOperation({
+            ...labOp,
+            action: 'insert'
+          });
+        }
+        
+        return {
+          invoice: invoiceOperation.data,
+          labReports: labReportOperations.map(op => op.data)
+        };
+      }
+
+      // Create invoice first
+      const { data: invoice, error: invoiceError } = await supabase
+        .from('invoices')
+        .insert([{
+          patient_id: labOrderData.patient_id,
+          amount: labOrderData.totalAmount,
+          description: labOrderData.invoiceDescription,
+          invoice_number: labOrderData.invoiceNumber,
+          status: 'paid', // Staff lab orders are paid at counter
+          paid_at: new Date().toISOString()
+        }])
+        .select()
+        .single();
+
+      if (invoiceError) throw invoiceError;
+
+      // Create lab reports
+      const labReportsData = labOrderData.selectedTests.map((test: any) => ({
+        patient_id: labOrderData.patient_id,
+        doctor_id: labOrderData.doctor_id,
+        external_doctor_name: labOrderData.external_doctor_name,
+        test_name: test.name,
+        test_id: test.id,
+        price: test.price,
+        invoice_id: invoice.id,
+        notes: labOrderData.notes,
+        status: 'pending'
+      }));
+
+      const { data: labReports, error: labReportsError } = await supabase
+        .from('lab_reports')
+        .insert(labReportsData)
+        .select();
+
+      if (labReportsError) throw labReportsError;
+
+      return { invoice, labReports };
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['lab-reports'] });
+      queryClient.invalidateQueries({ queryKey: ['invoices'] });
+    },
+  });
+};
+
+export const useCreatePatientWithProfile = () => {
+  const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (patientData: {
       first_name: string;

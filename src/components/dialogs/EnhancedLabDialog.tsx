@@ -15,7 +15,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { usePatientNames, useDoctorNames, getPatientName, getDoctorName } from "@/hooks/useDisplayHelpers";
 import { useSearchPatientsWithNames } from "@/hooks/useDisplayHelpers";
-import { useCreatePatientWithProfile } from "@/hooks/useDatabase";
+import { useCreatePatientWithProfile, useCreateLabOrderWithInvoice } from "@/hooks/useDatabase";
 import { useAuditLogger } from "@/hooks/useAuditLogger";
 import { useAuth } from "@/hooks/useAuth";
 import { formatPkrAmount } from "@/utils/currency";
@@ -58,7 +58,6 @@ export function EnhancedLabDialog() {
   const [notes, setNotes] = useState("");
   const [isExternalDoctor, setIsExternalDoctor] = useState(false);
   const [externalDoctorName, setExternalDoctorName] = useState("");
-  const [confirmationOpen, setConfirmationOpen] = useState(false);
   
   // New patient form
   const [newPatient, setNewPatient] = useState({
@@ -78,6 +77,8 @@ export function EnhancedLabDialog() {
   const { data: searchResults } = useSearchPatientsWithNames(searchTerm);
   const { logCreate } = useAuditLogger();
   const { user } = useAuth();
+  const createPatientWithProfile = useCreatePatientWithProfile();
+  const createLabOrderWithInvoice = useCreateLabOrderWithInvoice();
 
   // Fetch doctors
   const { data: doctors } = useQuery({
@@ -114,173 +115,126 @@ export function EnhancedLabDialog() {
     test.category?.toLowerCase().includes(testSearchQuery.toLowerCase())
   ) || [];
 
-  // Import the working patient creation hook
-  const createPatientWithProfile = useCreatePatientWithProfile();
+  // Create lab order with invoice - similar to appointments
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
 
-  // Handle patient creation using the working hook
-  const handleCreatePatient = async () => {
-    if (!newPatient.first_name.trim() || !newPatient.last_name.trim() || !newPatient.phone.trim() || !newPatient.cnic.trim()) {
+    let patientId = selectedPatient?.id;
+    let patientNumber = selectedPatient?.patient_number;
+    
+    // If registering new patient, create them first
+    if (activeTab === "register") {
+      if (!newPatient.first_name.trim() || !newPatient.last_name.trim() || !newPatient.phone.trim() || !newPatient.cnic.trim()) {
+        toast.error("Please fill in all required patient fields");
+        return;
+      }
+
+      try {
+        const patientData = {
+          first_name: newPatient.first_name,
+          last_name: newPatient.last_name,
+          phone: newPatient.phone,
+          cnic: newPatient.cnic
+        };
+        
+        const result = await createPatientWithProfile.mutateAsync(patientData);
+        patientId = result.patient.id;
+        patientNumber = result.patient.patient_number;
+        
+        toast.success("Patient registered successfully");
+      } catch (error: any) {
+        console.error("Error creating patient:", error);
+        if (error.message === 'DUPLICATE_PHONE') {
+          toast.error("A patient with this phone number already exists");
+        } else {
+          toast.error("Failed to register patient");
+        }
+        return;
+      }
+    }
+
+    if (!patientId || (!selectedDoctor && !isExternalDoctor) || selectedTests.length === 0) {
       toast.error("Please fill in all required fields");
       return;
     }
 
-    try {
-      const patientData = {
-        first_name: newPatient.first_name,
-        last_name: newPatient.last_name,
-        phone: newPatient.phone,
-        cnic: newPatient.cnic
-      };
-      
-      const result = await createPatientWithProfile.mutateAsync(patientData);
-      
-      // Create the patient object in the format expected by the lab dialog
-      const createdPatient = {
-        id: result.patient.id,
-        profile: {
-          first_name: newPatient.first_name,
-          last_name: newPatient.last_name,
-          email: `${newPatient.phone}@patient.local`,
-          phone: newPatient.phone
-        },
-        patient_number: result.patient.patient_number
-      };
-      
-      queryClient.invalidateQueries({ queryKey: ['patients-for-lab'] });
-      setSelectedPatient(createdPatient);
-      setActiveTab("search");
-      setNewPatient({
-        first_name: "",
-        last_name: "",
-        phone: "",
-        cnic: "",
-        date_of_birth: "",
-        address: "",
-        blood_type: "",
-        allergies: ""
-      });
-      toast.success("Patient registered successfully");
-    } catch (error: any) {
-      console.error("Error creating patient:", error);
-      if (error.message === 'DUPLICATE_PHONE') {
-        toast.error("A patient with this phone number already exists");
-      } else {
-        toast.error("Failed to register patient");
-      }
+    if (isExternalDoctor && !externalDoctorName.trim()) {
+      toast.error("External doctor name is required");
+      return;
     }
-  };
 
-  // Create lab order mutation
-  const createLabOrderMutation = useMutation({
-    mutationFn: async () => {
-      if (!selectedPatient || (!selectedDoctor && !isExternalDoctor) || selectedTests.length === 0) {
-        throw new Error("Missing required fields");
-      }
-
-      if (isExternalDoctor && !externalDoctorName.trim()) {
-        throw new Error("External doctor name is required");
-      }
-
+    try {
       const selectedLabTests = labTests?.filter(test => selectedTests.includes(test.id)) || [];
       const totalAmount = selectedLabTests.reduce((sum, test) => sum + test.price, 0);
 
-      // Create invoice first
-      const invoiceNumber = `LAB-${Date.now()}`;
-      const { data: invoice, error: invoiceError } = await supabase
-        .from('invoices')
-        .insert([{
-          patient_id: selectedPatient.id,
-          amount: totalAmount,
-          status: 'paid',
-          paid_at: new Date().toISOString(),
-          invoice_number: invoiceNumber,
-          description: `Lab Tests: ${selectedLabTests.map(t => t.name).join(', ')}`
-        }])
-        .select()
-        .single();
+      const labOrderData = {
+        patient_id: patientId,
+        doctor_id: isExternalDoctor ? null : selectedDoctor,
+        external_doctor_name: isExternalDoctor ? externalDoctorName.trim() : null,
+        selectedTests: selectedLabTests,
+        notes: notes.trim() || null,
+        totalAmount,
+        invoiceNumber: `LAB-${Date.now()}`,
+        invoiceDescription: `Lab Tests: ${selectedLabTests.map(test => test.name).join(', ')}`
+      };
 
-      if (invoiceError) throw invoiceError;
+      const result = await createLabOrderWithInvoice.mutateAsync(labOrderData);
 
-      // Create lab reports for each test
-      const labReports = await Promise.all(
-        selectedTests.map(async (testId) => {
-          const test = labTests?.find(t => t.id === testId);
-          const { data, error } = await supabase
-            .from('lab_reports')
-            .insert([{
-              patient_id: selectedPatient.id,
-              doctor_id: isExternalDoctor ? null : selectedDoctor,
-              external_doctor_name: isExternalDoctor ? externalDoctorName.trim() : null,
-              test_id: testId,
-              test_name: test?.name || '',
-              price: test?.price || 0,
-              status: 'pending',
-              notes: notes.trim() || null,
-              invoice_id: invoice.id
-            }])
-            .select()
-            .single();
-
-          if (error) throw error;
-          return data;
-        })
-      );
-
-      return { labReports, invoice, selectedLabTests };
-    },
-    onSuccess: async ({ invoice, selectedLabTests }) => {
-      queryClient.invalidateQueries({ queryKey: ['lab-reports'] });
-      
-      // Log audit event with current user ID
+      // Log the audit event
       await logCreate(
-        "Lab Order Created",
-        `${selectedTests.length} lab tests ordered for ${selectedPatient?.profile?.first_name} ${selectedPatient?.profile?.last_name}`,
+        "Created lab order with invoice",
+        `Lab order created for patient ${patientNumber || 'N/A'} with ${selectedLabTests.length} tests, total amount ${formatPkrAmount(totalAmount)}`,
         user?.id
       );
 
+      toast.success(`Lab order created successfully with ${selectedLabTests.length} tests`);
+
       // Generate and open PDF invoice
-      try {
-        const pdfBlob = await generateLabInvoicePDF({
-          invoiceNumber: invoice.invoice_number,
-          patientName: `${selectedPatient?.profile?.first_name} ${selectedPatient?.profile?.last_name}`,
-          patientEmail: selectedPatient?.profile?.email || '',
-          patientId: selectedPatient?.patient_number || 'N/A',
-          patientPhone: selectedPatient?.profile?.phone || '',
-          tests: selectedLabTests.map(test => ({
-            name: test.name,
-            price: test.price,
-            description: test.description || ''
-          })),
-          totalAmount: invoice.amount,
-          issueDate: new Date().toLocaleDateString()
-        });
+      const patientName = selectedPatient ? 
+        `${selectedPatient.profile?.first_name} ${selectedPatient.profile?.last_name}` :
+        `${newPatient.first_name} ${newPatient.last_name}`;
+      
+      const doctorName = isExternalDoctor ? 
+        externalDoctorName : 
+        (doctorNames?.find(d => d.id === selectedDoctor)?.first_name + ' ' + 
+         doctorNames?.find(d => d.id === selectedDoctor)?.last_name) || 'Unknown Doctor';
 
-        const url = URL.createObjectURL(pdfBlob);
-        window.open(url, '_blank');
-      } catch (error) {
-        console.error('Error generating PDF:', error);
-        toast.error("Lab order created but PDF generation failed");
-      }
+      const invoiceData = {
+        invoiceNumber: result.invoice.invoice_number,
+        patientName: patientName,
+        patientEmail: selectedPatient?.profile?.email || `${newPatient.phone}@patient.local`,
+        patientId: patientNumber || 'N/A',
+        patientPhone: selectedPatient?.profile?.phone || newPatient.phone,
+        tests: selectedLabTests.map(test => ({
+          name: test.name,
+          price: test.price,
+          description: test.description
+        })),
+        totalAmount,
+        issueDate: new Date().toLocaleDateString()
+      };
 
-      toast.success("Lab order created and invoice generated successfully");
-      handleReset();
-    },
-    onError: (error) => {
-      toast.error("Failed to create lab order");
+      await generateLabInvoicePDF(invoiceData);
+
+      // Reset form
+      resetForm();
+      setOpen(false);
+    } catch (error) {
       console.error("Error creating lab order:", error);
+      toast.error("Failed to create lab order");
     }
-  });
+  };
 
-  const handleReset = () => {
+  const resetForm = () => {
+    setActiveTab("search");
+    setSearchTerm("");
     setSelectedPatient(null);
     setSelectedDoctor("");
     setSelectedTests([]);
-    setNotes("");
-    setSearchTerm("");
     setTestSearchQuery("");
+    setNotes("");
     setIsExternalDoctor(false);
     setExternalDoctorName("");
-    setActiveTab("search");
     setNewPatient({
       first_name: "",
       last_name: "",
@@ -291,17 +245,11 @@ export function EnhancedLabDialog() {
       blood_type: "",
       allergies: ""
     });
-    setOpen(false);
   };
-
 
   const getTotalAmount = () => {
     const selectedLabTests = labTests?.filter(test => selectedTests.includes(test.id)) || [];
     return selectedLabTests.reduce((sum, test) => sum + test.price, 0);
-  };
-
-  const getSelectedTestsDetails = () => {
-    return labTests?.filter(test => selectedTests.includes(test.id)) || [];
   };
 
   const toggleTestSelection = (testId: string) => {
@@ -445,65 +393,6 @@ export function EnhancedLabDialog() {
                       />
                     </div>
                   </div>
-                  
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="dob">Date of Birth</Label>
-                      <Input
-                        id="dob"
-                        type="date"
-                        value={newPatient.date_of_birth}
-                        onChange={(e) => setNewPatient(prev => ({ ...prev, date_of_birth: e.target.value }))}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="bloodType">Blood Type</Label>
-                      <Select value={newPatient.blood_type} onValueChange={(value) => setNewPatient(prev => ({ ...prev, blood_type: value }))}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select blood type" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="A+">A+</SelectItem>
-                          <SelectItem value="A-">A-</SelectItem>
-                          <SelectItem value="B+">B+</SelectItem>
-                          <SelectItem value="B-">B-</SelectItem>
-                          <SelectItem value="AB+">AB+</SelectItem>
-                          <SelectItem value="AB-">AB-</SelectItem>
-                          <SelectItem value="O+">O+</SelectItem>
-                          <SelectItem value="O-">O-</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="address">Address</Label>
-                    <Input
-                      id="address"
-                      value={newPatient.address}
-                      onChange={(e) => setNewPatient(prev => ({ ...prev, address: e.target.value }))}
-                      placeholder="Complete address"
-                    />
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="allergies">Known Allergies</Label>
-                    <Textarea
-                      id="allergies"
-                      value={newPatient.allergies}
-                      onChange={(e) => setNewPatient(prev => ({ ...prev, allergies: e.target.value }))}
-                      placeholder="List any known allergies..."
-                      rows={2}
-                    />
-                  </div>
-                  
-                  <Button 
-                    onClick={handleCreatePatient}
-                    disabled={createPatientWithProfile.isPending}
-                    className="w-full"
-                  >
-                    {createPatientWithProfile.isPending ? "Registering..." : "Register Patient"}
-                  </Button>
                 </TabsContent>
               </Tabs>
             </CardContent>
@@ -683,86 +572,30 @@ export function EnhancedLabDialog() {
           </div>
 
           {/* Actions */}
-          <div className="flex justify-end space-x-2">
-            <Button variant="outline" onClick={handleReset}>
+          <div className="flex justify-end space-x-3 pt-4 border-t">
+            <Button variant="outline" onClick={() => setOpen(false)}>
               Cancel
             </Button>
             <Button
-              onClick={() => setConfirmationOpen(true)}
-              disabled={!selectedPatient || (!selectedDoctor && !isExternalDoctor) || selectedTests.length === 0}
+              onClick={handleSubmit}
+              disabled={createLabOrderWithInvoice.isPending || createPatientWithProfile.isPending}
+              className="bg-blue-600 hover:bg-blue-700 text-white"
             >
-              Confirm & Create Invoice
+              {createLabOrderWithInvoice.isPending || createPatientWithProfile.isPending ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
+                  Creating...
+                </>
+              ) : (
+                `Create Lab Order (${formatPkrAmount(selectedTests.reduce((sum, testId) => {
+                  const test = labTests?.find(t => t.id === testId);
+                  return sum + (test?.price || 0);
+                }, 0))})`
+              )}
             </Button>
           </div>
         </div>
       </DialogContent>
-
-      {/* Confirmation Dialog */}
-      <Dialog open={confirmationOpen} onOpenChange={setConfirmationOpen}>
-        <DialogContent className="sm:max-w-[500px] max-h-[80vh] overflow-y-auto animate-scale-in">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Check className="w-5 h-5 text-green-600" />
-              Confirm Lab Order
-            </DialogTitle>
-          </DialogHeader>
-          
-          <div className="space-y-4">
-            <div className="bg-blue-50 border border-blue-200 p-4 rounded-lg">
-              <h3 className="font-semibold text-lg mb-3">Order Summary</h3>
-              
-              <div className="space-y-2 text-sm">
-                <div><strong>Patient:</strong> {selectedPatient?.profile?.first_name} {selectedPatient?.profile?.last_name}</div>
-                <div><strong>Patient ID:</strong> {selectedPatient?.patient_number || 'Not assigned'}</div>
-                <div><strong>Doctor:</strong> {isExternalDoctor ? externalDoctorName : getDoctorName(selectedDoctor, doctorNames || [])}</div>
-                {notes && <div><strong>Notes:</strong> {notes}</div>}
-              </div>
-            </div>
-
-            <div className="border rounded-lg p-4 bg-gray-50">
-              <h4 className="font-semibold mb-3">Selected Tests ({selectedTests.length})</h4>
-              <div className="space-y-2 max-h-32 overflow-y-auto bg-white rounded border p-2">
-                {getSelectedTestsDetails().map((test) => (
-                  <div key={test.id} className="flex justify-between items-center py-2 border-b last:border-b-0">
-                    <div>
-                      <div className="font-medium">{test.name}</div>
-                      {test.description && (
-                        <div className="text-sm text-gray-600">{test.description}</div>
-                      )}
-                    </div>
-                    <div className="font-semibold text-green-600">
-                      {formatPkrAmount(test.price)}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="bg-green-50 border border-green-200 p-4 rounded-lg">
-              <div className="flex justify-between items-center text-lg font-bold">
-                <span>Total Amount:</span>
-                <span className="text-green-600">{formatPkrAmount(getTotalAmount())}</span>
-              </div>
-            </div>
-          </div>
-
-          <div className="flex justify-end space-x-2 pt-4 border-t">
-            <Button variant="outline" onClick={() => setConfirmationOpen(false)}>
-              Cancel
-            </Button>
-            <Button
-              onClick={() => {
-                setConfirmationOpen(false);
-                createLabOrderMutation.mutate();
-              }}
-              disabled={createLabOrderMutation.isPending}
-              className="bg-green-600 hover:bg-green-700"
-            >
-              {createLabOrderMutation.isPending ? "Creating Order..." : "Confirm & Generate Invoice"}
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
     </Dialog>
   );
 }
