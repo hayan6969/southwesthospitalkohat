@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import AppLayout from "@/layouts/AppLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -12,13 +12,15 @@ import { useAuditLogger } from "@/hooks/useAuditLogger";
 import { useAuth } from "@/hooks/useAuth";
 import { formatPkrAmount } from "@/utils/currency";
 import { toast } from "sonner";
-import { AlertTriangle, TrendingDown, TrendingUp, Package, Search, Edit } from "lucide-react";
+import { AlertTriangle, TrendingDown, TrendingUp, Package, Search, Edit, RefreshCw } from "lucide-react";
+import { useQueryClient } from '@tanstack/react-query';
 
 export default function PharmacyStock() {
   const [searchQuery, setSearchQuery] = useState("");
   const [editingStock, setEditingStock] = useState<{ id: string; quantity: number } | null>(null);
   
-  const { data: medicines, isLoading } = useMedicines();
+  const queryClient = useQueryClient();
+  const { data: medicines, isLoading, refetch } = useMedicines();
   const updateMedicine = useUpdateMedicine();
   const { canEditStock, canViewStock } = usePharmacyPermissions();
   const { logUpdate } = useAuditLogger();
@@ -26,6 +28,17 @@ export default function PharmacyStock() {
 
   // Debug: Log the actual medicine count
   console.log('📊 Medicine count in PharmacyStock:', medicines?.length);
+
+  // Force refresh medicine data on component mount
+  useEffect(() => {
+    const invalidateAndRefresh = async () => {
+      await queryClient.invalidateQueries({ queryKey: ['medicines'] });
+      await queryClient.invalidateQueries({ queryKey: ['pharmacy-stats'] });
+      await queryClient.invalidateQueries({ queryKey: ['expiring-medicines'] });
+      refetch();
+    };
+    invalidateAndRefresh();
+  }, [queryClient, refetch]);
 
   if (!canViewStock) {
     return (
@@ -231,9 +244,23 @@ export default function PharmacyStock() {
   return (
     <AppLayout>
       <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Stock Tracking</h1>
-          <p className="text-gray-600 mt-1">Monitor and manage medicine inventory</p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">Stock Tracking</h1>
+            <p className="text-gray-600 mt-1">Monitor and manage medicine inventory</p>
+          </div>
+          <Button 
+            onClick={() => {
+              queryClient.invalidateQueries({ queryKey: ['medicines'] });
+              refetch();
+              toast.success("Data refreshed");
+            }}
+            variant="outline"
+            size="sm"
+          >
+            <RefreshCw className="w-4 h-4 mr-2" />
+            Refresh Data
+          </Button>
         </div>
 
         {/* Stock Overview Cards */}
