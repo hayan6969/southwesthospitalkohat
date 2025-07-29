@@ -63,7 +63,7 @@ export function SearchableMedicineSelect({
       <PopoverContent className="w-full p-0" align="start">
         <Command>
           <CommandInput placeholder="Search medicine..." />
-          <CommandList className="max-h-[300px]">
+          <CommandList>
             <CommandEmpty>No medicine found.</CommandEmpty>
             <CommandGroup>
               {availableMedicines.map((medicine) => (
