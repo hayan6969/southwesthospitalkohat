@@ -220,7 +220,8 @@ export const useMedicines = () => {
       const { data, error } = await supabase
         .from('medicines')
         .select('*')
-        .order('name');
+        .order('name')
+        .limit(5000); // Set a high limit to ensure we get all medicines
 
       if (error) throw error;
       return data;
@@ -233,8 +234,8 @@ export const usePharmacyStats = () => {
     queryKey: ['pharmacy-stats'],
     queryFn: async () => {
       const [medicinesResult, invoicesResult] = await Promise.all([
-        supabase.from('medicines').select('*'),
-        supabase.from('pharmacy_invoices').select('*')
+        supabase.from('medicines').select('*').limit(5000),
+        supabase.from('pharmacy_invoices').select('*').limit(5000)
       ]);
 
       const medicines = medicinesResult.data || [];
@@ -259,7 +260,8 @@ export const useExpiringMedicines = () => {
       const { data, error } = await supabase
         .from('medicines')
         .select('*')
-        .order('expiry_date', { ascending: true });
+        .order('expiry_date', { ascending: true })
+        .limit(5000);
 
       if (error) throw error;
 
