@@ -233,21 +233,30 @@ export const usePharmacyStats = () => {
   return useQuery({
     queryKey: ['pharmacy-stats'],
     queryFn: async () => {
-      const [medicinesResult, invoicesResult] = await Promise.all([
-        supabase.from('medicines').select('*').limit(5000),
-        supabase.from('pharmacy_invoices').select('*').limit(5000)
+      // Use count queries instead of fetching all data
+      const [
+        { count: totalMedicines },
+        { count: totalInvoices },
+        { data: lowStockMedicines },
+        { data: expiredMedicines },
+        { data: revenueData }
+      ] = await Promise.all([
+        supabase.from('medicines').select('*', { count: 'exact', head: true }),
+        supabase.from('pharmacy_invoices').select('*', { count: 'exact', head: true }),
+        supabase.from('medicines').select('id').lte('stock_quantity', 10),
+        supabase.from('medicines').select('id').lt('expiry_date', new Date().toISOString().split('T')[0]),
+        supabase.from('pharmacy_invoices').select('final_amount')
       ]);
 
-      const medicines = medicinesResult.data || [];
-      const invoices = invoicesResult.data || [];
+      const totalRevenue = revenueData?.reduce((sum, invoice) => sum + invoice.final_amount, 0) || 0;
 
       return {
-        totalMedicines: medicines.length,
-        lowStock: medicines.filter(m => m.stock_quantity <= (m.minimum_stock_level || 10)).length,
-        expired: medicines.filter(m => new Date(m.expiry_date) < new Date()).length,
-        totalInvoices: invoices.length,
-        totalRevenue: invoices.reduce((sum, invoice) => sum + invoice.final_amount, 0),
-        lowStockCount: medicines.filter(m => m.stock_quantity <= (m.minimum_stock_level || 10)).length
+        totalMedicines: totalMedicines || 0,
+        lowStock: lowStockMedicines?.length || 0,
+        expired: expiredMedicines?.length || 0,
+        totalInvoices: totalInvoices || 0,
+        totalRevenue,
+        lowStockCount: lowStockMedicines?.length || 0
       };
     }
   });

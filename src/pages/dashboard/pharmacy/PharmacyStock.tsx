@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useMedicines, useUpdateMedicine } from "@/hooks/useDatabase";
+import { useMedicineCounts } from "@/hooks/useMedicineCounts";
 import { usePharmacyPermissions } from "@/hooks/usePharmacyPermissions";
 import { useAuditLogger } from "@/hooks/useAuditLogger";
 import { useAuth } from "@/hooks/useAuth";
@@ -21,6 +22,7 @@ export default function PharmacyStock() {
   
   const queryClient = useQueryClient();
   const { data: medicines, isLoading, refetch } = useMedicines();
+  const { data: medicineCounts, isLoading: countsLoading, refetch: refetchCounts } = useMedicineCounts();
   const updateMedicine = useUpdateMedicine();
   const { canEditStock, canViewStock } = usePharmacyPermissions();
   const { logUpdate } = useAuditLogger();
@@ -28,17 +30,20 @@ export default function PharmacyStock() {
 
   // Debug: Log the actual medicine count
   console.log('📊 Medicine count in PharmacyStock:', medicines?.length);
+  console.log('📊 Direct medicine counts:', medicineCounts);
 
   // Force refresh medicine data on component mount
   useEffect(() => {
     const invalidateAndRefresh = async () => {
       await queryClient.invalidateQueries({ queryKey: ['medicines'] });
+      await queryClient.invalidateQueries({ queryKey: ['medicine-counts'] });
       await queryClient.invalidateQueries({ queryKey: ['pharmacy-stats'] });
       await queryClient.invalidateQueries({ queryKey: ['expiring-medicines'] });
       refetch();
+      refetchCounts();
     };
     invalidateAndRefresh();
-  }, [queryClient, refetch]);
+  }, [queryClient, refetch, refetchCounts]);
 
   if (!canViewStock) {
     return (
@@ -252,7 +257,9 @@ export default function PharmacyStock() {
           <Button 
             onClick={() => {
               queryClient.invalidateQueries({ queryKey: ['medicines'] });
+              queryClient.invalidateQueries({ queryKey: ['medicine-counts'] });
               refetch();
+              refetchCounts();
               toast.success("Data refreshed");
             }}
             variant="outline"
@@ -273,7 +280,9 @@ export default function PharmacyStock() {
                 </div>
                 <div>
                   <p className="text-sm font-medium text-gray-600">Total Items</p>
-                  <p className="text-2xl font-bold">{filteredMedicines?.length || 0}</p>
+                  <p className="text-2xl font-bold">
+                    {countsLoading ? "..." : (medicineCounts?.total || filteredMedicines?.length || 0)}
+                  </p>
                 </div>
               </div>
             </CardContent>
@@ -287,7 +296,9 @@ export default function PharmacyStock() {
                 </div>
                 <div>
                   <p className="text-sm font-medium text-gray-600">Out of Stock</p>
-                  <p className="text-2xl font-bold text-red-600">{outOfStockMedicines?.length || 0}</p>
+                  <p className="text-2xl font-bold text-red-600">
+                    {countsLoading ? "..." : (medicineCounts?.outOfStock || outOfStockMedicines?.length || 0)}
+                  </p>
                 </div>
               </div>
             </CardContent>
@@ -301,7 +312,9 @@ export default function PharmacyStock() {
                 </div>
                 <div>
                   <p className="text-sm font-medium text-gray-600">Low Stock</p>
-                  <p className="text-2xl font-bold text-orange-600">{lowStockMedicines?.length || 0}</p>
+                  <p className="text-2xl font-bold text-orange-600">
+                    {countsLoading ? "..." : (medicineCounts?.lowStock || lowStockMedicines?.length || 0)}
+                  </p>
                 </div>
               </div>
             </CardContent>
@@ -315,7 +328,9 @@ export default function PharmacyStock() {
                 </div>
                 <div>
                   <p className="text-sm font-medium text-gray-600">Normal Stock</p>
-                  <p className="text-2xl font-bold text-green-600">{normalStockMedicines?.length || 0}</p>
+                  <p className="text-2xl font-bold text-green-600">
+                    {countsLoading ? "..." : (medicineCounts?.normalStock || normalStockMedicines?.length || 0)}
+                  </p>
                 </div>
               </div>
             </CardContent>
