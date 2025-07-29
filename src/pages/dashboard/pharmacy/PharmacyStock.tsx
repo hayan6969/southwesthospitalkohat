@@ -370,7 +370,7 @@ export default function PharmacyStock() {
           <TabsContent value="all">
             <StockTable 
               medicines={filteredMedicines || []} 
-              title={`All Medicines (${countsLoading ? "..." : (medicineCounts?.total || filteredMedicines?.length || 0)})`} 
+              title="All Medicines" 
             />
           </TabsContent>
 
