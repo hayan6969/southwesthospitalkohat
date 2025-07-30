@@ -30,6 +30,7 @@ import { StopAppointmentsButton } from "@/components/StopAppointmentsButton";
 import { useHospitalSettings } from "@/hooks/useHospitalSettings";
 import { formatPkrAmount } from "@/utils/currency";
 import { DoctorAnalytics } from "@/components/DoctorAnalytics";
+import { AdminDashboardNav } from "@/components/AdminDashboardNav";
 
 export default function DashboardDoctor() {
   const { profile, signOut } = useAuth();
@@ -88,20 +89,23 @@ export default function DashboardDoctor() {
       {/* Header with Profile - Compact */}
       <header className="bg-white shadow-sm border-b border-gray-200 px-4 py-3">
         <div className="flex justify-between items-center">
-          <div>
-            <h1 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-              {hospitalSettings?.logo_url ? (
-                <img 
-                  src={hospitalSettings.logo_url} 
-                  alt="Hospital Logo" 
-                  className="w-6 h-6 object-contain"
-                />
-              ) : (
-                <span className="inline-block w-2 h-6 bg-green-500 rounded-full" />
-              )}
-              {hospitalSettings?.hospital_name || "HIMS"}
-            </h1>
-            <p className="text-gray-500 text-xs mt-0.5">Hospital Information Management System</p>
+          <div className="flex items-center gap-6">
+            <div>
+              <h1 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+                {hospitalSettings?.logo_url ? (
+                  <img 
+                    src={hospitalSettings.logo_url} 
+                    alt="Hospital Logo" 
+                    className="w-6 h-6 object-contain"
+                  />
+                ) : (
+                  <span className="inline-block w-2 h-6 bg-green-500 rounded-full" />
+                )}
+                {hospitalSettings?.hospital_name || "HIMS"}
+              </h1>
+              <p className="text-gray-500 text-xs mt-0.5">Hospital Information Management System</p>
+            </div>
+            {profile?.role === 'admin' && <AdminDashboardNav />}
           </div>
           
           {/* Profile Section - Compact */}

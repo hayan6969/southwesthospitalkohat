@@ -12,6 +12,7 @@ import { toast } from "sonner";
 import { OTNotesDialog } from "@/components/dialogs/OTNotesDialog";
 import { DatePicker } from "@/components/ui/date-picker";
 import { useAuth } from "@/hooks/useAuth";
+import { AdminDashboardNav } from "@/components/AdminDashboardNav";
 
 interface OTScheduleWithDetails {
   id: string;
@@ -229,11 +230,14 @@ export default function DashboardOTA() {
       {/* Header */}
       <header className="bg-white shadow-sm border-b border-gray-200 px-6 py-4">
         <div className="flex justify-between items-center">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-              <span className="inline-block w-2 h-8 bg-blue-500 rounded-full" />
-              HIMS - OT Operations
-            </h1>
+          <div className="flex items-center gap-6">
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+                <span className="inline-block w-2 h-8 bg-blue-500 rounded-full" />
+                HIMS - OT Operations
+              </h1>
+            </div>
+            {profile?.role === 'admin' && <AdminDashboardNav />}
           </div>
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2 text-sm text-gray-600">

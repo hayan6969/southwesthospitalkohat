@@ -10,6 +10,7 @@ import { StaffOT } from "@/components/staff/StaffOT";
 import { PatientSearchDialog } from "@/components/staff/PatientSearchDialog";
 import { Receipt, TestTube, Building2 } from "lucide-react";
 import { useHospitalSettings } from "@/hooks/useHospitalSettings";
+import { AdminDashboardNav } from "@/components/AdminDashboardNav";
 
 export default function DashboardStaff() {
   const [activeTab, setActiveTab] = useState("counter");
@@ -29,19 +30,22 @@ export default function DashboardStaff() {
       {/* Header */}
       <header className="bg-white shadow-sm border-b border-gray-200 px-6 py-4">
         <div className="flex justify-between items-center">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-              {hospitalSettings?.logo_url ? (
-                <img 
-                  src={hospitalSettings.logo_url} 
-                  alt="Hospital Logo" 
-                  className="w-8 h-8 object-contain"
-                />
-              ) : (
-                <span className="inline-block w-2 h-8 bg-blue-500 rounded-full" />
-              )}
-              {hospitalSettings?.hospital_name || "HIMS"}
-            </h1>
+          <div className="flex items-center gap-6">
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+                {hospitalSettings?.logo_url ? (
+                  <img 
+                    src={hospitalSettings.logo_url} 
+                    alt="Hospital Logo" 
+                    className="w-8 h-8 object-contain"
+                  />
+                ) : (
+                  <span className="inline-block w-2 h-8 bg-blue-500 rounded-full" />
+                )}
+                {hospitalSettings?.hospital_name || "HIMS"}
+              </h1>
+            </div>
+            {profile.role === 'admin' && <AdminDashboardNav />}
           </div>
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2 text-sm text-gray-600">
