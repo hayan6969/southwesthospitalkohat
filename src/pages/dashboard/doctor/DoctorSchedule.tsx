@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import { useAppointments, useUpdateAppointment, useMarkAppointmentFree } from "@/hooks/useDatabase";
 import { usePatientNames, getPatientName } from "@/hooks/useDisplayHelpers";
-import { Calendar, Clock, User, Edit3, CheckCircle, X, Hash, CreditCard, AlertTriangle, Filter, Search, CalendarIcon, Gift } from "lucide-react";
+import { Calendar, Clock, User, Edit3, CheckCircle, X, Hash, CreditCard, AlertTriangle, Filter, Search, CalendarIcon, Gift, Pill } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -19,6 +19,7 @@ import { PatientDetailDialog } from "@/components/dialogs/PatientDetailDialog";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { getCurrentPakistanTime } from "@/utils/timezone";
+import { PrescriptionDialog } from "@/components/dialogs/PrescriptionDialog";
 
 export default function DoctorSchedule() { // Fixed ordering syntax
   const { data: appointments, isLoading, refetch: refetchAppointments } = useAppointments();
@@ -35,6 +36,10 @@ export default function DoctorSchedule() { // Fixed ordering syntax
   const [dateFilter, setDateFilter] = useState("");
   const [patientFilter, setPatientFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
+
+  // Prescription dialog state
+  const [isPrescriptionDialogOpen, setIsPrescriptionDialogOpen] = useState(false);
+  const [selectedAppointmentForPrescription, setSelectedAppointmentForPrescription] = useState<any>(null);
 
   // Fetch appointments with queue positions and patient details
   useEffect(() => {
@@ -298,6 +303,11 @@ export default function DoctorSchedule() { // Fixed ordering syntax
 
   // Removed handleGenerateInvoice - only staff can generate invoices
 
+  const handlePrescriptionClick = (appointment: any) => {
+    setSelectedAppointmentForPrescription(appointment);
+    setIsPrescriptionDialogOpen(true);
+  };
+
   const upcomingAppointments = appointmentsWithQueue?.filter(apt => {
     const selectedDateStr = format(selectedDate, 'yyyy-MM-dd');
     const aptDateStr = format(new Date(apt.appointment_date), 'yyyy-MM-dd');
@@ -359,18 +369,19 @@ export default function DoctorSchedule() { // Fixed ordering syntax
               <TableHead>Payment</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Actions</TableHead>
+              <TableHead>Prescription</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {(isLoading || loading) ? (
-              Array.from({ length: 5 }).map((_, i) => (
-                <TableRow key={i}>
-                  {Array.from({ length: 8 }).map((_, j) => (
-                    <TableCell key={j}>
-                      <div className="h-4 bg-gray-200 rounded animate-pulse"></div>
-                    </TableCell>
-                  ))}
-                </TableRow>
+               Array.from({ length: 5 }).map((_, i) => (
+                 <TableRow key={i}>
+                   {Array.from({ length: 9 }).map((_, j) => (
+                     <TableCell key={j}>
+                       <div className="h-4 bg-gray-200 rounded animate-pulse"></div>
+                     </TableCell>
+                   ))}
+                 </TableRow>
               ))
             ) : appointmentsList.length > 0 ? (
               appointmentsList.map((appointment) => (
@@ -525,15 +536,28 @@ export default function DoctorSchedule() { // Fixed ordering syntax
                             </Badge>
                           )}
                         </>
-                      )}
-                    </div>
-                  </TableCell>
+                       )}
+                     </div>
+                   </TableCell>
+                   
+                   {/* Prescription */}
+                   <TableCell>
+                     <Button
+                       size="sm"
+                       variant="outline"
+                       onClick={() => handlePrescriptionClick(appointment)}
+                       className="flex items-center gap-2"
+                     >
+                       <Pill className="w-3 h-3" />
+                       Prescription
+                     </Button>
+                   </TableCell>
                 </TableRow>
               ))
             ) : (
-              <TableRow>
-                <TableCell colSpan={8} className="text-center text-gray-500 py-12">
-                  No {title.toLowerCase()} found
+               <TableRow>
+                 <TableCell colSpan={9} className="text-center text-gray-500 py-12">
+                   No {title.toLowerCase()} found
                 </TableCell>
               </TableRow>
             )}
@@ -689,6 +713,17 @@ export default function DoctorSchedule() { // Fixed ordering syntax
           setSelectedPatient(null);
         }}
         patient={selectedPatient}
+      />
+
+      {/* Prescription Dialog */}
+      <PrescriptionDialog
+        open={isPrescriptionDialogOpen}
+        onOpenChange={setIsPrescriptionDialogOpen}
+        appointment={selectedAppointmentForPrescription}
+        patientName={selectedAppointmentForPrescription ? 
+          getPatientName(selectedAppointmentForPrescription.patient_id, patientNames || []) : 
+          ""
+        }
       />
     </div>
   );

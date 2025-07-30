@@ -9,7 +9,7 @@ import { usePatientNames, useDoctorNames, getPatientName, getDoctorName } from "
 import { useDoctorTodayAppointments } from "@/hooks/useDoctorData";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
-import { Calendar, Users, Clock, CheckCircle, Plus, User, LogOut, Stethoscope, FileText, CalendarDays, ClipboardList, Banknote, Building2 } from "lucide-react";
+import { Calendar, Users, Clock, CheckCircle, Plus, User, LogOut, Stethoscope, FileText, CalendarDays, ClipboardList, Banknote, Building2, Pill } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -31,6 +31,7 @@ import { useHospitalSettings } from "@/hooks/useHospitalSettings";
 import { formatPkrAmount } from "@/utils/currency";
 import { DoctorAnalytics } from "@/components/DoctorAnalytics";
 import { AdminDashboardNav } from "@/components/AdminDashboardNav";
+import { PrescriptionDialog } from "@/components/dialogs/PrescriptionDialog";
 
 export default function DashboardDoctor() {
   const { profile, signOut } = useAuth();

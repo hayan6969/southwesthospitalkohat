@@ -1316,6 +1316,36 @@ export type Database = {
         }
         Relationships: []
       }
+      prescriptions: {
+        Row: {
+          appointment_id: string
+          created_at: string
+          doctor_id: string
+          id: string
+          patient_id: string
+          prescription_text: string
+          updated_at: string
+        }
+        Insert: {
+          appointment_id: string
+          created_at?: string
+          doctor_id: string
+          id?: string
+          patient_id: string
+          prescription_text: string
+          updated_at?: string
+        }
+        Update: {
+          appointment_id?: string
+          created_at?: string
+          doctor_id?: string
+          id?: string
+          patient_id?: string
+          prescription_text?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string | null
