@@ -5,24 +5,26 @@ export function usePharmacyPermissions() {
   
   const role = profile?.role;
   
+  const isAdmin = role === 'admin';
   const isHeadPharmacist = role === 'head_pharmacist';
   const isAssistantPharmacist = role === 'assistant_pharmacist';
   const isSalesmanPharmacist = role === 'salesman_pharmacist';
   const isPharmacyUser = isHeadPharmacist || isAssistantPharmacist || isSalesmanPharmacist;
   
-  // Head pharmacist has all permissions
-  const canManageMedicines = isHeadPharmacist;
-  const canEditStock = isHeadPharmacist;
-  const canViewMedicines = isPharmacyUser;
-  const canSellMedicine = isPharmacyUser;
-  const canManageReturns = isHeadPharmacist || isAssistantPharmacist;
-  const canViewStock = isPharmacyUser;
-  const canViewAnalytics = isPharmacyUser;
-  const canViewExpiry = isPharmacyUser;
-  const canViewLabReports = isHeadPharmacist || isAssistantPharmacist;
+  // Admin and Head pharmacist have all permissions
+  const canManageMedicines = isAdmin || isHeadPharmacist;
+  const canEditStock = isAdmin || isHeadPharmacist;
+  const canViewMedicines = isAdmin || isPharmacyUser;
+  const canSellMedicine = isAdmin || isPharmacyUser;
+  const canManageReturns = isAdmin || isHeadPharmacist || isAssistantPharmacist;
+  const canViewStock = isAdmin || isPharmacyUser;
+  const canViewAnalytics = isAdmin || isPharmacyUser;
+  const canViewExpiry = isAdmin || isPharmacyUser;
+  const canViewLabReports = isAdmin || isHeadPharmacist || isAssistantPharmacist;
   
   return {
     role,
+    isAdmin,
     isHeadPharmacist,
     isAssistantPharmacist,
     isSalesmanPharmacist,

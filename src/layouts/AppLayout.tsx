@@ -8,9 +8,10 @@ import { AdminDashboardNav } from "@/components/AdminDashboardNav";
 
 interface AppLayoutProps {
   children: ReactNode;
+  sidebarRole?: string;
 }
 
-const AppLayout = ({ children }: AppLayoutProps) => {
+const AppLayout = ({ children, sidebarRole }: AppLayoutProps) => {
   const { profile, signOut } = useAuth();
 
   if (!profile) {
@@ -23,7 +24,7 @@ const AppLayout = ({ children }: AppLayoutProps) => {
 
   return (
     <div className="min-h-screen bg-gray-50 flex">
-      <SidebarNav role={profile.role} />
+      <SidebarNav role={sidebarRole || profile.role} />
       <div className="flex-1 flex flex-col">
         <header className="bg-white shadow-sm border-b border-gray-200 px-6 py-4">
           <div className="flex justify-between items-center">
