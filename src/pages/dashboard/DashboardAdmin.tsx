@@ -218,6 +218,8 @@ export default function DashboardAdmin() {
       case 'admin': return 'bg-purple-100 text-purple-700';
       case 'doctor': return 'bg-green-100 text-green-700';
       case 'staff': return 'bg-blue-100 text-blue-700';
+      case 'ota': return 'bg-indigo-100 text-indigo-700';
+      case 'nursing': return 'bg-pink-100 text-pink-700';
       case 'head_pharmacist': return 'bg-orange-100 text-orange-700';
       case 'assistant_pharmacist': return 'bg-orange-50 text-orange-600';
       case 'salesman_pharmacist': return 'bg-orange-200 text-orange-800';
@@ -523,17 +525,19 @@ export default function DashboardAdmin() {
                       <SelectTrigger className="w-48">
                         <SelectValue placeholder="Filter by role" />
                       </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All Roles</SelectItem>
-                        <SelectItem value="admin">Admin</SelectItem>
-                        <SelectItem value="doctor">Doctor</SelectItem>
-                        <SelectItem value="staff">Staff</SelectItem>
-                        <SelectItem value="head_pharmacist">Head Pharmacist</SelectItem>
-                        <SelectItem value="assistant_pharmacist">Assistant Pharmacist</SelectItem>
-                        <SelectItem value="salesman_pharmacist">Salesman Pharmacist</SelectItem>
-                        <SelectItem value="finance">Finance</SelectItem>
-                        <SelectItem value="patient">Patient</SelectItem>
-                      </SelectContent>
+                       <SelectContent>
+                         <SelectItem value="all">All Roles</SelectItem>
+                         <SelectItem value="admin">Admin</SelectItem>
+                         <SelectItem value="doctor">Doctor</SelectItem>
+                         <SelectItem value="staff">Staff</SelectItem>
+                         <SelectItem value="ota">OTA</SelectItem>
+                         <SelectItem value="nursing">Nursing</SelectItem>
+                         <SelectItem value="head_pharmacist">Head Pharmacist</SelectItem>
+                         <SelectItem value="assistant_pharmacist">Assistant Pharmacist</SelectItem>
+                         <SelectItem value="salesman_pharmacist">Salesman Pharmacist</SelectItem>
+                         <SelectItem value="finance">Finance</SelectItem>
+                         <SelectItem value="patient">Patient</SelectItem>
+                       </SelectContent>
                     </Select>
                   </div>
 
