@@ -125,56 +125,56 @@ const App = () => (
 
             {/* Doctor dashboard routes */}
             <Route path="/dashboard/doctor" element={
-              <ProtectedRoute allowedRoles={['doctor']}>
+              <ProtectedRoute allowedRoles={['doctor', 'admin']}>
                 <DashboardDoctor />
               </ProtectedRoute>
             } />
             <Route path="/dashboard/doctor/schedule" element={
-              <ProtectedRoute allowedRoles={['doctor']}>
+              <ProtectedRoute allowedRoles={['doctor', 'admin']}>
                 <DoctorSchedule />
               </ProtectedRoute>
             } />
             <Route path="/dashboard/doctor/patients" element={
-              <ProtectedRoute allowedRoles={['doctor']}>
+              <ProtectedRoute allowedRoles={['doctor', 'admin']}>
                 <DoctorPatients />
               </ProtectedRoute>
             } />
             <Route path="/dashboard/doctor/notes" element={
-              <ProtectedRoute allowedRoles={['doctor']}>
+              <ProtectedRoute allowedRoles={['doctor', 'admin']}>
                 <DoctorNotes />
               </ProtectedRoute>
             } />
 
             {/* Staff dashboard routes */}
             <Route path="/dashboard/staff" element={
-              <ProtectedRoute allowedRoles={['staff']}>
+              <ProtectedRoute allowedRoles={['staff', 'admin']}>
                 <DashboardStaff />
               </ProtectedRoute>
             } />
             <Route path="/dashboard/staff/patients" element={
-              <ProtectedRoute allowedRoles={['staff']}>
+              <ProtectedRoute allowedRoles={['staff', 'admin']}>
                 <StaffPatients />
               </ProtectedRoute>
             } />
             <Route path="/dashboard/staff/appointments" element={
-              <ProtectedRoute allowedRoles={['staff']}>
+              <ProtectedRoute allowedRoles={['staff', 'admin']}>
                 <StaffAppointments />
               </ProtectedRoute>
             } />
             <Route path="/dashboard/staff/invoices" element={
-              <ProtectedRoute allowedRoles={['staff']}>
+              <ProtectedRoute allowedRoles={['staff', 'admin']}>
                 <StaffInvoices />
               </ProtectedRoute>
             } />
             <Route path="/dashboard/staff/labs" element={
-              <ProtectedRoute allowedRoles={['staff']}>
+              <ProtectedRoute allowedRoles={['staff', 'admin']}>
                 <StaffLabs />
               </ProtectedRoute>
             } />
 
             {/* OTA dashboard routes */}
             <Route path="/dashboard/ota" element={
-              <ProtectedRoute allowedRoles={['ota']}>
+              <ProtectedRoute allowedRoles={['ota', 'admin']}>
                 <DashboardOTA />
               </ProtectedRoute>
             } />
@@ -213,7 +213,7 @@ const App = () => (
 
             {/* Pharmacy dashboard routes */}
             <Route path="/dashboard/pharmacy" element={
-              <ProtectedRoute allowedRoles={['head_pharmacist', 'assistant_pharmacist', 'salesman_pharmacist']}>
+              <ProtectedRoute allowedRoles={['head_pharmacist', 'assistant_pharmacist', 'salesman_pharmacist', 'admin']}>
                 <DashboardPharmacy />
               </ProtectedRoute>
             } />
@@ -222,49 +222,49 @@ const App = () => (
             <Route path="/dashboard/assistant_pharmacist" element={<Navigate to="/dashboard/pharmacy" replace />} />
             <Route path="/dashboard/salesman_pharmacist" element={<Navigate to="/dashboard/pharmacy" replace />} />
             <Route path="/dashboard/pharmacy/medicines" element={
-              <ProtectedRoute allowedRoles={['head_pharmacist', 'assistant_pharmacist']}>
+              <ProtectedRoute allowedRoles={['head_pharmacist', 'assistant_pharmacist', 'admin']}>
                 <PharmacyMedicines />
               </ProtectedRoute>
             } />
             <Route path="/dashboard/pharmacy/invoices" element={
-              <ProtectedRoute allowedRoles={['head_pharmacist', 'assistant_pharmacist']}>
+              <ProtectedRoute allowedRoles={['head_pharmacist', 'assistant_pharmacist', 'admin']}>
                 <PharmacyInvoices />
               </ProtectedRoute>
             } />
             <Route path="/dashboard/pharmacy/expiry" element={
-              <ProtectedRoute allowedRoles={['head_pharmacist', 'assistant_pharmacist']}>
+              <ProtectedRoute allowedRoles={['head_pharmacist', 'assistant_pharmacist', 'admin']}>
                 <PharmacyExpiry />
               </ProtectedRoute>
             } />
             <Route path="/dashboard/pharmacy/analytics" element={
-              <ProtectedRoute allowedRoles={['head_pharmacist', 'assistant_pharmacist']}>
+              <ProtectedRoute allowedRoles={['head_pharmacist', 'assistant_pharmacist', 'admin']}>
                 <PharmacyAnalytics />
               </ProtectedRoute>
             } />
             <Route path="/dashboard/pharmacy/sell" element={
-              <ProtectedRoute allowedRoles={['head_pharmacist', 'assistant_pharmacist', 'salesman_pharmacist']}>
+              <ProtectedRoute allowedRoles={['head_pharmacist', 'assistant_pharmacist', 'salesman_pharmacist', 'admin']}>
                 <PharmacySell />
               </ProtectedRoute>
             } />
             <Route path="/dashboard/pharmacy/stock" element={
-              <ProtectedRoute allowedRoles={['head_pharmacist', 'assistant_pharmacist']}>
+              <ProtectedRoute allowedRoles={['head_pharmacist', 'assistant_pharmacist', 'admin']}>
                 <PharmacyStock />
               </ProtectedRoute>
             } />
             <Route path="/dashboard/pharmacy/returns" element={
-              <ProtectedRoute allowedRoles={['head_pharmacist', 'assistant_pharmacist']}>
+              <ProtectedRoute allowedRoles={['head_pharmacist', 'assistant_pharmacist', 'admin']}>
                 <PharmacyReturns />
               </ProtectedRoute>
             } />
             <Route path="/dashboard/pharmacy/lab-reports" element={
-              <ProtectedRoute allowedRoles={['head_pharmacist', 'assistant_pharmacist']}>
+              <ProtectedRoute allowedRoles={['head_pharmacist', 'assistant_pharmacist', 'admin']}>
                 <PharmacyLabReports />
               </ProtectedRoute>
             } />
 
             {/* Finance dashboard routes - All wrapped in FinanceLayout */}
             <Route path="/dashboard/finance/*" element={
-              <ProtectedRoute allowedRoles={['finance']}>
+              <ProtectedRoute allowedRoles={['finance', 'admin']}>
                 <FinanceRoutes />
               </ProtectedRoute>
             } />

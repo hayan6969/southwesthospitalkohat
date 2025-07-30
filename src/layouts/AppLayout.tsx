@@ -4,6 +4,7 @@ import { SidebarNav } from "@/components/SidebarNav";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { LogOut, User } from "lucide-react";
+import { AdminDashboardNav } from "@/components/AdminDashboardNav";
 
 interface AppLayoutProps {
   children: ReactNode;
@@ -26,11 +27,12 @@ const AppLayout = ({ children }: AppLayoutProps) => {
       <div className="flex-1 flex flex-col">
         <header className="bg-white shadow-sm border-b border-gray-200 px-6 py-4">
           <div className="flex justify-between items-center">
-            <div>
+            <div className="flex items-center gap-6">
               <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
                 <span className="inline-block w-2 h-8 bg-blue-500 rounded-full" />
                 HIMS
               </h1>
+              {profile.role === 'admin' && <AdminDashboardNav />}
             </div>
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-2 text-sm text-gray-600">
