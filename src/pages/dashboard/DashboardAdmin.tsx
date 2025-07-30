@@ -232,23 +232,20 @@ export default function DashboardAdmin() {
       {/* Header with Profile - Compact */}
       <header className="bg-white shadow-sm border-b border-gray-200 px-4 py-3">
         <div className="flex justify-between items-center">
-          <div className="flex items-center gap-6">
-            <div>
-              <h1 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-                {hospitalSettings?.logo_url ? (
-                  <img 
-                    src={hospitalSettings.logo_url} 
-                    alt="Hospital Logo" 
-                    className="w-6 h-6 object-contain"
-                  />
-                ) : (
-                  <span className="inline-block w-2 h-6 bg-blue-500 rounded-full" />
-                )}
-                {hospitalSettings?.hospital_name || "HIMS"}
-              </h1>
-              <p className="text-gray-500 text-xs mt-0.5">Hospital Information Management System</p>
-            </div>
-            <AdminDashboardNav />
+          <div>
+            <h1 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+              {hospitalSettings?.logo_url ? (
+                <img 
+                  src={hospitalSettings.logo_url} 
+                  alt="Hospital Logo" 
+                  className="w-6 h-6 object-contain"
+                />
+              ) : (
+                <span className="inline-block w-2 h-6 bg-blue-500 rounded-full" />
+              )}
+              {hospitalSettings?.hospital_name || "HIMS"}
+            </h1>
+            <p className="text-gray-500 text-xs mt-0.5">Hospital Information Management System</p>
           </div>
           
           {/* Profile Section - Compact */}
@@ -289,6 +286,7 @@ export default function DashboardAdmin() {
         <div className="max-w-7xl mx-auto">
           <div className="flex items-center justify-between mb-8">
             <h2 className="text-2xl font-bold">System Overview</h2>
+            <AdminDashboardNav />
           </div>
 
           <Tabs defaultValue="overview" className="space-y-6">
