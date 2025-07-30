@@ -53,7 +53,7 @@ export default function PharmacyStock() {
   console.log('📊 Total medicines available:', allMedicinesResult?.count);
   console.log('📊 Direct medicine counts:', medicineCounts);
 
-  // Force refresh medicine data on component mount
+  // Force refresh medicine data on component mount only
   useEffect(() => {
     const invalidateAndRefresh = async () => {
       await queryClient.invalidateQueries({ queryKey: ['medicines-paginated'] });
@@ -64,7 +64,7 @@ export default function PharmacyStock() {
       refetchCounts();
     };
     invalidateAndRefresh();
-  }, [queryClient, refetchCounts]);
+  }, []); // Empty dependency array - only run once on mount
 
   if (!canViewStock) {
     return (
