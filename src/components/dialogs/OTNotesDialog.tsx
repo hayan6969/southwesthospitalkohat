@@ -147,7 +147,8 @@ export function OTNotesDialog({ open, onOpenChange, otSchedule, onSave, readOnly
               value={patientName}
               onChange={(e) => setPatientName(e.target.value)}
               placeholder="Patient name"
-              disabled={readOnly}
+              readOnly={readOnly}
+              className={readOnly ? "cursor-default" : ""}
             />
           </div>
 
@@ -158,7 +159,8 @@ export function OTNotesDialog({ open, onOpenChange, otSchedule, onSave, readOnly
               value={age}
               onChange={(e) => setAge(e.target.value)}
               placeholder="e.g., 45"
-              disabled={readOnly}
+              readOnly={readOnly}
+              className={readOnly ? "cursor-default" : ""}
             />
           </div>
 
@@ -169,7 +171,8 @@ export function OTNotesDialog({ open, onOpenChange, otSchedule, onSave, readOnly
               value={sex}
               onChange={(e) => setSex(e.target.value)}
               placeholder="e.g., M or F"
-              disabled={readOnly}
+              readOnly={readOnly}
+              className={readOnly ? "cursor-default" : ""}
             />
           </div>
 
@@ -180,7 +183,8 @@ export function OTNotesDialog({ open, onOpenChange, otSchedule, onSave, readOnly
               type="datetime-local"
               value={operationDateTime}
               onChange={(e) => setOperationDateTime(e.target.value)}
-              disabled={readOnly}
+              readOnly={readOnly}
+              className={readOnly ? "cursor-default" : ""}
             />
           </div>
 
@@ -192,7 +196,8 @@ export function OTNotesDialog({ open, onOpenChange, otSchedule, onSave, readOnly
               onChange={(e) => setDiagnosis(e.target.value)}
               placeholder="Enter diagnosis"
               rows={3}
-              disabled={readOnly}
+              readOnly={readOnly}
+              className={readOnly ? "cursor-default" : ""}
             />
           </div>
 
@@ -204,7 +209,8 @@ export function OTNotesDialog({ open, onOpenChange, otSchedule, onSave, readOnly
               onChange={(e) => setProcedure(e.target.value)}
               placeholder="Enter procedure details"
               rows={3}
-              disabled={readOnly}
+              readOnly={readOnly}
+              className={readOnly ? "cursor-default" : ""}
             />
           </div>
 
@@ -215,7 +221,8 @@ export function OTNotesDialog({ open, onOpenChange, otSchedule, onSave, readOnly
               value={surgeonName}
               onChange={(e) => setSurgeonName(e.target.value)}
               placeholder="Surgeon name"
-              disabled={readOnly}
+              readOnly={readOnly}
+              className={readOnly ? "cursor-default" : ""}
             />
           </div>
 
@@ -226,7 +233,8 @@ export function OTNotesDialog({ open, onOpenChange, otSchedule, onSave, readOnly
               value={anesthetistName}
               onChange={(e) => setAnesthetistName(e.target.value)}
               placeholder="Anesthetist name"
-              disabled={readOnly}
+              readOnly={readOnly}
+              className={readOnly ? "cursor-default" : ""}
             />
           </div>
 
@@ -238,7 +246,8 @@ export function OTNotesDialog({ open, onOpenChange, otSchedule, onSave, readOnly
               onChange={(e) => setPostOpOrders(e.target.value)}
               placeholder="Enter post-operation orders and instructions"
               rows={4}
-              disabled={readOnly}
+              readOnly={readOnly}
+              className={readOnly ? "cursor-default" : ""}
             />
           </div>
         </div>
