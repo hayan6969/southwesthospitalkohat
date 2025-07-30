@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SearchableMedicineSelect } from "@/components/SearchableMedicineSelect";
 import { Separator } from "@/components/ui/separator";
-import { useMedicines, useCreatePharmacyInvoice } from "@/hooks/useDatabase";
+import { useAllMedicines, useCreatePharmacyInvoice } from "@/hooks/useDatabase";
 import { useAuditLogger } from "@/hooks/useAuditLogger";
 import { useAuth } from "@/hooks/useAuth";
 import { formatPkrAmount } from "@/utils/currency";
@@ -32,7 +32,8 @@ export default function PharmacySell() {
   const [customerPhone, setCustomerPhone] = useState("");
   const [discount, setDiscount] = useState(0);
 
-  const { data: medicines, isLoading } = useMedicines();
+  const { data: medicinesData, isLoading } = useAllMedicines();
+  const medicines = medicinesData?.data;
   const createInvoice = useCreatePharmacyInvoice();
   const { logCreate } = useAuditLogger();
   const { profile } = useAuth();
