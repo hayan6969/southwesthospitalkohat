@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { usePaginatedMedicines, useAllMedicines, useUpdateMedicine } from "@/hooks/useDatabase";
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "@/components/ui/pagination";
@@ -14,30 +15,30 @@ import { useAuditLogger } from "@/hooks/useAuditLogger";
 import { useAuth } from "@/hooks/useAuth";
 import { formatPkrAmount } from "@/utils/currency";
 import { toast } from "sonner";
-import { AlertTriangle, TrendingDown, TrendingUp, Package, Search, Edit, RefreshCw } from "lucide-react";
+import { AlertTriangle, TrendingDown, TrendingUp, Package, Search, Edit, RefreshCw, Check, X } from "lucide-react";
 import { useQueryClient } from '@tanstack/react-query';
 
 export default function PharmacyStock() {
-  const [searchQuery, setSearchQuery] = useState("");
-  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
-  const [editingStock, setEditingStock] = useState<{ id: string; quantity: number } | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
+  const [editingStock, setEditingStock] = useState<{ id: string; quantity: number } | null>(null);
   const pageSize = 10;
   
-  // Debounce search query to avoid API calls on every keystroke
+  // Debounce search term to avoid API calls on every keystroke
   useEffect(() => {
     const timer = setTimeout(() => {
-      setDebouncedSearchQuery(searchQuery);
+      setDebouncedSearchTerm(searchTerm);
       setCurrentPage(1); // Reset to first page when search changes
     }, 300); // 300ms delay
 
     return () => clearTimeout(timer);
-  }, [searchQuery]);
+  }, [searchTerm]);
   
   const queryClient = useQueryClient();
-  const { data: medicinesResult, isLoading } = usePaginatedMedicines(currentPage, pageSize, debouncedSearchQuery);
+  const { data: medicinesResult, isLoading } = usePaginatedMedicines(currentPage, pageSize, debouncedSearchTerm);
   const { data: allMedicinesResult } = useAllMedicines();
-  const { data: medicineCounts, isLoading: countsLoading, refetch: refetchCounts } = useMedicineCounts();
+  const { data: medicineCounts, isLoading: countsLoading } = useMedicineCounts();
   const updateMedicine = useUpdateMedicine();
   const { canEditStock, canViewStock } = usePharmacyPermissions();
   const { logUpdate } = useAuditLogger();
@@ -47,24 +48,6 @@ export default function PharmacyStock() {
   const totalCount = medicinesResult?.count || 0;
   const totalPages = medicinesResult?.totalPages || 1;
   const allMedicines = allMedicinesResult?.data || [];
-
-  // Debug: Log the actual medicine count
-  console.log('📊 Medicine count in PharmacyStock:', medicines?.length);
-  console.log('📊 Total medicines available:', allMedicinesResult?.count);
-  console.log('📊 Direct medicine counts:', medicineCounts);
-
-  // Force refresh medicine data on component mount only
-  useEffect(() => {
-    const invalidateAndRefresh = async () => {
-      await queryClient.invalidateQueries({ queryKey: ['medicines-paginated'] });
-      await queryClient.invalidateQueries({ queryKey: ['medicines-all'] });
-      await queryClient.invalidateQueries({ queryKey: ['medicine-counts'] });
-      await queryClient.invalidateQueries({ queryKey: ['pharmacy-stats'] });
-      await queryClient.invalidateQueries({ queryKey: ['expiring-medicines'] });
-      refetchCounts();
-    };
-    invalidateAndRefresh();
-  }, []); // Empty dependency array - only run once on mount
 
   if (!canViewStock) {
     return (
@@ -78,7 +61,7 @@ export default function PharmacyStock() {
 
   // For stock categorization, use all medicines for accurate counts
   const lowStockMedicines = allMedicines?.filter(medicine => 
-    medicine.stock_quantity <= (medicine.minimum_stock_level || 10)
+    medicine.stock_quantity <= (medicine.minimum_stock_level || 10) && medicine.stock_quantity > 0
   );
 
   const outOfStockMedicines = allMedicines?.filter(medicine => 
@@ -137,153 +120,180 @@ export default function PharmacyStock() {
     }
   };
 
-  const StockTable = ({ medicines: medicinesList, title, totalCount }: { medicines: any[], title: string, totalCount?: number }) => (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Package className="w-5 h-5" />
-          {title} ({totalCount !== undefined ? totalCount : medicinesList.length})
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        {medicinesList.length === 0 ? (
-          <p className="text-gray-500 text-center py-8">No medicines found</p>
-        ) : (
-          <div className="space-y-4">
-            {medicinesList.map((medicine) => (
-              <div key={medicine.id} className="border rounded-lg p-4">
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex-1">
-                    <h4 className="font-semibold text-lg">{medicine.name}</h4>
-                    <p className="text-sm text-gray-600">
-                      {medicine.company_name && `${medicine.company_name} • `}
-                      Selling Price: {formatPkrAmount(medicine.selling_price)}
-                    </p>
-                  </div>
-                  {getStockBadge(medicine)}
-                </div>
+  const handleRefresh = () => {
+    queryClient.invalidateQueries({ queryKey: ['medicines-paginated'] });
+    queryClient.invalidateQueries({ queryKey: ['medicines-all'] });
+    queryClient.invalidateQueries({ queryKey: ['medicine-counts'] });
+    toast.success("Data refreshed");
+  };
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-3">
-                  <div>
-                    <Label className="text-sm font-medium">Current Stock</Label>
-                    <div className="flex items-center gap-2 mt-1">
-                      {editingStock?.id === medicine.id && canEditStock ? (
-                        <div className="flex gap-2 flex-1">
-                          <Input
-                            type="number"
-                            min="0"
-                            value={editingStock.quantity}
-                            onChange={(e) => setEditingStock({
-                              id: medicine.id,
-                              quantity: Number(e.target.value)
-                            })}
-                            className="flex-1"
-                          />
-                          <Button
-                            size="sm"
-                            onClick={() => handleStockUpdate(medicine.id, editingStock.quantity)}
-                            disabled={updateMedicine.isPending}
-                          >
-                            Save
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => setEditingStock(null)}
-                          >
-                            Cancel
-                          </Button>
-                        </div>
-                      ) : (
-                        <div className="flex items-center gap-2 flex-1">
-                          <span className="font-medium">{medicine.stock_quantity} units</span>
-                          {canEditStock && (
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => setEditingStock({
-                                id: medicine.id,
-                                quantity: medicine.stock_quantity
-                              })}
-                            >
-                              <Edit className="w-4 h-4" />
-                            </Button>
-                          )}
-                          {!canEditStock && (
-                            <span className="text-gray-500 text-sm ml-2">(View Only)</span>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  <div>
-                    <Label className="text-sm font-medium">Minimum Level</Label>
-                    <p className="font-medium mt-1">{medicine.minimum_stock_level || 10} units</p>
-                  </div>
-
-                  <div>
-                    <Label className="text-sm font-medium">Stock Value</Label>
-                    <p className="font-medium mt-1">
-                      {formatPkrAmount(medicine.stock_quantity * medicine.selling_price)}
-                    </p>
-                  </div>
-                </div>
-
-                {medicine.stock_quantity <= (medicine.minimum_stock_level || 10) && (
-                  <div className="mt-3 p-3 bg-orange-50 border border-orange-200 rounded-lg">
-                    <div className="flex items-center gap-2 text-orange-800">
-                      <AlertTriangle className="w-4 h-4" />
-                      <span className="text-sm font-medium">
-                        Stock is {medicine.stock_quantity === 0 ? 'out' : 'low'}! 
-                        {medicine.stock_quantity > 0 && ` Only ${medicine.stock_quantity} units remaining.`}
+  const renderMedicineTable = (medicinesList: any[], showPagination = false) => (
+    <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
+      <div className="overflow-x-auto">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Name</TableHead>
+              <TableHead>Company</TableHead>
+              <TableHead>Selling Price</TableHead>
+              <TableHead>Current Stock</TableHead>
+              <TableHead>Min Level</TableHead>
+              <TableHead>Stock Value</TableHead>
+              <TableHead>Status</TableHead>
+              {canEditStock && <TableHead>Actions</TableHead>}
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {isLoading ? (
+              Array.from({ length: 5 }).map((_, i) => (
+                <TableRow key={i}>
+                  {Array.from({ length: canEditStock ? 8 : 7 }).map((_, j) => (
+                    <TableCell key={j}>
+                      <div className="h-4 bg-gray-200 rounded animate-pulse"></div>
+                    </TableCell>
+                  ))}
+                </TableRow>
+              ))
+            ) : medicinesList && medicinesList.length > 0 ? (
+              medicinesList.map((medicine) => (
+                <TableRow key={medicine.id}>
+                  <TableCell className="font-medium">{medicine.name}</TableCell>
+                  <TableCell>{medicine.company_name || "N/A"}</TableCell>
+                  <TableCell>{formatPkrAmount(medicine.selling_price)}</TableCell>
+                  <TableCell>
+                    {editingStock?.id === medicine.id ? (
+                      <div className="flex items-center gap-2">
+                        <Input
+                          type="number"
+                          value={editingStock.quantity}
+                          onChange={(e) => setEditingStock({
+                            ...editingStock,
+                            quantity: parseInt(e.target.value) || 0
+                          })}
+                          className="w-20"
+                          min="0"
+                        />
+                        <Button
+                          size="sm"
+                          onClick={() => handleStockUpdate(medicine.id, editingStock.quantity)}
+                          disabled={updateMedicine.isPending}
+                        >
+                          <Check className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => setEditingStock(null)}
+                        >
+                          <X className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    ) : (
+                      <span className={
+                        medicine.stock_quantity === 0 ? "text-red-600 font-semibold" :
+                        medicine.stock_quantity <= (medicine.minimum_stock_level || 10) ? "text-orange-600 font-semibold" :
+                        "text-green-600"
+                      }>
+                        {medicine.stock_quantity}
                       </span>
-                    </div>
-                  </div>
-                )}
-              </div>
-            ))}
+                    )}
+                  </TableCell>
+                  <TableCell>{medicine.minimum_stock_level || 10}</TableCell>
+                  <TableCell>{formatPkrAmount(medicine.stock_quantity * medicine.selling_price)}</TableCell>
+                  <TableCell>{getStockBadge(medicine)}</TableCell>
+                  {canEditStock && (
+                    <TableCell>
+                      {editingStock?.id !== medicine.id && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => setEditingStock({ id: medicine.id, quantity: medicine.stock_quantity })}
+                        >
+                          <Edit className="w-4 h-4" />
+                        </Button>
+                      )}
+                    </TableCell>
+                  )}
+                </TableRow>
+              ))
+            ) : (
+              <TableRow>
+                <TableCell colSpan={canEditStock ? 8 : 7} className="text-center py-8 text-gray-500">
+                  No medicines found
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </div>
+      
+      {/* Pagination for All tab */}
+      {showPagination && totalPages > 1 && (
+        <div className="p-6 border-t border-gray-200">
+          <div className="flex items-center justify-between">
+            <p className="text-sm text-gray-700">
+              Showing {((currentPage - 1) * pageSize) + 1} to {Math.min(currentPage * pageSize, totalCount)} of {totalCount} medicines
+            </p>
+            <Pagination>
+              <PaginationContent>
+                <PaginationItem>
+                  <PaginationPrevious 
+                    onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                    className={currentPage === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                  />
+                </PaginationItem>
+                
+                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                  let pageNumber;
+                  if (totalPages <= 5) {
+                    pageNumber = i + 1;
+                  } else if (currentPage <= 3) {
+                    pageNumber = i + 1;
+                  } else if (currentPage >= totalPages - 2) {
+                    pageNumber = totalPages - 4 + i;
+                  } else {
+                    pageNumber = currentPage - 2 + i;
+                  }
+                  
+                  return (
+                    <PaginationItem key={pageNumber}>
+                      <PaginationLink
+                        onClick={() => setCurrentPage(pageNumber)}
+                        isActive={currentPage === pageNumber}
+                        className="cursor-pointer"
+                      >
+                        {pageNumber}
+                      </PaginationLink>
+                    </PaginationItem>
+                  );
+                })}
+                
+                <PaginationItem>
+                  <PaginationNext 
+                    onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+                    className={currentPage === totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                  />
+                </PaginationItem>
+              </PaginationContent>
+            </Pagination>
           </div>
-        )}
-      </CardContent>
-    </Card>
-  );
-
-  if (isLoading) {
-    return (
-      <AppLayout>
-        <div className="space-y-6">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">Stock Tracking</h1>
-            <p className="text-gray-600 mt-1">Monitor and manage medicine inventory</p>
-          </div>
-          <div className="text-center py-8">Loading stock data...</div>
         </div>
-      </AppLayout>
-    );
-  }
+      )}
+    </div>
+  );
 
   return (
     <AppLayout>
       <div className="space-y-6">
+        {/* Header */}
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold text-gray-900">Stock Tracking</h1>
-            <p className="text-gray-600 mt-1">Monitor and manage medicine inventory</p>
+            <p className="text-gray-600 mt-1">Monitor and manage medicine inventory levels</p>
           </div>
-          <Button 
-            onClick={() => {
-              queryClient.invalidateQueries({ queryKey: ['medicines-paginated'] });
-              queryClient.invalidateQueries({ queryKey: ['medicines-all'] });
-              queryClient.invalidateQueries({ queryKey: ['medicine-counts'] });
-              refetchCounts();
-              toast.success("Data refreshed");
-            }}
-            variant="outline"
-            size="sm"
-          >
+          <Button onClick={handleRefresh} variant="outline" size="sm">
             <RefreshCw className="w-4 h-4 mr-2" />
-            Refresh Data
+            Refresh
           </Button>
         </div>
 
@@ -296,7 +306,7 @@ export default function PharmacyStock() {
                   <Package className="w-6 h-6 text-blue-600" />
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Total Items</p>
+                  <p className="text-sm font-medium text-gray-600">Total Stock</p>
                   <p className="text-2xl font-bold">
                     {countsLoading ? "..." : (medicineCounts?.total || allMedicinesResult?.count || 0)}
                   </p>
@@ -314,7 +324,7 @@ export default function PharmacyStock() {
                 <div>
                   <p className="text-sm font-medium text-gray-600">Out of Stock</p>
                   <p className="text-2xl font-bold text-red-600">
-                    {countsLoading ? "..." : (medicineCounts?.outOfStock || outOfStockMedicines?.length || 0)}
+                    {countsLoading ? "..." : (medicineCounts?.outOfStock || 0)}
                   </p>
                 </div>
               </div>
@@ -330,7 +340,7 @@ export default function PharmacyStock() {
                 <div>
                   <p className="text-sm font-medium text-gray-600">Low Stock</p>
                   <p className="text-2xl font-bold text-orange-600">
-                    {countsLoading ? "..." : (medicineCounts?.lowStock || lowStockMedicines?.length || 0)}
+                    {countsLoading ? "..." : (medicineCounts?.lowStock || 0)}
                   </p>
                 </div>
               </div>
@@ -346,7 +356,7 @@ export default function PharmacyStock() {
                 <div>
                   <p className="text-sm font-medium text-gray-600">Normal Stock</p>
                   <p className="text-2xl font-bold text-green-600">
-                    {countsLoading ? "..." : (medicineCounts?.normalStock || normalStockMedicines?.length || 0)}
+                    {countsLoading ? "..." : (medicineCounts?.normalStock || 0)}
                   </p>
                 </div>
               </div>
@@ -354,120 +364,68 @@ export default function PharmacyStock() {
           </Card>
         </div>
 
-        {/* Search */}
-        <Card>
-          <CardContent className="p-6">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-              <Input
-                placeholder="Search medicines by name or company..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10"
-              />
+        {/* Alerts */}
+        {(medicineCounts?.outOfStock > 0 || medicineCounts?.lowStock > 0) && (
+          <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
+            <div className="flex items-center gap-2">
+              <AlertTriangle className="w-5 h-5 text-orange-600" />
+              <h3 className="text-lg font-semibold text-orange-800">Stock Alerts</h3>
             </div>
-          </CardContent>
-        </Card>
+            <p className="text-orange-700 mt-1">
+              {medicineCounts?.outOfStock > 0 && `${medicineCounts.outOfStock} medicines are out of stock. `}
+              {medicineCounts?.lowStock > 0 && `${medicineCounts.lowStock} medicines are running low.`}
+            </p>
+          </div>
+        )}
 
-        {/* Stock Tabs */}
-        <Tabs defaultValue="all" className="space-y-4">
-          <TabsList>
-            <TabsTrigger value="all">All Stock</TabsTrigger>
-            <TabsTrigger value="out-of-stock" className="text-red-600">
-              Out of Stock ({countsLoading ? "..." : (medicineCounts?.outOfStock || outOfStockMedicines?.length || 0)})
-            </TabsTrigger>
-            <TabsTrigger value="low-stock" className="text-orange-600">
-              Low Stock ({countsLoading ? "..." : (medicineCounts?.lowStock || lowStockMedicines?.length || 0)})
-            </TabsTrigger>
-            <TabsTrigger value="normal-stock" className="text-green-600">
-              Normal Stock ({countsLoading ? "..." : (medicineCounts?.normalStock || normalStockMedicines?.length || 0)})
-            </TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="all">
-            <StockTable 
-              medicines={medicines || []} 
-              title="All Medicines"
-              totalCount={totalCount}
-            />
-            {/* Pagination for All tab */}
-            {totalPages > 1 && (
-              <div className="mt-6">
-                <div className="flex items-center justify-between">
-                  <p className="text-sm text-gray-700">
-                    Showing {((currentPage - 1) * pageSize) + 1} to {Math.min(currentPage * pageSize, totalCount)} of {totalCount} medicines
-                  </p>
-                  <Pagination>
-                    <PaginationContent>
-                      <PaginationItem>
-                        <PaginationPrevious 
-                          onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-                          className={currentPage === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
-                        />
-                      </PaginationItem>
-                      
-                      {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                        let pageNumber;
-                        if (totalPages <= 5) {
-                          pageNumber = i + 1;
-                        } else if (currentPage <= 3) {
-                          pageNumber = i + 1;
-                        } else if (currentPage >= totalPages - 2) {
-                          pageNumber = totalPages - 4 + i;
-                        } else {
-                          pageNumber = currentPage - 2 + i;
-                        }
-                        
-                        return (
-                          <PaginationItem key={pageNumber}>
-                            <PaginationLink
-                              onClick={() => setCurrentPage(pageNumber)}
-                              isActive={currentPage === pageNumber}
-                              className="cursor-pointer"
-                            >
-                              {pageNumber}
-                            </PaginationLink>
-                          </PaginationItem>
-                        );
-                      })}
-                      
-                      <PaginationItem>
-                        <PaginationNext 
-                          onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
-                          className={currentPage === totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"}
-                        />
-                      </PaginationItem>
-                    </PaginationContent>
-                  </Pagination>
-                </div>
+        {/* Search and Tabs */}
+        <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
+          <div className="p-6 border-b border-gray-200">
+            <div className="flex items-center justify-between">
+              <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
+                <Package className="w-5 h-5" />
+                Medicine Stock
+              </h2>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                <Input
+                  type="text"
+                  placeholder="Search medicines..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10 w-64"
+                />
               </div>
-            )}
-          </TabsContent>
+            </div>
+          </div>
 
-          <TabsContent value="out-of-stock">
-            <StockTable 
-              medicines={outOfStockMedicines || []} 
-              title="Out of Stock Medicines"
-              totalCount={medicineCounts?.outOfStock} 
-            />
-          </TabsContent>
+          <div className="p-6">
+            <Tabs defaultValue="all" className="space-y-4">
+              <TabsList>
+                <TabsTrigger value="all">All Medicines</TabsTrigger>
+                <TabsTrigger value="out-of-stock">Out of Stock</TabsTrigger>
+                <TabsTrigger value="low-stock">Low Stock</TabsTrigger>
+                <TabsTrigger value="normal-stock">Normal Stock</TabsTrigger>
+              </TabsList>
 
-          <TabsContent value="low-stock">
-            <StockTable 
-              medicines={lowStockMedicines || []} 
-              title="Low Stock Medicines"
-              totalCount={medicineCounts?.lowStock} 
-            />
-          </TabsContent>
+              <TabsContent value="all">
+                {renderMedicineTable(medicines, true)}
+              </TabsContent>
 
-          <TabsContent value="normal-stock">
-            <StockTable 
-              medicines={normalStockMedicines || []} 
-              title="Normal Stock Medicines"
-              totalCount={medicineCounts?.normalStock} 
-            />
-          </TabsContent>
-        </Tabs>
+              <TabsContent value="out-of-stock">
+                {renderMedicineTable(outOfStockMedicines || [], false)}
+              </TabsContent>
+
+              <TabsContent value="low-stock">
+                {renderMedicineTable(lowStockMedicines || [], false)}
+              </TabsContent>
+
+              <TabsContent value="normal-stock">
+                {renderMedicineTable(normalStockMedicines || [], false)}
+              </TabsContent>
+            </Tabs>
+          </div>
+        </div>
       </div>
     </AppLayout>
   );
