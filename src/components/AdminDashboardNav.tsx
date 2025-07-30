@@ -15,7 +15,6 @@ const dashboards = [
   { path: "/dashboard/finance", label: "Finance", icon: DollarSign },
   { path: "/dashboard/pharmacy", label: "Pharmacy", icon: Pill },
   { path: "/dashboard/staff", label: "Staff", icon: UserCog },
-  { path: "/dashboard/doctor", label: "Doctor", icon: Stethoscope },
   { path: "/dashboard/ota", label: "OTA", icon: Calendar },
 ];
 
