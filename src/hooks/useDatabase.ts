@@ -213,25 +213,92 @@ export const useInvoices = () => {
   });
 };
 
+// Hook for paginated medicines with search
+export const usePaginatedMedicines = (page: number = 1, pageSize: number = 10, searchTerm: string = '') => {
+  return useQuery({
+    queryKey: ['medicines-paginated', page, pageSize, searchTerm],
+    queryFn: async () => {
+      console.log(`🔍 Fetching medicines page ${page} with search: "${searchTerm}"`);
+      
+      let query = supabase
+        .from('medicines')
+        .select('*', { count: 'exact' })
+        .order('created_at', { ascending: false });
+
+      // Apply search filter if provided
+      if (searchTerm.trim()) {
+        query = query.or(`name.ilike.%${searchTerm}%,company_name.ilike.%${searchTerm}%`);
+      }
+
+      // Apply pagination
+      const from = (page - 1) * pageSize;
+      const to = from + pageSize - 1;
+      query = query.range(from, to);
+
+      const { data, error, count } = await query;
+
+      if (error) {
+        console.error('❌ Error fetching paginated medicines:', error);
+        throw error;
+      }
+      
+      console.log(`✅ Page ${page} fetched: ${data?.length} records, Total: ${count}`);
+      
+      return {
+        data: data || [],
+        count: count || 0,
+        page,
+        pageSize,
+        totalPages: Math.ceil((count || 0) / pageSize)
+      };
+    }
+  });
+};
+
+// Hook for all medicines (used for counts and quick searches)
+export const useAllMedicines = () => {
+  return useQuery({
+    queryKey: ['medicines-all'],
+    queryFn: async () => {
+      console.log('🔍 Fetching ALL medicines from database...');
+      
+      const { data, error, count } = await supabase
+        .from('medicines')
+        .select('*', { count: 'exact' })
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('❌ Error fetching all medicines:', error);
+        throw error;
+      }
+      
+      console.log('✅ All medicines fetched successfully:', count, 'total records');
+      
+      return { data: data || [], count: count || 0 };
+    },
+    staleTime: 5 * 60 * 1000, // Cache for 5 minutes since this is heavy
+  });
+};
+
+// Keep original useMedicines for backward compatibility, but limit to recent medicines
 export const useMedicines = () => {
   return useQuery({
     queryKey: ['medicines'],
     queryFn: async () => {
-      console.log('🔍 Fetching medicines from database...');
+      console.log('🔍 Fetching recent medicines from database...');
       
       const { data, error } = await supabase
         .from('medicines')
         .select('*')
-        .order('created_at', { ascending: false }) // Show newest medicines first
-        .limit(5000); // Set a high limit to ensure we get all medicines
+        .order('created_at', { ascending: false })
+        .limit(1000); // Reduced limit for performance
 
       if (error) {
         console.error('❌ Error fetching medicines:', error);
         throw error;
       }
       
-      console.log('✅ Medicines fetched successfully:', data?.length, 'records');
-      console.log('📝 First few medicines:', data?.slice(0, 3).map(m => ({ name: m.name, created_at: m.created_at })));
+      console.log('✅ Recent medicines fetched successfully:', data?.length, 'records');
       
       return data;
     }

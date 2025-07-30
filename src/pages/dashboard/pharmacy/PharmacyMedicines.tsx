@@ -1,6 +1,6 @@
 import { useState } from "react";
 import AppLayout from "@/layouts/AppLayout";
-import { useMedicines, useCreateMedicine, useUpdateMedicine, useDeleteMedicine } from "@/hooks/useDatabase";
+import { usePaginatedMedicines, useCreateMedicine, useUpdateMedicine, useDeleteMedicine } from "@/hooks/useDatabase";
 import { usePharmacyPermissions } from "@/hooks/usePharmacyPermissions";
 import { useAuditLogger } from "@/hooks/useAuditLogger";
 import { useAuth } from "@/hooks/useAuth";
@@ -10,7 +10,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Pill, Plus, Edit, Trash2, Search } from "lucide-react";
+import { Pill, Plus, Edit, Trash2, Search, ChevronLeft, ChevronRight } from "lucide-react";
+import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "@/components/ui/pagination";
 import { useToast } from "@/hooks/use-toast";
 import { formatPkrAmount } from "@/utils/currency";
 
@@ -30,7 +31,11 @@ type Medicine = {
 };
 
 export default function PharmacyMedicines() {
-  const { data: medicines, isLoading } = useMedicines();
+  const [currentPage, setCurrentPage] = useState(1);
+  const [searchTerm, setSearchTerm] = useState("");
+  const pageSize = 10;
+  
+  const { data: medicinesResult, isLoading } = usePaginatedMedicines(currentPage, pageSize, searchTerm);
   const createMedicine = useCreateMedicine();
   const updateMedicine = useUpdateMedicine();
   const deleteMedicine = useDeleteMedicine();
@@ -51,7 +56,6 @@ export default function PharmacyMedicines() {
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingMedicine, setEditingMedicine] = useState<Medicine | null>(null);
-  const [searchTerm, setSearchTerm] = useState("");
   const [formData, setFormData] = useState<Medicine>({
     name: "",
     formula: "",
@@ -142,10 +146,9 @@ export default function PharmacyMedicines() {
     }
   };
 
-  const filteredMedicines = medicines?.filter(medicine =>
-    medicine.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    medicine.company_name?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const medicines = medicinesResult?.data || [];
+  const totalCount = medicinesResult?.count || 0;
+  const totalPages = medicinesResult?.totalPages || 1;
 
   return (
     <AppLayout>
@@ -326,7 +329,10 @@ export default function PharmacyMedicines() {
                   type="text"
                   placeholder="Search medicines..."
                   value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
+                  onChange={(e) => {
+                    setSearchTerm(e.target.value);
+                    setCurrentPage(1); // Reset to first page when searching
+                  }}
                   className="pl-10 w-64"
                 />
               </div>
@@ -358,8 +364,8 @@ export default function PharmacyMedicines() {
                       ))}
                     </TableRow>
                   ))
-                ) : filteredMedicines && filteredMedicines.length > 0 ? (
-                  filteredMedicines.map((medicine) => (
+                ) : medicines && medicines.length > 0 ? (
+                  medicines.map((medicine) => (
                     <TableRow key={medicine.id}>
                       <TableCell>
                         <div>
@@ -429,6 +435,59 @@ export default function PharmacyMedicines() {
               </TableBody>
             </Table>
           </div>
+          
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="p-6 border-t border-gray-200">
+              <div className="flex items-center justify-between">
+                <p className="text-sm text-gray-700">
+                  Showing {((currentPage - 1) * pageSize) + 1} to {Math.min(currentPage * pageSize, totalCount)} of {totalCount} medicines
+                </p>
+                <Pagination>
+                  <PaginationContent>
+                    <PaginationItem>
+                      <PaginationPrevious 
+                        onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                        className={currentPage === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                      />
+                    </PaginationItem>
+                    
+                    {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                      let pageNumber;
+                      if (totalPages <= 5) {
+                        pageNumber = i + 1;
+                      } else if (currentPage <= 3) {
+                        pageNumber = i + 1;
+                      } else if (currentPage >= totalPages - 2) {
+                        pageNumber = totalPages - 4 + i;
+                      } else {
+                        pageNumber = currentPage - 2 + i;
+                      }
+                      
+                      return (
+                        <PaginationItem key={pageNumber}>
+                          <PaginationLink
+                            onClick={() => setCurrentPage(pageNumber)}
+                            isActive={currentPage === pageNumber}
+                            className="cursor-pointer"
+                          >
+                            {pageNumber}
+                          </PaginationLink>
+                        </PaginationItem>
+                      );
+                    })}
+                    
+                    <PaginationItem>
+                      <PaginationNext 
+                        onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+                        className={currentPage === totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                      />
+                    </PaginationItem>
+                  </PaginationContent>
+                </Pagination>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </AppLayout>

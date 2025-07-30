@@ -6,7 +6,8 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useMedicines, useUpdateMedicine } from "@/hooks/useDatabase";
+import { usePaginatedMedicines, useAllMedicines, useUpdateMedicine } from "@/hooks/useDatabase";
+import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "@/components/ui/pagination";
 import { useMedicineCounts } from "@/hooks/useMedicineCounts";
 import { usePharmacyPermissions } from "@/hooks/usePharmacyPermissions";
 import { useAuditLogger } from "@/hooks/useAuditLogger";
@@ -19,31 +20,40 @@ import { useQueryClient } from '@tanstack/react-query';
 export default function PharmacyStock() {
   const [searchQuery, setSearchQuery] = useState("");
   const [editingStock, setEditingStock] = useState<{ id: string; quantity: number } | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 10;
   
   const queryClient = useQueryClient();
-  const { data: medicines, isLoading, refetch } = useMedicines();
+  const { data: medicinesResult, isLoading } = usePaginatedMedicines(currentPage, pageSize, searchQuery);
+  const { data: allMedicinesResult } = useAllMedicines();
   const { data: medicineCounts, isLoading: countsLoading, refetch: refetchCounts } = useMedicineCounts();
   const updateMedicine = useUpdateMedicine();
   const { canEditStock, canViewStock } = usePharmacyPermissions();
   const { logUpdate } = useAuditLogger();
   const { profile } = useAuth();
 
+  const medicines = medicinesResult?.data || [];
+  const totalCount = medicinesResult?.count || 0;
+  const totalPages = medicinesResult?.totalPages || 1;
+  const allMedicines = allMedicinesResult?.data || [];
+
   // Debug: Log the actual medicine count
   console.log('📊 Medicine count in PharmacyStock:', medicines?.length);
+  console.log('📊 Total medicines available:', allMedicinesResult?.count);
   console.log('📊 Direct medicine counts:', medicineCounts);
 
   // Force refresh medicine data on component mount
   useEffect(() => {
     const invalidateAndRefresh = async () => {
-      await queryClient.invalidateQueries({ queryKey: ['medicines'] });
+      await queryClient.invalidateQueries({ queryKey: ['medicines-paginated'] });
+      await queryClient.invalidateQueries({ queryKey: ['medicines-all'] });
       await queryClient.invalidateQueries({ queryKey: ['medicine-counts'] });
       await queryClient.invalidateQueries({ queryKey: ['pharmacy-stats'] });
       await queryClient.invalidateQueries({ queryKey: ['expiring-medicines'] });
-      refetch();
       refetchCounts();
     };
     invalidateAndRefresh();
-  }, [queryClient, refetch, refetchCounts]);
+  }, [queryClient, refetchCounts]);
 
   if (!canViewStock) {
     return (
@@ -55,20 +65,16 @@ export default function PharmacyStock() {
     );
   }
 
-  const filteredMedicines = medicines?.filter(medicine =>
-    medicine.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    medicine.company_name?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
-  const lowStockMedicines = filteredMedicines?.filter(medicine => 
+  // For stock categorization, use all medicines for accurate counts
+  const lowStockMedicines = allMedicines?.filter(medicine => 
     medicine.stock_quantity <= (medicine.minimum_stock_level || 10)
   );
 
-  const outOfStockMedicines = filteredMedicines?.filter(medicine => 
+  const outOfStockMedicines = allMedicines?.filter(medicine => 
     medicine.stock_quantity === 0
   );
 
-  const normalStockMedicines = filteredMedicines?.filter(medicine => 
+  const normalStockMedicines = allMedicines?.filter(medicine => 
     medicine.stock_quantity > (medicine.minimum_stock_level || 10)
   );
 
@@ -79,7 +85,7 @@ export default function PharmacyStock() {
     }
 
     try {
-      const medicine = medicines?.find(m => m.id === medicineId);
+      const medicine = allMedicines?.find(m => m.id === medicineId);
       const oldQuantity = medicine?.stock_quantity || 0;
       
       await updateMedicine.mutateAsync({
@@ -256,9 +262,9 @@ export default function PharmacyStock() {
           </div>
           <Button 
             onClick={() => {
-              queryClient.invalidateQueries({ queryKey: ['medicines'] });
+              queryClient.invalidateQueries({ queryKey: ['medicines-paginated'] });
+              queryClient.invalidateQueries({ queryKey: ['medicines-all'] });
               queryClient.invalidateQueries({ queryKey: ['medicine-counts'] });
-              refetch();
               refetchCounts();
               toast.success("Data refreshed");
             }}
@@ -281,7 +287,7 @@ export default function PharmacyStock() {
                 <div>
                   <p className="text-sm font-medium text-gray-600">Total Items</p>
                   <p className="text-2xl font-bold">
-                    {countsLoading ? "..." : (medicineCounts?.total || filteredMedicines?.length || 0)}
+                    {countsLoading ? "..." : (medicineCounts?.total || allMedicinesResult?.count || 0)}
                   </p>
                 </div>
               </div>
@@ -345,7 +351,10 @@ export default function PharmacyStock() {
               <Input
                 placeholder="Search medicines by name or company..."
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  setCurrentPage(1); // Reset to first page when searching
+                }}
                 className="pl-10"
               />
             </div>
@@ -369,10 +378,62 @@ export default function PharmacyStock() {
 
           <TabsContent value="all">
             <StockTable 
-              medicines={filteredMedicines || []} 
+              medicines={medicines || []} 
               title="All Medicines"
-              totalCount={medicineCounts?.total}
+              totalCount={totalCount}
             />
+            {/* Pagination for All tab */}
+            {totalPages > 1 && (
+              <div className="mt-6">
+                <div className="flex items-center justify-between">
+                  <p className="text-sm text-gray-700">
+                    Showing {((currentPage - 1) * pageSize) + 1} to {Math.min(currentPage * pageSize, totalCount)} of {totalCount} medicines
+                  </p>
+                  <Pagination>
+                    <PaginationContent>
+                      <PaginationItem>
+                        <PaginationPrevious 
+                          onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                          className={currentPage === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                        />
+                      </PaginationItem>
+                      
+                      {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                        let pageNumber;
+                        if (totalPages <= 5) {
+                          pageNumber = i + 1;
+                        } else if (currentPage <= 3) {
+                          pageNumber = i + 1;
+                        } else if (currentPage >= totalPages - 2) {
+                          pageNumber = totalPages - 4 + i;
+                        } else {
+                          pageNumber = currentPage - 2 + i;
+                        }
+                        
+                        return (
+                          <PaginationItem key={pageNumber}>
+                            <PaginationLink
+                              onClick={() => setCurrentPage(pageNumber)}
+                              isActive={currentPage === pageNumber}
+                              className="cursor-pointer"
+                            >
+                              {pageNumber}
+                            </PaginationLink>
+                          </PaginationItem>
+                        );
+                      })}
+                      
+                      <PaginationItem>
+                        <PaginationNext 
+                          onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+                          className={currentPage === totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                        />
+                      </PaginationItem>
+                    </PaginationContent>
+                  </Pagination>
+                </div>
+              </div>
+            )}
           </TabsContent>
 
           <TabsContent value="out-of-stock">
