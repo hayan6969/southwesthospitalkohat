@@ -13,13 +13,15 @@ interface PrescriptionDialogProps {
   onOpenChange: (open: boolean) => void;
   appointment: any;
   patientName: string;
+  patientId: string;
 }
 
 export function PrescriptionDialog({ 
   open, 
   onOpenChange, 
   appointment, 
-  patientName 
+  patientName,
+  patientId
 }: PrescriptionDialogProps) {
   const [prescriptionText, setPrescriptionText] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -96,6 +98,7 @@ export function PrescriptionDialog({
       await generatePrescriptionPDF({
         prescriptionText,
         patientName,
+        patientId,
         appointmentDate: new Date(appointment.appointment_date).toLocaleDateString(),
         doctorName: "Dr. " + (appointment.doctor?.first_name || "") + " " + (appointment.doctor?.last_name || "")
       });
@@ -157,6 +160,9 @@ export function PrescriptionDialog({
             <div className="grid grid-cols-2 gap-4 text-sm">
               <div>
                 <span className="font-medium">Patient:</span> {patientName}
+              </div>
+              <div>
+                <span className="font-medium">Patient ID:</span> {patientId}
               </div>
               <div>
                 <span className="font-medium">Date:</span> {

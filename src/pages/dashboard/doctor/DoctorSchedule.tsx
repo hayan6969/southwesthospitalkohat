@@ -724,6 +724,7 @@ export default function DoctorSchedule() { // Fixed ordering syntax
           getPatientName(selectedAppointmentForPrescription.patient_id, patientNames || []) : 
           ""
         }
+        patientId={selectedAppointmentForPrescription?.patient_number || ""}
       />
     </div>
   );

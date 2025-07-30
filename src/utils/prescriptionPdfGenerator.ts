@@ -3,12 +3,13 @@ import jsPDF from 'jspdf';
 interface PrescriptionData {
   prescriptionText: string;
   patientName: string;
+  patientId: string;
   appointmentDate: string;
   doctorName: string;
 }
 
 export const generatePrescriptionPDF = async (data: PrescriptionData): Promise<void> => {
-  const { prescriptionText, patientName, appointmentDate, doctorName } = data;
+  const { prescriptionText, patientName, patientId, appointmentDate, doctorName } = data;
 
   // Create new PDF document
   const pdf = new jsPDF({
@@ -33,6 +34,12 @@ export const generatePrescriptionPDF = async (data: PrescriptionData): Promise<v
   pdf.text('Patient:', 20, yPosition);
   pdf.setFont('helvetica', 'normal');
   pdf.text(patientName, 50, yPosition);
+
+  yPosition += 8;
+  pdf.setFont('helvetica', 'bold');
+  pdf.text('Patient ID:', 20, yPosition);
+  pdf.setFont('helvetica', 'normal');
+  pdf.text(patientId, 60, yPosition);
 
   yPosition += 8;
   pdf.setFont('helvetica', 'bold');
@@ -65,19 +72,6 @@ export const generatePrescriptionPDF = async (data: PrescriptionData): Promise<v
     pdf.text(line, 20, yPosition);
     yPosition += 6;
   });
-
-  // Doctor signature area (bottom of page)
-  const bottomY = pageHeight - 40;
-  
-  yPosition = Math.max(yPosition + 20, bottomY);
-  
-  pdf.setFont('helvetica', 'bold');
-  pdf.text('Doctor:', 20, yPosition);
-  pdf.setFont('helvetica', 'normal');
-  pdf.text(doctorName, 50, yPosition);
-
-  yPosition += 15;
-  pdf.text('Signature: ________________________', 20, yPosition);
 
   // Open PDF in new tab
   const pdfBlob = pdf.output('blob');
