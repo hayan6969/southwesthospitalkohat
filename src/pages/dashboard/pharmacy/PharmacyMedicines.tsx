@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import AppLayout from "@/layouts/AppLayout";
 import { usePaginatedMedicines, useCreateMedicine, useUpdateMedicine, useDeleteMedicine } from "@/hooks/useDatabase";
 import { usePharmacyPermissions } from "@/hooks/usePharmacyPermissions";
@@ -33,9 +33,20 @@ type Medicine = {
 export default function PharmacyMedicines() {
   const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
   const pageSize = 10;
   
-  const { data: medicinesResult, isLoading } = usePaginatedMedicines(currentPage, pageSize, searchTerm);
+  // Debounce search term to avoid API calls on every keystroke
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm);
+      setCurrentPage(1); // Reset to first page when search changes
+    }, 300); // 300ms delay
+
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+  
+  const { data: medicinesResult, isLoading } = usePaginatedMedicines(currentPage, pageSize, debouncedSearchTerm);
   const createMedicine = useCreateMedicine();
   const updateMedicine = useUpdateMedicine();
   const deleteMedicine = useDeleteMedicine();
@@ -329,10 +340,7 @@ export default function PharmacyMedicines() {
                   type="text"
                   placeholder="Search medicines..."
                   value={searchTerm}
-                  onChange={(e) => {
-                    setSearchTerm(e.target.value);
-                    setCurrentPage(1); // Reset to first page when searching
-                  }}
+                  onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-10 w-64"
                 />
               </div>

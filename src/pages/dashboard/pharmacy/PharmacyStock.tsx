@@ -19,12 +19,23 @@ import { useQueryClient } from '@tanstack/react-query';
 
 export default function PharmacyStock() {
   const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
   const [editingStock, setEditingStock] = useState<{ id: string; quantity: number } | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 10;
   
+  // Debounce search query to avoid API calls on every keystroke
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery);
+      setCurrentPage(1); // Reset to first page when search changes
+    }, 300); // 300ms delay
+
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+  
   const queryClient = useQueryClient();
-  const { data: medicinesResult, isLoading } = usePaginatedMedicines(currentPage, pageSize, searchQuery);
+  const { data: medicinesResult, isLoading } = usePaginatedMedicines(currentPage, pageSize, debouncedSearchQuery);
   const { data: allMedicinesResult } = useAllMedicines();
   const { data: medicineCounts, isLoading: countsLoading, refetch: refetchCounts } = useMedicineCounts();
   const updateMedicine = useUpdateMedicine();
@@ -351,10 +362,7 @@ export default function PharmacyStock() {
               <Input
                 placeholder="Search medicines by name or company..."
                 value={searchQuery}
-                onChange={(e) => {
-                  setSearchQuery(e.target.value);
-                  setCurrentPage(1); // Reset to first page when searching
-                }}
+                onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-10"
               />
             </div>
