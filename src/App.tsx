@@ -221,6 +221,9 @@ const App = () => (
             <Route path="/dashboard/head_pharmacist" element={<Navigate to="/dashboard/pharmacy" replace />} />
             <Route path="/dashboard/assistant_pharmacist" element={<Navigate to="/dashboard/pharmacy" replace />} />
             <Route path="/dashboard/salesman_pharmacist" element={<Navigate to="/dashboard/pharmacy" replace />} />
+            
+            {/* Nursing role redirect to OTA dashboard */}
+            <Route path="/dashboard/nursing" element={<Navigate to="/dashboard/ota" replace />} />
             <Route path="/dashboard/pharmacy/medicines" element={
               <ProtectedRoute allowedRoles={['head_pharmacist', 'assistant_pharmacist', 'admin']}>
                 <PharmacyMedicines />

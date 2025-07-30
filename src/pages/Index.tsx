@@ -20,6 +20,8 @@ const Index = () => {
       // Handle special role mappings
       if (profile.role.includes('pharmacist')) {
         dashboardRole = 'pharmacy';
+      } else if (profile.role === 'nursing' as any) {
+        dashboardRole = 'ota';
       } else {
         dashboardRole = profile.role;
       }
@@ -96,6 +98,8 @@ const Index = () => {
                     // Handle special role mappings
                     if (profile.role.includes('pharmacist')) {
                       dashboardRole = 'pharmacy';
+                    } else if (profile.role === 'nursing' as any) {
+                      dashboardRole = 'ota';
                     } else {
                       dashboardRole = profile.role;
                     }
