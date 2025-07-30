@@ -42,11 +42,17 @@ export function SearchableMedicineSelect({
   allowOutOfStock = false, // Default to false for backward compatibility
 }: SearchableMedicineSelectProps) {
   const [open, setOpen] = useState(false);
+  const [searchValue, setSearchValue] = useState("");
 
   const selectedMedicine = medicines?.find((medicine) => medicine.id === value);
-  const availableMedicines = allowOutOfStock 
+  
+  // Filter medicines based on stock and search
+  const filteredMedicines = (allowOutOfStock 
     ? medicines || [] 
-    : medicines?.filter(m => m.stock_quantity > 0) || [];
+    : medicines?.filter(m => m.stock_quantity > 0) || []
+  ).filter(medicine => 
+    medicine.name.toLowerCase().includes(searchValue.toLowerCase())
+  );
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -65,18 +71,23 @@ export function SearchableMedicineSelect({
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-full p-0" align="start">
-        <Command>
-          <CommandInput placeholder="Search medicine..." />
+        <Command shouldFilter={false}>
+          <CommandInput 
+            placeholder="Search medicine..." 
+            value={searchValue}
+            onValueChange={setSearchValue}
+          />
           <CommandList>
             <CommandEmpty>No medicine found.</CommandEmpty>
             <CommandGroup>
-              {availableMedicines.map((medicine) => (
+              {filteredMedicines.map((medicine) => (
                 <CommandItem
                   key={medicine.id}
-                  value={`${medicine.name}-${medicine.id}`}
+                  value={medicine.id}
                   onSelect={() => {
                     onValueChange(medicine.id);
                     setOpen(false);
+                    setSearchValue(""); // Reset search when selecting
                   }}
                 >
                   <Check
