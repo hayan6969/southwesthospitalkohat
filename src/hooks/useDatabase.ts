@@ -280,6 +280,38 @@ export const useAllMedicines = () => {
   });
 };
 
+// Hook for searchable medicines (database-level search)
+export const useSearchableMedicines = (searchTerm: string = '') => {
+  return useQuery({
+    queryKey: ['medicines-searchable', searchTerm],
+    queryFn: async () => {
+      console.log(`🔍 Searching medicines with term: "${searchTerm}"`);
+      
+      let query = supabase
+        .from('medicines')
+        .select('*')
+        .order('name', { ascending: true }); // Order by name for better search experience
+
+      // Apply search filter if provided
+      if (searchTerm.trim()) {
+        query = query.or(`name.ilike.%${searchTerm}%,company_name.ilike.%${searchTerm}%`);
+      }
+
+      const { data, error } = await query;
+
+      if (error) {
+        console.error('❌ Error searching medicines:', error);
+        throw error;
+      }
+      
+      console.log(`✅ Search completed: ${data?.length} medicines found`);
+      
+      return data || [];
+    },
+    staleTime: 2 * 60 * 1000, // Cache for 2 minutes for responsive search
+  });
+};
+
 // Keep original useMedicines for backward compatibility, but limit to recent medicines
 export const useMedicines = () => {
   return useQuery({

@@ -25,12 +25,13 @@ interface Medicine {
 }
 
 interface SearchableMedicineSelectProps {
-  medicines: Medicine[] | undefined;
+  medicines?: Medicine[];
   value: string;
   onValueChange: (value: string) => void;
   placeholder?: string;
   isLoading?: boolean;
   allowOutOfStock?: boolean; // New prop to include out-of-stock medicines
+  onSearchChange?: (search: string) => void; // For database-level search
 }
 
 export function SearchableMedicineSelect({
@@ -40,19 +41,17 @@ export function SearchableMedicineSelect({
   placeholder = "Search medicine...",
   isLoading = false,
   allowOutOfStock = false, // Default to false for backward compatibility
+  onSearchChange, // For database-level search
 }: SearchableMedicineSelectProps) {
   const [open, setOpen] = useState(false);
   const [searchValue, setSearchValue] = useState("");
 
   const selectedMedicine = medicines?.find((medicine) => medicine.id === value);
   
-  // Filter medicines based on stock and search
-  const filteredMedicines = (allowOutOfStock 
+  // Filter medicines based on stock (database search handles name filtering when onSearchChange is provided)
+  const filteredMedicines = allowOutOfStock 
     ? medicines || [] 
-    : medicines?.filter(m => m.stock_quantity > 0) || []
-  ).filter(medicine => 
-    medicine.name.toLowerCase().includes(searchValue.toLowerCase())
-  );
+    : medicines?.filter(m => m.stock_quantity > 0) || [];
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -75,7 +74,10 @@ export function SearchableMedicineSelect({
           <CommandInput 
             placeholder="Search medicine..." 
             value={searchValue}
-            onValueChange={setSearchValue}
+            onValueChange={(value) => {
+              setSearchValue(value);
+              onSearchChange?.(value); // Trigger database search if available
+            }}
           />
           <CommandList>
             <CommandEmpty>No medicine found.</CommandEmpty>

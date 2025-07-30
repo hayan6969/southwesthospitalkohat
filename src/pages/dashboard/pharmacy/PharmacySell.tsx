@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SearchableMedicineSelect } from "@/components/SearchableMedicineSelect";
 import { Separator } from "@/components/ui/separator";
-import { useAllMedicines, useCreatePharmacyInvoice } from "@/hooks/useDatabase";
+import { useSearchableMedicines, useCreatePharmacyInvoice } from "@/hooks/useDatabase";
 import { useAuditLogger } from "@/hooks/useAuditLogger";
 import { useAuth } from "@/hooks/useAuth";
 import { formatPkrAmount } from "@/utils/currency";
@@ -31,9 +31,9 @@ export default function PharmacySell() {
   const [customerName, setCustomerName] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
   const [discount, setDiscount] = useState(0);
+  const [searchTerm, setSearchTerm] = useState("");
 
-  const { data: medicinesData, isLoading } = useAllMedicines();
-  const medicines = medicinesData?.data;
+  const { data: medicines, isLoading } = useSearchableMedicines(searchTerm);
   const createInvoice = useCreatePharmacyInvoice();
   const { logCreate } = useAuditLogger();
   const { profile } = useAuth();
@@ -208,6 +208,7 @@ export default function PharmacySell() {
                   onValueChange={setSelectedMedicineId}
                   placeholder="Search and select medicine..."
                   isLoading={isLoading}
+                  onSearchChange={setSearchTerm}
                 />
               </div>
 

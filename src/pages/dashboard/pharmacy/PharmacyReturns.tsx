@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SearchableMedicineSelect } from "@/components/SearchableMedicineSelect";
 import { Separator } from "@/components/ui/separator";
-import { useAllMedicines } from "@/hooks/useDatabase";
+import { useSearchableMedicines } from "@/hooks/useDatabase";
 import { formatPkrAmount } from "@/utils/currency";
 import { toast } from "sonner";
 import { RotateCcw, Plus, Trash2, AlertTriangle } from "lucide-react";
@@ -36,9 +36,9 @@ export default function PharmacyReturns() {
   const [selectedMedicineId, setSelectedMedicineId] = useState("");
   const [quantity, setQuantity] = useState<number | "">("");
   const [isProcessing, setIsProcessing] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
 
-  const { data: allMedicinesResult, isLoading } = useAllMedicines();
-  const medicines = allMedicinesResult?.data || [];
+  const { data: medicines, isLoading } = useSearchableMedicines(searchTerm);
 
   const addToReturnCart = () => {
     if (!selectedMedicineId || !quantity || quantity <= 0) {
@@ -216,6 +216,7 @@ export default function PharmacyReturns() {
                   placeholder="Search and select medicine..."
                   isLoading={isLoading}
                   allowOutOfStock={true}
+                  onSearchChange={setSearchTerm}
                 />
               </div>
 
