@@ -148,7 +148,7 @@ export function OTNotesDialog({ open, onOpenChange, otSchedule, onSave, readOnly
               onChange={(e) => setPatientName(e.target.value)}
               placeholder="Patient name"
               readOnly={readOnly}
-              className={readOnly ? "cursor-default" : ""}
+              className={readOnly ? "cursor-default text-foreground bg-background" : ""}
             />
           </div>
 
@@ -160,7 +160,7 @@ export function OTNotesDialog({ open, onOpenChange, otSchedule, onSave, readOnly
               onChange={(e) => setAge(e.target.value)}
               placeholder="e.g., 45"
               readOnly={readOnly}
-              className={readOnly ? "cursor-default" : ""}
+              className={readOnly ? "cursor-default text-foreground bg-background" : ""}
             />
           </div>
 
@@ -172,7 +172,7 @@ export function OTNotesDialog({ open, onOpenChange, otSchedule, onSave, readOnly
               onChange={(e) => setSex(e.target.value)}
               placeholder="e.g., M or F"
               readOnly={readOnly}
-              className={readOnly ? "cursor-default" : ""}
+              className={readOnly ? "cursor-default text-foreground bg-background" : ""}
             />
           </div>
 
@@ -184,7 +184,7 @@ export function OTNotesDialog({ open, onOpenChange, otSchedule, onSave, readOnly
               value={operationDateTime}
               onChange={(e) => setOperationDateTime(e.target.value)}
               readOnly={readOnly}
-              className={readOnly ? "cursor-default" : ""}
+              className={readOnly ? "cursor-default text-foreground bg-background" : ""}
             />
           </div>
 
@@ -197,7 +197,7 @@ export function OTNotesDialog({ open, onOpenChange, otSchedule, onSave, readOnly
               placeholder="Enter diagnosis"
               rows={3}
               readOnly={readOnly}
-              className={readOnly ? "cursor-default" : ""}
+              className={readOnly ? "cursor-default text-foreground bg-background" : ""}
             />
           </div>
 
@@ -210,7 +210,7 @@ export function OTNotesDialog({ open, onOpenChange, otSchedule, onSave, readOnly
               placeholder="Enter procedure details"
               rows={3}
               readOnly={readOnly}
-              className={readOnly ? "cursor-default" : ""}
+              className={readOnly ? "cursor-default text-foreground bg-background" : ""}
             />
           </div>
 
@@ -222,7 +222,7 @@ export function OTNotesDialog({ open, onOpenChange, otSchedule, onSave, readOnly
               onChange={(e) => setSurgeonName(e.target.value)}
               placeholder="Surgeon name"
               readOnly={readOnly}
-              className={readOnly ? "cursor-default" : ""}
+              className={readOnly ? "cursor-default text-foreground bg-background" : ""}
             />
           </div>
 
@@ -234,7 +234,7 @@ export function OTNotesDialog({ open, onOpenChange, otSchedule, onSave, readOnly
               onChange={(e) => setAnesthetistName(e.target.value)}
               placeholder="Anesthetist name"
               readOnly={readOnly}
-              className={readOnly ? "cursor-default" : ""}
+              className={readOnly ? "cursor-default text-foreground bg-background" : ""}
             />
           </div>
 
@@ -247,7 +247,7 @@ export function OTNotesDialog({ open, onOpenChange, otSchedule, onSave, readOnly
               placeholder="Enter post-operation orders and instructions"
               rows={4}
               readOnly={readOnly}
-              className={readOnly ? "cursor-default" : ""}
+              className={readOnly ? "cursor-default text-foreground bg-background" : ""}
             />
           </div>
         </div>
