@@ -30,6 +30,7 @@ interface SearchableMedicineSelectProps {
   onValueChange: (value: string) => void;
   placeholder?: string;
   isLoading?: boolean;
+  allowOutOfStock?: boolean; // New prop to include out-of-stock medicines
 }
 
 export function SearchableMedicineSelect({
@@ -38,11 +39,14 @@ export function SearchableMedicineSelect({
   onValueChange,
   placeholder = "Search medicine...",
   isLoading = false,
+  allowOutOfStock = false, // Default to false for backward compatibility
 }: SearchableMedicineSelectProps) {
   const [open, setOpen] = useState(false);
 
   const selectedMedicine = medicines?.find((medicine) => medicine.id === value);
-  const availableMedicines = medicines?.filter(m => m.stock_quantity > 0) || [];
+  const availableMedicines = allowOutOfStock 
+    ? medicines || [] 
+    : medicines?.filter(m => m.stock_quantity > 0) || [];
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
