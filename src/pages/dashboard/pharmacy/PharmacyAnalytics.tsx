@@ -15,7 +15,7 @@ export default function PharmacyAnalytics() {
 
   if (isLoading) {
     return (
-      <AppLayout>
+      <AppLayout sidebarRole="head_pharmacist">
         <div className="flex items-center justify-center h-64">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
         </div>
@@ -33,7 +33,7 @@ export default function PharmacyAnalytics() {
   ];
 
   return (
-    <AppLayout>
+    <AppLayout sidebarRole="head_pharmacist">
       <div className="space-y-8">
         <div className="flex items-center justify-between">
           <div>

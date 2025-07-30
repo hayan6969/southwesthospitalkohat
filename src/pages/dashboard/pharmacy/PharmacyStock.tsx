@@ -51,7 +51,7 @@ export default function PharmacyStock() {
 
   if (!canViewStock) {
     return (
-      <AppLayout>
+      <AppLayout sidebarRole="head_pharmacist">
         <div className="text-center py-8">
           <p className="text-red-600">You don't have permission to view this page.</p>
         </div>
@@ -283,7 +283,7 @@ export default function PharmacyStock() {
   );
 
   return (
-    <AppLayout>
+    <AppLayout sidebarRole="head_pharmacist">
       <div className="space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">

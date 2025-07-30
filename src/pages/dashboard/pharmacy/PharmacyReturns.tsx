@@ -187,7 +187,7 @@ export default function PharmacyReturns() {
   };
 
   return (
-    <AppLayout>
+    <AppLayout sidebarRole="head_pharmacist">
       <div className="p-6 space-y-6">
         <div className="flex items-center gap-3">
           <RotateCcw className="w-8 h-8 text-orange-600" />
