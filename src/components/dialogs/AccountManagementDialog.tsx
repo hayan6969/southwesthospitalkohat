@@ -128,10 +128,11 @@ export function AccountManagementDialog() {
               <SelectTrigger>
                 <SelectValue placeholder="Select role" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="bg-white z-50">
                 <SelectItem value="doctor">Doctor</SelectItem>
                 <SelectItem value="staff">Staff</SelectItem>
                 <SelectItem value="ota">OTA</SelectItem>
+                <SelectItem value="nursing">Nursing</SelectItem>
                 <SelectItem value="head_pharmacist">Head Pharmacist</SelectItem>
                 <SelectItem value="assistant_pharmacist">Assistant Pharmacist</SelectItem>
                 <SelectItem value="salesman_pharmacist">Salesman Pharmacist</SelectItem>

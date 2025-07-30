@@ -173,6 +173,7 @@ export function EditUserDialog({ user, open, onOpenChange, onUserUpdated }: Edit
                 <SelectItem value="doctor">Doctor</SelectItem>
                 <SelectItem value="staff">Staff</SelectItem>
                 <SelectItem value="ota">OTA</SelectItem>
+                <SelectItem value="nursing">Nursing</SelectItem>
                 <SelectItem value="head_pharmacist">Head Pharmacist</SelectItem>
                 <SelectItem value="assistant_pharmacist">Assistant Pharmacist</SelectItem>
                 <SelectItem value="salesman_pharmacist">Salesman Pharmacist</SelectItem>

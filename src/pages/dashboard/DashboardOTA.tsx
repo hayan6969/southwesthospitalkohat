@@ -476,7 +476,7 @@ export default function DashboardOTA() {
                                       className="flex items-center gap-1"
                                     >
                                       <Edit className="w-3 h-3" />
-                                      OT Notes
+                                      {(profile?.role as string) === 'nursing' ? 'View Notes' : 'OT Notes'}
                                     </Button>
                                   </TableCell>
                                 </TableRow>
@@ -559,15 +559,15 @@ export default function DashboardOTA() {
                                     {ot.status === 'completed' ? (
                                       <span className="text-sm text-green-600 font-medium">Completed</span>
                                     ) : (
-                                      <Button 
-                                        size="sm" 
-                                        variant="outline"
-                                        onClick={() => handleOTNotes(ot)}
-                                        className="flex items-center gap-1"
-                                      >
-                                        <Edit className="w-3 h-3" />
-                                        OT Notes
-                                      </Button>
+                                       <Button 
+                                         size="sm" 
+                                         variant="outline"
+                                         onClick={() => handleOTNotes(ot)}
+                                         className="flex items-center gap-1"
+                                       >
+                                         <Edit className="w-3 h-3" />
+                                         {(profile?.role as string) === 'nursing' ? 'View Notes' : 'OT Notes'}
+                                       </Button>
                                     )}
                                   </TableCell>
                                 </TableRow>
@@ -595,6 +595,7 @@ export default function DashboardOTA() {
           onOpenChange={setShowOTNotesDialog}
           otSchedule={selectedOT}
           onSave={fetchOTSchedules}
+          readOnly={(profile?.role as string) === 'nursing'}
         />
         </div>
       </main>

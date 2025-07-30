@@ -174,7 +174,7 @@ const App = () => (
 
             {/* OTA dashboard routes */}
             <Route path="/dashboard/ota" element={
-              <ProtectedRoute allowedRoles={['ota', 'admin']}>
+              <ProtectedRoute allowedRoles={['ota', 'nursing', 'admin']}>
                 <DashboardOTA />
               </ProtectedRoute>
             } />

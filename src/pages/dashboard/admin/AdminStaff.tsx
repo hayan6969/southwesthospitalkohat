@@ -50,6 +50,8 @@ export default function AdminStaff() {
       case 'admin': return 'bg-purple-100 text-purple-700';
       case 'doctor': return 'bg-green-100 text-green-700';
       case 'staff': return 'bg-blue-100 text-blue-700';
+      case 'ota': return 'bg-indigo-100 text-indigo-700';
+      case 'nursing': return 'bg-pink-100 text-pink-700';
       case 'head_pharmacist': return 'bg-orange-100 text-orange-700';
       case 'assistant_pharmacist': return 'bg-orange-50 text-orange-600';
       case 'salesman_pharmacist': return 'bg-orange-200 text-orange-800';

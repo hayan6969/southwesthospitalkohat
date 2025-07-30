@@ -40,9 +40,10 @@ interface OTNotesDialogProps {
     };
   } | null;
   onSave?: () => void;
+  readOnly?: boolean;
 }
 
-export function OTNotesDialog({ open, onOpenChange, otSchedule, onSave }: OTNotesDialogProps) {
+export function OTNotesDialog({ open, onOpenChange, otSchedule, onSave, readOnly = false }: OTNotesDialogProps) {
   const { toast } = useToast();
   const [saving, setSaving] = useState(false);
   
@@ -133,7 +134,9 @@ export function OTNotesDialog({ open, onOpenChange, otSchedule, onSave }: OTNote
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>OT Notes - {otSchedule.operation.operation_name}</DialogTitle>
+          <DialogTitle>
+            {readOnly ? 'View ' : ''}OT Notes - {otSchedule.operation.operation_name}
+          </DialogTitle>
         </DialogHeader>
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -144,6 +147,7 @@ export function OTNotesDialog({ open, onOpenChange, otSchedule, onSave }: OTNote
               value={patientName}
               onChange={(e) => setPatientName(e.target.value)}
               placeholder="Patient name"
+              disabled={readOnly}
             />
           </div>
 
@@ -154,6 +158,7 @@ export function OTNotesDialog({ open, onOpenChange, otSchedule, onSave }: OTNote
               value={age}
               onChange={(e) => setAge(e.target.value)}
               placeholder="e.g., 45"
+              disabled={readOnly}
             />
           </div>
 
@@ -164,6 +169,7 @@ export function OTNotesDialog({ open, onOpenChange, otSchedule, onSave }: OTNote
               value={sex}
               onChange={(e) => setSex(e.target.value)}
               placeholder="e.g., M or F"
+              disabled={readOnly}
             />
           </div>
 
@@ -174,6 +180,7 @@ export function OTNotesDialog({ open, onOpenChange, otSchedule, onSave }: OTNote
               type="datetime-local"
               value={operationDateTime}
               onChange={(e) => setOperationDateTime(e.target.value)}
+              disabled={readOnly}
             />
           </div>
 
@@ -185,6 +192,7 @@ export function OTNotesDialog({ open, onOpenChange, otSchedule, onSave }: OTNote
               onChange={(e) => setDiagnosis(e.target.value)}
               placeholder="Enter diagnosis"
               rows={3}
+              disabled={readOnly}
             />
           </div>
 
@@ -196,6 +204,7 @@ export function OTNotesDialog({ open, onOpenChange, otSchedule, onSave }: OTNote
               onChange={(e) => setProcedure(e.target.value)}
               placeholder="Enter procedure details"
               rows={3}
+              disabled={readOnly}
             />
           </div>
 
@@ -206,6 +215,7 @@ export function OTNotesDialog({ open, onOpenChange, otSchedule, onSave }: OTNote
               value={surgeonName}
               onChange={(e) => setSurgeonName(e.target.value)}
               placeholder="Surgeon name"
+              disabled={readOnly}
             />
           </div>
 
@@ -216,6 +226,7 @@ export function OTNotesDialog({ open, onOpenChange, otSchedule, onSave }: OTNote
               value={anesthetistName}
               onChange={(e) => setAnesthetistName(e.target.value)}
               placeholder="Anesthetist name"
+              disabled={readOnly}
             />
           </div>
 
@@ -227,17 +238,20 @@ export function OTNotesDialog({ open, onOpenChange, otSchedule, onSave }: OTNote
               onChange={(e) => setPostOpOrders(e.target.value)}
               placeholder="Enter post-operation orders and instructions"
               rows={4}
+              disabled={readOnly}
             />
           </div>
         </div>
 
         <div className="flex justify-end gap-2 mt-6">
           <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Cancel
+            {readOnly ? 'Close' : 'Cancel'}
           </Button>
-          <Button onClick={handleSave} disabled={saving}>
-            {saving ? "Saving..." : "Save Notes"}
-          </Button>
+          {!readOnly && (
+            <Button onClick={handleSave} disabled={saving}>
+              {saving ? "Saving..." : "Save Notes"}
+            </Button>
+          )}
         </div>
       </DialogContent>
     </Dialog>

@@ -35,6 +35,10 @@ const navsByRole: Record<string, { label: string; to: string; icon: React.Elemen
     { label: "Dashboard", to: "/dashboard/ota", icon: Info },
     { label: "OT Operations", to: "/dashboard/ota/operations", icon: Building2 },
   ],
+  nursing: [
+    { label: "Dashboard", to: "/dashboard/ota", icon: Info },
+    { label: "OT Operations", to: "/dashboard/ota/operations", icon: Building2 },
+  ],
   admin: [
     { label: "Dashboard", to: "/dashboard/admin", icon: Info },
     { label: "Account Management", to: "/dashboard/admin/accounts", icon: Users },
