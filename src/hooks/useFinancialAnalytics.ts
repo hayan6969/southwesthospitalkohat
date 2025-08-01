@@ -69,12 +69,13 @@ export const useFinancialAnalytics = () => {
       const expenses = expensesRes.data || [];
       const refunds = refundsRes.data || [];
 
-      // Calculate hospital revenue (paid invoices only)
-      const hospitalRevenue = invoices
-        .filter(inv => inv.status === 'paid')
+      // Calculate hospital revenue - EXCLUDING regular consultation fees (those go to doctors)
+      // Hospital only gets revenue from: emergency consultations, lab tests, OT hospital portion, pharmacy profit
+      const emergencyConsultationRevenue = invoices
+        .filter(inv => inv.status === 'paid' && inv.description?.toLowerCase().includes('emergency'))
         .reduce((sum, inv) => sum + Number(inv.amount), 0);
 
-      // Calculate pharmacy revenue and profit
+      // Calculate pharmacy profit only (not revenue - hospital gets profit share)
       let pharmacyRevenue = 0;
       let pharmacyProfit = 0;
       
@@ -99,16 +100,20 @@ export const useFinancialAnalytics = () => {
         .reduce((sum, report) => sum + Number(report.price), 0);
 
       // Calculate OT revenue (hospital portion only, excluding doctor expenses)
-      const otRevenue = otSchedules
+      const otHospitalRevenue = otSchedules
         .filter(schedule => schedule.total_cost && schedule.doctor_expense)
         .reduce((sum, schedule) => sum + (Number(schedule.total_cost) - Number(schedule.doctor_expense)), 0);
 
-      const totalRevenue = hospitalRevenue + pharmacyRevenue + labRevenue + otRevenue;
+      // Hospital total revenue = emergency consultations + lab revenue + OT hospital portion + pharmacy profit
+      const hospitalRevenue = emergencyConsultationRevenue + labRevenue + otHospitalRevenue + pharmacyProfit;
+      
+      // Total revenue is hospital revenue + pharmacy sales (for analytics display)
+      const totalRevenue = hospitalRevenue + pharmacyRevenue;
       
       // Total expenses = regular expenses (including refund expense records)
       const totalExpenses = expenses.reduce((sum, exp) => sum + Number(exp.amount), 0);
       
-      const netProfit = totalRevenue - totalExpenses + pharmacyProfit; // Add pharmacy profit to net profit
+      const netProfit = hospitalRevenue - totalExpenses; // Hospital profit excluding pharmacy profit (already included in hospitalRevenue)
       const profitMargin = totalRevenue > 0 ? (netProfit / totalRevenue) * 100 : 0;
 
       // Calculate monthly data (current month)
@@ -184,10 +189,10 @@ export const useFinancialAnalytics = () => {
         monthlyRevenue,
         monthlyExpenses,
         revenueBySource: {
-          hospital: hospitalRevenue,
+          hospital: emergencyConsultationRevenue,
           pharmacy: pharmacyRevenue,
           lab: labRevenue,
-          ot: otRevenue,
+          ot: otHospitalRevenue,
         },
         pharmacyProfit,
         recentActivity,

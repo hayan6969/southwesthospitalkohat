@@ -83,11 +83,25 @@ export default function FinanceIncome() {
     }
   };
 
-  const hospitalRevenue = invoices?.reduce((sum, invoice) => sum + (invoice.amount || 0), 0) || 0;
+  // Emergency consultation revenue (hospital only gets emergency fees, not regular consultations)
+  const emergencyRevenue = invoices?.filter(inv => 
+    inv.description?.toLowerCase().includes('emergency')
+  ).reduce((sum, invoice) => sum + (invoice.amount || 0), 0) || 0;
+  
   const pharmacyRevenue = pharmacyInvoices?.reduce((sum, invoice) => sum + (invoice.final_amount || 0), 0) || 0;
   const labRevenue = labReports?.reduce((sum, report) => sum + (report.price || 0), 0) || 0;
-  const otRevenue = otSchedules?.reduce((sum, schedule) => sum + (schedule.total_cost || 0), 0) || 0;
-  const totalRevenue = hospitalRevenue + pharmacyRevenue + labRevenue + otRevenue;
+  
+  // OT hospital revenue (excluding doctor expenses)
+  const otHospitalRevenue = otSchedules?.reduce((sum, schedule) => {
+    if (!schedule.total_cost || !schedule.doctor_expense) return sum + (schedule.total_cost || 0);
+    return sum + (Number(schedule.total_cost) - Number(schedule.doctor_expense));
+  }, 0) || 0;
+  
+  // Hospital revenue = emergency consultations + lab + OT hospital portion
+  const hospitalRevenue = emergencyRevenue + labRevenue + otHospitalRevenue;
+  
+  // Total revenue for display includes pharmacy sales
+  const totalRevenue = hospitalRevenue + pharmacyRevenue;
 
   if (invoicesLoading || pharmacyLoading || labLoading || otLoading) {
     return <div className="p-8">Loading...</div>;
@@ -135,10 +149,10 @@ export default function FinanceIncome() {
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">OT Procedures</CardTitle>
+            <CardTitle className="text-sm font-medium text-gray-600">OT Hospital Revenue</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{formatPkrAmount(otRevenue)}</div>
+            <div className="text-2xl font-bold">{formatPkrAmount(otHospitalRevenue)}</div>
           </CardContent>
         </Card>
       </div>

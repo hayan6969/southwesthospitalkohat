@@ -286,25 +286,35 @@ export const usePharmacyAnalytics = () => {
       const monthlyProfitMargin = monthlyRevenue > 0 ? (monthlyProfit / monthlyRevenue) * 100 : 0;
 
       // Calculate amount to pay hospital (profit since last closing)
-      // If no closing exists, start from beginning of time (include all transactions)
+      // Hospital gets the pharmacy profit share since last daily closing
       const lastClosingTime = lastClosing ? toPakistanTime(new Date(lastClosing.closing_time)) : new Date(0);
       
-      const sinceClosingInvoiceItems = allInvoiceItems.filter(item => {
-        const invoiceDate = toPakistanTime(new Date(item.created_at));
-        return invoiceDate > lastClosingTime && item.unit_price > 0 && item.medicines?.purchase_price !== undefined;
+      // Get sales invoices since last closing
+      const sinceClosingSalesInvoices = salesInvoices.filter(inv => {
+        const invoiceDate = toPakistanTime(new Date(inv.created_at));
+        return invoiceDate > lastClosingTime;
       });
       
-      // Only count return expenses, not return invoices
-      // because return items in invoice_items already have negative quantities
+      // Calculate profit from sales since last closing
+      const sinceClosingProfit = sinceClosingSalesInvoices.reduce((totalProfit, invoice) => {
+        const invoiceProfit = (invoice.pharmacy_invoice_items || []).reduce((itemsProfit: number, item: any) => {
+          if (item.medicines && item.medicines.selling_price && item.medicines.purchase_price) {
+            const profitPerUnit = item.medicines.selling_price - item.medicines.purchase_price;
+            return itemsProfit + (profitPerUnit * item.quantity);
+          }
+          return itemsProfit;
+        }, 0);
+        return totalProfit + invoiceProfit;
+      }, 0);
+      
+      // Subtract returns since last closing
       const sinceClosingReturns = returnExpenses.filter(exp => {
         const expDate = toPakistanTime(new Date(exp.expense_date));
         return expDate > lastClosingTime;
       }).reduce((sum, exp) => sum + exp.amount, 0);
       
-      const payHospitalAmount = Math.max(0, sinceClosingInvoiceItems.reduce((sum, item) => {
-        const profit = (item.unit_price - (item.medicines?.purchase_price || 0)) * item.quantity;
-        return sum + profit;
-      }, 0) - sinceClosingReturns);
+      // Hospital gets the net profit since last closing
+      const payHospitalAmount = Math.max(0, sinceClosingProfit - sinceClosingReturns);
 
       return {
         todayRevenue,

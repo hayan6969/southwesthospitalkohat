@@ -133,8 +133,8 @@ export default function FinanceDaily() {
       console.log('All refunds in system:', allRefunds?.length, allRefunds);
 
       // Calculate totals
-      // Note: Regular consultation invoices are not included in hospital revenue
-      const hospitalRevenue = 0; // Consultations are paid directly to doctors, not hospital revenue
+      // Hospital revenue ONLY from emergency consultations (regular consultations go to doctors)
+      const emergencyRevenue = emergencyAppointments?.reduce((sum, apt) => sum + (apt.consultation_fee_at_time || 0), 0) || 0;
       
       // Calculate pharmacy revenue and profit correctly
       let pharmacyRevenue = 0;
@@ -166,13 +166,12 @@ export default function FinanceDaily() {
       }
       
       const labRevenue = labReports?.reduce((sum, lab) => sum + (lab.price || 0), 0) || 0;
-      const otRevenue = otSchedules?.reduce((sum, ot) => sum + ((ot.total_cost || 0) - (ot.doctor_expense || 0)), 0) || 0;
-      const emergencyRevenue = emergencyAppointments?.reduce((sum, apt) => sum + (apt.consultation_fee_at_time || 0), 0) || 0;
+      const otHospitalRevenue = otSchedules?.reduce((sum, ot) => sum + ((ot.total_cost || 0) - (ot.doctor_expense || 0)), 0) || 0;
       const totalExpenses = expenses?.reduce((sum, exp) => sum + exp.amount, 0) || 0;
       const totalRefunds = refunds?.reduce((sum, ref) => sum + ref.amount, 0) || 0;
 
-      // Total hospital revenue and profit
-      const totalHospitalRevenue = hospitalRevenue + labRevenue + otRevenue + emergencyRevenue;
+      // Total hospital revenue = emergency consultations + lab + OT hospital portion + pharmacy profit
+      const totalHospitalRevenue = emergencyRevenue + labRevenue + otHospitalRevenue + pharmacyProfit;
       const totalHospitalProfit = totalHospitalRevenue - totalExpenses;
 
       // Categorize refunds
@@ -181,12 +180,11 @@ export default function FinanceDaily() {
       const otherRefunds = refunds?.filter(r => !r.refund_type.includes('ot') && r.refund_type !== 'pharmacy_invoice')?.reduce((sum, r) => sum + r.amount, 0) || 0;
 
       console.log('Calculated values:', {
-        hospitalRevenue,
+        emergencyRevenue,
         pharmacyRevenue,
         pharmacyProfit,
         labRevenue,
-        otRevenue,
-        emergencyRevenue,
+        otHospitalRevenue,
         totalHospitalRevenue,
         totalHospitalProfit,
         totalExpenses,
@@ -197,12 +195,11 @@ export default function FinanceDaily() {
       });
 
       return {
-        hospitalRevenue,
+        emergencyRevenue,
         pharmacyRevenue,
         pharmacyProfit,
         labRevenue,
-        otRevenue,
-        emergencyRevenue,
+        otHospitalRevenue,
         totalHospitalRevenue,
         totalHospitalProfit,
         totalExpenses,
@@ -493,7 +490,7 @@ export default function FinanceDaily() {
           />
           <StatsCard
             title="OT Revenue"
-            value={formatPkrAmount(dailyData?.otRevenue || 0)}
+            value={formatPkrAmount(dailyData?.otHospitalRevenue || 0)}
             icon={<Activity className="w-5 h-5 text-purple-600" />}
             loading={isLoading}
           />
@@ -724,7 +721,7 @@ export default function FinanceDaily() {
                   <Card>
                     <CardContent className="p-4">
                       <div className="text-sm text-muted-foreground">OT Revenue</div>
-                      <div className="text-lg font-bold">{formatPkrAmount(dailyData?.otRevenue || 0)}</div>
+                      <div className="text-lg font-bold">{formatPkrAmount(dailyData?.otHospitalRevenue || 0)}</div>
                     </CardContent>
                   </Card>
                   <Card>

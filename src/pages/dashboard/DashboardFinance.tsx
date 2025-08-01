@@ -104,8 +104,11 @@ export default function DashboardFinance() {
     }
   });
 
-  // Calculate revenues and profit (excluding doctor charges)
-  const hospitalRevenue = invoices?.reduce((sum, invoice) => sum + (invoice.amount || 0), 0) || 0;
+  // Calculate hospital revenue - EXCLUDING regular consultation fees (those go to doctors)
+  // Hospital only gets: emergency consultations, lab tests, OT hospital portion, pharmacy profit
+  const emergencyConsultationRevenue = invoices?.filter(inv => 
+    inv.status === 'paid' && inv.description?.toLowerCase().includes('emergency')
+  ).reduce((sum, invoice) => sum + (invoice.amount || 0), 0) || 0;
   
   // Calculate pharmacy revenue and profit correctly
   let pharmacyRevenue = 0;
@@ -126,16 +129,24 @@ export default function DashboardFinance() {
       return totalProfit + invoiceProfit;
     }, 0);
   }
+  
   const labRevenue = labReports?.reduce((sum, lab) => sum + (lab.price || 0), 0) || 0;
+  
   // Only include hospital's portion of OT revenue (excluding doctor expenses)
-  const otRevenue = otSchedules?.reduce((sum, schedule) => {
+  const otHospitalRevenue = otSchedules?.reduce((sum, schedule) => {
     if (!schedule.total_cost || !schedule.doctor_expense) return sum;
     return sum + (Number(schedule.total_cost) - Number(schedule.doctor_expense));
   }, 0) || 0;
-  const totalRevenue = hospitalRevenue + pharmacyRevenue + labRevenue + otRevenue;
+  
+  // Hospital revenue = emergency consultations + lab + OT hospital portion + pharmacy profit
+  const hospitalRevenue = emergencyConsultationRevenue + labRevenue + otHospitalRevenue + pharmacyProfit;
+  
+  // Total revenue for display purposes includes pharmacy sales
+  const totalRevenue = hospitalRevenue + pharmacyRevenue;
   const totalExpenses = expenses?.reduce((sum, exp) => sum + (exp.amount || 0), 0) || 0;
-  // Include pharmacy profit in total profit calculation
-  const totalProfit = totalRevenue - totalExpenses + pharmacyProfit;
+  
+  // Hospital profit (excluding pharmacy profit which is already included in hospitalRevenue)
+  const totalProfit = hospitalRevenue - totalExpenses;
   
   const paidInvoices = invoices?.filter(inv => inv.status === 'paid') || [];
   const pendingInvoices = invoices?.filter(inv => inv.status === 'pending') || [];
@@ -144,9 +155,13 @@ export default function DashboardFinance() {
   const currentMonth = new Date().getMonth();
   const currentYear = new Date().getFullYear();
   
-  const currentMonthHospitalRevenue = invoices?.filter(invoice => {
+  // Monthly emergency consultation revenue (hospital only gets emergency fees, not regular consultations)
+  const currentMonthEmergencyRevenue = invoices?.filter(invoice => {
     const invoiceDate = new Date(invoice.paid_at || invoice.created_at);
-    return invoiceDate.getMonth() === currentMonth && invoiceDate.getFullYear() === currentYear && invoice.status === 'paid';
+    return invoiceDate.getMonth() === currentMonth && 
+           invoiceDate.getFullYear() === currentYear && 
+           invoice.status === 'paid' &&
+           invoice.description?.toLowerCase().includes('emergency');
   }).reduce((sum, invoice) => sum + (invoice.amount || 0), 0) || 0;
   
   const currentMonthPharmacyRevenue = pharmacyInvoices?.filter(invoice => {
@@ -154,12 +169,27 @@ export default function DashboardFinance() {
     return invoiceDate.getMonth() === currentMonth && invoiceDate.getFullYear() === currentYear;
   }).reduce((sum, invoice) => sum + (invoice.final_amount || 0), 0) || 0;
   
+  // Monthly pharmacy profit
+  const currentMonthPharmacyProfit = pharmacyInvoices?.filter(invoice => {
+    const invoiceDate = new Date(invoice.created_at);
+    return invoiceDate.getMonth() === currentMonth && invoiceDate.getFullYear() === currentYear;
+  }).reduce((totalProfit, invoice) => {
+    const invoiceProfit = (invoice.pharmacy_invoice_items || []).reduce((itemsProfit: number, item: any) => {
+      if (item.medicines && item.medicines.selling_price && item.medicines.purchase_price) {
+        const profitPerUnit = item.medicines.selling_price - item.medicines.purchase_price;
+        return itemsProfit + (profitPerUnit * item.quantity);
+      }
+      return itemsProfit;
+    }, 0);
+    return totalProfit + invoiceProfit;
+  }, 0) || 0;
+  
   const currentMonthLabRevenue = labReports?.filter(lab => {
     const labDate = new Date(lab.created_at);
     return labDate.getMonth() === currentMonth && labDate.getFullYear() === currentYear;
   }).reduce((sum, lab) => sum + (lab.price || 0), 0) || 0;
   
-  const currentMonthOTRevenue = otSchedules?.filter(schedule => {
+  const currentMonthOTHospitalRevenue = otSchedules?.filter(schedule => {
     const scheduleDate = new Date(schedule.created_at);
     return scheduleDate.getMonth() === currentMonth && scheduleDate.getFullYear() === currentYear;
   }).reduce((sum, schedule) => {
@@ -167,7 +197,11 @@ export default function DashboardFinance() {
     return sum + (Number(schedule.total_cost) - Number(schedule.doctor_expense));
   }, 0) || 0;
   
-  const monthlyRevenue = currentMonthHospitalRevenue + currentMonthPharmacyRevenue + currentMonthLabRevenue + currentMonthOTRevenue;
+  // Monthly hospital revenue = emergency consultations + lab + OT hospital portion + pharmacy profit
+  const monthlyHospitalRevenue = currentMonthEmergencyRevenue + currentMonthLabRevenue + currentMonthOTHospitalRevenue + currentMonthPharmacyProfit;
+  
+  // Total monthly revenue for display includes pharmacy sales
+  const monthlyRevenue = monthlyHospitalRevenue + currentMonthPharmacyRevenue;
 
   return (
     <div className="space-y-8">
@@ -287,7 +321,7 @@ export default function DashboardFinance() {
                 </div>
                 <div className="flex justify-between">
                   <span>OT Services (Hospital Portion)</span>
-                  <span className="font-medium">{formatPkrAmount(otRevenue)}</span>
+                  <span className="font-medium">{formatPkrAmount(otHospitalRevenue)}</span>
                 </div>
                 <hr />
                 <div className="flex justify-between items-center font-bold text-lg">
