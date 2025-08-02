@@ -314,7 +314,7 @@ export default function PharmacyInvoices() {
                     <TableCell>{invoice.customer_name || 'Walk-in Customer'}</TableCell>
                     <TableCell>{invoice.customer_phone || '-'}</TableCell>
                     <TableCell>{formatPkrAmount(invoice.final_amount)}</TableCell>
-                    <TableCell>{format(new Date(invoice.created_at), 'MMM dd, yyyy HH:mm')}</TableCell>
+                    <TableCell>{format(new Date(invoice.created_at), 'MMM dd, yyyy hh:mm a')}</TableCell>
                     <TableCell>
                       <Button 
                         size="sm" 
