@@ -63,18 +63,68 @@ export default function FinanceInvoices() {
 
   const handleDownloadPDF = async (invoice: any) => {
     try {
-      await generateInvoicePDF(invoice);
+      if (invoice.type === 'hospital') {
+        await generateInvoicePDF(invoice);
+      } else {
+        // For other types, create a simple invoice PDF and open in new tab
+        await generateGenericInvoicePDF(invoice);
+      }
       toast({
         title: "Success",
-        description: "Invoice PDF generated successfully",
+        description: "Invoice opened in new tab",
       });
     } catch (error) {
       toast({
         title: "Error",
-        description: "Failed to generate PDF",
+        description: "Failed to open invoice",
         variant: "destructive",
       });
     }
+  };
+
+  const generateGenericInvoicePDF = async (invoice: any) => {
+    const { jsPDF } = await import('jspdf');
+    const doc = new jsPDF();
+    const pageWidth = doc.internal.pageSize.width;
+    
+    // Header
+    doc.setFontSize(18);
+    doc.setFont('helvetica', 'bold');
+    doc.text('INVOICE', pageWidth / 2, 30, { align: 'center' });
+    
+    // Invoice details
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'normal');
+    let yPos = 50;
+    
+    doc.text(`Invoice #: ${invoice.displayNumber}`, 20, yPos);
+    doc.text(`Date: ${format(new Date(invoice.displayDate!), 'MMM dd, yyyy')}`, 20, yPos + 10);
+    doc.text(`Type: ${invoice.typeLabel}`, 20, yPos + 20);
+    doc.text(`Amount: ${formatPkrAmount(invoice.displayAmount || 0)}`, 20, yPos + 30);
+    doc.text(`Status: ${invoice.displayStatus}`, 20, yPos + 40);
+    
+    // Additional details based on type
+    if (invoice.type === 'pharmacy') {
+      if (invoice.customer_name) {
+        doc.text(`Customer: ${invoice.customer_name}`, 20, yPos + 50);
+      }
+      if (invoice.customer_phone) {
+        doc.text(`Phone: ${invoice.customer_phone}`, 20, yPos + 60);
+      }
+    } else if (invoice.type === 'lab') {
+      if (invoice.test_name) {
+        doc.text(`Test: ${invoice.test_name}`, 20, yPos + 50);
+      }
+    } else if (invoice.type === 'ot') {
+      if (invoice.operation_date) {
+        doc.text(`Operation Date: ${format(new Date(invoice.operation_date), 'MMM dd, yyyy')}`, 20, yPos + 50);
+      }
+    }
+    
+    // Open in new tab
+    const pdfBlob = doc.output('blob');
+    const pdfUrl = URL.createObjectURL(pdfBlob);
+    window.open(pdfUrl, '_blank');
   };
 
   // Combine all invoices into a single array with type information
@@ -279,20 +329,15 @@ export default function FinanceInvoices() {
                   </TableCell>
                   <TableCell>{format(new Date(invoice.displayDate!), 'MMM dd, yyyy')}</TableCell>
                   <TableCell>
-                    {invoice.type === 'hospital' && (
-                      <Button 
-                        size="sm" 
-                        variant="outline"
-                        onClick={() => handleDownloadPDF(invoice)}
-                      >
-                        <Download className="w-4 h-4" />
-                      </Button>
-                    )}
-                    {invoice.type !== 'hospital' && (
-                      <Button size="sm" variant="outline" disabled>
-                        <Download className="w-4 h-4" />
-                      </Button>
-                    )}
+                    <Button 
+                      size="sm" 
+                      variant="outline"
+                      onClick={() => handleDownloadPDF(invoice)}
+                      className="flex items-center gap-2"
+                    >
+                      <Download className="w-4 h-4" />
+                      View
+                    </Button>
                   </TableCell>
                 </TableRow>
               ))}
