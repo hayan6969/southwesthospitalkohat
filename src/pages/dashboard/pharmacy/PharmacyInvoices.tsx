@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import AppLayout from "@/layouts/AppLayout";
 import { useMedicines, usePharmacyInvoices, useCreatePharmacyInvoice } from "@/hooks/useDatabase";
@@ -9,10 +8,15 @@ import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ShoppingCart, Plus, Trash2, Receipt, Download } from "lucide-react";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { ShoppingCart, Plus, Trash2, Receipt, Download, Calendar as CalendarIcon, Filter } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { generatePharmacyInvoicePDF } from "@/utils/pharmacyPdfGenerator";
 import { formatPkrAmount, convertUsdToPkr } from "@/utils/currency";
+import { supabase } from "@/integrations/supabase/client";
+import { format } from "date-fns";
+import { cn } from "@/lib/utils";
 
 type InvoiceItem = {
   medicine_id: string;
@@ -36,6 +40,7 @@ export default function PharmacyInvoices() {
   const [items, setItems] = useState<InvoiceItem[]>([]);
   const [selectedMedicineId, setSelectedMedicineId] = useState("");
   const [quantity, setQuantity] = useState(1);
+  const [filterDate, setFilterDate] = useState<Date | undefined>();
 
   const addItem = () => {
     if (!selectedMedicineId) return;
@@ -157,27 +162,188 @@ export default function PharmacyInvoices() {
   };
 
   const handleDownloadPDF = async (invoice: any) => {
-    await generatePharmacyInvoicePDF(invoice);
+    // Fetch invoice items for this invoice
+    const { data: items } = await supabase
+      .from('pharmacy_invoice_items')
+      .select(`
+        *,
+        medicines:medicine_id (
+          name,
+          selling_price
+        )
+      `)
+      .eq('invoice_id', invoice.id);
+
+    const invoiceData = {
+      invoice_number: invoice.invoice_number,
+      customer_name: invoice.customer_name,
+      customer_phone: invoice.customer_phone,
+      total_amount: invoice.total_amount,
+      discount_amount: invoice.discount_amount || 0,
+      final_amount: invoice.final_amount,
+      created_at: invoice.created_at,
+      items: items?.map(item => ({
+        medicine_name: item.medicines?.name || 'Unknown Medicine',
+        quantity: item.quantity,
+        unit_price: item.unit_price,
+        total_price: item.total_price
+      })) || []
+    };
+
+    await generatePharmacyInvoicePDF(invoiceData);
     logDownload('Pharmacy Invoice PDF', `Downloaded PDF for invoice ${invoice.invoice_number}`);
   };
+
+  // Filter invoices by date if selected
+  const filteredInvoices = filterDate
+    ? invoices?.filter(invoice => {
+        const invoiceDate = new Date(invoice.created_at!);
+        return invoiceDate.toDateString() === filterDate.toDateString();
+      })
+    : invoices;
+
+  // Calculate totals for filtered invoices
+  const totalAmount = filteredInvoices?.reduce((sum, invoice) => sum + (invoice.final_amount || 0), 0) || 0;
+  const totalCount = filteredInvoices?.length || 0;
 
   return (
     <AppLayout sidebarRole="head_pharmacist">
       <div className="space-y-8">
+        {/* Summary Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-gray-600">Total Invoices</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{totalCount}</div>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-gray-600">Total Revenue</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-green-600">{formatPkrAmount(totalAmount)}</div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-gray-600">Filter Applied</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-sm text-gray-600">
+                {filterDate ? format(filterDate, 'MMM dd, yyyy') : 'All Dates'}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Header */}
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold text-gray-900">Pharmacy Invoices</h1>
             <p className="text-gray-600 mt-1">Create and manage sales invoices</p>
           </div>
-          
-          <Button 
-            onClick={() => setShowCreateForm(!showCreateForm)}
-            className="flex items-center gap-2"
-          >
-            <Plus className="w-4 h-4" />
-            Create Invoice
-          </Button>
         </div>
+
+        {/* Pharmacy Invoices */}
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <CardTitle className="flex items-center gap-2">
+              <Receipt className="w-5 h-5" />
+              Pharmacy Invoices
+            </CardTitle>
+            <div className="flex items-center gap-4">
+              {/* Date Filter */}
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "w-48 justify-start text-left font-normal",
+                      !filterDate && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {filterDate ? format(filterDate, "PPP") : <span>Filter by date</span>}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={filterDate}
+                    onSelect={setFilterDate}
+                    initialFocus
+                    className={cn("p-3 pointer-events-auto")}
+                  />
+                </PopoverContent>
+              </Popover>
+
+              {/* Clear Filter */}
+              {filterDate && (
+                <Button 
+                  variant="outline" 
+                  onClick={() => setFilterDate(undefined)}
+                  className="flex items-center gap-2"
+                >
+                  <Filter className="w-4 h-4" />
+                  Clear Filter
+                </Button>
+              )}
+
+              <Button onClick={() => setShowCreateForm(!showCreateForm)} className="flex items-center gap-2">
+                <Plus className="w-4 h-4" />
+                Create Invoice
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Invoice #</TableHead>
+                  <TableHead>Customer</TableHead>
+                  <TableHead>Phone</TableHead>
+                  <TableHead>Amount</TableHead>
+                  <TableHead>Date</TableHead>
+                  <TableHead>Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredInvoices?.map((invoice) => (
+                  <TableRow key={invoice.id}>
+                    <TableCell className="font-mono">{invoice.invoice_number}</TableCell>
+                    <TableCell>{invoice.customer_name || 'Walk-in Customer'}</TableCell>
+                    <TableCell>{invoice.customer_phone || '-'}</TableCell>
+                    <TableCell>{formatPkrAmount(invoice.final_amount)}</TableCell>
+                    <TableCell>{format(new Date(invoice.created_at), 'MMM dd, yyyy HH:mm')}</TableCell>
+                    <TableCell>
+                      <Button 
+                        size="sm" 
+                        variant="outline"
+                        onClick={() => handleDownloadPDF(invoice)}
+                        className="flex items-center gap-2"
+                      >
+                        <Download className="w-4 h-4" />
+                        View Invoice
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+                {(!filteredInvoices || filteredInvoices.length === 0) && (
+                  <TableRow>
+                    <TableCell colSpan={6} className="text-center py-8 text-gray-500">
+                      {filterDate ? 'No invoices found for the selected date' : 'No invoices created yet'}
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
 
         {showCreateForm && (
           <Card>
@@ -323,89 +489,6 @@ export default function PharmacyInvoices() {
             </CardContent>
           </Card>
         )}
-
-        <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
-          <div className="p-6 border-b border-gray-200">
-            <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
-              <ShoppingCart className="w-5 h-5" />
-              Recent Invoices
-            </h2>
-          </div>
-          
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Invoice #</TableHead>
-                  <TableHead>Customer</TableHead>
-                  <TableHead>Date</TableHead>
-                  <TableHead>Items</TableHead>
-                  <TableHead>Total</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {isLoading ? (
-                  Array.from({ length: 5 }).map((_, i) => (
-                    <TableRow key={i}>
-                      {Array.from({ length: 7 }).map((_, j) => (
-                        <TableCell key={j}>
-                          <div className="h-4 bg-gray-200 rounded animate-pulse"></div>
-                        </TableCell>
-                      ))}
-                    </TableRow>
-                  ))
-                ) : invoices && invoices.length > 0 ? (
-                  invoices.map((invoice) => (
-                    <TableRow key={invoice.id}>
-                      <TableCell className="font-mono">{invoice.invoice_number}</TableCell>
-                      <TableCell>
-                        <div>
-                          <div>{invoice.customer_name || 'Walk-in Customer'}</div>
-                          {invoice.customer_phone && (
-                            <div className="text-sm text-gray-500">{invoice.customer_phone}</div>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        {new Date(invoice.created_at).toLocaleDateString()}
-                      </TableCell>
-                      <TableCell>
-                        {invoice.pharmacy_invoice_items?.length || 0} items
-                      </TableCell>
-                      <TableCell className="font-medium">
-                        {formatPkrAmount(invoice.final_amount)}
-                      </TableCell>
-                      <TableCell>
-                        <span className="px-2 py-1 rounded-full text-xs bg-green-100 text-green-800">
-                          {invoice.status || 'Completed'}
-                        </span>
-                      </TableCell>
-                      <TableCell>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleDownloadPDF(invoice)}
-                          className="flex items-center gap-1 text-blue-600 hover:text-blue-700"
-                        >
-                          <Download className="w-4 h-4" />
-                          PDF
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))
-                ) : (
-                  <TableRow>
-                    <TableCell colSpan={7} className="text-center text-gray-500 py-12">
-                      No invoices found
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </div>
-        </div>
       </div>
     </AppLayout>
   );
