@@ -1,7 +1,7 @@
 import { ReactNode } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useLocation, useNavigate } from "react-router-dom";
-import { Calculator, ChartBar, Receipt, Users, Info, User, LogOut, Stethoscope, Pill, RotateCcw, Calendar } from "lucide-react";
+import { Calculator, ChartBar, Receipt, Users, Info, User, LogOut, Stethoscope, Pill, RotateCcw, Calendar, FileText } from "lucide-react";
 import { useHospitalSettings } from "@/hooks/useHospitalSettings";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
@@ -28,6 +28,7 @@ export default function FinanceLayout({ children }: FinanceLayoutProps) {
     if (path === "/dashboard/finance/doctor-payments") return "doctor-payments";
     if (path === "/dashboard/finance/pharmacy") return "pharmacy";
     if (path === "/dashboard/finance/refunds") return "refunds";
+    if (path === "/dashboard/finance/invoices") return "invoices";
     return "dashboard";
   };
 
@@ -59,6 +60,9 @@ export default function FinanceLayout({ children }: FinanceLayoutProps) {
         break;
       case "refunds":
         navigate("/dashboard/finance/refunds");
+        break;
+      case "invoices":
+        navigate("/dashboard/finance/invoices");
         break;
     }
   };
@@ -110,7 +114,7 @@ export default function FinanceLayout({ children }: FinanceLayoutProps) {
         </div>
 
       <Tabs value={getCurrentTab()} onValueChange={handleTabChange} className="w-full">
-        <TabsList className="grid w-full grid-cols-9 mb-8">
+        <TabsList className="grid w-full grid-cols-10 mb-8">
           <TabsTrigger value="dashboard" className="flex items-center gap-2">
             <Info className="w-4 h-4" />
             Dashboard
@@ -146,6 +150,10 @@ export default function FinanceLayout({ children }: FinanceLayoutProps) {
           <TabsTrigger value="refunds" className="flex items-center gap-2">
             <RotateCcw className="w-4 h-4" />
             Refunds
+          </TabsTrigger>
+          <TabsTrigger value="invoices" className="flex items-center gap-2">
+            <FileText className="w-4 h-4" />
+            Invoices
           </TabsTrigger>
         </TabsList>
 

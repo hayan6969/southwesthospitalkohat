@@ -9,6 +9,7 @@ import FinanceDoctorPayments from "./finance/FinanceDoctorPayments";
 import FinancePharmacy from "./finance/FinancePharmacy";
 import FinanceRefunds from "./finance/FinanceRefunds";
 import FinanceDaily from "./finance/FinanceDaily";
+import FinanceInvoices from "./finance/FinanceInvoices";
 
 export default function FinanceRoutes() {
   return (
@@ -23,6 +24,7 @@ export default function FinanceRoutes() {
         <Route path="doctor-payments" element={<FinanceDoctorPayments />} />
         <Route path="pharmacy" element={<FinancePharmacy />} />
         <Route path="refunds" element={<FinanceRefunds />} />
+        <Route path="invoices" element={<FinanceInvoices />} />
       </Routes>
     </FinanceLayout>
   );
