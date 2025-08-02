@@ -7,11 +7,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell } from "recharts";
 import { usePharmacyStats, usePharmacyInvoices, useMedicines } from "@/hooks/useDatabase";
-import { TrendingUp, Banknote, Package, ShoppingCart, AlertTriangle, FileText, Calendar, User } from "lucide-react";
+import { TrendingUp, Banknote, Package, ShoppingCart, AlertTriangle, FileText, Calendar, User, Receipt } from "lucide-react";
 import { format, subDays, startOfDay } from "date-fns";
 import { formatPkrAmount } from "@/utils/currency";
 import { PharmacyInvoiceDetailsDialog } from "@/components/dialogs/PharmacyInvoiceDetailsDialog";
 import { PharmacyAccountDialog } from "@/components/dialogs/PharmacyAccountDialog";
+import { PharmacyExpensesDialog } from "@/components/dialogs/PharmacyExpensesDialog";
 
 export default function FinancePharmacy() {
   const { data: stats, isLoading: statsLoading } = usePharmacyStats();
@@ -21,6 +22,7 @@ export default function FinancePharmacy() {
   const [selectedInvoice, setSelectedInvoice] = useState(null);
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
   const [accountDialogOpen, setAccountDialogOpen] = useState(false);
+  const [expensesDialogOpen, setExpensesDialogOpen] = useState(false);
 
   const getDaysArray = (days: number) => {
     const result = [];
@@ -118,6 +120,15 @@ export default function FinancePharmacy() {
             className="bg-blue-600 hover:bg-blue-700"
           >
             Pharmacy Account
+          </Button>
+          
+          <Button 
+            onClick={() => setExpensesDialogOpen(true)}
+            variant="outline"
+            className="border-orange-600 text-orange-600 hover:bg-orange-50"
+          >
+            <Receipt className="w-4 h-4 mr-2" />
+            Pharmacy Expenses
           </Button>
           
           <Select value={timeRange} onValueChange={setTimeRange}>
@@ -378,6 +389,11 @@ export default function FinancePharmacy() {
       <PharmacyAccountDialog
         open={accountDialogOpen}
         onOpenChange={setAccountDialogOpen}
+      />
+
+      <PharmacyExpensesDialog
+        open={expensesDialogOpen}
+        onOpenChange={setExpensesDialogOpen}
       />
     </div>
   );
