@@ -219,17 +219,6 @@ export const generatePharmacyInvoicePDF = async (invoiceData: PharmacyInvoiceDat
     yPosition += 8;
   });
   
-  // Draw table border
-  pdf.setDrawColor(0, 0, 0);
-  pdf.rect(15, tableStartY, pageWidth - 30, yPosition - tableStartY);
-  
-  // Vertical lines for table
-  xPosition = 15;
-  for (let i = 0; i < colWidths.length - 1; i++) {
-    xPosition += colWidths[i];
-    pdf.line(xPosition, tableStartY, xPosition, yPosition);
-  }
-  
   yPosition += 15;
   
   // Totals Section
