@@ -21,6 +21,7 @@ export function PharmacyAccountDialog({ open, onOpenChange }: PharmacyAccountDia
   const [startingBalance, setStartingBalance] = useState<number>(0);
   const [expenseAmount, setExpenseAmount] = useState<number>(0);
   const [expenseType, setExpenseType] = useState<string>("hospital_profit_withdrawal");
+  const [billNumber, setBillNumber] = useState<string>("");
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isAddingExpense, setIsAddingExpense] = useState(false);
@@ -188,6 +189,16 @@ export function PharmacyAccountDialog({ open, onOpenChange }: PharmacyAccountDia
       return;
     }
 
+    // Validate bill number if bill payment is selected
+    if (expenseType === 'bill_payment' && !billNumber.trim()) {
+      toast({
+        title: "Error",
+        description: "Please enter a bill number for bill payment",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsAddingExpense(true);
     try {
       const { error } = await supabase
@@ -196,6 +207,7 @@ export function PharmacyAccountDialog({ open, onOpenChange }: PharmacyAccountDia
           amount: expenseAmount,
           expense_type: expenseType,
           description: expenseType === 'hospital_profit_withdrawal' ? 'Hospital profit withdrawal' : 'Bill payment',
+          bill_number: expenseType === 'bill_payment' ? billNumber.trim() : null,
           expense_date: getCurrentPakistanTime().toISOString().split('T')[0]
         });
 
@@ -211,6 +223,7 @@ export function PharmacyAccountDialog({ open, onOpenChange }: PharmacyAccountDia
       // Reset form
       setExpenseAmount(0);
       setExpenseType("hospital_profit_withdrawal");
+      setBillNumber("");
 
       toast({
         title: "Success",
@@ -322,6 +335,21 @@ export function PharmacyAccountDialog({ open, onOpenChange }: PharmacyAccountDia
                   </Select>
                 </div>
               </div>
+              
+              {/* Bill Number Input - Only shown when bill payment is selected */}
+              {expenseType === 'bill_payment' && (
+                <div>
+                  <Label htmlFor="bill-number" className="text-lg font-medium">Bill Number</Label>
+                  <Input
+                    id="bill-number"
+                    type="text"
+                    value={billNumber}
+                    onChange={(e) => setBillNumber(e.target.value)}
+                    placeholder="Enter bill number"
+                    className="mt-3 h-14 text-xl"
+                  />
+                </div>
+              )}
               <div className="flex justify-between items-center">
                 <p className="text-base text-muted-foreground">
                   Track hospital profit withdrawals and bill payments from pharmacy account.

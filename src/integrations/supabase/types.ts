@@ -1205,6 +1205,7 @@ export type Database = {
       pharmacy_expenses: {
         Row: {
           amount: number
+          bill_number: string | null
           created_at: string
           created_by: string | null
           description: string | null
@@ -1215,6 +1216,7 @@ export type Database = {
         }
         Insert: {
           amount: number
+          bill_number?: string | null
           created_at?: string
           created_by?: string | null
           description?: string | null
@@ -1225,6 +1227,7 @@ export type Database = {
         }
         Update: {
           amount?: number
+          bill_number?: string | null
           created_at?: string
           created_by?: string | null
           description?: string | null
