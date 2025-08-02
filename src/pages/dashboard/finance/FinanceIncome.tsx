@@ -9,6 +9,7 @@ import { formatPkrAmount } from "@/utils/currency";
 import { Download, Receipt, Calendar as CalendarIcon } from "lucide-react";
 import { format } from "date-fns";
 import { generateInvoicePDF } from "@/utils/pdfGenerator";
+import { generatePharmacyInvoicePDF } from "@/utils/pharmacyPdfGenerator";
 import { useToast } from "@/hooks/use-toast";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -67,17 +68,50 @@ export default function FinanceIncome() {
     }
   });
 
-  const handleDownloadPDF = async (invoice: any) => {
+  const handleDownloadPDF = async (invoice: any, type: 'hospital' | 'pharmacy' = 'hospital') => {
     try {
-      await generateInvoicePDF(invoice);
+      if (type === 'hospital') {
+        await generateInvoicePDF(invoice);
+      } else if (type === 'pharmacy') {
+        // Fetch invoice items for pharmacy invoice
+        const { data: items } = await supabase
+          .from('pharmacy_invoice_items')
+          .select(`
+            *,
+            medicines:medicine_id (
+              name,
+              selling_price
+            )
+          `)
+          .eq('invoice_id', invoice.id);
+
+        const invoiceData = {
+          invoice_number: invoice.invoice_number,
+          customer_name: invoice.customer_name,
+          customer_phone: invoice.customer_phone,
+          total_amount: invoice.total_amount,
+          discount_amount: invoice.discount_amount || 0,
+          final_amount: invoice.final_amount,
+          created_at: invoice.created_at,
+          items: items?.map(item => ({
+            medicine_name: item.medicines?.name || 'Unknown Medicine',
+            quantity: item.quantity,
+            unit_price: item.unit_price,
+            total_price: item.total_price
+          })) || []
+        };
+
+        await generatePharmacyInvoicePDF(invoiceData);
+      }
+      
       toast({
         title: "Success",
-        description: "Invoice PDF generated successfully",
+        description: "Invoice opened in new tab",
       });
     } catch (error) {
       toast({
         title: "Error",
-        description: "Failed to generate PDF",
+        description: "Failed to open invoice",
         variant: "destructive",
       });
     }
@@ -234,7 +268,11 @@ export default function FinanceIncome() {
                   </TableCell>
                   <TableCell>{format(new Date(invoice.created_at), 'MMM dd, yyyy')}</TableCell>
                   <TableCell>
-                    <Button size="sm" variant="outline">
+                    <Button 
+                      size="sm" 
+                      variant="outline"
+                      onClick={() => handleDownloadPDF(invoice, 'pharmacy')}
+                    >
                       <Download className="w-4 h-4" />
                     </Button>
                   </TableCell>
