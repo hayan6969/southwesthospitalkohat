@@ -10,6 +10,7 @@ import { formatPkrAmount } from "@/utils/currency";
 import { Download, Receipt, Calendar as CalendarIcon, Filter } from "lucide-react";
 import { format } from "date-fns";
 import { generateInvoicePDF } from "@/utils/pdfGenerator";
+import { generatePharmacyInvoicePDF } from "@/utils/pharmacyPdfGenerator";
 import { useToast } from "@/hooks/use-toast";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -65,9 +66,11 @@ export default function FinanceInvoices() {
     try {
       if (invoice.type === 'hospital') {
         await generateInvoicePDF(invoice);
+      } else if (invoice.type === 'pharmacy') {
+        await generatePharmacyInvoiceFromData(invoice);
       } else {
-        // For other types, create a simple invoice PDF and open in new tab
-        await generateGenericInvoicePDF(invoice);
+        // For lab and OT types, create detailed invoice PDF
+        await generateDetailedInvoicePDF(invoice);
       }
       toast({
         title: "Success",
@@ -82,44 +85,236 @@ export default function FinanceInvoices() {
     }
   };
 
-  const generateGenericInvoicePDF = async (invoice: any) => {
+  const generatePharmacyInvoiceFromData = async (invoice: any) => {
+    // Fetch invoice items for pharmacy invoice
+    const { data: items } = await supabase
+      .from('pharmacy_invoice_items')
+      .select(`
+        *,
+        medicines:medicine_id (
+          name,
+          selling_price
+        )
+      `)
+      .eq('invoice_id', invoice.id);
+
+    const invoiceData = {
+      invoice_number: invoice.invoice_number,
+      customer_name: invoice.customer_name,
+      customer_phone: invoice.customer_phone,
+      total_amount: invoice.total_amount,
+      discount_amount: invoice.discount_amount || 0,
+      final_amount: invoice.final_amount,
+      created_at: invoice.created_at,
+      items: items?.map(item => ({
+        medicine_name: item.medicines?.name || 'Unknown Medicine',
+        quantity: item.quantity,
+        unit_price: item.unit_price,
+        total_price: item.total_price
+      })) || []
+    };
+
+    await generatePharmacyInvoicePDF(invoiceData);
+  };
+
+  const generateDetailedInvoicePDF = async (invoice: any) => {
+    // Get hospital settings for PDF branding
+    const getHospitalSettings = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('hospital_settings')
+          .select('*')
+          .limit(1)
+          .single();
+        
+        if (error) throw error;
+        return data;
+      } catch (error) {
+        return {
+          hospital_name: 'Medical Center',
+          hospital_address: 'Healthcare District',
+          contact_number: '+92-XXX-XXXXXXX',
+          logo_url: null
+        };
+      }
+    };
+
     const { jsPDF } = await import('jspdf');
     const doc = new jsPDF();
     const pageWidth = doc.internal.pageSize.width;
+    const settings = await getHospitalSettings();
     
-    // Header
-    doc.setFontSize(18);
-    doc.setFont('helvetica', 'bold');
-    doc.text('INVOICE', pageWidth / 2, 30, { align: 'center' });
-    
-    // Invoice details
-    doc.setFontSize(12);
-    doc.setFont('helvetica', 'normal');
-    let yPos = 50;
-    
-    doc.text(`Invoice #: ${invoice.displayNumber}`, 20, yPos);
-    doc.text(`Date: ${format(new Date(invoice.displayDate!), 'MMM dd, yyyy')}`, 20, yPos + 10);
-    doc.text(`Type: ${invoice.typeLabel}`, 20, yPos + 20);
-    doc.text(`Amount: ${formatPkrAmount(invoice.displayAmount || 0)}`, 20, yPos + 30);
-    doc.text(`Status: ${invoice.displayStatus}`, 20, yPos + 40);
-    
-    // Additional details based on type
-    if (invoice.type === 'pharmacy') {
-      if (invoice.customer_name) {
-        doc.text(`Customer: ${invoice.customer_name}`, 20, yPos + 50);
-      }
-      if (invoice.customer_phone) {
-        doc.text(`Phone: ${invoice.customer_phone}`, 20, yPos + 60);
-      }
-    } else if (invoice.type === 'lab') {
-      if (invoice.test_name) {
-        doc.text(`Test: ${invoice.test_name}`, 20, yPos + 50);
-      }
-    } else if (invoice.type === 'ot') {
-      if (invoice.operation_date) {
-        doc.text(`Operation Date: ${format(new Date(invoice.operation_date), 'MMM dd, yyyy')}`, 20, yPos + 50);
+    let yPosition = 20;
+
+    // Hospital logo (if available)
+    if (settings.logo_url) {
+      try {
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        
+        await new Promise((resolve) => {
+          img.onload = () => {
+            try {
+              doc.addImage(img, 'JPEG', 20, yPosition - 5, 30, 20);
+              resolve(true);
+            } catch (error) {
+              resolve(false);
+            }
+          };
+          img.onerror = () => resolve(false);
+          setTimeout(() => resolve(false), 5000);
+          img.src = settings.logo_url;
+        });
+      } catch (error) {
+        console.error('Error loading logo:', error);
       }
     }
+
+    // Hospital name
+    doc.setFontSize(18);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(40, 40, 40);
+    doc.text(`${settings.hospital_name}${invoice.type === 'lab' ? ' - Laboratory' : ' - Operation Theater'}`, pageWidth / 2, yPosition + 8, { align: 'center' });
+    
+    yPosition += 16;
+    
+    // Hospital address
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(60, 60, 60);
+    doc.text(settings.hospital_address, pageWidth / 2, yPosition, { align: 'center' });
+    
+    yPosition += 6;
+    
+    // Contact number
+    doc.text(`Phone: ${settings.contact_number}`, pageWidth / 2, yPosition, { align: 'center' });
+    
+    yPosition += 15;
+    
+    // Document title
+    doc.setFontSize(16);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(40, 40, 40);
+    const title = invoice.type === 'lab' ? 'LAB TEST INVOICE' : 'OPERATION THEATER INVOICE';
+    doc.text(title, pageWidth / 2, yPosition, { align: 'center' });
+    
+    yPosition += 25;
+    
+    // Invoice details box
+    doc.setDrawColor(0, 0, 0);
+    doc.rect(15, yPosition - 5, pageWidth - 30, 60);
+    
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(40, 40, 40);
+    
+    // Invoice details
+    doc.text('Invoice #:', 20, yPosition + 5);
+    doc.setFont('helvetica', 'normal');
+    doc.text(invoice.displayNumber, 60, yPosition + 5);
+    
+    doc.setFont('helvetica', 'bold');
+    doc.text('Date:', 120, yPosition + 5);
+    doc.setFont('helvetica', 'normal');
+    doc.text(format(new Date(invoice.displayDate!), 'MMM dd, yyyy'), 140, yPosition + 5);
+    
+    yPosition += 10;
+    
+    if (invoice.type === 'lab') {
+      doc.setFont('helvetica', 'bold');
+      doc.text('Test Name:', 20, yPosition + 5);
+      doc.setFont('helvetica', 'normal');
+      doc.text(invoice.test_name || 'Lab Test', 70, yPosition + 5);
+      
+      doc.setFont('helvetica', 'bold');
+      doc.text('Test Date:', 120, yPosition + 5);
+      doc.setFont('helvetica', 'normal');
+      doc.text(format(new Date(invoice.test_date || invoice.displayDate!), 'MMM dd, yyyy'), 170, yPosition + 5);
+      
+      yPosition += 10;
+      
+      if (invoice.external_doctor_name) {
+        doc.setFont('helvetica', 'bold');
+        doc.text('Referred by:', 20, yPosition + 5);
+        doc.setFont('helvetica', 'normal');
+        doc.text(invoice.external_doctor_name, 75, yPosition + 5);
+      }
+    } else if (invoice.type === 'ot') {
+      doc.setFont('helvetica', 'bold');
+      doc.text('Operation Date:', 20, yPosition + 5);
+      doc.setFont('helvetica', 'normal');
+      doc.text(format(new Date(invoice.operation_date), 'MMM dd, yyyy'), 85, yPosition + 5);
+      
+      if (invoice.doctor_name) {
+        doc.setFont('helvetica', 'bold');
+        doc.text('Doctor:', 120, yPosition + 5);
+        doc.setFont('helvetica', 'normal');
+        doc.text(invoice.doctor_name, 155, yPosition + 5);
+      }
+      
+      yPosition += 10;
+      
+      if (invoice.notes) {
+        doc.setFont('helvetica', 'bold');
+        doc.text('Procedure:', 20, yPosition + 5);
+        doc.setFont('helvetica', 'normal');
+        const notes = invoice.notes.length > 40 ? invoice.notes.substring(0, 37) + '...' : invoice.notes;
+        doc.text(notes, 70, yPosition + 5);
+      }
+    }
+    
+    doc.setFont('helvetica', 'bold');
+    doc.text('Status:', 20, yPosition + 15);
+    doc.setFont('helvetica', 'normal');
+    doc.text(invoice.displayStatus.toUpperCase(), 55, yPosition + 15);
+    
+    yPosition += 70;
+    
+    // Service details
+    const tableStartY = yPosition;
+    doc.setFillColor(240, 240, 240);
+    doc.rect(15, yPosition, pageWidth - 30, 10, 'F');
+    
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(10);
+    doc.setTextColor(40, 40, 40);
+    doc.text('Description', 20, yPosition + 7);
+    doc.text('Amount', pageWidth - 50, yPosition + 7);
+    
+    yPosition += 15;
+    
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(60, 60, 60);
+    const description = invoice.type === 'lab' ? `Lab Test: ${invoice.test_name || 'Laboratory Service'}` : 'Operation Theater Service';
+    doc.text(description, 20, yPosition);
+    doc.text(formatPkrAmount(invoice.displayAmount || 0), pageWidth - 50, yPosition);
+    
+    yPosition += 8;
+    
+    // Draw table border
+    doc.setDrawColor(0, 0, 0);
+    doc.rect(15, tableStartY, pageWidth - 30, yPosition - tableStartY);
+    doc.line(pageWidth - 70, tableStartY, pageWidth - 70, yPosition);
+    
+    yPosition += 20;
+    
+    // Total section
+    const totalsX = pageWidth - 85;
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(12);
+    doc.setTextColor(40, 40, 40);
+    doc.rect(totalsX, yPosition - 5, 80, 18);
+    doc.text('Total Amount:', totalsX + 5, yPosition + 4);
+    doc.text(formatPkrAmount(invoice.displayAmount || 0), totalsX + 5, yPosition + 12);
+    
+    yPosition += 30;
+    
+    // Footer
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'italic');
+    doc.setTextColor(100, 100, 100);
+    doc.text('Thank you for choosing our medical services!', pageWidth / 2, yPosition, { align: 'center' });
+    doc.text('For any queries, please contact us at the above number.', pageWidth / 2, yPosition + 8, { align: 'center' });
     
     // Open in new tab
     const pdfBlob = doc.output('blob');
