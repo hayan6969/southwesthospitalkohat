@@ -7,7 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { StaffCounter } from "@/components/staff/StaffCounter";
 import { StaffLab } from "@/components/staff/StaffLab";
 import { StaffOT } from "@/components/staff/StaffOT";
-import { StaffInvoices } from "@/components/staff/StaffInvoices";
+import StaffInvoices from "@/pages/dashboard/staff/StaffInvoices";
 import { StaffXray } from "@/components/staff/StaffXray";
 import { PatientSearchDialog } from "@/components/staff/PatientSearchDialog";
 import { Receipt, TestTube, Building2, FileText, Image } from "lucide-react";
