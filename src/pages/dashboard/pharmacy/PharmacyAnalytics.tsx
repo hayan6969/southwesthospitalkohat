@@ -2,16 +2,21 @@
 import { useState } from "react";
 import AppLayout from "@/layouts/AppLayout";
 import { usePharmacyAnalytics } from "@/hooks/usePharmacyAnalytics";
+import { useFilteredTopProducts } from "@/hooks/useFilteredTopProducts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell, Area, AreaChart } from "recharts";
-import { TrendingUp, TrendingDown, Banknote, Package, ShoppingCart, AlertTriangle, RotateCcw, Calendar, Activity, Percent, Building2 } from "lucide-react";
+import { TrendingUp, TrendingDown, Banknote, Package, ShoppingCart, AlertTriangle, RotateCcw, Calendar, Activity, Percent, Building2, X } from "lucide-react";
 import { formatPkrAmount } from "@/utils/currency";
 
 export default function PharmacyAnalytics() {
+  const [selectedMonth, setSelectedMonth] = useState<string>("");
   const { data: analytics, isLoading } = usePharmacyAnalytics();
+  const { data: filteredTopProducts, isLoading: isLoadingFiltered } = useFilteredTopProducts(selectedMonth);
 
   if (isLoading) {
     return (
@@ -284,28 +289,89 @@ export default function PharmacyAnalytics() {
           <TabsContent value="products" className="space-y-6">
             <Card>
               <CardHeader>
-                <CardTitle>Top Selling Medicines</CardTitle>
-                <p className="text-sm text-gray-600">Based on revenue and profit contribution</p>
+                <div className="flex flex-col space-y-4 sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
+                  <div>
+                    <CardTitle>Top Selling Medicines</CardTitle>
+                    <p className="text-sm text-gray-600">Based on revenue and profit contribution</p>
+                  </div>
+                  <div className="flex flex-col space-y-2 sm:flex-row sm:items-center sm:space-y-0 sm:space-x-2">
+                    <Select value={selectedMonth} onValueChange={setSelectedMonth}>
+                      <SelectTrigger className="w-full sm:w-48">
+                        <SelectValue placeholder="Filter by month" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="2024-01">January 2024</SelectItem>
+                        <SelectItem value="2024-02">February 2024</SelectItem>
+                        <SelectItem value="2024-03">March 2024</SelectItem>
+                        <SelectItem value="2024-04">April 2024</SelectItem>
+                        <SelectItem value="2024-05">May 2024</SelectItem>
+                        <SelectItem value="2024-06">June 2024</SelectItem>
+                        <SelectItem value="2024-07">July 2024</SelectItem>
+                        <SelectItem value="2024-08">August 2024</SelectItem>
+                        <SelectItem value="2024-09">September 2024</SelectItem>
+                        <SelectItem value="2024-10">October 2024</SelectItem>
+                        <SelectItem value="2024-11">November 2024</SelectItem>
+                        <SelectItem value="2024-12">December 2024</SelectItem>
+                        <SelectItem value="2025-01">January 2025</SelectItem>
+                        <SelectItem value="2025-02">February 2025</SelectItem>
+                        <SelectItem value="2025-03">March 2025</SelectItem>
+                        <SelectItem value="2025-04">April 2025</SelectItem>
+                        <SelectItem value="2025-05">May 2025</SelectItem>
+                        <SelectItem value="2025-06">June 2025</SelectItem>
+                        <SelectItem value="2025-07">July 2025</SelectItem>
+                        <SelectItem value="2025-08">August 2025</SelectItem>
+                        <SelectItem value="2025-09">September 2025</SelectItem>
+                        <SelectItem value="2025-10">October 2025</SelectItem>
+                        <SelectItem value="2025-11">November 2025</SelectItem>
+                        <SelectItem value="2025-12">December 2025</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    {selectedMonth && (
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={() => setSelectedMonth("")}
+                        className="flex items-center gap-1"
+                      >
+                        <X className="w-3 h-3" />
+                        Clear Filter
+                      </Button>
+                    )}
+                  </div>
+                </div>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {analytics?.topMedicines?.slice(0, 8).map((medicine, index) => (
-                    <div key={medicine.name} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                          <span className="text-sm font-bold text-blue-600">#{index + 1}</span>
-                        </div>
-                        <div>
-                          <p className="font-medium">{medicine.name}</p>
-                          <p className="text-sm text-gray-600">Qty: {medicine.quantity} units</p>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <p className="font-bold text-green-600">{formatPkrAmount(medicine.revenue)}</p>
-                        <p className="text-sm text-blue-600">Profit: {formatPkrAmount(medicine.profit)}</p>
-                      </div>
+                  {isLoadingFiltered ? (
+                    <div className="flex items-center justify-center h-32">
+                      <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-gray-900"></div>
                     </div>
-                  )) || []}
+                  ) : (
+                    <>
+                      {(selectedMonth ? filteredTopProducts : analytics?.topMedicines)?.slice(0, 8).map((medicine, index) => (
+                        <div key={medicine.name} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                              <span className="text-sm font-bold text-blue-600">#{index + 1}</span>
+                            </div>
+                            <div>
+                              <p className="font-medium">{medicine.name}</p>
+                              <p className="text-sm text-gray-600">Qty: {medicine.quantity} units</p>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <p className="font-bold text-green-600">{formatPkrAmount(medicine.revenue)}</p>
+                            <p className="text-sm text-blue-600">Profit: {formatPkrAmount(medicine.profit)}</p>
+                          </div>
+                        </div>
+                      )) || []}
+                      {((selectedMonth ? filteredTopProducts : analytics?.topMedicines)?.length === 0) && (
+                        <div className="text-center py-8 text-gray-500">
+                          No products found for the selected period
+                        </div>
+                      )}
+                    </>
+                  )}
                 </div>
               </CardContent>
             </Card>
