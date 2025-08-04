@@ -27,6 +27,36 @@ export function StaffInvoices() {
   const { data: hospitalInvoices, isLoading: hospitalLoading } = useInvoices();
   const { data: patientNames } = usePatientNames();
 
+  // Fetch X-ray reports
+  const { data: xrayReports, isLoading: xrayLoading } = useQuery({
+    queryKey: ['xray-reports'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('xray_reports')
+        .select(`
+          *,
+          profiles!xray_reports_patient_id_fkey(first_name, last_name)
+        `)
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      return data;
+    }
+  });
+
+  // Fetch patients data separately for X-ray reports
+  const { data: patients } = useQuery({
+    queryKey: ['patients'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('patients')
+        .select('id, patient_number');
+      
+      if (error) throw error;
+      return data;
+    }
+  });
+
   // Combine all invoices and categorize by type based on description/context
   const allInvoices = useMemo(() => {
     const combined: any[] = [];
@@ -62,8 +92,36 @@ export function StaffInvoices() {
       });
     }
 
+    // Add X-ray reports
+    if (xrayReports) {
+      xrayReports.forEach(xrayReport => {
+        const patientName = xrayReport.profiles 
+          ? `${xrayReport.profiles.first_name} ${xrayReport.profiles.last_name}`.trim()
+          : 'Walk-in Patient';
+        
+        // Find patient number from patients array
+        const patient = patients?.find(p => p.id === xrayReport.patient_id);
+        
+        combined.push({
+          ...xrayReport,
+          type: 'xray',
+          invoice_type: 'xray',
+          invoice_date: xrayReport.created_at,
+          patient_name: patientName,
+          patient_id_display: patient?.patient_number || 'N/A',
+          display_date: format(new Date(xrayReport.created_at), 'MMM d, yyyy'),
+          display_time: format(new Date(xrayReport.created_at), 'h:mm a'),
+          display_amount: formatPkrAmount(xrayReport.price || 0),
+          amount: xrayReport.price || 0,
+          invoice_number: `XRAY-${xrayReport.id.slice(-8).toUpperCase()}`,
+          description: `X-ray: ${xrayReport.test_name}`,
+          status: xrayReport.status === 'completed' ? 'paid' : 'pending'
+        });
+      });
+    }
+
     return combined.sort((a, b) => new Date(b.invoice_date).getTime() - new Date(a.invoice_date).getTime());
-  }, [hospitalInvoices, patientNames]);
+  }, [hospitalInvoices, patientNames, xrayReports, patients]);
 
   // Filter and paginate invoices
   const filteredInvoices = useMemo(() => {
@@ -350,7 +408,7 @@ export function StaffInvoices() {
     return <Badge className={color}>{label}</Badge>;
   };
 
-  const isLoading = hospitalLoading;
+  const isLoading = hospitalLoading || xrayLoading;
   const totalAmount = allInvoices.reduce((sum, invoice) => sum + Number(invoice.amount || 0), 0);
 
   return (
