@@ -68,8 +68,18 @@ export default function FinanceInvoices() {
         await generateInvoicePDF(invoice);
       } else if (invoice.type === 'pharmacy') {
         await generatePharmacyInvoiceFromData(invoice);
+      } else if (invoice.type === 'lab') {
+        // For lab invoices, use the detailed invoice PDF with lab-specific formatting
+        await generateDetailedInvoicePDF({
+          ...invoice,
+          test_name: invoice.description || 'Laboratory Service', // Use description as test name
+          type: 'lab'
+        });
+      } else if (invoice.type === 'ot') {
+        // For OT types, create detailed invoice PDF
+        await generateDetailedInvoicePDF(invoice);
       } else {
-        // For lab and OT types, create detailed invoice PDF
+        // Default to detailed invoice PDF for any other types
         await generateDetailedInvoicePDF(invoice);
       }
       toast({
