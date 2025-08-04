@@ -735,13 +735,13 @@ function OTAnalytics({ data }: { data: any[] }) {
   
   // Calculate today's OT revenue
   const todayRevenue = data.filter(ot => {
-    const otDate = new Date(ot.created_at);
+    const otDate = new Date(ot.operation_date);
     return ot.total_cost && ot.doctor_expense && otDate >= startOfToday && otDate <= endOfToday;
   }).reduce((sum, ot) => sum + (Number(ot.total_cost || 0) - Number(ot.doctor_expense || 0)), 0);
   
   // Calculate monthly OT revenue
   const monthlyRevenue = data.filter(ot => {
-    const otDate = new Date(ot.created_at);
+    const otDate = new Date(ot.operation_date);
     return ot.total_cost && ot.doctor_expense && otDate >= startOfThisMonth && otDate <= endOfThisMonth;
   }).reduce((sum, ot) => sum + (Number(ot.total_cost || 0) - Number(ot.doctor_expense || 0)), 0);
   
