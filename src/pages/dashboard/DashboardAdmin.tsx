@@ -295,7 +295,7 @@ export default function DashboardAdmin() {
             <TabsList className="grid w-full grid-cols-9 h-auto gap-1">
               <TabsTrigger value="overview" className="whitespace-nowrap">Overview</TabsTrigger>
               <TabsTrigger value="analytics" className="whitespace-nowrap">Analytics</TabsTrigger>
-              <TabsTrigger value="finance" className="whitespace-nowrap">Finance</TabsTrigger>
+              {/* <TabsTrigger value="finance" className="whitespace-nowrap">Finance</TabsTrigger> */}
               <TabsTrigger value="accounts" className="whitespace-nowrap">Account Management</TabsTrigger>
               <TabsTrigger value="pharmacy" className="whitespace-nowrap">Pharmacy</TabsTrigger>
               <TabsTrigger value="lab" className="whitespace-nowrap">Lab</TabsTrigger>
@@ -497,9 +497,9 @@ export default function DashboardAdmin() {
               </div>
             </TabsContent>
 
-            <TabsContent value="finance">
+            {/* <TabsContent value="finance">
               <AdminFinanceAnalytics />
-            </TabsContent>
+            </TabsContent> */}
 
             <TabsContent value="accounts">
               <div className="space-y-6">
