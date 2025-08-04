@@ -12,6 +12,7 @@ interface FinancialMetrics {
     hospital: number;
     pharmacy: number;
     lab: number;
+    xray: number;
     ot: number;
     miscellaneous: number;
   };
@@ -45,7 +46,7 @@ export const useFinancialAnalytics = () => {
     queryKey: ['financial-analytics'],
     queryFn: async () => {
       // Fetch all required data
-      const [invoicesRes, pharmacyInvoicesRes, labReportsRes, otSchedulesRes, expensesRes, refundsRes, miscIncomeRes] = await Promise.all([
+      const [invoicesRes, pharmacyInvoicesRes, labReportsRes, xrayReportsRes, otSchedulesRes, expensesRes, refundsRes, miscIncomeRes] = await Promise.all([
         supabase.from('invoices').select('*'),
         supabase.from('pharmacy_invoices').select(`
           *,
@@ -58,6 +59,7 @@ export const useFinancialAnalytics = () => {
           )
         `),
         supabase.from('lab_reports').select('*'),
+        supabase.from('xray_reports').select('*'),
         supabase.from('ot_schedules').select('*'),
         supabase.from('expenses').select('*'),
         supabase.from('refunds').select('*'),
@@ -67,6 +69,7 @@ export const useFinancialAnalytics = () => {
       const invoices = invoicesRes.data || [];
       const pharmacyInvoices = pharmacyInvoicesRes.data || [];
       const labReports = labReportsRes.data || [];
+      const xrayReports = xrayReportsRes.data || [];
       const otSchedules = otSchedulesRes.data || [];
       const expenses = expensesRes.data || [];
       const refunds = refundsRes.data || [];
@@ -104,6 +107,11 @@ export const useFinancialAnalytics = () => {
         .filter(report => report.price)
         .reduce((sum, report) => sum + Number(report.price), 0);
 
+      // Calculate X-ray revenue from reports with prices (both completed and pending)
+      const xrayRevenue = xrayReports
+        .filter(report => report.price)
+        .reduce((sum, report) => sum + Number(report.price), 0);
+
       // Calculate OT revenue (hospital portion only, excluding doctor expenses)
       const otHospitalRevenue = otSchedules
         .filter(schedule => schedule.total_cost && schedule.doctor_expense)
@@ -112,8 +120,8 @@ export const useFinancialAnalytics = () => {
       // Calculate miscellaneous income
       const miscellaneousIncome = miscIncome.reduce((sum, income) => sum + Number(income.amount), 0);
 
-      // Hospital total revenue = emergency consultations + lab revenue + OT hospital portion + pharmacy profit + miscellaneous income
-      const hospitalRevenue = emergencyConsultationRevenue + labRevenue + otHospitalRevenue + pharmacyProfit + miscellaneousIncome;
+      // Hospital total revenue = emergency consultations + lab revenue + X-ray revenue + OT hospital portion + pharmacy profit + miscellaneous income
+      const hospitalRevenue = emergencyConsultationRevenue + labRevenue + xrayRevenue + otHospitalRevenue + pharmacyProfit + miscellaneousIncome;
       
       // Total revenue is hospital revenue + pharmacy sales (for analytics display)
       const totalRevenue = hospitalRevenue + pharmacyRevenue;
@@ -138,6 +146,10 @@ export const useFinancialAnalytics = () => {
           return date.getMonth() === currentMonth && date.getFullYear() === currentYear;
         }),
         ...labReports.filter(report => {
+          const date = new Date(report.created_at);
+          return report.price && date.getMonth() === currentMonth && date.getFullYear() === currentYear;
+        }),
+        ...xrayReports.filter(report => {
           const date = new Date(report.created_at);
           return report.price && date.getMonth() === currentMonth && date.getFullYear() === currentYear;
         }),
@@ -204,6 +216,7 @@ export const useFinancialAnalytics = () => {
           hospital: emergencyConsultationRevenue,
           pharmacy: pharmacyRevenue,
           lab: labRevenue,
+          xray: xrayRevenue,
           ot: otHospitalRevenue,
           miscellaneous: miscellaneousIncome,
         },

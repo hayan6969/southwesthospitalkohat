@@ -75,7 +75,7 @@ export default function FinanceAnalytics() {
   const totalExpenses = financialData?.totalExpenses || 0;
   const netProfit = financialData?.netProfit || 0;
   const profitMargin = financialData?.profitMargin || 0;
-  const revenueBySource = financialData?.revenueBySource || { hospital: 0, pharmacy: 0, lab: 0, ot: 0 };
+  const revenueBySource = financialData?.revenueBySource || { hospital: 0, pharmacy: 0, lab: 0, xray: 0, ot: 0 };
   const monthlyRevenue = financialData?.monthlyRevenue || 0;
   const monthlyExpenses = financialData?.monthlyExpenses || 0;
   const recentActivities = financialData?.recentActivity || [];
@@ -100,6 +100,7 @@ export default function FinanceAnalytics() {
       hospital: revenueBySource.hospital,
       pharmacy: revenueBySource.pharmacy,
       lab: revenueBySource.lab,
+      xray: revenueBySource.xray,
       ot: revenueBySource.ot
     }];
   }, [monthlyRevenue, monthlyExpenses, revenueBySource]);
@@ -109,6 +110,7 @@ export default function FinanceAnalytics() {
     { name: 'Hospital Services', value: revenueBySource.hospital, color: '#3b82f6' },
     { name: 'Pharmacy Sales', value: revenueBySource.pharmacy, color: '#10b981' },
     { name: 'Lab Services', value: revenueBySource.lab, color: '#f59e0b' },
+    { name: 'X-ray Services', value: revenueBySource.xray, color: '#ef4444' },
     { name: 'OT Services (Hospital)', value: revenueBySource.ot, color: '#8b5cf6' },
   ].filter(item => item.value > 0);
 
@@ -373,11 +375,15 @@ export default function FinanceAnalytics() {
                    <div className="w-3 h-3 bg-purple-500 rounded-full flex-shrink-0"></div>
                    <span className="break-all">Pharmacy: {formatLargeNumber(revenueBySource.pharmacy)}</span>
                  </li>
-                 <li className="flex items-center gap-2">
-                   <div className="w-3 h-3 bg-green-500 rounded-full flex-shrink-0"></div>
-                   <span className="break-all">Lab Tests: {formatLargeNumber(revenueBySource.lab)}</span>
-                 </li>
-               </ul>
+                  <li className="flex items-center gap-2">
+                    <div className="w-3 h-3 bg-green-500 rounded-full flex-shrink-0"></div>
+                    <span className="break-all">Lab Tests: {formatLargeNumber(revenueBySource.lab)}</span>
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <div className="w-3 h-3 bg-red-500 rounded-full flex-shrink-0"></div>
+                    <span className="break-all">X-ray Services: {formatLargeNumber(revenueBySource.xray)}</span>
+                  </li>
+                </ul>
              </div>
           </div>
         </CardContent>

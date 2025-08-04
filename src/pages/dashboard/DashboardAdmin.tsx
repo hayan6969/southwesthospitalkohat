@@ -438,7 +438,8 @@ export default function DashboardAdmin() {
                             <div className={`w-3 h-3 rounded-full ${
                               source === 'hospital' ? 'bg-blue-500' :
                               source === 'pharmacy' ? 'bg-green-500' :
-                              source === 'lab' ? 'bg-yellow-500' : 'bg-purple-500'
+                              source === 'lab' ? 'bg-yellow-500' :
+                              source === 'xray' ? 'bg-red-500' : 'bg-purple-500'
                             }`} />
                             <span className="text-sm font-medium capitalize">{source}</span>
                           </div>

@@ -17,6 +17,7 @@ interface FinanceData {
   hospitalInvoices: any[];
   pharmacyInvoices: any[];
   labReports: any[];
+  xrayReports: any[];
   otSchedules: any[];
   expenses: any[];
 }
@@ -63,12 +64,14 @@ export function AdminFinanceAnalytics() {
         { data: hospitalInvoices },
         { data: pharmacyInvoices },
         { data: labReports },
+        { data: xrayReports },
         { data: otSchedules },
         { data: expenses }
       ] = await Promise.all([
         supabase.from('invoices').select('*').gte('created_at', start).lte('created_at', end).order('created_at', { ascending: false }),
         supabase.from('pharmacy_invoices').select('*').gte('created_at', start).lte('created_at', end).order('created_at', { ascending: false }),
         supabase.from('lab_reports').select('*').gte('created_at', start).lte('created_at', end).order('created_at', { ascending: false }),
+        supabase.from('xray_reports').select('*').gte('created_at', start).lte('created_at', end).order('created_at', { ascending: false }),
         supabase.from('ot_schedules').select('*').gte('created_at', start).lte('created_at', end).order('created_at', { ascending: false }),
         supabase.from('expenses').select('*').gte('created_at', start).lte('created_at', end).order('created_at', { ascending: false })
       ]);
@@ -77,6 +80,7 @@ export function AdminFinanceAnalytics() {
         hospitalInvoices: hospitalInvoices || [],
         pharmacyInvoices: pharmacyInvoices || [],
         labReports: labReports || [],
+        xrayReports: xrayReports || [],
         otSchedules: otSchedules || [],
         expenses: expenses || []
       };
@@ -94,6 +98,7 @@ export function AdminFinanceAnalytics() {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'invoices' }, () => refetch())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'pharmacy_invoices' }, () => refetch())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'lab_reports' }, () => refetch())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'xray_reports' }, () => refetch())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'ot_schedules' }, () => refetch())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'expenses' }, () => refetch())
       .subscribe();
@@ -301,7 +306,7 @@ export function AdminFinanceAnalytics() {
 }
 
 function calculateAnalytics(data: FinanceData) {
-  const { hospitalInvoices, pharmacyInvoices, labReports, otSchedules, expenses } = data;
+  const { hospitalInvoices, pharmacyInvoices, labReports, xrayReports, otSchedules, expenses } = data;
   const today = new Date();
   const startOfToday = startOfDay(today);
   const endOfToday = endOfDay(today);
@@ -330,6 +335,9 @@ function calculateAnalytics(data: FinanceData) {
   // Lab revenue goes to hospital (both completed and pending with prices)
   const labRevenue = labReports.filter(report => report.price).reduce((sum, report) => sum + Number(report.price), 0);
   
+  // X-ray revenue goes to hospital (both completed and pending with prices)
+  const xrayRevenue = xrayReports.filter(report => report.price).reduce((sum, report) => sum + Number(report.price), 0);
+  
   // OT revenue - hospital gets total cost minus doctor expense
   const otHospitalRevenue = otSchedules.filter(schedule => schedule.total_cost && schedule.doctor_expense)
     .reduce((sum, schedule) => sum + (Number(schedule.total_cost) - Number(schedule.doctor_expense)), 0);
@@ -338,8 +346,8 @@ function calculateAnalytics(data: FinanceData) {
   const otDoctorExpenses = otSchedules.filter(schedule => schedule.doctor_expense)
     .reduce((sum, schedule) => sum + Number(schedule.doctor_expense), 0);
 
-  // Hospital revenue = EMERGENCY consultations + lab + OT hospital portion + pharmacy profit
-  const hospitalRevenue = emergencyConsultationRevenue + labRevenue + otHospitalRevenue + pharmacyProfit;
+  // Hospital revenue = EMERGENCY consultations + lab + X-ray + OT hospital portion + pharmacy profit
+  const hospitalRevenue = emergencyConsultationRevenue + labRevenue + xrayRevenue + otHospitalRevenue + pharmacyProfit;
   
   // Total revenue for display purposes
   const totalRevenue = hospitalRevenue + pharmacyRevenue + doctorConsultationRevenue + otDoctorExpenses;
@@ -360,12 +368,17 @@ function calculateAnalytics(data: FinanceData) {
     new Date(report.created_at) >= startOfToday && new Date(report.created_at) <= endOfToday
   ).reduce((sum, report) => sum + Number(report.price), 0);
   
+  const todayXrayRevenue = xrayReports.filter(report => 
+    report.price &&
+    new Date(report.created_at) >= startOfToday && new Date(report.created_at) <= endOfToday
+  ).reduce((sum, report) => sum + Number(report.price), 0);
+  
   const todayOTRevenue = otSchedules.filter(schedule => 
     schedule.total_cost && schedule.doctor_expense &&
     new Date(schedule.created_at) >= startOfToday && new Date(schedule.created_at) <= endOfToday
   ).reduce((sum, schedule) => sum + (Number(schedule.total_cost) - Number(schedule.doctor_expense)), 0);
   
-  const todayTotalRevenue = todayEmergencyRevenue + todayPharmacyRevenue + todayLabRevenue + todayOTRevenue;
+  const todayTotalRevenue = todayEmergencyRevenue + todayPharmacyRevenue + todayLabRevenue + todayXrayRevenue + todayOTRevenue;
   
   // Calculate MONTHLY revenue
   const monthlyEmergencyRevenue = hospitalInvoices.filter(inv => 
@@ -383,25 +396,31 @@ function calculateAnalytics(data: FinanceData) {
     new Date(report.created_at) >= startOfThisMonth && new Date(report.created_at) <= endOfThisMonth
   ).reduce((sum, report) => sum + Number(report.price), 0);
   
+  const monthlyXrayRevenue = xrayReports.filter(report => 
+    report.price &&
+    new Date(report.created_at) >= startOfThisMonth && new Date(report.created_at) <= endOfThisMonth
+  ).reduce((sum, report) => sum + Number(report.price), 0);
+  
   const monthlyOTRevenue = otSchedules.filter(schedule => 
     schedule.total_cost && schedule.doctor_expense &&
     new Date(schedule.created_at) >= startOfThisMonth && new Date(schedule.created_at) <= endOfThisMonth
   ).reduce((sum, schedule) => sum + (Number(schedule.total_cost) - Number(schedule.doctor_expense)), 0);
   
-  const monthlyTotalRevenue = monthlyEmergencyRevenue + monthlyPharmacyRevenue + monthlyLabRevenue + monthlyOTRevenue;
+  const monthlyTotalRevenue = monthlyEmergencyRevenue + monthlyPharmacyRevenue + monthlyLabRevenue + monthlyXrayRevenue + monthlyOTRevenue;
   
   const totalExpenses = expenses.reduce((sum, exp) => sum + Number(exp.amount), 0);
   const netProfit = hospitalRevenue - totalExpenses; // Hospital profit only
   const profitMargin = totalRevenue > 0 ? (netProfit / totalRevenue) * 100 : 0;
 
   // Calculate daily trends
-  const dailyTrends = calculateDailyTrends([...hospitalInvoices, ...pharmacyInvoices, ...labReports, ...otSchedules], expenses);
+  const dailyTrends = calculateDailyTrends([...hospitalInvoices, ...pharmacyInvoices, ...labReports, ...xrayReports, ...otSchedules], expenses);
 
   // Revenue by source for pie chart
   const revenueBySource = [
     { name: 'Hospital', value: hospitalRevenue },
     { name: 'Pharmacy', value: pharmacyRevenue },
     { name: 'Lab', value: labRevenue },
+    { name: 'X-ray', value: xrayRevenue },
     { name: 'OT', value: otHospitalRevenue }
   ].filter(item => item.value > 0);
 
@@ -434,14 +453,17 @@ function calculateAnalytics(data: FinanceData) {
     hospitalRevenue,
     pharmacyRevenue,
     labRevenue,
+    xrayRevenue,
     otRevenue: otHospitalRevenue,
     hospitalInvoiceCount: hospitalInvoices.length,
     pharmacyInvoiceCount: pharmacyInvoices.length,
     labReportCount: labReports.length,
+    xrayReportCount: xrayReports.length,
     otScheduleCount: otSchedules.length,
     hospitalAverage: hospitalInvoices.length > 0 ? hospitalRevenue / hospitalInvoices.length : 0,
     pharmacyAverage: pharmacyInvoices.length > 0 ? pharmacyRevenue / pharmacyInvoices.length : 0,
     labAverage: labReports.length > 0 ? labRevenue / labReports.length : 0,
+    xrayAverage: xrayReports.length > 0 ? xrayRevenue / xrayReports.length : 0,
     otAverage: otSchedules.length > 0 ? otHospitalRevenue / otSchedules.length : 0,
     dailyTrends,
     revenueBySource,
