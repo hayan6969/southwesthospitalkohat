@@ -4,11 +4,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { formatPkrAmount } from "@/utils/currency";
-import { Eye, Search, ChevronLeft, ChevronRight } from "lucide-react";
+import { Eye, Search, ChevronLeft, ChevronRight, Calendar as CalendarIcon, X } from "lucide-react";
 import { format } from "date-fns";
+import { cn } from "@/lib/utils";
 
 interface ExpenseWithProfile {
   id: string;
@@ -29,8 +32,9 @@ interface ExpenseWithProfile {
 export function AllExpensesDialog() {
   const [open, setOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+  const [filterDate, setFilterDate] = useState<Date | undefined>();
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 20;
+  const itemsPerPage = 10;
 
   // Fetch expenses with creator profile information
   const { data: allExpenses, isLoading } = useQuery({
@@ -66,20 +70,31 @@ export function AllExpensesDialog() {
     }
   });
 
-  // Filter expenses based on search term (search in creator email)
+  // Filter expenses based on search term and date
   const filteredExpenses = allExpenses?.filter(expense => {
-    if (!searchTerm) return true;
-    
-    const searchLower = searchTerm.toLowerCase();
-    const creatorEmail = expense.creator?.email?.toLowerCase() || '';
-    const creatorName = `${expense.creator?.first_name || ''} ${expense.creator?.last_name || ''}`.toLowerCase();
-    const category = expense.category.toLowerCase();
-    const description = expense.description.toLowerCase();
-    
-    return creatorEmail.includes(searchLower) || 
-           creatorName.includes(searchLower) ||
-           category.includes(searchLower) ||
-           description.includes(searchLower);
+    // Text search filter
+    let matchesSearch = true;
+    if (searchTerm) {
+      const searchLower = searchTerm.toLowerCase();
+      const creatorEmail = expense.creator?.email?.toLowerCase() || '';
+      const creatorName = `${expense.creator?.first_name || ''} ${expense.creator?.last_name || ''}`.toLowerCase();
+      const category = expense.category.toLowerCase();
+      const description = expense.description.toLowerCase();
+      
+      matchesSearch = creatorEmail.includes(searchLower) || 
+                     creatorName.includes(searchLower) ||
+                     category.includes(searchLower) ||
+                     description.includes(searchLower);
+    }
+
+    // Date filter
+    let matchesDate = true;
+    if (filterDate) {
+      const expenseDate = new Date(expense.expense_date);
+      matchesDate = expenseDate.toDateString() === filterDate.toDateString();
+    }
+
+    return matchesSearch && matchesDate;
   }) || [];
 
   // Pagination logic
@@ -88,9 +103,19 @@ export function AllExpensesDialog() {
   const endIndex = startIndex + itemsPerPage;
   const paginatedExpenses = filteredExpenses.slice(startIndex, endIndex);
 
-  // Reset page when search changes
+  // Reset page when search or date filter changes
   const handleSearchChange = (value: string) => {
     setSearchTerm(value);
+    setCurrentPage(1);
+  };
+
+  const handleDateFilterChange = (date: Date | undefined) => {
+    setFilterDate(date);
+    setCurrentPage(1);
+  };
+
+  const clearDateFilter = () => {
+    setFilterDate(undefined);
     setCurrentPage(1);
   };
 
@@ -110,8 +135,8 @@ export function AllExpensesDialog() {
         </DialogHeader>
         
         <div className="space-y-4">
-          {/* Search and summary */}
-          <div className="flex items-center justify-between gap-4">
+          {/* Search and filters */}
+          <div className="flex items-center justify-between gap-4 flex-wrap">
             <div className="flex items-center gap-2 flex-1">
               <Search className="w-4 h-4 text-gray-400" />
               <Input
@@ -121,9 +146,47 @@ export function AllExpensesDialog() {
                 className="max-w-md"
               />
             </div>
+            
+            <div className="flex items-center gap-2">
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "w-48 justify-start text-left font-normal",
+                      !filterDate && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {filterDate ? format(filterDate, "PPP") : <span>Filter by date</span>}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={filterDate}
+                    onSelect={handleDateFilterChange}
+                    initialFocus
+                    className={cn("p-3 pointer-events-auto")}
+                  />
+                </PopoverContent>
+              </Popover>
+              
+              {filterDate && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={clearDateFilter}
+                  className="px-2"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              )}
+            </div>
+            
             <div className="text-sm text-gray-600">
               Total: <span className="font-semibold text-red-600">{formatPkrAmount(totalAmount)}</span>
-              {searchTerm && ` (${filteredExpenses.length} results)`}
+              {(searchTerm || filterDate) && ` (${filteredExpenses.length} results)`}
             </div>
           </div>
 
@@ -187,8 +250,8 @@ export function AllExpensesDialog() {
                   ) : (
                     <TableRow>
                       <TableCell colSpan={6} className="text-center text-gray-500 py-8">
-                        {filteredExpenses.length === 0 && searchTerm 
-                          ? `No expenses found matching "${searchTerm}"`
+                        {filteredExpenses.length === 0 && (searchTerm || filterDate)
+                          ? `No expenses found matching the current filters`
                           : "No expenses found"
                         }
                       </TableCell>
