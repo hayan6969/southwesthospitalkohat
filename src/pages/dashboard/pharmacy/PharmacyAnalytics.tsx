@@ -14,9 +14,19 @@ import { TrendingUp, TrendingDown, Banknote, Package, ShoppingCart, AlertTriangl
 import { formatPkrAmount } from "@/utils/currency";
 
 export default function PharmacyAnalytics() {
+  const [selectedYear, setSelectedYear] = useState<string>("");
   const [selectedMonth, setSelectedMonth] = useState<string>("");
+  
+  // Create the month filter string for the hook
+  const monthFilter = selectedYear && selectedMonth ? `${selectedYear}-${selectedMonth.padStart(2, '0')}` : "";
+  
   const { data: analytics, isLoading } = usePharmacyAnalytics();
-  const { data: filteredTopProducts, isLoading: isLoadingFiltered } = useFilteredTopProducts(selectedMonth);
+  const { data: filteredTopProducts, isLoading: isLoadingFiltered } = useFilteredTopProducts(monthFilter);
+
+  const clearFilters = () => {
+    setSelectedYear("");
+    setSelectedMonth("");
+  };
 
   if (isLoading) {
     return (
@@ -295,46 +305,44 @@ export default function PharmacyAnalytics() {
                     <p className="text-sm text-gray-600">Based on revenue and profit contribution</p>
                   </div>
                   <div className="flex flex-col space-y-2 sm:flex-row sm:items-center sm:space-y-0 sm:space-x-2">
-                    <Select value={selectedMonth} onValueChange={setSelectedMonth}>
-                      <SelectTrigger className="w-full sm:w-48">
-                        <SelectValue placeholder="Filter by month" />
+                    <Select value={selectedYear} onValueChange={setSelectedYear}>
+                      <SelectTrigger className="w-full sm:w-32">
+                        <SelectValue placeholder="Year" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="2024-01">January 2024</SelectItem>
-                        <SelectItem value="2024-02">February 2024</SelectItem>
-                        <SelectItem value="2024-03">March 2024</SelectItem>
-                        <SelectItem value="2024-04">April 2024</SelectItem>
-                        <SelectItem value="2024-05">May 2024</SelectItem>
-                        <SelectItem value="2024-06">June 2024</SelectItem>
-                        <SelectItem value="2024-07">July 2024</SelectItem>
-                        <SelectItem value="2024-08">August 2024</SelectItem>
-                        <SelectItem value="2024-09">September 2024</SelectItem>
-                        <SelectItem value="2024-10">October 2024</SelectItem>
-                        <SelectItem value="2024-11">November 2024</SelectItem>
-                        <SelectItem value="2024-12">December 2024</SelectItem>
-                        <SelectItem value="2025-01">January 2025</SelectItem>
-                        <SelectItem value="2025-02">February 2025</SelectItem>
-                        <SelectItem value="2025-03">March 2025</SelectItem>
-                        <SelectItem value="2025-04">April 2025</SelectItem>
-                        <SelectItem value="2025-05">May 2025</SelectItem>
-                        <SelectItem value="2025-06">June 2025</SelectItem>
-                        <SelectItem value="2025-07">July 2025</SelectItem>
-                        <SelectItem value="2025-08">August 2025</SelectItem>
-                        <SelectItem value="2025-09">September 2025</SelectItem>
-                        <SelectItem value="2025-10">October 2025</SelectItem>
-                        <SelectItem value="2025-11">November 2025</SelectItem>
-                        <SelectItem value="2025-12">December 2025</SelectItem>
+                        <SelectItem value="2024">2024</SelectItem>
+                        <SelectItem value="2025">2025</SelectItem>
+                        <SelectItem value="2026">2026</SelectItem>
                       </SelectContent>
                     </Select>
-                    {selectedMonth && (
+                    <Select value={selectedMonth} onValueChange={setSelectedMonth}>
+                      <SelectTrigger className="w-full sm:w-32">
+                        <SelectValue placeholder="Month" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="1">January</SelectItem>
+                        <SelectItem value="2">February</SelectItem>
+                        <SelectItem value="3">March</SelectItem>
+                        <SelectItem value="4">April</SelectItem>
+                        <SelectItem value="5">May</SelectItem>
+                        <SelectItem value="6">June</SelectItem>
+                        <SelectItem value="7">July</SelectItem>
+                        <SelectItem value="8">August</SelectItem>
+                        <SelectItem value="9">September</SelectItem>
+                        <SelectItem value="10">October</SelectItem>
+                        <SelectItem value="11">November</SelectItem>
+                        <SelectItem value="12">December</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    {(selectedYear || selectedMonth) && (
                       <Button 
                         variant="outline" 
                         size="sm" 
-                        onClick={() => setSelectedMonth("")}
+                        onClick={clearFilters}
                         className="flex items-center gap-1"
                       >
                         <X className="w-3 h-3" />
-                        Clear Filter
+                        Clear Filters
                       </Button>
                     )}
                   </div>
@@ -348,7 +356,7 @@ export default function PharmacyAnalytics() {
                     </div>
                   ) : (
                     <>
-                      {(selectedMonth ? filteredTopProducts : analytics?.topMedicines)?.slice(0, 8).map((medicine, index) => (
+                      {(monthFilter ? filteredTopProducts : analytics?.topMedicines)?.slice(0, 8).map((medicine, index) => (
                         <div key={medicine.name} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
                           <div className="flex items-center gap-3">
                             <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
@@ -365,7 +373,7 @@ export default function PharmacyAnalytics() {
                           </div>
                         </div>
                       )) || []}
-                      {((selectedMonth ? filteredTopProducts : analytics?.topMedicines)?.length === 0) && (
+                      {((monthFilter ? filteredTopProducts : analytics?.topMedicines)?.length === 0) && (
                         <div className="text-center py-8 text-gray-500">
                           No products found for the selected period
                         </div>
