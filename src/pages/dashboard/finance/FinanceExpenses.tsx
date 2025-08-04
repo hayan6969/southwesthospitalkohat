@@ -344,7 +344,7 @@ export default function FinanceExpenses() {
                 <TableHead>Description</TableHead>
                 <TableHead>Amount</TableHead>
                 <TableHead>Date</TableHead>
-                
+                <TableHead>Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -358,6 +358,16 @@ export default function FinanceExpenses() {
                     -{formatPkrAmount(expense.amount)}
                   </TableCell>
                   <TableCell>{format(new Date(expense.expense_date), 'MMM dd, yyyy')}</TableCell>
+                  <TableCell>
+                    <Button 
+                      size="sm" 
+                      variant="outline"
+                      onClick={() => deleteExpenseMutation.mutate(expense.id)}
+                      disabled={deleteExpenseMutation.isPending}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>
