@@ -67,16 +67,31 @@ export default function FinanceDaily() {
       const upperBound = isToday ? currentPakTime.toISOString() : toPakistanTime(new Date(`${targetDate}T23:59:59`)).toISOString();
       
       console.log('Filtering activities from:', cutoffTime, 'to:', upperBound);
+      console.log('Last closing details:', lastClosing ? {
+        id: lastClosing.id,
+        closing_date: lastClosing.closing_date,
+        closing_time: lastClosing.closing_time,
+        formattedTime: formatInPakistanTime(new Date(lastClosing.closing_time), 'MMM d, yyyy h:mm a')
+      } : 'No previous closing found');
 
       // Hospital invoices (consultations) - filter based on cutoff time
       const { data: hospitalInvoices } = await supabase
         .from('invoices')
-        .select('amount')
+        .select('amount, created_at, description')
         .eq('status', 'paid')
         .gte('created_at', cutoffTime)
         .lte('created_at', upperBound);
 
       console.log('Hospital invoices found:', hospitalInvoices?.length, hospitalInvoices);
+      
+      // Log each hospital invoice to verify time filtering
+      if (hospitalInvoices && hospitalInvoices.length > 0) {
+        console.log('Hospital invoice details:', hospitalInvoices.map(inv => ({
+          amount: inv.amount,
+          created_at: inv.created_at,
+          formatted_time: formatInPakistanTime(new Date(inv.created_at), 'MMM d, yyyy h:mm a')
+        })));
+      }
 
       // Pharmacy invoices with items for profit calculation - filter based on cutoff time
       const { data: pharmacyInvoicesWithItems } = await supabase
@@ -95,11 +110,20 @@ export default function FinanceDaily() {
         .lte('created_at', upperBound);
 
       console.log('Pharmacy invoices found:', pharmacyInvoicesWithItems?.length, pharmacyInvoicesWithItems);
+      
+      // Log each pharmacy invoice to verify time filtering
+      if (pharmacyInvoicesWithItems && pharmacyInvoicesWithItems.length > 0) {
+        console.log('Pharmacy invoice details:', pharmacyInvoicesWithItems.map(inv => ({
+          final_amount: inv.final_amount,
+          created_at: inv.created_at,
+          formatted_time: formatInPakistanTime(new Date(inv.created_at), 'MMM d, yyyy h:mm a')
+        })));
+      }
 
       // Lab reports - filter based on cutoff time
       const { data: labReports } = await supabase
         .from('lab_reports')
-        .select('price')
+        .select('price, created_at, test_name')
         .eq('status', 'completed')
         .gte('created_at', cutoffTime)
         .lte('created_at', upperBound);
@@ -204,7 +228,10 @@ export default function FinanceDaily() {
         totalRefunds,
         otRefunds,
         pharmacyRefunds,
-        otherRefunds
+        otherRefunds,
+        cutoffTimeUsed: cutoffTime,
+        upperBoundUsed: upperBound,
+        lastClosingInfo: lastClosing ? formatInPakistanTime(new Date(lastClosing.closing_time), 'MMM d, yyyy h:mm a') : 'None'
       });
 
       return {
@@ -458,7 +485,7 @@ export default function FinanceDaily() {
           </p>
           {dailyData?.lastClosing && (
             <p className="text-xs text-blue-600 mt-1">
-              📊 Showing activities since last closing: {formatInPakistanTime(new Date(dailyData.lastClosing.closing_time), 'MMM d, yyyy HH:mm')} (Pakistan time)
+              📊 Showing activities since last closing: {formatInPakistanTime(new Date(dailyData.lastClosing.closing_time), 'MMM d, yyyy h:mm a')} (Pakistan time)
             </p>
           )}
         </div>
@@ -917,7 +944,7 @@ export default function FinanceDaily() {
                     {formatInPakistanTime(new Date(lastClosingData.closing_date), 'EEEE, MMMM d, yyyy')}
                   </h3>
                   <p className="text-muted-foreground">
-                    Closed at: {formatInPakistanTime(new Date(lastClosingData.closing_time), 'HH:mm:ss')} (Pakistan time)
+                    Closed at: {formatInPakistanTime(new Date(lastClosingData.closing_time), 'h:mm:ss a')} (Pakistan time)
                   </p>
                 </div>
                 
