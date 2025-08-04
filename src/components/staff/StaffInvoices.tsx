@@ -55,6 +55,7 @@ export function StaffInvoices() {
           invoice_type: type,
           invoice_date: invoice.created_at,
           patient_name: getPatientName(invoice.patient_id, patientNames || []),
+          patient_number: invoice.patient?.patient_number, // Add this line to preserve patient_number
           amount: invoice.amount,
           status: invoice.status
         });
@@ -209,7 +210,9 @@ export function StaffInvoices() {
     doc.setFont('helvetica', 'bold');
     doc.text('Patient ID:', 120, yPosition + 5);
     doc.setFont('helvetica', 'normal');
-    doc.text(invoice.patient_number || 'N/A', 160, yPosition + 5);
+    // Access patient number from nested patient object
+    const patientId = invoice.patient?.patient_number || invoice.patient_number || 'N/A';
+    doc.text(patientId, 160, yPosition + 5);
     
     yPosition += 10;
     
