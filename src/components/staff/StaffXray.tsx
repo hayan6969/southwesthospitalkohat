@@ -91,10 +91,16 @@ export function StaffXray() {
       const patientProfile = patients?.find(p => p.id === report.patient_id);
       const doctorProfile = doctors?.find(d => d.id === report.doctor_id);
       
-      const patientInfo = formatPatientInfo(
-        { emergency_contact_phone: patientProfile?.phone }, 
+      // Provide fallback data when patient profile is not found
+      const patientInfo = patientProfile ? formatPatientInfo(
+        { emergency_contact_phone: patientProfile.phone }, 
         patientProfile
-      );
+      ) : {
+        fullName: 'Unknown Patient',
+        email: 'Not provided',
+        phone: 'Not provided',
+        patientNumber: 'Not assigned'
+      };
       
       await generateXrayInvoicePDF({
         invoiceNumber: `XR-${report.id.slice(0, 8)}`,
@@ -111,7 +117,7 @@ export function StaffXray() {
         }],
         totalAmount: report.price || 0,
         issueDate: new Date(report.created_at).toLocaleDateString(),
-        xrayDate: new Date(report.xray_date).toLocaleDateString(),
+        xrayDate: new Date(report.xray_date || report.created_at).toLocaleDateString(),
         notes: report.notes
       });
     } catch (error) {
