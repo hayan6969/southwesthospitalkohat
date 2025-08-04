@@ -15,6 +15,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Calendar, Search, UserPlus, X, CalendarIcon } from "lucide-react";
 import { formatPkrAmount } from "@/utils/currency";
+import { generateXrayInvoicePDF } from "@/utils/pdfGenerator";
 import { XrayOrderConfirmationDialog } from "./XrayOrderConfirmationDialog";
 import { useCreatePatientWithProfile } from "@/hooks/useDatabase";
 import { useSearchPatientsWithNames } from "@/hooks/useDisplayHelpers";
@@ -273,6 +274,7 @@ export function XrayDialog({ open, onOpenChange, onSuccess }: XrayDialogProps) {
     
     try {
       let patientId = selectedPatient?.id;
+      let patientData = selectedPatient;
       
       // If registering new patient, create them first
       if (activeTab === "register") {
@@ -291,6 +293,7 @@ export function XrayDialog({ open, onOpenChange, onSuccess }: XrayDialogProps) {
       }
       
       // Create X-ray reports for each selected test
+      const createdReports = [];
       for (const testId of selectedTests) {
         const test = xrayTests?.find(t => t.id === testId);
         if (!test) continue;
@@ -307,7 +310,47 @@ export function XrayDialog({ open, onOpenChange, onSuccess }: XrayDialogProps) {
           status: 'pending'
         };
 
-        await createXrayReport.mutateAsync(xrayData);
+        const report = await createXrayReport.mutateAsync(xrayData);
+        createdReports.push(report);
+      }
+
+      // Generate and open PDF invoice
+      if (createdReports.length > 0) {
+        const selectedDoctor = doctors?.find(d => d.id === doctorId);
+        const doctorName = externalDoctorName || (selectedDoctor ? selectedDoctor.name : undefined);
+        
+        const patientName = activeTab === "register" 
+          ? `${newPatient.first_name} ${newPatient.last_name}`.trim()
+          : selectedPatient?.profile?.first_name && selectedPatient?.profile?.last_name
+            ? `${selectedPatient.profile.first_name} ${selectedPatient.profile.last_name}`.trim()
+            : "Unknown Patient";
+
+        const patientPhone = activeTab === "register" 
+          ? newPatient.phone 
+          : selectedPatient?.profile?.phone || "N/A";
+
+        const testsForPDF = selectedTests.map(testId => {
+          const test = xrayTests?.find(t => t.id === testId);
+          return test ? {
+            name: test.name,
+            price: test.price,
+            description: test.description || undefined
+          } : null;
+        }).filter(Boolean) as any[];
+
+        await generateXrayInvoicePDF({
+          invoiceNumber: `XR-${createdReports[0].id.slice(0, 8)}`,
+          patientName: patientName,
+          patientEmail: "N/A",
+          patientId: activeTab === "register" ? "New Patient" : selectedPatient?.patient_number || "N/A",
+          patientPhone: patientPhone,
+          doctorName: doctorName,
+          tests: testsForPDF,
+          totalAmount: totalAmount,
+          issueDate: new Date().toLocaleDateString(),
+          xrayDate: xrayDate ? format(xrayDate, "MMM dd, yyyy") : new Date().toLocaleDateString(),
+          notes: notes.trim()
+        });
       }
 
       toast.success(`${selectedTests.length} X-ray examination(s) scheduled successfully`);
