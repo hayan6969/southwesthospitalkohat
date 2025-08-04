@@ -685,13 +685,15 @@ export function XrayDialog({ open, onOpenChange, onSuccess }: XrayDialogProps) {
         </DialogContent>
       </Dialog>
 
-      <XrayOrderConfirmationDialog
-        open={showConfirmation}
-        onOpenChange={setShowConfirmation}
-        confirmationData={confirmationData}
-        onConfirm={handleConfirm}
-        isProcessing={isSubmitting}
-      />
+      {confirmationData && (
+        <XrayOrderConfirmationDialog
+          open={showConfirmation}
+          onOpenChange={setShowConfirmation}
+          confirmationData={confirmationData}
+          onConfirm={handleConfirm}
+          isProcessing={isSubmitting}
+        />
+      )}
     </>
   );
 }
