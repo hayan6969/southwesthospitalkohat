@@ -41,17 +41,39 @@ export default function FinanceDaily() {
     queryFn: async () => {
       console.log('Daily Finance Query for date:', targetDate);
       
-      // Hospital invoices (consultations)
+      // First, get the last daily closing to determine the cutoff time
+      const { data: lastClosingData } = await supabase.rpc('get_last_daily_closing');
+      const lastClosing = lastClosingData?.[0];
+      
+      // Determine the time cutoff for filtering
+      let cutoffTime: string;
+      if (lastClosing) {
+        // If there's a previous closing, use activities after that closing time
+        cutoffTime = lastClosing.closing_time;
+        console.log('Last closing found at:', cutoffTime, 'filtering activities after this time');
+      } else {
+        // If no previous closing, include activities from the beginning of the selected date
+        cutoffTime = `${targetDate}T00:00:00`;
+        console.log('No previous closing found, using start of selected date:', cutoffTime);
+      }
+      
+      // Current time for upper bound (only for today's date)
+      const isToday = targetDate === formatDateForQuery(new Date());
+      const upperBound = isToday ? new Date().toISOString() : `${targetDate}T23:59:59`;
+      
+      console.log('Filtering activities from:', cutoffTime, 'to:', upperBound);
+
+      // Hospital invoices (consultations) - filter based on cutoff time
       const { data: hospitalInvoices } = await supabase
         .from('invoices')
         .select('amount')
         .eq('status', 'paid')
-        .gte('created_at', `${targetDate}T00:00:00`)
-        .lt('created_at', `${targetDate}T23:59:59`);
+        .gte('created_at', cutoffTime)
+        .lte('created_at', upperBound);
 
       console.log('Hospital invoices found:', hospitalInvoices?.length, hospitalInvoices);
 
-      // Pharmacy invoices with items for profit calculation
+      // Pharmacy invoices with items for profit calculation - filter based on cutoff time
       const { data: pharmacyInvoicesWithItems } = await supabase
         .from('pharmacy_invoices')
         .select(`
@@ -64,73 +86,59 @@ export default function FinanceDaily() {
             medicines(purchase_price, selling_price)
           )
         `)
-        .gte('created_at', `${targetDate}T00:00:00`)
-        .lt('created_at', `${targetDate}T23:59:59`);
+        .gte('created_at', cutoffTime)
+        .lte('created_at', upperBound);
 
       console.log('Pharmacy invoices found:', pharmacyInvoicesWithItems?.length, pharmacyInvoicesWithItems);
 
-      // Lab reports
+      // Lab reports - filter based on cutoff time
       const { data: labReports } = await supabase
         .from('lab_reports')
         .select('price')
         .eq('status', 'completed')
-        .gte('created_at', `${targetDate}T00:00:00`)
-        .lt('created_at', `${targetDate}T23:59:59`);
+        .gte('created_at', cutoffTime)
+        .lte('created_at', upperBound);
 
       console.log('Lab reports found:', labReports?.length, labReports);
 
-      // OT schedules
+      // OT schedules - filter based on cutoff time for creation but still filter by operation_date for the day
       const { data: otSchedules } = await supabase
         .from('ot_schedules')
-        .select('total_cost, doctor_expense')
+        .select('total_cost, doctor_expense, created_at, operation_date')
         .eq('status', 'completed')
-        .eq('operation_date', targetDate);
+        .gte('created_at', cutoffTime)
+        .lte('created_at', upperBound);
 
       console.log('OT schedules found:', otSchedules?.length, otSchedules);
 
-      // Emergency consultations - check both 'emergency' and 'Emergency' and include completed status
+      // Emergency consultations - filter based on cutoff time
       const { data: emergencyAppointments } = await supabase
         .from('appointments')
         .select('consultation_fee_at_time, type, status, appointment_date')
         .ilike('type', 'emergency')
         .eq('status', 'completed')
-        .gte('appointment_date', `${targetDate}T00:00:00`)
-        .lt('appointment_date', `${targetDate}T23:59:59`);
+        .gte('appointment_date', cutoffTime)
+        .lte('appointment_date', upperBound);
 
       console.log('Emergency appointments found:', emergencyAppointments?.length, emergencyAppointments);
 
-      // Let's also check all appointments for that date to see if any exist
-      const { data: allAppointments } = await supabase
-        .from('appointments')
-        .select('consultation_fee_at_time, type, status, appointment_date')
-        .gte('appointment_date', `${targetDate}T00:00:00`)
-        .lt('appointment_date', `${targetDate}T23:59:59`);
-
-      console.log('All appointments for date:', allAppointments?.length, allAppointments);
-
-      // Daily expenses
+      // Daily expenses - filter based on cutoff time
       const { data: expenses } = await supabase
         .from('expenses')
-        .select('amount')
-        .eq('expense_date', targetDate);
+        .select('amount, expense_date, created_at')
+        .gte('created_at', cutoffTime)
+        .lte('created_at', upperBound);
 
       console.log('Expenses found:', expenses?.length, expenses);
 
-      // Refunds for the day
+      // Refunds for the period - filter based on cutoff time
       const { data: refunds } = await supabase
         .from('refunds')
         .select('amount, refund_type, description, created_at')
-        .gte('created_at', `${targetDate}T00:00:00`)
-        .lt('created_at', `${targetDate}T23:59:59`);
+        .gte('created_at', cutoffTime)
+        .lte('created_at', upperBound);
 
       console.log('Refunds found:', refunds?.length, refunds);
-
-      // Let's also check all refunds to see if any exist
-      const { data: allRefunds } = await supabase
-        .from('refunds')
-        .select('amount, refund_type, description, created_at');
-
-      console.log('All refunds in system:', allRefunds?.length, allRefunds);
 
       // Calculate totals
       // Hospital revenue ONLY from emergency consultations (regular consultations go to doctors)
@@ -207,7 +215,9 @@ export default function FinanceDaily() {
         otRefunds,
         pharmacyRefunds,
         otherRefunds,
-        refunds: refunds || []
+        refunds: refunds || [],
+        lastClosing: lastClosing,
+        cutoffTime: cutoffTime
       };
     },
     refetchInterval: 30000, // Refresh every 30 seconds
@@ -217,7 +227,25 @@ export default function FinanceDaily() {
   const { data: detailedData } = useQuery({
     queryKey: ['daily-detailed', targetDate],
     queryFn: async () => {
-      // Fetch all detailed transaction data
+      // First, get the last daily closing to determine the cutoff time for detailed data
+      const { data: lastClosingData } = await supabase.rpc('get_last_daily_closing');
+      const lastClosing = lastClosingData?.[0];
+      
+      // Determine the time cutoff for filtering detailed data
+      let cutoffTime: string;
+      if (lastClosing) {
+        // If there's a previous closing, use activities after that closing time
+        cutoffTime = lastClosing.closing_time;
+      } else {
+        // If no previous closing, include activities from the beginning of the selected date
+        cutoffTime = `${targetDate}T00:00:00`;
+      }
+      
+      // Current time for upper bound (only for today's date)
+      const isToday = targetDate === formatDateForQuery(new Date());
+      const upperBound = isToday ? new Date().toISOString() : `${targetDate}T23:59:59`;
+
+      // Fetch all detailed transaction data using proper time filtering
       const [
         hospitalInvoicesRes,
         pharmacyInvoicesRes,
@@ -234,8 +262,8 @@ export default function FinanceDaily() {
           .from('invoices')
           .select('*, patients(id, profiles(first_name, last_name))')
           .eq('status', 'paid')
-          .gte('created_at', `${targetDate}T00:00:00`)
-          .lt('created_at', `${targetDate}T23:59:59`),
+          .gte('created_at', cutoffTime)
+          .lte('created_at', upperBound),
         
         supabase
           .from('pharmacy_invoices')
@@ -249,45 +277,48 @@ export default function FinanceDaily() {
               medicines(name, purchase_price, selling_price)
             )
           `)
-          .gte('created_at', `${targetDate}T00:00:00`)
-          .lt('created_at', `${targetDate}T23:59:59`),
+          .gte('created_at', cutoffTime)
+          .lte('created_at', upperBound),
         
         supabase
           .from('lab_reports')
           .select('*, patients(id, profiles(first_name, last_name))')
           .eq('status', 'completed')
-          .gte('created_at', `${targetDate}T00:00:00`)
-          .lt('created_at', `${targetDate}T23:59:59`),
+          .gte('created_at', cutoffTime)
+          .lte('created_at', upperBound),
         
         supabase
           .from('ot_schedules')
           .select('*, patients(id, profiles(first_name, last_name)), ot_operations(operation_name)')
           .eq('status', 'completed')
-          .eq('operation_date', targetDate),
+          .gte('created_at', cutoffTime)
+          .lte('created_at', upperBound),
         
         supabase
           .from('appointments')
           .select('*, patients(id, profiles(first_name, last_name)), doctors(id, profiles(first_name, last_name))')
           .ilike('type', 'emergency')
           .eq('status', 'completed')
-          .gte('appointment_date', `${targetDate}T00:00:00`)
-          .lt('appointment_date', `${targetDate}T23:59:59`),
+          .gte('appointment_date', cutoffTime)
+          .lte('appointment_date', upperBound),
         
         supabase
           .from('expenses')
           .select('*')
-          .eq('expense_date', targetDate),
+          .gte('created_at', cutoffTime)
+          .lte('created_at', upperBound),
         
         supabase
           .from('refunds')
           .select('*')
-          .gte('created_at', `${targetDate}T00:00:00`)
-          .lt('created_at', `${targetDate}T23:59:59`),
+          .gte('created_at', cutoffTime)
+          .lte('created_at', upperBound),
         
         supabase
           .from('pharmacy_expenses')
           .select('*')
-          .eq('expense_date', targetDate),
+          .gte('created_at', cutoffTime)
+          .lte('created_at', upperBound),
         
         supabase
           .from('pharmacy_account')
@@ -315,7 +346,9 @@ export default function FinanceDaily() {
         refunds: refundsRes.data || [],
         pharmacyExpenses: pharmacyExpensesRes.data || [],
         pharmacyAccount: pharmacyAccountRes.data?.[0] || null,
-        totalStockValue
+        totalStockValue,
+        lastClosing: lastClosing,
+        cutoffTime: cutoffTime
       };
     },
     enabled: showClosingDialog
@@ -412,6 +445,11 @@ export default function FinanceDaily() {
           <p className="text-muted-foreground">
             Daily revenue, expenses, and profits for {format(selectedDate, 'EEEE, MMMM d, yyyy')}
           </p>
+          {dailyData?.lastClosing && (
+            <p className="text-xs text-blue-600 mt-1">
+              📊 Showing activities since last closing: {format(new Date(dailyData.lastClosing.closing_time), 'MMM d, yyyy HH:mm')}
+            </p>
+          )}
         </div>
         <div className="flex gap-2">
           <Button
