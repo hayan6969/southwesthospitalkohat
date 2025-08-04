@@ -50,18 +50,28 @@ export default function DoctorConsultationRates() {
       
       const newFee = parseFloat(consultationFee);
       
+      console.log('Updating doctor consultation fee:', {
+        doctorId: user.id,
+        newFee: newFee,
+        userEmail: user.email
+      });
+      
       const { error } = await supabase
         .from('doctors')
         .update({ consultation_fee: newFee })
         .eq('id', user.id);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Database error details:', error);
+        throw error;
+      }
       
+      console.log('Doctor consultation fee updated successfully');
       setCurrentFee(newFee);
       toast.success("Consultation rate updated successfully");
     } catch (error) {
       console.error("Error updating consultation rate:", error);
-      toast.error("Failed to update consultation rate");
+      toast.error(`Failed to update consultation rate: ${error.message}`);
     } finally {
       setLoading(false);
     }
