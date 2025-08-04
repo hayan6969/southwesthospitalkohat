@@ -18,6 +18,7 @@ import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
+import { AllExpensesDialog } from "@/components/dialogs/AllExpensesDialog";
 
 interface Expense {
   id: string;
@@ -250,6 +251,7 @@ export default function FinanceExpenses() {
                 />
               </PopoverContent>
             </Popover>
+            <AllExpensesDialog />
             <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
               <DialogTrigger asChild>
                 <Button>
