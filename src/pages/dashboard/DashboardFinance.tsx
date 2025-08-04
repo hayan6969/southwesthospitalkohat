@@ -104,11 +104,11 @@ export default function DashboardFinance() {
     }
   });
 
-  // Calculate hospital revenue - EXCLUDING regular consultation fees (those go to doctors)
-  // Hospital only gets: emergency consultations, lab tests, OT hospital portion, pharmacy profit
-  const emergencyConsultationRevenue = invoices?.filter(inv => 
-    inv.status === 'paid' && inv.description?.toLowerCase().includes('emergency')
-  ).reduce((sum, invoice) => sum + (invoice.amount || 0), 0) || 0;
+  // Calculate hospital revenue - ALL consultation fees go to doctors (including emergency)
+  // Hospital only gets: lab tests, OT hospital portion (excluding doctor expense), pharmacy profit
+  
+  // All consultation fees go to doctors, not hospital
+  const emergencyConsultationRevenue = 0; // Changed: emergency consultations also go to doctors
   
   // Calculate pharmacy revenue and profit correctly
   let pharmacyRevenue = 0;
@@ -143,8 +143,8 @@ export default function DashboardFinance() {
     return sum + (Number(schedule.total_cost) - Number(schedule.doctor_expense));
   }, 0) || 0;
   
-  // Hospital revenue = emergency consultations + lab + OT hospital portion + pharmacy profit
-  const hospitalRevenue = emergencyConsultationRevenue + labRevenue + otHospitalRevenue + pharmacyProfit;
+  // Hospital revenue = lab + OT hospital portion + pharmacy profit (NO consultation fees)
+  const hospitalRevenue = labRevenue + otHospitalRevenue + pharmacyProfit;
   
   // Total revenue for display purposes includes pharmacy sales
   const totalRevenue = hospitalRevenue + pharmacyRevenue;
@@ -160,14 +160,8 @@ export default function DashboardFinance() {
   const currentMonth = new Date().getMonth();
   const currentYear = new Date().getFullYear();
   
-  // Monthly emergency consultation revenue (hospital only gets emergency fees, not regular consultations)
-  const currentMonthEmergencyRevenue = invoices?.filter(invoice => {
-    const invoiceDate = new Date(invoice.paid_at || invoice.created_at);
-    return invoiceDate.getMonth() === currentMonth && 
-           invoiceDate.getFullYear() === currentYear && 
-           invoice.status === 'paid' &&
-           invoice.description?.toLowerCase().includes('emergency');
-  }).reduce((sum, invoice) => sum + (invoice.amount || 0), 0) || 0;
+  // Monthly consultation revenue - ALL consultations go to doctors (including emergency)
+  const currentMonthEmergencyRevenue = 0; // Changed: all consultation fees go to doctors
   
   const currentMonthPharmacyRevenue = pharmacyInvoices?.filter(invoice => {
     const invoiceDate = new Date(invoice.created_at);

@@ -303,26 +303,37 @@ export function AdminFinanceAnalytics() {
 function calculateAnalytics(data: FinanceData) {
   const { hospitalInvoices, pharmacyInvoices, labReports, otSchedules, expenses } = data;
 
-  // Calculate revenues
-  const hospitalRevenue = hospitalInvoices.filter(inv => inv.status === 'paid').reduce((sum, inv) => sum + Number(inv.amount), 0);
-  const pharmacyRevenue = pharmacyInvoices.reduce((sum, inv) => sum + Number(inv.final_amount), 0);
-  
-  // Calculate pharmacy profit (this would need actual invoice items data for accurate calculation)
-  // For now, we'll use a simplified estimate until we can fetch the full data
-  const pharmacyProfit = pharmacyRevenue * 0.25; // Estimated 25% profit margin as placeholder
-  
-  // Calculate lab revenue from paid invoices for lab tests (more accurate)
-  const labRevenue = hospitalInvoices.filter(invoice => 
-    invoice.status === 'paid' && 
-    invoice.description && 
-    invoice.description.toLowerCase().includes('lab')
-  ).reduce((sum, invoice) => sum + Number(invoice.amount), 0);
-  const otRevenue = otSchedules.filter(schedule => schedule.total_cost && schedule.doctor_expense)
-    .reduce((sum, schedule) => sum + (Number(schedule.total_cost) - Number(schedule.doctor_expense)), 0);
+  // IMPORTANT: Separate doctor revenue from hospital revenue
+  // Doctor revenue: ALL appointment consultation fees (including emergency) + OT doctor expenses
+  // Hospital revenue: Lab tests + OT hospital portion (total - doctor expense) + pharmacy profit
 
-  const totalRevenue = hospitalRevenue + pharmacyRevenue + labRevenue + otRevenue;
+  // Hospital invoices are for consultations - these ALL go to doctors, not hospital
+  const doctorConsultationRevenue = hospitalInvoices.filter(inv => inv.status === 'paid').reduce((sum, inv) => sum + Number(inv.amount), 0);
+  
+  // Calculate pharmacy revenue and profit
+  const pharmacyRevenue = pharmacyInvoices.reduce((sum, inv) => sum + Number(inv.final_amount), 0);
+  // For now, use estimated profit margin - ideally should fetch invoice items
+  const pharmacyProfit = pharmacyRevenue * 0.25; // Estimated 25% profit margin
+  
+  // Lab revenue goes to hospital
+  const labRevenue = labReports.filter(report => report.price).reduce((sum, report) => sum + Number(report.price), 0);
+  
+  // OT revenue - hospital gets total cost minus doctor expense
+  const otHospitalRevenue = otSchedules.filter(schedule => schedule.total_cost && schedule.doctor_expense)
+    .reduce((sum, schedule) => sum + (Number(schedule.total_cost) - Number(schedule.doctor_expense)), 0);
+  
+  // OT doctor expenses go to doctors
+  const otDoctorExpenses = otSchedules.filter(schedule => schedule.doctor_expense)
+    .reduce((sum, schedule) => sum + Number(schedule.doctor_expense), 0);
+
+  // Hospital revenue = lab + OT hospital portion + pharmacy profit (excluding doctor consultation fees)
+  const hospitalRevenue = labRevenue + otHospitalRevenue + pharmacyProfit;
+  
+  // Total revenue for display purposes
+  const totalRevenue = hospitalRevenue + pharmacyRevenue + doctorConsultationRevenue + otDoctorExpenses;
+  
   const totalExpenses = expenses.reduce((sum, exp) => sum + Number(exp.amount), 0);
-  const netProfit = totalRevenue - totalExpenses + pharmacyProfit; // Include pharmacy profit
+  const netProfit = hospitalRevenue - totalExpenses; // Hospital profit only
   const profitMargin = totalRevenue > 0 ? (netProfit / totalRevenue) * 100 : 0;
 
   // Calculate daily trends
@@ -333,7 +344,7 @@ function calculateAnalytics(data: FinanceData) {
     { name: 'Hospital', value: hospitalRevenue },
     { name: 'Pharmacy', value: pharmacyRevenue },
     { name: 'Lab', value: labRevenue },
-    { name: 'OT', value: otRevenue }
+    { name: 'OT', value: otHospitalRevenue }
   ].filter(item => item.value > 0);
 
   // Recent activities
@@ -363,7 +374,7 @@ function calculateAnalytics(data: FinanceData) {
     hospitalRevenue,
     pharmacyRevenue,
     labRevenue,
-    otRevenue,
+    otRevenue: otHospitalRevenue,
     hospitalInvoiceCount: hospitalInvoices.length,
     pharmacyInvoiceCount: pharmacyInvoices.length,
     labReportCount: labReports.length,
@@ -371,7 +382,7 @@ function calculateAnalytics(data: FinanceData) {
     hospitalAverage: hospitalInvoices.length > 0 ? hospitalRevenue / hospitalInvoices.length : 0,
     pharmacyAverage: pharmacyInvoices.length > 0 ? pharmacyRevenue / pharmacyInvoices.length : 0,
     labAverage: labReports.length > 0 ? labRevenue / labReports.length : 0,
-    otAverage: otSchedules.length > 0 ? otRevenue / otSchedules.length : 0,
+    otAverage: otSchedules.length > 0 ? otHospitalRevenue / otSchedules.length : 0,
     dailyTrends,
     revenueBySource,
     recentActivities
@@ -415,6 +426,8 @@ function calculateDailyTrends(revenueData: any[], expenseData: any[]) {
 
 // Individual analytics components
 function HospitalAnalytics({ data }: { data: any[] }) {
+  // NOTE: This shows consultation revenue which actually goes to doctors, not hospital
+  // For accurate hospital revenue, use lab + OT (minus doctor expense) + pharmacy profit
   const totalRevenue = data.filter(inv => inv.status === 'paid').reduce((sum, inv) => sum + Number(inv.amount), 0);
   
   return (
