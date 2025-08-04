@@ -179,6 +179,15 @@ export default function FinanceDaily() {
 
       console.log('Refunds found:', refunds?.length, refunds);
 
+      // Miscellaneous income - filter based on cutoff time
+      const { data: miscIncome } = await supabase
+        .from('miscellaneous_income')
+        .select('amount, description, created_at')
+        .gte('created_at', cutoffTime)
+        .lte('created_at', upperBound);
+
+      console.log('Miscellaneous income found:', miscIncome?.length, miscIncome);
+
       // Calculate totals
       // Hospital revenue ONLY from emergency consultations (regular consultations go to doctors)
       const emergencyRevenue = emergencyAppointments?.reduce((sum, apt) => sum + (apt.consultation_fee_at_time || 0), 0) || 0;
@@ -217,11 +226,12 @@ export default function FinanceDaily() {
       
       const labRevenue = labReports?.reduce((sum, lab) => sum + (lab.price || 0), 0) || 0;
       const otHospitalRevenue = otSchedules?.reduce((sum, ot) => sum + ((ot.total_cost || 0) - (ot.doctor_expense || 0)), 0) || 0;
+      const miscellaneousIncome = miscIncome?.reduce((sum, income) => sum + (income.amount || 0), 0) || 0;
       const totalExpenses = expenses?.reduce((sum, exp) => sum + exp.amount, 0) || 0;
       const totalRefunds = refunds?.reduce((sum, ref) => sum + ref.amount, 0) || 0;
 
-      // Total hospital revenue = emergency consultations + lab + OT hospital portion + pharmacy profit
-      const totalHospitalRevenue = emergencyRevenue + labRevenue + otHospitalRevenue + pharmacyProfit;
+      // Total hospital revenue = emergency consultations + lab + OT hospital portion + pharmacy profit + miscellaneous income
+      const totalHospitalRevenue = emergencyRevenue + labRevenue + otHospitalRevenue + pharmacyProfit + miscellaneousIncome;
       const totalHospitalProfit = totalHospitalRevenue - totalExpenses;
 
       // Categorize refunds
@@ -235,6 +245,7 @@ export default function FinanceDaily() {
         pharmacyProfit,
         labRevenue,
         otHospitalRevenue,
+        miscellaneousIncome,
         totalHospitalRevenue,
         totalHospitalProfit,
         totalExpenses,
@@ -253,6 +264,7 @@ export default function FinanceDaily() {
         pharmacyProfit,
         labRevenue,
         otHospitalRevenue,
+        miscellaneousIncome,
         totalHospitalRevenue,
         totalHospitalProfit,
         totalExpenses,
@@ -558,7 +570,7 @@ export default function FinanceDaily() {
       {/* Revenue Cards */}
       <div>
         <h2 className="text-xl font-semibold mb-4">Daily Revenue</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
           <StatsCard
             title="Hospital Revenue"
             value={formatPkrAmount(dailyData?.totalHospitalRevenue || 0)}
@@ -581,6 +593,12 @@ export default function FinanceDaily() {
             title="OT Revenue"
             value={formatPkrAmount(dailyData?.otHospitalRevenue || 0)}
             icon={<Activity className="w-5 h-5 text-purple-600" />}
+            loading={isLoading}
+          />
+          <StatsCard
+            title="Miscellaneous Income"
+            value={formatPkrAmount(dailyData?.miscellaneousIncome || 0)}
+            icon={<DollarSign className="w-5 h-5 text-yellow-600" />}
             loading={isLoading}
           />
         </div>

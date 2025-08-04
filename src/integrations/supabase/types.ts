@@ -802,6 +802,36 @@ export type Database = {
         }
         Relationships: []
       }
+      miscellaneous_income: {
+        Row: {
+          amount: number
+          created_at: string
+          created_by: string | null
+          description: string
+          id: string
+          income_date: string
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          created_by?: string | null
+          description: string
+          id?: string
+          income_date?: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          created_by?: string | null
+          description?: string
+          id?: string
+          income_date?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       ot_expenses: {
         Row: {
           cost: number

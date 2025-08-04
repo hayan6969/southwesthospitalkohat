@@ -13,6 +13,7 @@ interface FinancialMetrics {
     pharmacy: number;
     lab: number;
     ot: number;
+    miscellaneous: number;
   };
   pharmacyProfit: number;
   recentActivity: Array<{
@@ -44,7 +45,7 @@ export const useFinancialAnalytics = () => {
     queryKey: ['financial-analytics'],
     queryFn: async () => {
       // Fetch all required data
-      const [invoicesRes, pharmacyInvoicesRes, labReportsRes, otSchedulesRes, expensesRes, refundsRes] = await Promise.all([
+      const [invoicesRes, pharmacyInvoicesRes, labReportsRes, otSchedulesRes, expensesRes, refundsRes, miscIncomeRes] = await Promise.all([
         supabase.from('invoices').select('*'),
         supabase.from('pharmacy_invoices').select(`
           *,
@@ -59,7 +60,8 @@ export const useFinancialAnalytics = () => {
         supabase.from('lab_reports').select('*'),
         supabase.from('ot_schedules').select('*'),
         supabase.from('expenses').select('*'),
-        supabase.from('refunds').select('*')
+        supabase.from('refunds').select('*'),
+        supabase.from('miscellaneous_income').select('*')
       ]);
 
       const invoices = invoicesRes.data || [];
@@ -68,6 +70,7 @@ export const useFinancialAnalytics = () => {
       const otSchedules = otSchedulesRes.data || [];
       const expenses = expensesRes.data || [];
       const refunds = refundsRes.data || [];
+      const miscIncome = miscIncomeRes.data || [];
 
       // Calculate hospital revenue - EXCLUDING regular consultation fees (those go to doctors)
       // Hospital only gets revenue from: EMERGENCY consultations, lab tests, OT hospital portion, pharmacy profit
@@ -110,8 +113,11 @@ export const useFinancialAnalytics = () => {
         .filter(schedule => schedule.total_cost && schedule.doctor_expense)
         .reduce((sum, schedule) => sum + (Number(schedule.total_cost) - Number(schedule.doctor_expense)), 0);
 
-      // Hospital total revenue = emergency consultations + lab revenue + OT hospital portion + pharmacy profit
-      const hospitalRevenue = emergencyConsultationRevenue + labRevenue + otHospitalRevenue + pharmacyProfit;
+      // Calculate miscellaneous income
+      const miscellaneousIncome = miscIncome.reduce((sum, income) => sum + Number(income.amount), 0);
+
+      // Hospital total revenue = emergency consultations + lab revenue + OT hospital portion + pharmacy profit + miscellaneous income
+      const hospitalRevenue = emergencyConsultationRevenue + labRevenue + otHospitalRevenue + pharmacyProfit + miscellaneousIncome;
       
       // Total revenue is hospital revenue + pharmacy sales (for analytics display)
       const totalRevenue = hospitalRevenue + pharmacyRevenue;
@@ -142,6 +148,10 @@ export const useFinancialAnalytics = () => {
         ...otSchedules.filter(schedule => {
           const date = new Date(schedule.created_at);
           return schedule.total_cost && date.getMonth() === currentMonth && date.getFullYear() === currentYear;
+        }),
+        ...miscIncome.filter(income => {
+          const date = new Date(income.created_at);
+          return date.getMonth() === currentMonth && date.getFullYear() === currentYear;
         })
       ].reduce((sum, item) => {
         if ('amount' in item) return sum + Number(item.amount);
@@ -199,6 +209,7 @@ export const useFinancialAnalytics = () => {
           pharmacy: pharmacyRevenue,
           lab: labRevenue,
           ot: otHospitalRevenue,
+          miscellaneous: miscellaneousIncome,
         },
         pharmacyProfit,
         recentActivity,

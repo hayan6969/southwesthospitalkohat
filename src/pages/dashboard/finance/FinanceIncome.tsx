@@ -15,6 +15,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
+import { MiscellaneousIncomeDialog } from "@/components/dialogs/MiscellaneousIncomeDialog";
 
 export default function FinanceIncome() {
   const [filterDate, setFilterDate] = useState<Date | undefined>();
@@ -61,6 +62,19 @@ export default function FinanceIncome() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('ot_schedules')
+        .select('*')
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return data;
+    }
+  });
+
+  // Get miscellaneous income
+  const { data: miscIncome, isLoading: miscLoading, refetch: refetchMiscIncome } = useQuery({
+    queryKey: ['miscellaneous-income'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('miscellaneous_income')
         .select('*')
         .order('created_at', { ascending: false });
       if (error) throw error;
@@ -131,20 +145,23 @@ export default function FinanceIncome() {
     return sum + (Number(schedule.total_cost) - Number(schedule.doctor_expense));
   }, 0) || 0;
   
-  // Hospital revenue = emergency consultations + lab + OT hospital portion
-  const hospitalRevenue = emergencyRevenue + labRevenue + otHospitalRevenue;
+  // Miscellaneous income
+  const miscellaneousIncome = miscIncome?.reduce((sum, income) => sum + (income.amount || 0), 0) || 0;
+  
+  // Hospital revenue = emergency consultations + lab + OT hospital portion + miscellaneous income
+  const hospitalRevenue = emergencyRevenue + labRevenue + otHospitalRevenue + miscellaneousIncome;
   
   // Total revenue for display includes pharmacy sales
   const totalRevenue = hospitalRevenue + pharmacyRevenue;
 
-  if (invoicesLoading || pharmacyLoading || labLoading || otLoading) {
+  if (invoicesLoading || pharmacyLoading || labLoading || otLoading || miscLoading) {
     return <div className="p-8">Loading...</div>;
   }
 
   return (
     <div className="space-y-6">
       {/* Revenue Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-gray-600">Total Revenue</CardTitle>
@@ -189,6 +206,15 @@ export default function FinanceIncome() {
             <div className="text-2xl font-bold">{formatPkrAmount(otHospitalRevenue)}</div>
           </CardContent>
         </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-gray-600">Miscellaneous Income</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{formatPkrAmount(miscellaneousIncome)}</div>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Recent Transactions */}
@@ -198,29 +224,32 @@ export default function FinanceIncome() {
             <Receipt className="w-5 h-5" />
             Recent Transactions
           </CardTitle>
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button
-                variant="outline"
-                className={cn(
-                  "w-48 justify-start text-left font-normal",
-                  !filterDate && "text-muted-foreground"
-                )}
-              >
-                <CalendarIcon className="mr-2 h-4 w-4" />
-                {filterDate ? format(filterDate, "PPP") : <span>Filter by date</span>}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0" align="start">
-              <Calendar
-                mode="single"
-                selected={filterDate}
-                onSelect={setFilterDate}
-                initialFocus
-                className={cn("p-3 pointer-events-auto")}
-              />
-            </PopoverContent>
-          </Popover>
+          <div className="flex gap-2">
+            <MiscellaneousIncomeDialog onIncomeAdded={refetchMiscIncome} />
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className={cn(
+                    "w-48 justify-start text-left font-normal",
+                    !filterDate && "text-muted-foreground"
+                  )}
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {filterDate ? format(filterDate, "PPP") : <span>Filter by date</span>}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="single"
+                  selected={filterDate}
+                  onSelect={setFilterDate}
+                  initialFocus
+                  className={cn("p-3 pointer-events-auto")}
+                />
+              </PopoverContent>
+            </Popover>
+          </div>
         </CardHeader>
         <CardContent>
           <Table>
@@ -275,6 +304,21 @@ export default function FinanceIncome() {
                     >
                       <Download className="w-4 h-4" />
                     </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+
+              {miscIncome?.slice(0, 5).map((income) => (
+                <TableRow key={`misc-${income.id}`}>
+                  <TableCell className="font-mono">-</TableCell>
+                  <TableCell>Miscellaneous Income</TableCell>
+                  <TableCell>{formatPkrAmount(income.amount)}</TableCell>
+                  <TableCell>
+                    <Badge variant="default">Completed</Badge>
+                  </TableCell>
+                  <TableCell>{format(new Date(income.created_at), 'MMM dd, yyyy')}</TableCell>
+                  <TableCell>
+                    <span className="text-sm text-gray-500">{income.description}</span>
                   </TableCell>
                 </TableRow>
               ))}
