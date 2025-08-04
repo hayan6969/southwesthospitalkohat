@@ -723,9 +723,27 @@ function LabAnalytics({ data }: { data: any[] }) {
 }
 
 function OTAnalytics({ data }: { data: any[] }) {
+  const today = new Date();
+  const startOfToday = startOfDay(today);
+  const endOfToday = endOfDay(today);
+  const startOfThisMonth = startOfMonth(today);
+  const endOfThisMonth = endOfMonth(today);
+
   const completedOTs = data.filter(ot => ot.status === 'completed').length;
   const scheduledOTs = data.filter(ot => ot.status === 'scheduled').length;
   const totalRevenue = data.reduce((sum, ot) => sum + (Number(ot.total_cost || 0) - Number(ot.doctor_expense || 0)), 0);
+  
+  // Calculate today's OT revenue
+  const todayRevenue = data.filter(ot => {
+    const otDate = new Date(ot.created_at);
+    return ot.total_cost && ot.doctor_expense && otDate >= startOfToday && otDate <= endOfToday;
+  }).reduce((sum, ot) => sum + (Number(ot.total_cost || 0) - Number(ot.doctor_expense || 0)), 0);
+  
+  // Calculate monthly OT revenue
+  const monthlyRevenue = data.filter(ot => {
+    const otDate = new Date(ot.created_at);
+    return ot.total_cost && ot.doctor_expense && otDate >= startOfThisMonth && otDate <= endOfThisMonth;
+  }).reduce((sum, ot) => sum + (Number(ot.total_cost || 0) - Number(ot.doctor_expense || 0)), 0);
   
   return (
     <div className="space-y-6">
@@ -737,7 +755,7 @@ function OTAnalytics({ data }: { data: any[] }) {
           </CardHeader>
           <CardContent>
             <div className="space-y-2">
-              <div className="text-2xl font-bold text-green-600">{formatPkrAmount(totalRevenue)}</div>
+              <div className="text-2xl font-bold text-green-600">{formatPkrAmount(todayRevenue)}</div>
               <div className="text-sm text-gray-600">OT earnings today</div>
             </div>
           </CardContent>
@@ -749,7 +767,7 @@ function OTAnalytics({ data }: { data: any[] }) {
           </CardHeader>
           <CardContent>
             <div className="space-y-2">
-              <div className="text-2xl font-bold text-blue-600">{formatPkrAmount(totalRevenue)}</div>
+              <div className="text-2xl font-bold text-blue-600">{formatPkrAmount(monthlyRevenue)}</div>
               <div className="text-sm text-gray-600">This month's earnings</div>
             </div>
           </CardContent>
