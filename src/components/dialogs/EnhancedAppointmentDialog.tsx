@@ -18,6 +18,7 @@ import { toast } from "sonner";
 import { Plus, Search, UserPlus, Check, ChevronsUpDown } from "lucide-react";
 import { formatCurrency } from "@/utils/currency";
 import { generateInvoicePDF } from "@/utils/pdfGenerator";
+import { getCurrentPakistanTime } from "@/utils/timezone";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 
@@ -94,10 +95,10 @@ export function EnhancedAppointmentDialog() {
     setActiveTab("search");
   };
 
-  // Set current date and time when dialog opens
+  // Set current date and time when dialog opens using Pakistani timezone
   useEffect(() => {
     if (open) {
-      const now = new Date();
+      const now = getCurrentPakistanTime();
       const currentDate = now.toISOString().split('T')[0];
       const currentTime = now.toTimeString().slice(0, 5);
       setAppointmentDate(currentDate);

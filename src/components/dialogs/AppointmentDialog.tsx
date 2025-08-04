@@ -14,6 +14,7 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { toast } from "sonner";
 import { Plus, Check, ChevronsUpDown } from "lucide-react";
+import { getCurrentPakistanTime } from "@/utils/timezone";
 import { cn } from "@/lib/utils";
 
 const appointmentTypes = [
@@ -45,10 +46,10 @@ export function AppointmentDialog() {
   const { checkAvailability } = useCheckDoctorAvailability();
   const { data: availability } = useDoctorAvailability(doctorId, appointmentDate);
 
-  // Set current date and time when dialog opens
+  // Set current date and time when dialog opens using Pakistani timezone
   useEffect(() => {
     if (open) {
-      const now = new Date();
+      const now = getCurrentPakistanTime();
       const currentDate = now.toISOString().split('T')[0];
       const currentTime = now.toTimeString().slice(0, 5);
       setAppointmentDate(currentDate);
