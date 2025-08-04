@@ -286,9 +286,7 @@ export const generateInvoicePDF = async (invoice: any) => {
   // Third row - Get contact information from the correct profile structure
   yPosition += 10;
   const patientProfileForContact = invoice.patient?.profiles || invoice.patient?.users;
-  const phoneNumber = patientProfileForContact?.phone || 
-                     getPatientContactNumber(invoice.patient, patientProfileForContact) || 
-                     'N/A';
+  const phoneNumber = getPatientContactNumber(invoice.patient, patientProfileForContact);
   
   doc.setFont('helvetica', 'bold');
   doc.text('Contact:', 20, yPosition + 5);
