@@ -113,15 +113,23 @@ export const usePharmacyAnalytics = () => {
       const returnInvoices = allInvoices.filter(inv => inv.final_amount < 0);
 
       // Today's calculations (using Pakistan timezone)
+      console.log('Total sales invoices:', salesInvoices.length);
+      console.log('Sample invoice dates:', salesInvoices.slice(0, 3).map(inv => ({
+        invoice: inv.invoice_number,
+        created_at: inv.created_at,
+        pakistan_time: toPakistanTime(new Date(inv.created_at))
+      })));
+      
       const todaySalesInvoices = salesInvoices.filter(inv => {
         const invDate = new Date(inv.created_at);
         const invPakistanTime = toPakistanTime(invDate);
         const isToday = invPakistanTime >= startOfToday && invPakistanTime <= endOfToday;
         if (isToday) {
-          console.log('Today sale found:', inv.invoice_number, 'at', invPakistanTime, 'amount:', inv.final_amount);
+          console.log('✅ Today sale found:', inv.invoice_number, 'at', invPakistanTime, 'amount:', inv.final_amount);
         }
         return isToday;
       });
+      console.log('Found', todaySalesInvoices.length, 'sales for today');
       const todayReturnInvoices = returnInvoices.filter(inv => {
         const invPakistanTime = toPakistanTime(new Date(inv.created_at));
         return invPakistanTime >= startOfToday && invPakistanTime <= endOfToday;
