@@ -54,6 +54,7 @@ export function StaffInvoices() {
           invoice_type: type,
           invoice_date: invoice.created_at,
           patient_name: getPatientName(invoice.patient_id, patientNames || []),
+          patient_id_display: invoice.patient?.patient_number || 'N/A', // Add patient ID for display
           display_date: format(new Date(invoice.created_at), 'MMM d, yyyy'),
           display_time: format(new Date(invoice.created_at), 'h:mm a'),
           display_amount: formatPkrAmount(invoice.amount)
@@ -481,6 +482,7 @@ export function StaffInvoices() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Invoice #</TableHead>
+                  <TableHead>Patient ID</TableHead>
                   <TableHead>Type</TableHead>
                   <TableHead>Date</TableHead>
                   <TableHead>Amount</TableHead>
@@ -492,7 +494,7 @@ export function StaffInvoices() {
                 {isLoading ? (
                   Array.from({ length: itemsPerPage }).map((_, i) => (
                     <TableRow key={i}>
-                      {Array.from({ length: 6 }).map((_, j) => (
+                      {Array.from({ length: 7 }).map((_, j) => (
                         <TableCell key={j}>
                           <div className="h-4 bg-gray-200 rounded animate-pulse"></div>
                         </TableCell>
@@ -507,6 +509,11 @@ export function StaffInvoices() {
                           {getTypeIcon(invoice.type)}
                           <span className="font-medium">{invoice.invoice_number}</span>
                         </div>
+                      </TableCell>
+                      <TableCell>
+                        <span className="font-medium text-blue-600">
+                          {invoice.patient_id_display || 'N/A'}
+                        </span>
                       </TableCell>
                       <TableCell>
                         {getTypeBadge(invoice.type)}
@@ -538,7 +545,7 @@ export function StaffInvoices() {
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center text-gray-500 py-12">
+                    <TableCell colSpan={7} className="text-center text-gray-500 py-12">
                       {searchTerm || filterType !== "all" || filterDate 
                         ? "No invoices match your search criteria" 
                         : "No invoices found"}
