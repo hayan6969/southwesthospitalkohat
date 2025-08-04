@@ -9,7 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { formatPkrAmount } from "@/utils/currency";
 import { Download, Receipt, Calendar as CalendarIcon, Filter } from "lucide-react";
 import { format } from "date-fns";
-import { generateInvoicePDF } from "@/utils/pdfGenerator";
+import { generateInvoicePDF, generateXrayInvoicePDF } from "@/utils/pdfGenerator";
 import { generatePharmacyInvoicePDF } from "@/utils/pharmacyPdfGenerator";
 import { useToast } from "@/hooks/use-toast";
 import { Calendar } from "@/components/ui/calendar";
@@ -49,6 +49,19 @@ export default function FinanceInvoices() {
     }
   });
 
+  // Get X-ray reports for invoicing
+  const { data: xrayReports, isLoading: xrayLoading } = useQuery({
+    queryKey: ['xray-reports-invoices'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('xray_reports')
+        .select('*')
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return data;
+    }
+  });
+
   // Get OT schedules for invoicing
   const { data: otSchedules, isLoading: otLoading } = useQuery({
     queryKey: ['ot-schedules-invoices'],
@@ -74,6 +87,25 @@ export default function FinanceInvoices() {
           ...invoice,
           test_name: invoice.description || 'Laboratory Service', // Use description as test name
           type: 'lab'
+        });
+      } else if (invoice.type === 'xray') {
+        // For X-ray invoices, use the existing generateXrayInvoicePDF function
+        await generateXrayInvoicePDF({
+          invoiceNumber: invoice.displayNumber,
+          patientName: "Patient", // This would need patient lookup in real implementation
+          patientEmail: "N/A",
+          patientId: "N/A",
+          patientPhone: "N/A",
+          doctorName: invoice.external_doctor_name || "External Doctor",
+          tests: [{
+            name: invoice.test_name,
+            price: invoice.price || 0,
+            description: invoice.notes || undefined
+          }],
+          totalAmount: invoice.price || 0,
+          issueDate: format(new Date(invoice.created_at), 'MMM dd, yyyy'),
+          xrayDate: format(new Date(invoice.xray_date || invoice.created_at), 'MMM dd, yyyy'),
+          notes: invoice.notes
         });
       } else if (invoice.type === 'ot') {
         // For OT types, create detailed invoice PDF
@@ -405,6 +437,15 @@ export default function FinanceInvoices() {
       displayDate: lab.created_at,
       displayStatus: lab.status
     })) || []),
+    ...(xrayReports?.map(xray => ({
+      ...xray,
+      type: 'xray',
+      typeLabel: 'X-ray',
+      displayAmount: xray.price,
+      displayNumber: `XR-${xray.id.slice(0, 8)}`,
+      displayDate: xray.created_at,
+      displayStatus: xray.status
+    })) || []),
     ...(otSchedules?.map(ot => ({
       ...ot,
       type: 'ot',
@@ -434,7 +475,7 @@ export default function FinanceInvoices() {
   const totalAmount = filteredInvoices.reduce((sum, invoice) => sum + (invoice.displayAmount || 0), 0);
   const totalCount = filteredInvoices.length;
 
-  if (hospitalLoading || pharmacyLoading || labLoading || otLoading) {
+  if (hospitalLoading || pharmacyLoading || labLoading || xrayLoading || otLoading) {
     return <div className="p-8">Loading...</div>;
   }
 
@@ -470,8 +511,9 @@ export default function FinanceInvoices() {
                filterType === 'hospital' ? 'Hospital Services' :
                filterType === 'emergency' ? 'Emergency' :
                filterType === 'pharmacy' ? 'Pharmacy' :
-               filterType === 'lab' ? 'Lab Tests' :
-               filterType === 'ot' ? 'OT Services' : 'All Types'}
+                filterType === 'lab' ? 'Lab Tests' :
+                filterType === 'xray' ? 'X-ray' :
+                filterType === 'ot' ? 'OT Services' : 'All Types'}
               {filterDate && ` • ${format(filterDate, 'MMM dd, yyyy')}`}
             </div>
           </CardContent>
@@ -491,14 +533,15 @@ export default function FinanceInvoices() {
               <SelectTrigger className="w-48">
                 <SelectValue placeholder="Filter by type" />
               </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Types</SelectItem>
-                <SelectItem value="hospital">Hospital Services</SelectItem>
-                <SelectItem value="emergency">Emergency</SelectItem>
-                <SelectItem value="pharmacy">Pharmacy</SelectItem>
-                <SelectItem value="lab">Lab Tests</SelectItem>
-                <SelectItem value="ot">Operation Theater</SelectItem>
-              </SelectContent>
+               <SelectContent>
+                 <SelectItem value="all">All Types</SelectItem>
+                 <SelectItem value="hospital">Hospital Services</SelectItem>
+                 <SelectItem value="emergency">Emergency</SelectItem>
+                 <SelectItem value="pharmacy">Pharmacy</SelectItem>
+                 <SelectItem value="lab">Lab Tests</SelectItem>
+                 <SelectItem value="xray">X-ray</SelectItem>
+                 <SelectItem value="ot">Operation Theater</SelectItem>
+               </SelectContent>
             </Select>
 
             {/* Date Filter */}
@@ -563,6 +606,7 @@ export default function FinanceInvoices() {
                       invoice.type === 'hospital' ? 'default' :
                       invoice.type === 'pharmacy' ? 'secondary' :
                       invoice.type === 'lab' ? 'outline' :
+                      invoice.type === 'xray' ? 'default' :
                       invoice.type === 'ot' ? 'destructive' : 'default'
                     }>
                       {invoice.typeLabel}
