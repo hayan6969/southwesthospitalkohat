@@ -285,7 +285,7 @@ export default function StaffInvoices() {
                 {isLoading ? (
                   Array.from({ length: 5 }).map((_, i) => (
                     <TableRow key={i}>
-                      {Array.from({ length: 7 }).map((_, j) => (
+                      {Array.from({ length: 6 }).map((_, j) => (
                         <TableCell key={j}>
                           <div className="h-4 bg-gray-200 rounded animate-pulse"></div>
                         </TableCell>
@@ -358,7 +358,12 @@ export default function StaffInvoices() {
                 ) : (
                   <TableRow>
                     <TableCell colSpan={6} className="text-center text-gray-500 py-12">
-                      No invoices found
+                      {filteredInvoices.length === 0 && searchTerm 
+                        ? `No invoices found matching "${searchTerm}"`
+                        : filteredInvoices.length === 0 && filterType !== 'all'
+                        ? `No ${filterType} invoices found`
+                        : "No invoices found"
+                      }
                     </TableCell>
                   </TableRow>
                 )}
