@@ -270,7 +270,7 @@ export default function FinanceInvoices() {
     
     yPosition += 70;
     
-    // Service details
+    // Service details with proper text wrapping
     const tableStartY = yPosition;
     doc.setFillColor(240, 240, 240);
     doc.rect(15, yPosition, pageWidth - 30, 10, 'F');
@@ -285,11 +285,26 @@ export default function FinanceInvoices() {
     
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(60, 60, 60);
-    const description = invoice.type === 'lab' ? `Lab Test: ${invoice.test_name || 'Laboratory Service'}` : 'Operation Theater Service';
-    doc.text(description, 20, yPosition);
-    doc.text(formatPkrAmount(invoice.displayAmount || 0), pageWidth - 50, yPosition);
     
-    yPosition += 8;
+    if (invoice.type === 'lab') {
+      const description = `Lab Test: ${invoice.test_name || 'Laboratory Service'}`;
+      // Apply text wrapping for lab test descriptions
+      const maxWidth = pageWidth - 90; // Leave space for amount column
+      const wrappedText = doc.splitTextToSize(description, maxWidth);
+      const textHeight = wrappedText.length * 5;
+      
+      doc.text(wrappedText, 20, yPosition);
+      doc.text(formatPkrAmount(invoice.displayAmount || 0), pageWidth - 50, yPosition);
+      
+      yPosition += textHeight + 2;
+    } else {
+      // OT Service
+      const description = 'Operation Theater Service';
+      doc.text(description, 20, yPosition);
+      doc.text(formatPkrAmount(invoice.displayAmount || 0), pageWidth - 50, yPosition);
+      
+      yPosition += 8;
+    }
     
     // Draw table border
     doc.setDrawColor(0, 0, 0);

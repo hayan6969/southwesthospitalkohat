@@ -12,6 +12,7 @@ import { format } from "date-fns";
 import { formatPkrAmount } from "@/utils/currency";
 import { generateInvoicePDF } from "@/utils/pdfGenerator";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 export function StaffInvoices() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -82,11 +83,191 @@ export function StaffInvoices() {
 
   const handleViewInvoice = async (invoice: any) => {
     try {
-      await generateInvoicePDF(invoice);
+      if (invoice.type === 'lab' || invoice.type === 'ot') {
+        // For lab and OT invoices, generate detailed invoice with proper formatting
+        await generateDetailedInvoicePDF(invoice);
+      } else {
+        // For regular invoices, use the standard function
+        await generateInvoicePDF(invoice);
+      }
     } catch (error) {
       console.error('Error generating PDF:', error);
       toast.error('Failed to generate invoice PDF');
     }
+  };
+
+  // Import the detailed PDF generation function for lab/OT invoices
+  const generateDetailedInvoicePDF = async (invoice: any) => {
+    const { jsPDF } = await import('jspdf');
+    const doc = new jsPDF();
+    const pageWidth = doc.internal.pageSize.width;
+    
+    // Get hospital settings for PDF branding
+    const getHospitalSettings = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('hospital_settings')
+          .select('*')
+          .limit(1)
+          .single();
+        
+        if (error) throw error;
+        return data;
+      } catch (error) {
+        return {
+          hospital_name: 'Medical Center',
+          hospital_address: 'Healthcare District',
+          contact_number: '+92-XXX-XXXXXXX',
+          logo_url: null
+        };
+      }
+    };
+
+    const settings = await getHospitalSettings();
+    let yPosition = 20;
+
+    // Hospital logo (if available)
+    if (settings.logo_url) {
+      try {
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        
+        await new Promise((resolve) => {
+          img.onload = () => {
+            try {
+              doc.addImage(img, 'JPEG', 20, yPosition - 5, 30, 20);
+              resolve(true);
+            } catch (error) {
+              resolve(false);
+            }
+          };
+          img.onerror = () => resolve(false);
+          setTimeout(() => resolve(false), 5000);
+          img.src = settings.logo_url;
+        });
+      } catch (error) {
+        console.error('Error loading logo:', error);
+      }
+    }
+
+    // Hospital name
+    doc.setFontSize(18);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(40, 40, 40);
+    doc.text(`${settings.hospital_name}${invoice.type === 'lab' ? ' - Laboratory' : ' - Operation Theater'}`, pageWidth / 2, yPosition + 8, { align: 'center' });
+    
+    yPosition += 16;
+    
+    // Hospital address
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(60, 60, 60);
+    doc.text(settings.hospital_address, pageWidth / 2, yPosition, { align: 'center' });
+    
+    yPosition += 6;
+    
+    // Contact number
+    doc.text(`Phone: ${settings.contact_number}`, pageWidth / 2, yPosition, { align: 'center' });
+    
+    yPosition += 15;
+    
+    // Document title
+    doc.setFontSize(16);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(40, 40, 40);
+    const title = invoice.type === 'lab' ? 'LAB TEST INVOICE' : 'OPERATION THEATER INVOICE';
+    doc.text(title, pageWidth / 2, yPosition, { align: 'center' });
+    
+    yPosition += 25;
+    
+    // Invoice details box
+    doc.setDrawColor(0, 0, 0);
+    doc.rect(15, yPosition - 5, pageWidth - 30, 40);
+    
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(40, 40, 40);
+    
+    // Invoice details
+    doc.text('Invoice #:', 20, yPosition + 5);
+    doc.setFont('helvetica', 'normal');
+    doc.text(invoice.invoice_number, 60, yPosition + 5);
+    
+    doc.setFont('helvetica', 'bold');
+    doc.text('Date:', 120, yPosition + 5);
+    doc.setFont('helvetica', 'normal');
+    doc.text(format(new Date(invoice.invoice_date), 'MMM dd, yyyy'), 140, yPosition + 5);
+    
+    yPosition += 10;
+    
+    doc.setFont('helvetica', 'bold');
+    doc.text('Patient:', 20, yPosition + 5);
+    doc.setFont('helvetica', 'normal');
+    doc.text(invoice.patient_name || 'N/A', 60, yPosition + 5);
+    
+    doc.setFont('helvetica', 'bold');
+    doc.text('Status:', 120, yPosition + 5);
+    doc.setFont('helvetica', 'normal');
+    doc.text(invoice.status.toUpperCase(), 155, yPosition + 5);
+    
+    yPosition += 50;
+    
+    // Service details with proper text wrapping
+    const tableStartY = yPosition;
+    doc.setFillColor(240, 240, 240);
+    doc.rect(15, yPosition, pageWidth - 30, 10, 'F');
+    
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(10);
+    doc.setTextColor(40, 40, 40);
+    doc.text('Description', 20, yPosition + 7);
+    doc.text('Amount', pageWidth - 50, yPosition + 7);
+    
+    yPosition += 15;
+    
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(60, 60, 60);
+    
+    // Apply text wrapping for descriptions
+    const maxWidth = pageWidth - 90; // Leave space for amount column
+    const description = invoice.description || (invoice.type === 'lab' ? 'Laboratory Service' : 'Operation Theater Service');
+    const wrappedText = doc.splitTextToSize(description, maxWidth);
+    const textHeight = wrappedText.length * 5;
+    
+    doc.text(wrappedText, 20, yPosition);
+    doc.text(formatPkrAmount(invoice.amount), pageWidth - 50, yPosition);
+    
+    yPosition += textHeight + 8;
+    
+    // Draw table border
+    doc.setDrawColor(0, 0, 0);
+    doc.rect(15, tableStartY, pageWidth - 30, yPosition - tableStartY);
+    doc.line(pageWidth - 70, tableStartY, pageWidth - 70, yPosition);
+    
+    yPosition += 20;
+    
+    // Total section
+    const totalsX = pageWidth - 85;
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(12);
+    doc.setTextColor(40, 40, 40);
+    doc.rect(totalsX, yPosition - 5, 80, 18);
+    doc.text('Total Amount:', totalsX + 5, yPosition + 4);
+    doc.text(formatPkrAmount(invoice.amount), totalsX + 5, yPosition + 12);
+    
+    yPosition += 30;
+    
+    // Footer
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'italic');
+    doc.setTextColor(100, 100, 100);
+    doc.text('Thank you for choosing our medical services!', pageWidth / 2, yPosition, { align: 'center' });
+    doc.text('For any queries, please contact us at the above number.', pageWidth / 2, yPosition + 8, { align: 'center' });
+    
+    // Open in new tab
+    const pdfBlob = doc.output('blob');
+    const pdfUrl = URL.createObjectURL(pdfBlob);
+    window.open(pdfUrl, '_blank');
   };
 
   const getTypeIcon = (type: string) => {
