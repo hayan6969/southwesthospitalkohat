@@ -17,6 +17,13 @@ export default function PharmacyAnalytics() {
   const [selectedYear, setSelectedYear] = useState<string>("");
   const [selectedMonth, setSelectedMonth] = useState<string>("");
   
+  // Generate dynamic year range (5 years before current year to 2 years after)
+  const currentYear = new Date().getFullYear();
+  const yearOptions = [];
+  for (let year = currentYear - 5; year <= currentYear + 2; year++) {
+    yearOptions.push(year);
+  }
+  
   // Create the month filter string for the hook
   const monthFilter = selectedYear && selectedMonth ? `${selectedYear}-${selectedMonth.padStart(2, '0')}` : "";
   
@@ -309,11 +316,11 @@ export default function PharmacyAnalytics() {
                       <SelectTrigger className="w-full sm:w-32">
                         <SelectValue placeholder="Year" />
                       </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="2024">2024</SelectItem>
-                        <SelectItem value="2025">2025</SelectItem>
-                        <SelectItem value="2026">2026</SelectItem>
-                      </SelectContent>
+                       <SelectContent>
+                        {yearOptions.map(year => (
+                          <SelectItem key={year} value={year.toString()}>{year}</SelectItem>
+                        ))}
+                       </SelectContent>
                     </Select>
                     <Select value={selectedMonth} onValueChange={setSelectedMonth}>
                       <SelectTrigger className="w-full sm:w-32">
