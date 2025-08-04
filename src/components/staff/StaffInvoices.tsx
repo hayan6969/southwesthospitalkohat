@@ -35,7 +35,7 @@ export function StaffInvoices() {
     if (hospitalInvoices) {
       hospitalInvoices.forEach(invoice => {
         // Determine type based on description or other properties
-        let type = 'hospital';
+        let type = 'appointments'; // Changed from 'hospital' to 'appointments'
         const desc = invoice.description?.toLowerCase() || '';
         
         if (desc.includes('pharmacy') || desc.includes('medicine')) {
@@ -308,7 +308,7 @@ export function StaffInvoices() {
 
   const getTypeIcon = (type: string) => {
     switch (type) {
-      case 'hospital':
+      case 'appointments':
         return <Receipt className="w-4 h-4 text-blue-500" />;
       case 'pharmacy':
         return <Receipt className="w-4 h-4 text-green-500" />;
@@ -325,14 +325,14 @@ export function StaffInvoices() {
 
   const getTypeBadge = (type: string) => {
     const config = {
-      hospital: { color: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300', label: 'Hospital' },
+      appointments: { color: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300', label: 'Appointments' },
       pharmacy: { color: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300', label: 'Pharmacy' },
       lab: { color: 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300', label: 'Lab' },
       xray: { color: 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300', label: 'X-ray' },
       ot: { color: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300', label: 'OT' }
     };
     
-    const { color, label } = config[type as keyof typeof config] || config.hospital;
+    const { color, label } = config[type as keyof typeof config] || config.appointments;
     return <Badge className={color}>{label}</Badge>;
   };
 
@@ -425,7 +425,7 @@ export function StaffInvoices() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Types</SelectItem>
-                <SelectItem value="hospital">Hospital</SelectItem>
+                <SelectItem value="appointments">Appointments</SelectItem>
                 <SelectItem value="pharmacy">Pharmacy</SelectItem>
                 <SelectItem value="lab">Lab</SelectItem>
                 <SelectItem value="xray">X-ray</SelectItem>
