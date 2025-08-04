@@ -5,49 +5,52 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, Search, FileText, Receipt, TestTube, Building2, Eye, Download } from "lucide-react";
-import { useInvoices, useLabReports } from "@/hooks/useDatabase";
+import { Calendar, Search, FileText, Receipt, TestTube, Building2, Eye, Download, ChevronLeft, ChevronRight, Zap, X } from "lucide-react";
+import { useInvoices } from "@/hooks/useDatabase";
 import { usePatientNames, getPatientName } from "@/hooks/useDisplayHelpers";
 import { format } from "date-fns";
 import { formatPkrAmount } from "@/utils/currency";
 import { generateInvoicePDF } from "@/utils/pdfGenerator";
+import { generatePharmacyInvoicePDF } from "@/utils/pharmacyPdfGenerator";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { useQuery } from '@tanstack/react-query';
 
 export function StaffInvoices() {
+  const [filterType, setFilterType] = useState("all");
+  const [filterDate, setFilterDate] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
-  const [invoiceTypeFilter, setInvoiceTypeFilter] = useState("all");
-  const [dateFilter, setDateFilter] = useState("");
-  
-  const { data: invoices, isLoading: invoicesLoading } = useInvoices();
-  const { data: labReports, isLoading: labLoading } = useLabReports();
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+
+  // Fetch hospital invoices
+  const { data: hospitalInvoices, isLoading: hospitalLoading } = useInvoices();
+
+  // Since all invoices are in the main invoices table, we'll filter them directly
+  const allTypesInvoices = hospitalInvoices || [];
+
   const { data: patientNames } = usePatientNames();
 
-  // Format time to 12-hour format
-  const formatTime = (dateString: string) => {
-    try {
-      const date = new Date(dateString);
-      return format(date, 'PPp'); // Example: "Dec 25, 2023 at 2:30 PM"
-    } catch (error) {
-      return 'Invalid date';
-    }
-  };
-
-  // Combine all invoices with their types
+  // Combine all invoices and categorize by type based on description/context
   const allInvoices = useMemo(() => {
     const combined: any[] = [];
 
-    // Regular invoices (appointments)
-    if (invoices) {
-      invoices.forEach(invoice => {
-        const isLabInvoice = invoice.description && invoice.description.toLowerCase().includes('lab');
-        const isOTInvoice = invoice.description && invoice.description.toLowerCase().includes('ot');
-        const isEmergencyInvoice = invoice.description && invoice.description.toLowerCase().includes('emergency');
+    // Process all invoices and categorize them
+    if (hospitalInvoices) {
+      hospitalInvoices.forEach(invoice => {
+        // Determine type based on description or other properties
+        let type = 'hospital';
+        const desc = invoice.description?.toLowerCase() || '';
         
-        let type = 'appointment';
-        if (isEmergencyInvoice) type = 'emergency';
-        else if (isLabInvoice) type = 'lab';
-        else if (isOTInvoice) type = 'ot';
+        if (desc.includes('pharmacy') || desc.includes('medicine')) {
+          type = 'pharmacy';
+        } else if (desc.includes('lab') || desc.includes('test')) {
+          type = 'lab';
+        } else if (desc.includes('xray') || desc.includes('x-ray') || desc.includes('radiology')) {
+          type = 'xray';
+        } else if (desc.includes('ot') || desc.includes('operation') || desc.includes('surgery')) {
+          type = 'ot';
+        }
 
         combined.push({
           ...invoice,
@@ -55,40 +58,47 @@ export function StaffInvoices() {
           invoice_type: type,
           invoice_date: invoice.created_at,
           patient_name: getPatientName(invoice.patient_id, patientNames || []),
-          patient_number: invoice.patient?.patient_number, // Add this line to preserve patient_number
-          amount: invoice.amount,
-          status: invoice.status
+          display_date: format(new Date(invoice.created_at), 'MMM d, yyyy'),
+          display_time: format(new Date(invoice.created_at), 'h:mm a'),
+          display_amount: formatPkrAmount(invoice.amount)
         });
       });
     }
 
     return combined.sort((a, b) => new Date(b.invoice_date).getTime() - new Date(a.invoice_date).getTime());
-  }, [invoices, patientNames]);
+  }, [hospitalInvoices, patientNames]);
 
-  // Filter invoices
+  // Filter and paginate invoices
   const filteredInvoices = useMemo(() => {
     return allInvoices.filter(invoice => {
       const matchesSearch = 
-        invoice.patient_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        invoice.invoice_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        invoice.patient_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        invoice.invoice_number?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         invoice.description?.toLowerCase().includes(searchTerm.toLowerCase());
 
-      const matchesType = invoiceTypeFilter === "all" || invoice.type === invoiceTypeFilter;
+      const matchesType = filterType === "all" || invoice.type === filterType;
 
-      const matchesDate = !dateFilter || 
-        format(new Date(invoice.invoice_date), 'yyyy-MM-dd') === dateFilter;
+      const matchesDate = !filterDate || 
+        format(new Date(invoice.invoice_date), 'yyyy-MM-dd') === filterDate;
 
       return matchesSearch && matchesType && matchesDate;
     });
-  }, [allInvoices, searchTerm, invoiceTypeFilter, dateFilter]);
+  }, [allInvoices, searchTerm, filterType, filterDate]);
 
-  const handleViewInvoice = async (invoice: any) => {
+  const totalPages = Math.ceil(filteredInvoices.length / itemsPerPage);
+  const paginatedInvoices = filteredInvoices.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
+
+  const handleDownloadPDF = async (invoice: any) => {
     try {
-      if (invoice.type === 'lab' || invoice.type === 'ot') {
-        // For lab and OT invoices, generate detailed invoice with proper formatting
-        await generateDetailedInvoicePDF(invoice);
+      if (invoice.type === 'pharmacy') {
+        await generatePharmacyInvoicePDF(invoice);
+      } else if (invoice.type === 'xray') {
+        // Use generateInvoicePDF for X-ray invoices
+        await generateInvoicePDF(invoice);
       } else {
-        // For regular invoices, use the standard function
         await generateInvoicePDF(invoice);
       }
     } catch (error) {
@@ -97,228 +107,50 @@ export function StaffInvoices() {
     }
   };
 
-  // Import the detailed PDF generation function for lab/OT invoices
-  const generateDetailedInvoicePDF = async (invoice: any) => {
-    const { jsPDF } = await import('jspdf');
-    const doc = new jsPDF();
-    const pageWidth = doc.internal.pageSize.width;
-    
-    // Get hospital settings for PDF branding
-    const getHospitalSettings = async () => {
-      try {
-        const { data, error } = await supabase
-          .from('hospital_settings')
-          .select('*')
-          .limit(1)
-          .single();
-        
-        if (error) throw error;
-        return data;
-      } catch (error) {
-        return {
-          hospital_name: 'Medical Center',
-          hospital_address: 'Healthcare District',
-          contact_number: '+92-XXX-XXXXXXX',
-          logo_url: null
-        };
-      }
-    };
-
-    const settings = await getHospitalSettings();
-    let yPosition = 20;
-
-    // Hospital logo (if available)
-    if (settings.logo_url) {
-      try {
-        const img = new Image();
-        img.crossOrigin = 'anonymous';
-        
-        await new Promise((resolve) => {
-          img.onload = () => {
-            try {
-              doc.addImage(img, 'JPEG', 20, yPosition - 5, 30, 20);
-              resolve(true);
-            } catch (error) {
-              resolve(false);
-            }
-          };
-          img.onerror = () => resolve(false);
-          setTimeout(() => resolve(false), 5000);
-          img.src = settings.logo_url;
-        });
-      } catch (error) {
-        console.error('Error loading logo:', error);
-      }
-    }
-
-    // Hospital name
-    doc.setFontSize(18);
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(40, 40, 40);
-    doc.text(`${settings.hospital_name}${invoice.type === 'lab' ? ' - Laboratory' : ' - Operation Theater'}`, pageWidth / 2, yPosition + 8, { align: 'center' });
-    
-    yPosition += 16;
-    
-    // Hospital address
-    doc.setFontSize(10);
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(60, 60, 60);
-    doc.text(settings.hospital_address, pageWidth / 2, yPosition, { align: 'center' });
-    
-    yPosition += 6;
-    
-    // Contact number
-    doc.text(`Phone: ${settings.contact_number}`, pageWidth / 2, yPosition, { align: 'center' });
-    
-    yPosition += 15;
-    
-    // Document title
-    doc.setFontSize(16);
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(40, 40, 40);
-    const title = invoice.type === 'lab' ? 'LAB TEST INVOICE' : 'OPERATION THEATER INVOICE';
-    doc.text(title, pageWidth / 2, yPosition, { align: 'center' });
-    
-    yPosition += 25;
-    
-    // Invoice details box
-    doc.setDrawColor(0, 0, 0);
-    doc.rect(15, yPosition - 5, pageWidth - 30, 50);
-    
-    doc.setFontSize(11);
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(40, 40, 40);
-    
-    // First row
-    doc.text('Invoice #:', 20, yPosition + 5);
-    doc.setFont('helvetica', 'normal');
-    doc.text(invoice.invoice_number, 60, yPosition + 5);
-    
-    doc.setFont('helvetica', 'bold');
-    doc.text('Date:', 120, yPosition + 5);
-    doc.setFont('helvetica', 'normal');
-    doc.text(format(new Date(invoice.invoice_date), 'MMM dd, yyyy'), 140, yPosition + 5);
-    
-    yPosition += 10;
-    
-    // Second row
-    doc.setFont('helvetica', 'bold');
-    doc.text('Patient:', 20, yPosition + 5);
-    doc.setFont('helvetica', 'normal');
-    doc.text(invoice.patient_name || 'N/A', 60, yPosition + 5);
-    
-    doc.setFont('helvetica', 'bold');
-    doc.text('Patient ID:', 120, yPosition + 5);
-    doc.setFont('helvetica', 'normal');
-    // Access patient number from nested patient object
-    const patientId = invoice.patient?.patient_number || invoice.patient_number || 'N/A';
-    doc.text(patientId, 160, yPosition + 5);
-    
-    yPosition += 10;
-    
-    // Third row
-    doc.setFont('helvetica', 'bold');
-    doc.text('Status:', 20, yPosition + 5);
-    doc.setFont('helvetica', 'normal');
-    doc.text(invoice.status.toUpperCase(), 60, yPosition + 5);
-    
-    yPosition += 50;
-    
-    // Service details with proper text wrapping
-    const tableStartY = yPosition;
-    doc.setFillColor(240, 240, 240);
-    doc.rect(15, yPosition, pageWidth - 30, 10, 'F');
-    
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(10);
-    doc.setTextColor(40, 40, 40);
-    doc.text('Description', 20, yPosition + 7);
-    doc.text('Amount', pageWidth - 50, yPosition + 7);
-    
-    yPosition += 15;
-    
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(60, 60, 60);
-    
-    // Apply text wrapping for descriptions
-    const maxWidth = pageWidth - 90; // Leave space for amount column
-    const description = invoice.description || (invoice.type === 'lab' ? 'Laboratory Service' : 'Operation Theater Service');
-    const wrappedText = doc.splitTextToSize(description, maxWidth);
-    const textHeight = wrappedText.length * 5;
-    
-    doc.text(wrappedText, 20, yPosition);
-    doc.text(formatPkrAmount(invoice.amount), pageWidth - 50, yPosition);
-    
-    yPosition += textHeight + 8;
-    
-    // Draw table border
-    doc.setDrawColor(0, 0, 0);
-    doc.rect(15, tableStartY, pageWidth - 30, yPosition - tableStartY);
-    doc.line(pageWidth - 70, tableStartY, pageWidth - 70, yPosition);
-    
-    yPosition += 20;
-    
-    // Total section
-    const totalsX = pageWidth - 85;
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(12);
-    doc.setTextColor(40, 40, 40);
-    doc.rect(totalsX, yPosition - 5, 80, 18);
-    doc.text('Total Amount:', totalsX + 5, yPosition + 4);
-    doc.text(formatPkrAmount(invoice.amount), totalsX + 5, yPosition + 12);
-    
-    yPosition += 30;
-    
-    // Footer
-    doc.setFontSize(9);
-    doc.setFont('helvetica', 'italic');
-    doc.setTextColor(100, 100, 100);
-    doc.text('Thank you for choosing our medical services!', pageWidth / 2, yPosition, { align: 'center' });
-    doc.text('For any queries, please contact us at the above number.', pageWidth / 2, yPosition + 8, { align: 'center' });
-    
-    // Open in new tab
-    const pdfBlob = doc.output('blob');
-    const pdfUrl = URL.createObjectURL(pdfBlob);
-    window.open(pdfUrl, '_blank');
-  };
-
   const getTypeIcon = (type: string) => {
     switch (type) {
-      case 'emergency':
-        return <Receipt className="w-4 h-4 text-red-500" />;
+      case 'hospital':
+        return <Receipt className="w-4 h-4 text-blue-500" />;
+      case 'pharmacy':
+        return <Receipt className="w-4 h-4 text-green-500" />;
       case 'lab':
-        return <TestTube className="w-4 h-4" />;
+        return <TestTube className="w-4 h-4 text-purple-500" />;
+      case 'xray':
+        return <Zap className="w-4 h-4 text-orange-500" />;
       case 'ot':
-        return <Building2 className="w-4 h-4" />;
+        return <Building2 className="w-4 h-4 text-red-500" />;
       default:
-        return <Receipt className="w-4 h-4" />;
+        return <Receipt className="w-4 h-4 text-gray-500" />;
     }
   };
 
   const getTypeBadge = (type: string) => {
     const config = {
-      emergency: { color: 'bg-red-100 text-red-700', label: 'Emergency' },
-      lab: { color: 'bg-blue-100 text-blue-700', label: 'Lab' },
-      ot: { color: 'bg-green-100 text-green-700', label: 'OT' },
-      appointment: { color: 'bg-purple-100 text-purple-700', label: 'Appointment' }
+      hospital: { color: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300', label: 'Hospital' },
+      pharmacy: { color: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300', label: 'Pharmacy' },
+      lab: { color: 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300', label: 'Lab' },
+      xray: { color: 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300', label: 'X-ray' },
+      ot: { color: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300', label: 'OT' }
     };
     
-    const { color, label } = config[type as keyof typeof config] || config.appointment;
+    const { color, label } = config[type as keyof typeof config] || config.hospital;
     return <Badge className={color}>{label}</Badge>;
   };
 
   const getStatusBadge = (status: string) => {
     const config = {
-      paid: { color: 'bg-green-100 text-green-700', label: 'Paid' },
-      pending: { color: 'bg-yellow-100 text-yellow-700', label: 'Pending' },
-      overdue: { color: 'bg-red-100 text-red-700', label: 'Overdue' }
+      paid: { color: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300', label: 'Paid' },
+      pending: { color: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300', label: 'Pending' },
+      overdue: { color: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300', label: 'Overdue' }
     };
     
     const { color, label } = config[status as keyof typeof config] || config.pending;
     return <Badge className={color}>{label}</Badge>;
   };
 
-  const isLoading = invoicesLoading || labLoading;
+  const isLoading = hospitalLoading;
+
+  const totalAmount = allInvoices.reduce((sum, invoice) => sum + Number(invoice.amount || 0), 0);
 
   return (
     <div className="space-y-6">
@@ -336,37 +168,33 @@ export function StaffInvoices() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Lab Invoices</CardTitle>
-            <TestTube className="w-4 h-4 text-blue-500" />
+            <CardTitle className="text-sm font-medium">Total Amount</CardTitle>
+            <Receipt className="w-4 h-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-blue-600">
-              {allInvoices.filter(inv => inv.type === 'lab').length}
+            <div className="text-2xl font-bold">{formatPkrAmount(totalAmount)}</div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">X-ray Invoices</CardTitle>
+            <Zap className="w-4 h-4 text-orange-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-orange-600">
+              {allInvoices.filter(inv => inv.type === 'xray').length}
             </div>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">OT Invoices</CardTitle>
-            <Building2 className="w-4 h-4 text-green-500" />
+            <CardTitle className="text-sm font-medium">Applied Filters</CardTitle>
+            <Search className="w-4 h-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">
-              {allInvoices.filter(inv => inv.type === 'ot').length}
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
-            <Receipt className="w-4 h-4 text-purple-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-purple-600">
-              {formatPkrAmount(allInvoices.filter(inv => inv.status === 'paid').reduce((sum, inv) => sum + Number(inv.amount), 0))}
-            </div>
+            <div className="text-2xl font-bold">{filteredInvoices.length}</div>
           </CardContent>
         </Card>
       </div>
@@ -393,16 +221,17 @@ export function StaffInvoices() {
               </div>
             </div>
             
-            <Select value={invoiceTypeFilter} onValueChange={setInvoiceTypeFilter}>
+            <Select value={filterType} onValueChange={setFilterType}>
               <SelectTrigger className="w-full sm:w-48">
                 <SelectValue placeholder="Filter by type" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Types</SelectItem>
-                <SelectItem value="appointment">Appointments</SelectItem>
-                <SelectItem value="emergency">Emergency</SelectItem>
-                <SelectItem value="lab">Lab Tests</SelectItem>
-                <SelectItem value="ot">OT Operations</SelectItem>
+                <SelectItem value="hospital">Hospital</SelectItem>
+                <SelectItem value="pharmacy">Pharmacy</SelectItem>
+                <SelectItem value="lab">Lab</SelectItem>
+                <SelectItem value="xray">X-ray</SelectItem>
+                <SelectItem value="ot">OT</SelectItem>
               </SelectContent>
             </Select>
 
@@ -410,23 +239,25 @@ export function StaffInvoices() {
               <Calendar className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
               <Input
                 type="date"
-                value={dateFilter}
-                onChange={(e) => setDateFilter(e.target.value)}
+                value={filterDate}
+                onChange={(e) => setFilterDate(e.target.value)}
                 className="pl-10 w-full sm:w-48"
               />
             </div>
 
-            {(searchTerm || invoiceTypeFilter !== "all" || dateFilter) && (
+            {(searchTerm || filterType !== "all" || filterDate) && (
               <Button
                 variant="outline"
                 onClick={() => {
                   setSearchTerm("");
-                  setInvoiceTypeFilter("all");
-                  setDateFilter("");
+                  setFilterType("all");
+                  setFilterDate("");
+                  setCurrentPage(1);
                 }}
                 className="px-3"
               >
-                Clear
+                <X className="w-4 h-4 mr-2" />
+                Clear Filters
               </Button>
             )}
           </div>
@@ -436,10 +267,8 @@ export function StaffInvoices() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Invoice #</TableHead>
-                  <TableHead>Patient</TableHead>
                   <TableHead>Type</TableHead>
-                  <TableHead>Description</TableHead>
-                  <TableHead>Date & Time</TableHead>
+                  <TableHead>Date</TableHead>
                   <TableHead>Amount</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Actions</TableHead>
@@ -447,18 +276,18 @@ export function StaffInvoices() {
               </TableHeader>
               <TableBody>
                 {isLoading ? (
-                  Array.from({ length: 5 }).map((_, i) => (
+                  Array.from({ length: itemsPerPage }).map((_, i) => (
                     <TableRow key={i}>
-                      {Array.from({ length: 8 }).map((_, j) => (
+                      {Array.from({ length: 6 }).map((_, j) => (
                         <TableCell key={j}>
                           <div className="h-4 bg-gray-200 rounded animate-pulse"></div>
                         </TableCell>
                       ))}
                     </TableRow>
                   ))
-                ) : filteredInvoices.length > 0 ? (
-                  filteredInvoices.map((invoice) => (
-                    <TableRow key={invoice.id}>
+                ) : paginatedInvoices.length > 0 ? (
+                  paginatedInvoices.map((invoice) => (
+                    <TableRow key={`${invoice.type}-${invoice.id}`}>
                       <TableCell>
                         <div className="flex items-center gap-2">
                           {getTypeIcon(invoice.type)}
@@ -466,59 +295,77 @@ export function StaffInvoices() {
                         </div>
                       </TableCell>
                       <TableCell>
-                        <div className="font-medium">{invoice.patient_name}</div>
-                      </TableCell>
-                      <TableCell>
                         {getTypeBadge(invoice.type)}
                       </TableCell>
                       <TableCell>
-                        <span className="text-sm text-gray-600">
-                          {invoice.description || 'No description'}
-                        </span>
-                      </TableCell>
-                      <TableCell>
                         <div className="text-sm">
-                          <div className="font-medium">
-                            {format(new Date(invoice.invoice_date), 'MMM d, yyyy')}
-                          </div>
-                          <div className="text-gray-500">
-                            {format(new Date(invoice.invoice_date), 'h:mm a')}
-                          </div>
+                          <div className="font-medium">{invoice.display_date}</div>
+                          <div className="text-gray-500">{invoice.display_time}</div>
                         </div>
                       </TableCell>
                       <TableCell>
-                        <span className="font-medium text-green-600">
-                          {formatPkrAmount(invoice.amount)}
-                        </span>
+                        <span className="font-medium">{invoice.display_amount}</span>
                       </TableCell>
                       <TableCell>
                         {getStatusBadge(invoice.status)}
                       </TableCell>
                       <TableCell>
-                        <div className="flex items-center gap-2">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleViewInvoice(invoice)}
-                            className="flex items-center gap-1"
-                          >
-                            <Eye className="w-3 h-3" />
-                            View
-                          </Button>
-                        </div>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleDownloadPDF(invoice)}
+                          className="flex items-center gap-1"
+                        >
+                          <Download className="w-3 h-3" />
+                          View PDF
+                        </Button>
                       </TableCell>
                     </TableRow>
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={8} className="text-center text-gray-500 py-12">
-                      No invoices found
+                    <TableCell colSpan={6} className="text-center text-gray-500 py-12">
+                      {searchTerm || filterType !== "all" || filterDate 
+                        ? "No invoices match your search criteria" 
+                        : "No invoices found"}
                     </TableCell>
                   </TableRow>
                 )}
               </TableBody>
             </Table>
           </div>
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between mt-6">
+              <div className="text-sm text-gray-500">
+                Showing {(currentPage - 1) * itemsPerPage + 1} to {Math.min(currentPage * itemsPerPage, filteredInvoices.length)} of {filteredInvoices.length} invoices
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                  disabled={currentPage === 1}
+                >
+                  <ChevronLeft className="w-4 h-4 mr-1" />
+                  Previous
+                </Button>
+                <span className="text-sm">
+                  Page {currentPage} of {totalPages}
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                  disabled={currentPage === totalPages}
+                >
+                  Next
+                  <ChevronRight className="w-4 h-4 ml-1" />
+                </Button>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
