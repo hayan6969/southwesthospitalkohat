@@ -503,8 +503,8 @@ export function EnhancedAppointmentDialog() {
           <div className="space-y-2 bg-muted/30 p-3 rounded-lg">
             <Label className="text-sm font-medium">Scheduled for:</Label>
             <div className="text-sm text-muted-foreground">
-              <div>{appointmentDate ? new Date(appointmentDate).toLocaleDateString() : 'No date selected'} at {appointmentTime || 'No time selected'}</div>
-              <div className="text-xs mt-1">Using current date and time as default</div>
+              <div>{appointmentDate && appointmentTime ? `${appointmentDate} at ${appointmentTime}` : 'No date/time selected'}</div>
+              <div className="text-xs mt-1">Using Pakistani date and time</div>
             </div>
           </div>
 
