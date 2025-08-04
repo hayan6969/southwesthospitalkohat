@@ -59,8 +59,10 @@ export const usePharmacyAnalytics = () => {
     queryFn: async (): Promise<PharmacyAnalytics> => {
       // Use Pakistan timezone for all date calculations
       const pakistanToday = getCurrentPakistanTime();
+      console.log('Current Pakistan Time:', pakistanToday, 'Date:', pakistanToday.toDateString());
       const startOfToday = startOfDay(pakistanToday);
       const endOfToday = endOfDay(pakistanToday);
+      console.log('Today range:', startOfToday, 'to', endOfToday);
       const startOfThisMonth = startOfMonth(pakistanToday);
       const endOfThisMonth = endOfMonth(pakistanToday);
 
@@ -113,7 +115,11 @@ export const usePharmacyAnalytics = () => {
       // Today's calculations (using Pakistan timezone)
       const todaySalesInvoices = salesInvoices.filter(inv => {
         const invDate = toPakistanTime(new Date(inv.created_at));
-        return invDate >= startOfToday && invDate <= endOfToday;
+        const isToday = invDate >= startOfToday && invDate <= endOfToday;
+        if (isToday) {
+          console.log('Today sale found:', inv.invoice_number, 'at', invDate, 'amount:', inv.final_amount);
+        }
+        return isToday;
       });
       const todayReturnInvoices = returnInvoices.filter(inv => {
         const invDate = toPakistanTime(new Date(inv.created_at));
