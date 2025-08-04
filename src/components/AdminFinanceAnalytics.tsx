@@ -808,8 +808,8 @@ function OTAnalytics({ data }: { data: any[] }) {
                 <span className="font-semibold text-blue-600">{scheduledOTs}</span>
               </div>
               <div className="flex justify-between">
-                <span>Hospital Revenue</span>
-                <span className="font-semibold">{formatPkrAmount(totalRevenue)}</span>
+                <span>Hospital Revenue (This Month)</span>
+                <span className="font-semibold">{formatPkrAmount(monthlyRevenue)}</span>
               </div>
             </div>
           </CardContent>
