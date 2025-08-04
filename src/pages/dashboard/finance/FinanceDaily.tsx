@@ -199,8 +199,8 @@ export default function FinanceDaily() {
         // Returns from negative invoices (make positive for display)
         pharmacyReturnsFromInvoices = Math.abs(negativeInvoices.reduce((sum, inv) => sum + (inv.final_amount || 0), 0));
         
-        // Calculate actual profit only from positive sales based on selling price - purchase price
-        pharmacyProfit = positiveInvoices.reduce((totalProfit, invoice) => {
+        // Calculate gross profit only from positive sales based on selling price - purchase price
+        const grossPharmacyProfit = positiveInvoices.reduce((totalProfit, invoice) => {
           const invoiceProfit = (invoice.pharmacy_invoice_items || []).reduce((itemsProfit, item) => {
             if (item.medicines && item.medicines.selling_price && item.medicines.purchase_price) {
               const profitPerUnit = item.medicines.selling_price - item.medicines.purchase_price;
@@ -210,6 +210,9 @@ export default function FinanceDaily() {
           }, 0);
           return totalProfit + invoiceProfit;
         }, 0);
+        
+        // Calculate NET pharmacy profit (gross profit minus returns)
+        pharmacyProfit = grossPharmacyProfit - pharmacyReturnsFromInvoices;
       }
       
       const labRevenue = labReports?.reduce((sum, lab) => sum + (lab.price || 0), 0) || 0;
