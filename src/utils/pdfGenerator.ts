@@ -177,24 +177,41 @@ export const generateLabInvoicePDF = async (data: {
   
   yPosition += 15; // More spacing before first item
   
-  // Test items
+  // Test items with proper text wrapping
   doc.setFont('helvetica', 'normal');
   data.tests.forEach((test) => {
     xPosition = 20;
     
-    // Test name
-    doc.text(test.name, xPosition, yPosition);
+    // Check if we need a new page
+    if (yPosition > 250) {
+      doc.addPage();
+      yPosition = 20;
+    }
+    
+    // Test name with text wrapping
+    const testNameLines = doc.splitTextToSize(test.name, colWidths[0] - 5);
+    const testNameHeight = testNameLines.length * 5;
+    
+    // Description with text wrapping
+    const description = test.description || '-';
+    const descLines = doc.splitTextToSize(description, colWidths[1] - 5);
+    const descHeight = descLines.length * 5;
+    
+    // Calculate row height based on the tallest cell content
+    const rowHeight = Math.max(testNameHeight, descHeight, 8);
+    
+    // Test name (wrapped)
+    doc.text(testNameLines, xPosition, yPosition);
     xPosition += colWidths[0];
     
-    // Description
-    const description = test.description || '-';
-    doc.text(description.length > 20 ? description.substring(0, 17) + '...' : description, xPosition, yPosition);
+    // Description (wrapped)
+    doc.text(descLines, xPosition, yPosition);
     xPosition += colWidths[1];
     
-    // Price
+    // Price (aligned to top of row)
     doc.text(formatPkrAmount(test.price), xPosition, yPosition);
     
-    yPosition += 8;
+    yPosition += rowHeight + 2; // Add some padding between rows
   });
   
   // Draw table border
