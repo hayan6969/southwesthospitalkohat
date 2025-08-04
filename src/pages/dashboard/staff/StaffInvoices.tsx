@@ -4,7 +4,7 @@ import { useInvoices, useUpdateInvoice } from "@/hooks/useDatabase";
 import { InvoiceDialog } from "@/components/dialogs/InvoiceDialog";
 import { generateInvoicePDF, generateXrayInvoicePDF } from "@/utils/pdfGenerator";
 import { generatePharmacyInvoicePDF } from "@/utils/pharmacyPdfGenerator";
-import { Banknote, FileText, Calendar, CheckCircle, Download } from "lucide-react";
+import { Banknote, FileText, Calendar, CheckCircle, Download, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
@@ -21,6 +21,8 @@ import { useState } from "react";
 export default function StaffInvoices() {
   const [filterType, setFilterType] = useState<string>("all");
   const [searchTerm, setSearchTerm] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 20;
   const { data: hospitalInvoices, isLoading: hospitalLoading } = useInvoices();
   const updateInvoice = useUpdateInvoice();
 
@@ -138,7 +140,13 @@ export default function StaffInvoices() {
       );
     }
     return true;
-  });
+  }).sort((a, b) => new Date(b.displayDate).getTime() - new Date(a.displayDate).getTime());
+
+  // Pagination logic
+  const totalPages = Math.ceil(filteredInvoices.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedInvoices = filteredInvoices.slice(startIndex, endIndex);
 
   const handleMarkAsPaid = async (invoiceId: string) => {
     try {
@@ -284,8 +292,8 @@ export default function StaffInvoices() {
                       ))}
                     </TableRow>
                   ))
-                ) : filteredInvoices && filteredInvoices.length > 0 ? (
-                  filteredInvoices.map((invoice) => (
+                ) : paginatedInvoices && paginatedInvoices.length > 0 ? (
+                  paginatedInvoices.map((invoice) => (
                     <TableRow key={invoice.id}>
                       <TableCell>
                         <div className="flex items-center gap-2">
@@ -349,13 +357,63 @@ export default function StaffInvoices() {
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center text-gray-500 py-12">
+                    <TableCell colSpan={6} className="text-center text-gray-500 py-12">
                       No invoices found
                     </TableCell>
                   </TableRow>
                 )}
               </TableBody>
             </Table>
+            
+            {/* Pagination Controls */}
+            {totalPages > 1 && (
+              <div className="flex items-center justify-between px-6 py-4 border-t">
+                <div className="text-sm text-gray-700">
+                  Showing {startIndex + 1} to {Math.min(endIndex, filteredInvoices.length)} of {filteredInvoices.length} results
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCurrentPage(currentPage - 1)}
+                    disabled={currentPage === 1}
+                    className="flex items-center gap-1"
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                    Previous
+                  </Button>
+                  
+                  <div className="flex items-center gap-1">
+                    {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                      const pageNum = i + 1;
+                      return (
+                        <Button
+                          key={pageNum}
+                          variant={currentPage === pageNum ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => setCurrentPage(pageNum)}
+                          className="w-8 h-8 p-0"
+                        >
+                          {pageNum}
+                        </Button>
+                      );
+                    })}
+                    {totalPages > 5 && <span className="px-2">...</span>}
+                  </div>
+                  
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCurrentPage(currentPage + 1)}
+                    disabled={currentPage === totalPages}
+                    className="flex items-center gap-1"
+                  >
+                    Next
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>

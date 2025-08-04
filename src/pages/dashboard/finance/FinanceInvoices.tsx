@@ -7,7 +7,7 @@ import { useInvoices } from "@/hooks/useDatabase";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { formatPkrAmount } from "@/utils/currency";
-import { Download, Receipt, Calendar as CalendarIcon, Filter } from "lucide-react";
+import { Download, Receipt, Calendar as CalendarIcon, Filter, ChevronLeft, ChevronRight } from "lucide-react";
 import { format } from "date-fns";
 import { generateInvoicePDF, generateXrayInvoicePDF } from "@/utils/pdfGenerator";
 import { generatePharmacyInvoicePDF } from "@/utils/pharmacyPdfGenerator";
@@ -467,6 +467,15 @@ export default function FinanceInvoices() {
     // Filter by type
     if (filterType !== 'all' && invoice.type !== filterType) return false;
     
+    // Filter by search term
+    if (searchTerm) {
+      const searchLower = searchTerm.toLowerCase();
+      return (
+        invoice.displayNumber.toLowerCase().includes(searchLower) ||
+        invoice.typeLabel.toLowerCase().includes(searchLower)
+      );
+    }
+    
     // Filter by date
     if (filterDate) {
       const invoiceDate = new Date(invoice.displayDate!);
@@ -475,6 +484,12 @@ export default function FinanceInvoices() {
     
     return true;
   }).sort((a, b) => new Date(b.displayDate!).getTime() - new Date(a.displayDate!).getTime());
+
+  // Pagination logic
+  const totalPages = Math.ceil(filteredInvoices.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedInvoices = filteredInvoices.slice(startIndex, endIndex);
 
   // Calculate totals
   const totalAmount = filteredInvoices.reduce((sum, invoice) => sum + (invoice.displayAmount || 0), 0);
@@ -603,7 +618,7 @@ export default function FinanceInvoices() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredInvoices.map((invoice, index) => (
+              {paginatedInvoices.map((invoice, index) => (
                 <TableRow key={`${invoice.type}-${invoice.id}`}>
                   <TableCell className="font-mono">{invoice.displayNumber}</TableCell>
                   <TableCell>
@@ -641,7 +656,7 @@ export default function FinanceInvoices() {
                   </TableCell>
                 </TableRow>
               ))}
-              {filteredInvoices.length === 0 && (
+              {paginatedInvoices.length === 0 && (
                 <TableRow>
                   <TableCell colSpan={6} className="text-center py-8 text-gray-500">
                     No invoices found with the selected filters
@@ -650,6 +665,56 @@ export default function FinanceInvoices() {
               )}
             </TableBody>
           </Table>
+          
+          {/* Pagination Controls */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between px-2 pt-4">
+              <div className="text-sm text-gray-700">
+                Showing {startIndex + 1} to {Math.min(endIndex, filteredInvoices.length)} of {filteredInvoices.length} results
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(currentPage - 1)}
+                  disabled={currentPage === 1}
+                  className="flex items-center gap-1"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                  Previous
+                </Button>
+                
+                <div className="flex items-center gap-1">
+                  {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                    const pageNum = i + 1;
+                    return (
+                      <Button
+                        key={pageNum}
+                        variant={currentPage === pageNum ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => setCurrentPage(pageNum)}
+                        className="w-8 h-8 p-0"
+                      >
+                        {pageNum}
+                      </Button>
+                    );
+                  })}
+                  {totalPages > 5 && <span className="px-2">...</span>}
+                </div>
+                
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(currentPage + 1)}
+                  disabled={currentPage === totalPages}
+                  className="flex items-center gap-1"
+                >
+                  Next
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
