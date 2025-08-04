@@ -525,14 +525,6 @@ export default function FinanceDaily() {
             Closing Balance
           </Button>
           <Button
-            onClick={() => setShowLastClosingDialog(true)}
-            variant="outline"
-            className="flex items-center gap-2"
-          >
-            <Upload className="h-4 w-4" />
-            Last Closing
-          </Button>
-          <Button
             onClick={handleDailyClosing}
             className="flex items-center gap-2 bg-green-600 hover:bg-green-700"
           >
