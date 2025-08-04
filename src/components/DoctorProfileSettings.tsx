@@ -96,7 +96,7 @@ export const DoctorProfileSettings = () => {
         .from('doctors')
         .select('*')
         .eq('id', profile?.id)
-        .single();
+        .maybeSingle();
 
       if (doctorError) throw doctorError;
 
@@ -109,12 +109,21 @@ export const DoctorProfileSettings = () => {
 
       if (profileError) throw profileError;
 
+      // If no doctor record exists, create default values
+      const defaultDoctorData = {
+        specialization: '',
+        consultation_fee: 0,
+        experience_years: 0,
+        license_number: '',
+        avatar_url: ''
+      };
+
       setDoctorProfile({
-        specialization: doctorData.specialization || '',
-        consultation_fee: doctorData.consultation_fee || 0,
-        experience_years: doctorData.experience_years || 0,
-        license_number: doctorData.license_number || '',
-        avatar_url: doctorData.avatar_url || '',
+        specialization: doctorData?.specialization || defaultDoctorData.specialization,
+        consultation_fee: doctorData?.consultation_fee || defaultDoctorData.consultation_fee,
+        experience_years: doctorData?.experience_years || defaultDoctorData.experience_years,
+        license_number: doctorData?.license_number || defaultDoctorData.license_number,
+        avatar_url: doctorData?.avatar_url || defaultDoctorData.avatar_url,
         first_name: profileData.first_name || '',
         last_name: profileData.last_name || '',
         phone: profileData.phone || ''
