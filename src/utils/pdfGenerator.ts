@@ -401,6 +401,189 @@ export const generateInvoicePDF = async (invoice: any) => {
   window.open(pdfUrl, '_blank');
 };
 
+// X-ray invoice generation
+export const generateXrayInvoicePDF = async (data: {
+  invoiceNumber: string;
+  patientName: string;
+  patientEmail: string;
+  patientId?: string;
+  patientPhone?: string;
+  doctorName?: string;
+  tests: Array<{
+    name: string;
+    price: number;
+    description?: string;
+  }>;
+  totalAmount: number;
+  issueDate: string;
+  xrayDate: string;
+  notes?: string;
+}) => {
+  const doc = new jsPDF();
+  const pageWidth = doc.internal.pageSize.width;
+
+  // Add hospital header
+  let yPosition = await addHospitalHeader(doc, 'X-RAY EXAMINATION INVOICE');
+  yPosition += 10;
+
+  // Invoice details box
+  doc.setDrawColor(0, 0, 0);
+  doc.rect(15, yPosition - 5, pageWidth - 30, 60);
+  
+  doc.setFontSize(11);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(40, 40, 40);
+  
+  // First row
+  doc.text('Invoice #:', 20, yPosition + 5);
+  doc.setFont('helvetica', 'normal');
+  doc.text(data.invoiceNumber, 60, yPosition + 5);
+  
+  doc.setFont('helvetica', 'bold');
+  doc.text('Issue Date:', 120, yPosition + 5);
+  doc.setFont('helvetica', 'normal');
+  doc.text(data.issueDate, 160, yPosition + 5);
+  
+  yPosition += 10;
+  
+  // Second row
+  doc.setFont('helvetica', 'bold');
+  doc.text('Patient:', 20, yPosition + 5);
+  doc.setFont('helvetica', 'normal');
+  doc.text(data.patientName, 60, yPosition + 5);
+  
+  doc.setFont('helvetica', 'bold');
+  doc.text('Patient ID:', 120, yPosition + 5);
+  doc.setFont('helvetica', 'normal');
+  doc.text(data.patientId || 'N/A', 160, yPosition + 5);
+  
+  yPosition += 10;
+  
+  // Third row
+  doc.setFont('helvetica', 'bold');
+  doc.text('X-ray Date:', 20, yPosition + 5);
+  doc.setFont('helvetica', 'normal');
+  doc.text(data.xrayDate, 70, yPosition + 5);
+  
+  if (data.doctorName) {
+    doc.setFont('helvetica', 'bold');
+    doc.text('Doctor:', 120, yPosition + 5);
+    doc.setFont('helvetica', 'normal');
+    doc.text(data.doctorName, 150, yPosition + 5);
+  }
+  
+  yPosition += 10;
+  
+  // Fourth row - Status
+  doc.setFont('helvetica', 'bold');
+  doc.text('Status:', 20, yPosition + 5);
+  doc.setFont('helvetica', 'normal');
+  doc.text('SCHEDULED', 60, yPosition + 5);
+
+  yPosition += 65;
+
+  // Tests table
+  const tableStartY = yPosition;
+  const colWidths = [100, 40, 40];
+  const headers = ['X-ray Test', 'Description', 'Price'];
+  
+  // Table header
+  doc.setFillColor(240, 240, 240);
+  doc.rect(15, yPosition, pageWidth - 30, 10, 'F');
+  
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(10);
+  let xPosition = 20;
+  headers.forEach((header, index) => {
+    doc.text(header, xPosition, yPosition + 7);
+    xPosition += colWidths[index];
+  });
+  
+  yPosition += 15;
+  
+  // Test items
+  doc.setFont('helvetica', 'normal');
+  data.tests.forEach((test) => {
+    xPosition = 20;
+    
+    if (yPosition > 250) {
+      doc.addPage();
+      yPosition = 20;
+    }
+    
+    const testNameLines = doc.splitTextToSize(test.name, colWidths[0] - 5);
+    const testNameHeight = testNameLines.length * 5;
+    
+    const description = test.description || '-';
+    const descLines = doc.splitTextToSize(description, colWidths[1] - 5);
+    const descHeight = descLines.length * 5;
+    
+    const rowHeight = Math.max(testNameHeight, descHeight, 8);
+    
+    doc.text(testNameLines, xPosition, yPosition);
+    xPosition += colWidths[0];
+    
+    doc.text(descLines, xPosition, yPosition);
+    xPosition += colWidths[1];
+    
+    doc.text(formatPkrAmount(test.price), xPosition, yPosition);
+    
+    yPosition += rowHeight + 2;
+  });
+  
+  // Draw table border
+  doc.setDrawColor(0, 0, 0);
+  doc.rect(15, tableStartY, pageWidth - 30, yPosition - tableStartY);
+  
+  // Vertical lines for table
+  xPosition = 15;
+  for (let i = 0; i < colWidths.length - 1; i++) {
+    xPosition += colWidths[i];
+    doc.line(xPosition, tableStartY, xPosition, yPosition);
+  }
+
+  yPosition += 15;
+
+  // Notes section if available
+  if (data.notes) {
+    yPosition += 10;
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(11);
+    doc.text('Notes:', 20, yPosition);
+    yPosition += 8;
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(10);
+    const notesLines = doc.splitTextToSize(data.notes, pageWidth - 40);
+    doc.text(notesLines, 20, yPosition);
+    yPosition += notesLines.length * 5 + 10;
+  }
+
+  // Total section
+  yPosition += 15;
+  const totalsX = pageWidth - 85;
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(12);
+  doc.setTextColor(40, 40, 40);
+  doc.rect(totalsX, yPosition - 5, 80, 18);
+  doc.text('Total Amount:', totalsX + 5, yPosition + 4);
+  doc.text(formatPkrAmount(data.totalAmount), totalsX + 5, yPosition + 12);
+
+  // Footer
+  yPosition += 30;
+  doc.setFontSize(9);
+  doc.setFont('helvetica', 'italic');
+  doc.setTextColor(100, 100, 100);
+  doc.text('Please arrive 15 minutes before your scheduled X-ray appointment.', pageWidth / 2, yPosition, { align: 'center' });
+  doc.text('Payment is required before the examination.', pageWidth / 2, yPosition + 8, { align: 'center' });
+
+  // Open PDF in new tab
+  const pdfBlob = doc.output('blob');
+  const pdfUrl = URL.createObjectURL(pdfBlob);
+  window.open(pdfUrl, '_blank');
+  
+  return pdfBlob;
+};
+
 export const generateOTPDF = async (data: {
   invoiceNumber: string;
   patientName: string;

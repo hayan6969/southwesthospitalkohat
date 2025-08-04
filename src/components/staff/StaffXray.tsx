@@ -7,8 +7,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import { Input } from "@/components/ui/input";
-import { Search, X } from "lucide-react";
+import { Search, X, FileText } from "lucide-react";
 import { formatPkrAmount } from "@/utils/currency";
+import { generateXrayInvoicePDF } from "@/utils/pdfGenerator";
+import { formatPatientInfo } from "@/utils/patientUtils";
 
 export function StaffXray() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -84,6 +86,39 @@ export function StaffXray() {
     }
   };
 
+  const handleDownloadPDF = async (report: any) => {
+    try {
+      const patientProfile = patients?.find(p => p.id === report.patient_id);
+      const doctorProfile = doctors?.find(d => d.id === report.doctor_id);
+      
+      const patientInfo = formatPatientInfo(
+        { emergency_contact_phone: patientProfile?.phone }, 
+        patientProfile
+      );
+      
+      await generateXrayInvoicePDF({
+        invoiceNumber: `XR-${report.id.slice(0, 8)}`,
+        patientName: patientInfo.fullName,
+        patientEmail: patientInfo.email,
+        patientId: patientInfo.patientNumber,
+        patientPhone: patientInfo.phone,
+        doctorName: report.external_doctor_name || 
+          (doctorProfile ? `Dr. ${doctorProfile.first_name} ${doctorProfile.last_name}` : undefined),
+        tests: [{
+          name: report.test_name,
+          price: report.price || 0,
+          description: report.notes || undefined
+        }],
+        totalAmount: report.price || 0,
+        issueDate: new Date(report.created_at).toLocaleDateString(),
+        xrayDate: new Date(report.xray_date).toLocaleDateString(),
+        notes: report.notes
+      });
+    } catch (error) {
+      console.error('Error generating X-ray PDF:', error);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-8">
@@ -137,12 +172,13 @@ export function StaffXray() {
               <TableHead>Status</TableHead>
               <TableHead>Price</TableHead>
               <TableHead>Notes</TableHead>
+              <TableHead>Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {filteredReports?.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                   {searchTerm ? "No X-ray reports found matching your search." : "No X-ray reports found."}
                 </TableCell>
               </TableRow>
@@ -180,6 +216,17 @@ export function StaffXray() {
                       <div className="max-w-xs truncate text-sm text-muted-foreground">
                         {report.notes || "-"}
                       </div>
+                    </TableCell>
+                    <TableCell>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleDownloadPDF(report)}
+                        className="flex items-center gap-2"
+                      >
+                        <FileText className="h-4 w-4" />
+                        PDF
+                      </Button>
                     </TableCell>
                   </TableRow>
                 );

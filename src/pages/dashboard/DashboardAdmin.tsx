@@ -31,6 +31,7 @@ import { useToast } from "@/hooks/use-toast";
 import { toast } from "sonner";
 import AdminLabs from "./admin/AdminLabs";
 import { AdminOT } from "./admin/AdminOT";
+import AdminXrays from "./admin/AdminXrays";
 import { AdminFinanceAnalytics } from "@/components/AdminFinanceAnalytics";
 import { AuditLogDetailDialog } from "@/components/dialogs/AuditLogDetailDialog";
 import { AdminDashboardNav } from "@/components/AdminDashboardNav";
@@ -292,13 +293,14 @@ export default function DashboardAdmin() {
           </div>
 
           <Tabs defaultValue="overview" className="space-y-6">
-            <TabsList className="grid w-full grid-cols-8 h-auto gap-1">
+            <TabsList className="grid w-full grid-cols-9 h-auto gap-1">
               <TabsTrigger value="overview" className="whitespace-nowrap">Overview</TabsTrigger>
               <TabsTrigger value="analytics" className="whitespace-nowrap">Analytics</TabsTrigger>
               {/* <TabsTrigger value="finance" className="whitespace-nowrap">Finance</TabsTrigger> */}
               <TabsTrigger value="accounts" className="whitespace-nowrap">Account Management</TabsTrigger>
               <TabsTrigger value="pharmacy" className="whitespace-nowrap">Pharmacy</TabsTrigger>
               <TabsTrigger value="lab" className="whitespace-nowrap">Lab</TabsTrigger>
+              <TabsTrigger value="xray" className="whitespace-nowrap">X-ray</TabsTrigger>
               <TabsTrigger value="ot" className="whitespace-nowrap">OT</TabsTrigger>
               <TabsTrigger value="logs" className="whitespace-nowrap">System Logs</TabsTrigger>
               <TabsTrigger value="settings" className="whitespace-nowrap">Settings</TabsTrigger>
@@ -623,6 +625,10 @@ export default function DashboardAdmin() {
 
             <TabsContent value="lab">
               <AdminLabs />
+            </TabsContent>
+
+            <TabsContent value="xray">
+              <AdminXrays />
             </TabsContent>
 
             <TabsContent value="ot">
