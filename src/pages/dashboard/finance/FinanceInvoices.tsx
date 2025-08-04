@@ -346,10 +346,27 @@ export default function FinanceInvoices() {
       // Check if this is an emergency consultation
       const isEmergency = inv.description?.toLowerCase().includes('emergency');
       
+      // Check if this is a lab invoice (starts with LAB- or contains lab keywords)
+      const isLabInvoice = inv.invoice_number?.startsWith('LAB-') || 
+                          inv.description?.toLowerCase().includes('lab') ||
+                          inv.description?.toLowerCase().includes('test');
+      
+      // Determine the type and label
+      let type = 'hospital';
+      let typeLabel = 'Hospital Service';
+      
+      if (isLabInvoice) {
+        type = 'lab';
+        typeLabel = 'Lab Test';
+      } else if (isEmergency) {
+        type = 'emergency';
+        typeLabel = 'Emergency';
+      }
+      
       return {
         ...inv,
-        type: isEmergency ? 'emergency' : 'hospital',
-        typeLabel: isEmergency ? 'Emergency' : 'Hospital Service',
+        type,
+        typeLabel,
         displayAmount: inv.amount,
         displayNumber: inv.invoice_number,
         displayDate: inv.created_at,
