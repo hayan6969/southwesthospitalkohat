@@ -29,13 +29,21 @@ export function StaffXray() {
     },
   });
 
-  // Fetch patient data with patient numbers
+  // Fetch patient data with both names and patient numbers
   const { data: patients } = useQuery({
-    queryKey: ["patients-with-numbers"],
+    queryKey: ["patients-full-info"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("patients")
-        .select("id, patient_number")
+        .select(`
+          id, 
+          patient_number,
+          profiles:id (
+            first_name,
+            last_name,
+            phone
+          )
+        `)
         .order("patient_number");
       if (error) throw error;
       return data;
@@ -61,11 +69,13 @@ export function StaffXray() {
     const doctor = doctors?.find(d => d.id === report.doctor_id);
     
     const patientNumber = patient?.patient_number || '';
+    const patientName = patient?.profiles ? `${patient.profiles.first_name || ''} ${patient.profiles.last_name || ''}`.toLowerCase() : '';
     const doctorName = doctor ? `${doctor.first_name || ''} ${doctor.last_name || ''}`.toLowerCase() : '';
     const testName = report.test_name.toLowerCase();
     
     return (
       patientNumber.includes(searchTerm.toLowerCase()) ||
+      patientName.includes(searchTerm.toLowerCase()) ||
       doctorName.includes(searchTerm.toLowerCase()) ||
       testName.includes(searchTerm.toLowerCase())
     );
@@ -186,8 +196,13 @@ export function StaffXray() {
                 return (
                   <TableRow key={report.id}>
                     <TableCell>
-                      <div className="font-medium text-blue-600">
-                        {patient?.patient_number || 'N/A'}
+                      <div>
+                        <div className="font-medium">
+                          {patient?.profiles ? `${patient.profiles.first_name || ''} ${patient.profiles.last_name || ''}`.trim() : 'Unknown Patient'}
+                        </div>
+                        <div className="text-sm text-blue-600 font-medium">
+                          {patient?.patient_number || 'N/A'}
+                        </div>
                       </div>
                     </TableCell>
                     <TableCell>
