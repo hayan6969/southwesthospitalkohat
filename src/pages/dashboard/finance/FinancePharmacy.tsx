@@ -240,24 +240,6 @@ export default function FinancePharmacy() {
             </Card>
           </div>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Top Revenue Generating Medicines</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ChartContainer config={{}} className="h-80">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={topMedicines} layout="horizontal">
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis type="number" />
-                    <YAxis dataKey="name" type="category" width={120} />
-                    <ChartTooltip content={<ChartTooltipContent />} />
-                    <Bar dataKey="revenue" fill="#f59e0b" />
-                  </BarChart>
-                </ResponsiveContainer>
-              </ChartContainer>
-            </CardContent>
-          </Card>
         </TabsContent>
 
         <TabsContent value="invoices" className="space-y-6">
