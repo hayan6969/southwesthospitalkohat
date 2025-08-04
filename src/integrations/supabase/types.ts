@@ -1618,7 +1618,29 @@ export type Database = {
           test_name?: string
           xray_date?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "xray_reports_doctor_id_fkey"
+            columns: ["doctor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "xray_reports_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "xray_reports_test_id_fkey"
+            columns: ["test_id"]
+            isOneToOne: false
+            referencedRelation: "xray_tests"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       xray_tests: {
         Row: {

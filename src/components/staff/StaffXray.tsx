@@ -19,13 +19,34 @@ export function StaffXray() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("xray_reports")
-        .select(`
-          *,
-          patient:profiles!xray_reports_patient_id_fkey(first_name, last_name, phone),
-          doctor:profiles!xray_reports_doctor_id_fkey(first_name, last_name)
-        `)
+        .select("*")
         .order("created_at", { ascending: false });
 
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  // Fetch patient and doctor data separately
+  const { data: patients } = useQuery({
+    queryKey: ["patients"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("id, first_name, last_name, phone")
+        .eq("role", "patient");
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const { data: doctors } = useQuery({
+    queryKey: ["doctors"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("id, first_name, last_name")
+        .eq("role", "doctor");
       if (error) throw error;
       return data;
     },
@@ -34,10 +55,13 @@ export function StaffXray() {
   const filteredReports = xrayReports?.filter((report) => {
     if (!searchTerm) return true;
     
-    const patientName = `${report.patient?.first_name || ''} ${report.patient?.last_name || ''}`.toLowerCase();
-    const doctorName = `${report.doctor?.first_name || ''} ${report.doctor?.last_name || ''}`.toLowerCase();
+    const patient = patients?.find(p => p.id === report.patient_id);
+    const doctor = doctors?.find(d => d.id === report.doctor_id);
+    
+    const patientName = patient ? `${patient.first_name || ''} ${patient.last_name || ''}`.toLowerCase() : '';
+    const doctorName = doctor ? `${doctor.first_name || ''} ${doctor.last_name || ''}`.toLowerCase() : '';
     const testName = report.test_name.toLowerCase();
-    const phone = report.patient?.phone || '';
+    const phone = patient?.phone || '';
     
     return (
       patientName.includes(searchTerm.toLowerCase()) ||
@@ -123,38 +147,43 @@ export function StaffXray() {
                 </TableCell>
               </TableRow>
             ) : (
-              filteredReports?.map((report) => (
-                <TableRow key={report.id}>
-                  <TableCell>
-                    <div>
-                      <div className="font-medium">
-                        {report.patient?.first_name} {report.patient?.last_name}
+              filteredReports?.map((report) => {
+                const patient = patients?.find(p => p.id === report.patient_id);
+                const doctor = doctors?.find(d => d.id === report.doctor_id);
+                
+                return (
+                  <TableRow key={report.id}>
+                    <TableCell>
+                      <div>
+                        <div className="font-medium">
+                          {patient ? `${patient.first_name} ${patient.last_name}` : 'Unknown Patient'}
+                        </div>
+                        <div className="text-sm text-muted-foreground">
+                          {patient?.phone || 'N/A'}
+                        </div>
                       </div>
-                      <div className="text-sm text-muted-foreground">
-                        {report.patient?.phone}
+                    </TableCell>
+                    <TableCell>
+                      {doctor ? (
+                        `Dr. ${doctor.first_name} ${doctor.last_name}`
+                      ) : (
+                        <span className="text-muted-foreground">{report.external_doctor_name || "External"}</span>
+                      )}
+                    </TableCell>
+                    <TableCell className="font-medium">{report.test_name}</TableCell>
+                    <TableCell>
+                      {format(new Date(report.xray_date), "MMM dd, yyyy 'at' h:mm a")}
+                    </TableCell>
+                    <TableCell>{getStatusBadge(report.status)}</TableCell>
+                    <TableCell className="font-medium">{formatPkrAmount(report.price)}</TableCell>
+                    <TableCell>
+                      <div className="max-w-xs truncate text-sm text-muted-foreground">
+                        {report.notes || "-"}
                       </div>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    {report.doctor ? (
-                      `Dr. ${report.doctor.first_name} ${report.doctor.last_name}`
-                    ) : (
-                      <span className="text-muted-foreground">{report.external_doctor_name || "External"}</span>
-                    )}
-                  </TableCell>
-                  <TableCell className="font-medium">{report.test_name}</TableCell>
-                  <TableCell>
-                    {format(new Date(report.xray_date), "MMM dd, yyyy 'at' h:mm a")}
-                  </TableCell>
-                  <TableCell>{getStatusBadge(report.status)}</TableCell>
-                  <TableCell className="font-medium">{formatPkrAmount(report.price)}</TableCell>
-                  <TableCell>
-                    <div className="max-w-xs truncate text-sm text-muted-foreground">
-                      {report.notes || "-"}
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))
+                    </TableCell>
+                  </TableRow>
+                );
+              })
             )}
           </TableBody>
         </Table>
