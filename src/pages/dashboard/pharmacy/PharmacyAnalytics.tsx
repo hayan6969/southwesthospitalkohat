@@ -7,15 +7,17 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell, Area, AreaChart } from "recharts";
-import { TrendingUp, TrendingDown, Banknote, Package, ShoppingCart, AlertTriangle, RotateCcw, Calendar, Activity, Percent, Building2, X } from "lucide-react";
+import { TrendingUp, TrendingDown, Banknote, Package, ShoppingCart, AlertTriangle, RotateCcw, Calendar, Activity, Percent, Building2, X, Search } from "lucide-react";
 import { formatPkrAmount } from "@/utils/currency";
 
 export default function PharmacyAnalytics() {
   const [selectedYear, setSelectedYear] = useState<string>("");
   const [selectedMonth, setSelectedMonth] = useState<string>("");
+  const [searchQuery, setSearchQuery] = useState<string>("");
   
   // Generate dynamic year range (5 years before current year to 2 years after)
   const currentYear = new Date().getFullYear();
@@ -30,9 +32,22 @@ export default function PharmacyAnalytics() {
   const { data: analytics, isLoading } = usePharmacyAnalytics();
   const { data: filteredTopProducts, isLoading: isLoadingFiltered } = useFilteredTopProducts(monthFilter);
 
+  // Filter products based on search query
+  const getFilteredProducts = () => {
+    const products = monthFilter ? filteredTopProducts : analytics?.topMedicines;
+    if (!searchQuery || !products) return products;
+    
+    return products.filter(medicine => 
+      medicine.name.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+  };
+
+  const displayProducts = getFilteredProducts();
+
   const clearFilters = () => {
     setSelectedYear("");
     setSelectedMonth("");
+    setSearchQuery("");
   };
 
   if (isLoading) {
@@ -306,52 +321,64 @@ export default function PharmacyAnalytics() {
           <TabsContent value="products" className="space-y-6">
             <Card>
               <CardHeader>
-                <div className="flex flex-col space-y-4 sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
-                  <div>
-                    <CardTitle>Top Selling Medicines</CardTitle>
-                    <p className="text-sm text-gray-600">Based on revenue and profit contribution</p>
+                <div className="flex flex-col space-y-4">
+                  <div className="flex flex-col space-y-4 sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
+                    <div>
+                      <CardTitle>Top Selling Medicines</CardTitle>
+                      <p className="text-sm text-gray-600">Based on revenue and profit contribution</p>
+                    </div>
+                    <div className="flex flex-col space-y-2 sm:flex-row sm:items-center sm:space-y-0 sm:space-x-2">
+                      <Select value={selectedYear} onValueChange={setSelectedYear}>
+                        <SelectTrigger className="w-full sm:w-32">
+                          <SelectValue placeholder="Year" />
+                        </SelectTrigger>
+                         <SelectContent>
+                          {yearOptions.map(year => (
+                            <SelectItem key={year} value={year.toString()}>{year}</SelectItem>
+                          ))}
+                         </SelectContent>
+                      </Select>
+                      <Select value={selectedMonth} onValueChange={setSelectedMonth}>
+                        <SelectTrigger className="w-full sm:w-32">
+                          <SelectValue placeholder="Month" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="1">January</SelectItem>
+                          <SelectItem value="2">February</SelectItem>
+                          <SelectItem value="3">March</SelectItem>
+                          <SelectItem value="4">April</SelectItem>
+                          <SelectItem value="5">May</SelectItem>
+                          <SelectItem value="6">June</SelectItem>
+                          <SelectItem value="7">July</SelectItem>
+                          <SelectItem value="8">August</SelectItem>
+                          <SelectItem value="9">September</SelectItem>
+                          <SelectItem value="10">October</SelectItem>
+                          <SelectItem value="11">November</SelectItem>
+                          <SelectItem value="12">December</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      {(selectedYear || selectedMonth || searchQuery) && (
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          onClick={clearFilters}
+                          className="flex items-center gap-1"
+                        >
+                          <X className="w-3 h-3" />
+                          Clear Filters
+                        </Button>
+                      )}
+                    </div>
                   </div>
-                  <div className="flex flex-col space-y-2 sm:flex-row sm:items-center sm:space-y-0 sm:space-x-2">
-                    <Select value={selectedYear} onValueChange={setSelectedYear}>
-                      <SelectTrigger className="w-full sm:w-32">
-                        <SelectValue placeholder="Year" />
-                      </SelectTrigger>
-                       <SelectContent>
-                        {yearOptions.map(year => (
-                          <SelectItem key={year} value={year.toString()}>{year}</SelectItem>
-                        ))}
-                       </SelectContent>
-                    </Select>
-                    <Select value={selectedMonth} onValueChange={setSelectedMonth}>
-                      <SelectTrigger className="w-full sm:w-32">
-                        <SelectValue placeholder="Month" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="1">January</SelectItem>
-                        <SelectItem value="2">February</SelectItem>
-                        <SelectItem value="3">March</SelectItem>
-                        <SelectItem value="4">April</SelectItem>
-                        <SelectItem value="5">May</SelectItem>
-                        <SelectItem value="6">June</SelectItem>
-                        <SelectItem value="7">July</SelectItem>
-                        <SelectItem value="8">August</SelectItem>
-                        <SelectItem value="9">September</SelectItem>
-                        <SelectItem value="10">October</SelectItem>
-                        <SelectItem value="11">November</SelectItem>
-                        <SelectItem value="12">December</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    {(selectedYear || selectedMonth) && (
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        onClick={clearFilters}
-                        className="flex items-center gap-1"
-                      >
-                        <X className="w-3 h-3" />
-                        Clear Filters
-                      </Button>
-                    )}
+                  
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Search medicine by name..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="pl-10"
+                    />
                   </div>
                 </div>
               </CardHeader>
@@ -363,7 +390,7 @@ export default function PharmacyAnalytics() {
                     </div>
                   ) : (
                     <>
-                      {(monthFilter ? filteredTopProducts : analytics?.topMedicines)?.slice(0, 8).map((medicine, index) => (
+                      {displayProducts?.slice(0, 8).map((medicine, index) => (
                         <div key={medicine.name} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
                           <div className="flex items-center gap-3">
                             <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
@@ -380,9 +407,9 @@ export default function PharmacyAnalytics() {
                           </div>
                         </div>
                       )) || []}
-                      {((monthFilter ? filteredTopProducts : analytics?.topMedicines)?.length === 0) && (
+                      {(displayProducts?.length === 0) && (
                         <div className="text-center py-8 text-gray-500">
-                          No products found for the selected period
+                          {searchQuery ? `No medicines found matching "${searchQuery}"` : "No products found for the selected period"}
                         </div>
                       )}
                     </>
