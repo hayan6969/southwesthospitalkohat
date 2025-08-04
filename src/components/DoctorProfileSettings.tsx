@@ -226,25 +226,34 @@ export const DoctorProfileSettings = () => {
       // Update doctor table
       const { error: doctorError } = await supabase
         .from('doctors')
-        .update({
-        specialization: doctorProfile.specialization,
-        consultation_fee: doctorProfile.consultation_fee,
-        experience_years: doctorProfile.experience_years,
-        license_number: doctorProfile.license_number,
-        avatar_url: doctorProfile.avatar_url
-        })
-        .eq('id', profile?.id);
+        .upsert({
+          id: profile?.id,
+          specialization: doctorProfile.specialization,
+          consultation_fee: doctorProfile.consultation_fee,
+          experience_years: doctorProfile.experience_years,
+          license_number: doctorProfile.license_number,
+          avatar_url: doctorProfile.avatar_url
+        }, {
+          onConflict: 'id'
+        });
 
       if (doctorError) throw doctorError;
+
+      // Prepare profile update data - only include phone if it's not empty
+      const profileUpdateData: any = {
+        first_name: doctorProfile.first_name,
+        last_name: doctorProfile.last_name
+      };
+
+      // Only include phone in update if it's not empty to avoid constraint issues
+      if (doctorProfile.phone && doctorProfile.phone.trim() !== '') {
+        profileUpdateData.phone = doctorProfile.phone;
+      }
 
       // Update profiles table
       const { error: profileError } = await supabase
         .from('profiles')
-        .update({
-          first_name: doctorProfile.first_name,
-          last_name: doctorProfile.last_name,
-          phone: doctorProfile.phone
-        })
+        .update(profileUpdateData)
         .eq('id', profile?.id);
 
       if (profileError) throw profileError;
