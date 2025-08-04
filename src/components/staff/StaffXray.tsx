@@ -102,18 +102,20 @@ export function StaffXray() {
 
   const handleDownloadPDF = async (report: any) => {
     try {
-      const patientProfile = patients?.find(p => p.id === report.patient_id);
+      const patient = patients?.find(p => p.id === report.patient_id);
+      const patientProfile = patientProfiles?.find(p => p.id === report.patient_id);
       const doctorProfile = doctors?.find(d => d.id === report.doctor_id);
       
       // Use patient number for patient info
-      const patientId = patientProfile?.patient_number || 'Not assigned';
+      const patientId = patient?.patient_number || 'Not assigned';
+      const patientName = patientProfile ? `${patientProfile.first_name || ''} ${patientProfile.last_name || ''}`.trim() : 'Unknown Patient';
       
       await generateXrayInvoicePDF({
         invoiceNumber: `XR-${report.id.slice(0, 8)}`,
-        patientName: 'Patient',
+        patientName: patientName,
         patientEmail: 'Not provided',
         patientId: patientId,
-        patientPhone: 'Not provided',
+        patientPhone: patientProfile?.phone || 'Not provided',
         doctorName: report.external_doctor_name || 
           (doctorProfile ? `Dr. ${doctorProfile.first_name} ${doctorProfile.last_name}` : undefined),
         tests: [{

@@ -94,14 +94,29 @@ export default function FinanceInvoices() {
           type: 'lab'
         });
       } else if (invoice.type === 'xray') {
-        // For X-ray invoices, use the existing generateXrayInvoicePDF function
+        // For X-ray invoices, fetch patient and doctor data for proper PDF generation
+        const [patientRes, patientProfileRes, doctorRes] = await Promise.all([
+          supabase.from('patients').select('patient_number').eq('id', invoice.patient_id).single(),
+          supabase.from('profiles').select('first_name, last_name, phone').eq('id', invoice.patient_id).single(),
+          invoice.doctor_id ? 
+            supabase.from('profiles').select('first_name, last_name').eq('id', invoice.doctor_id).single() :
+            Promise.resolve({ data: null })
+        ]);
+
+        const patientNumber = patientRes.data?.patient_number || 'N/A';
+        const patientProfile = patientProfileRes.data;
+        const patientName = patientProfile ? `${patientProfile.first_name || ''} ${patientProfile.last_name || ''}`.trim() : 'Unknown Patient';
+        const doctorProfile = doctorRes.data;
+        const doctorName = invoice.external_doctor_name || 
+          (doctorProfile ? `Dr. ${doctorProfile.first_name} ${doctorProfile.last_name}` : 'External Doctor');
+
         await generateXrayInvoicePDF({
           invoiceNumber: invoice.displayNumber,
-          patientName: "Patient", // This would need patient lookup in real implementation
-          patientEmail: "N/A",
-          patientId: "N/A",
-          patientPhone: "N/A",
-          doctorName: invoice.external_doctor_name || "External Doctor",
+          patientName: patientName,
+          patientEmail: 'Not provided',
+          patientId: patientNumber,
+          patientPhone: patientProfile?.phone || 'Not provided',
+          doctorName: doctorName,
           tests: [{
             name: invoice.test_name,
             price: invoice.price || 0,
