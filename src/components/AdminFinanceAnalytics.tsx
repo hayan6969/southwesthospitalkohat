@@ -736,14 +736,46 @@ function OTAnalytics({ data }: { data: any[] }) {
   // Calculate today's OT revenue (only completed operations)
   const todayRevenue = data.filter(ot => {
     const otDate = new Date(ot.operation_date);
-    return ot.status === 'completed' && ot.total_cost && ot.doctor_expense && otDate >= startOfToday && otDate <= endOfToday;
+    const isToday = otDate >= startOfToday && otDate <= endOfToday;
+    const isCompleted = ot.status === 'completed';
+    const hasRevenue = ot.total_cost && ot.doctor_expense;
+    
+    console.log('OT Today Check:', {
+      operation_date: ot.operation_date,
+      otDate: otDate.toISOString(),
+      startOfToday: startOfToday.toISOString(),
+      endOfToday: endOfToday.toISOString(),
+      isToday,
+      isCompleted,
+      hasRevenue,
+      total_cost: ot.total_cost,
+      doctor_expense: ot.doctor_expense
+    });
+    
+    return isCompleted && hasRevenue && isToday;
   }).reduce((sum, ot) => sum + (Number(ot.total_cost || 0) - Number(ot.doctor_expense || 0)), 0);
   
   // Calculate monthly OT revenue (only completed operations)
   const monthlyRevenue = data.filter(ot => {
     const otDate = new Date(ot.operation_date);
-    return ot.status === 'completed' && ot.total_cost && ot.doctor_expense && otDate >= startOfThisMonth && otDate <= endOfThisMonth;
+    const isThisMonth = otDate >= startOfThisMonth && otDate <= endOfThisMonth;
+    const isCompleted = ot.status === 'completed';
+    const hasRevenue = ot.total_cost && ot.doctor_expense;
+    
+    console.log('OT Monthly Check:', {
+      operation_date: ot.operation_date,
+      otDate: otDate.toISOString(),
+      startOfThisMonth: startOfThisMonth.toISOString(),
+      endOfThisMonth: endOfThisMonth.toISOString(),
+      isThisMonth,
+      isCompleted,
+      hasRevenue
+    });
+    
+    return isCompleted && hasRevenue && isThisMonth;
   }).reduce((sum, ot) => sum + (Number(ot.total_cost || 0) - Number(ot.doctor_expense || 0)), 0);
+  
+  console.log('OT Revenue Results:', { todayRevenue, monthlyRevenue });
   
   return (
     <div className="space-y-6">
