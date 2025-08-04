@@ -29,22 +29,27 @@ export function StaffXray() {
     },
   });
 
-  // Fetch patient data with both names and patient numbers
+  // Fetch patient data with patient numbers
   const { data: patients } = useQuery({
-    queryKey: ["patients-full-info"],
+    queryKey: ["patients-with-numbers"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("patients")
-        .select(`
-          id, 
-          patient_number,
-          profiles:id (
-            first_name,
-            last_name,
-            phone
-          )
-        `)
+        .select("id, patient_number")
         .order("patient_number");
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  // Fetch patient profiles separately  
+  const { data: patientProfiles } = useQuery({
+    queryKey: ["patient-profiles"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("id, first_name, last_name, phone")
+        .eq("role", "patient");
       if (error) throw error;
       return data;
     },
@@ -66,10 +71,11 @@ export function StaffXray() {
     if (!searchTerm) return true;
     
     const patient = patients?.find(p => p.id === report.patient_id);
+    const patientProfile = patientProfiles?.find(p => p.id === report.patient_id);
     const doctor = doctors?.find(d => d.id === report.doctor_id);
     
     const patientNumber = patient?.patient_number || '';
-    const patientName = patient?.profiles ? `${patient.profiles.first_name || ''} ${patient.profiles.last_name || ''}`.toLowerCase() : '';
+    const patientName = patientProfile ? `${patientProfile.first_name || ''} ${patientProfile.last_name || ''}`.toLowerCase() : '';
     const doctorName = doctor ? `${doctor.first_name || ''} ${doctor.last_name || ''}`.toLowerCase() : '';
     const testName = report.test_name.toLowerCase();
     
@@ -191,6 +197,7 @@ export function StaffXray() {
             ) : (
               filteredReports?.map((report) => {
                 const patient = patients?.find(p => p.id === report.patient_id);
+                const patientProfile = patientProfiles?.find(p => p.id === report.patient_id);
                 const doctor = doctors?.find(d => d.id === report.doctor_id);
                 
                 return (
@@ -198,7 +205,7 @@ export function StaffXray() {
                     <TableCell>
                       <div>
                         <div className="font-medium">
-                          {patient?.profiles ? `${patient.profiles.first_name || ''} ${patient.profiles.last_name || ''}`.trim() : 'Unknown Patient'}
+                          {patientProfile ? `${patientProfile.first_name || ''} ${patientProfile.last_name || ''}`.trim() : 'Unknown Patient'}
                         </div>
                         <div className="text-sm text-blue-600 font-medium">
                           {patient?.patient_number || 'N/A'}
