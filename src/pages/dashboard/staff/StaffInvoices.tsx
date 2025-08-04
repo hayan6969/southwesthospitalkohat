@@ -8,13 +8,19 @@ import { Banknote, FileText, Calendar, CheckCircle, Download } from "lucide-reac
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
+import { Search, Filter } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { formatPkrCurrency } from "@/utils/currency";
+import { useState } from "react";
 
 export default function StaffInvoices() {
+  const [filterType, setFilterType] = useState<string>("all");
+  const [searchTerm, setSearchTerm] = useState("");
   const { data: hospitalInvoices, isLoading: hospitalLoading } = useInvoices();
   const updateInvoice = useUpdateInvoice();
 
@@ -121,6 +127,19 @@ export default function StaffInvoices() {
 
   const isLoading = hospitalLoading || pharmacyLoading || labLoading || xrayLoading || otLoading;
 
+  // Filter invoices based on type and search
+  const filteredInvoices = allInvoices.filter(invoice => {
+    if (filterType !== 'all' && invoice.type !== filterType) return false;
+    if (searchTerm) {
+      const searchLower = searchTerm.toLowerCase();
+      return (
+        invoice.displayNumber.toLowerCase().includes(searchLower) ||
+        invoice.typeLabel.toLowerCase().includes(searchLower)
+      );
+    }
+    return true;
+  });
+
   const handleMarkAsPaid = async (invoiceId: string) => {
     try {
       await updateInvoice.mutateAsync({
@@ -208,11 +227,38 @@ export default function StaffInvoices() {
         </div>
 
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
-          <div className="p-6 border-b border-gray-200">
+          <div className="p-6 border-b border-gray-200 space-y-4">
             <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
               <Banknote className="w-5 h-5" />
-              All Invoices
+              All Invoices ({filteredInvoices.length})
             </h2>
+            
+            {/* Search and Filter Controls */}
+            <div className="flex flex-col sm:flex-row gap-4">
+              <div className="flex-1 relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                <Input
+                  placeholder="Search invoices..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+              <Select value={filterType} onValueChange={setFilterType}>
+                <SelectTrigger className="w-full sm:w-[200px]">
+                  <Filter className="h-4 w-4 mr-2" />
+                  <SelectValue placeholder="Filter by type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Types</SelectItem>
+                  <SelectItem value="hospital">Hospital Services</SelectItem>
+                  <SelectItem value="pharmacy">Pharmacy</SelectItem>
+                  <SelectItem value="lab">Lab Tests</SelectItem>
+                  <SelectItem value="xray">X-ray</SelectItem>
+                  <SelectItem value="ot">Operation Theater</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
           
           <div className="overflow-x-auto">
@@ -238,8 +284,8 @@ export default function StaffInvoices() {
                       ))}
                     </TableRow>
                   ))
-                ) : allInvoices && allInvoices.length > 0 ? (
-                  allInvoices.map((invoice) => (
+                ) : filteredInvoices && filteredInvoices.length > 0 ? (
+                  filteredInvoices.map((invoice) => (
                     <TableRow key={invoice.id}>
                       <TableCell>
                         <div className="flex items-center gap-2">
