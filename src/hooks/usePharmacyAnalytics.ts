@@ -289,7 +289,7 @@ export const usePharmacyAnalytics = () => {
       // Hospital gets the pharmacy profit share since last daily closing
       const lastClosingTime = lastClosing ? toPakistanTime(new Date(lastClosing.closing_time)) : new Date(0);
       
-      // Get sales invoices since last closing
+      // Get sales invoices since last closing (comparing Pakistani time)
       const sinceClosingSalesInvoices = salesInvoices.filter(inv => {
         const invoiceDate = toPakistanTime(new Date(inv.created_at));
         return invoiceDate > lastClosingTime;
@@ -307,7 +307,7 @@ export const usePharmacyAnalytics = () => {
         return totalProfit + invoiceProfit;
       }, 0);
       
-      // Subtract returns since last closing
+      // Subtract returns since last closing (comparing Pakistani time)
       const sinceClosingReturns = returnExpenses.filter(exp => {
         const expDate = toPakistanTime(new Date(exp.expense_date));
         return expDate > lastClosingTime;

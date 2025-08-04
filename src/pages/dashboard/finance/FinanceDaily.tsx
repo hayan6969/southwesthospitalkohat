@@ -16,7 +16,7 @@ import { generateDailyClosingPDF } from "@/utils/pdfGenerator";
 import { StatsCard } from "@/components/StatsCard";
 import { toast } from "sonner";
 import { HospitalClosingBalanceDialog } from "@/components/dialogs/HospitalClosingBalanceDialog";
-import { getCurrentPakistanTime } from "@/utils/timezone";
+import { getCurrentPakistanTime, toPakistanTime, formatInPakistanTime } from "@/utils/timezone";
 
 export default function FinanceDaily() {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
@@ -45,21 +45,26 @@ export default function FinanceDaily() {
       const { data: lastClosingData } = await supabase.rpc('get_last_daily_closing');
       const lastClosing = lastClosingData?.[0];
       
-      // Determine the time cutoff for filtering
+      // Determine the time cutoff for filtering in Pakistani time
       let cutoffTime: string;
       if (lastClosing) {
         // If there's a previous closing, use activities after that closing time
-        cutoffTime = lastClosing.closing_time;
-        console.log('Last closing found at:', cutoffTime, 'filtering activities after this time');
+        // Convert the closing time to Pakistani timezone for comparison
+        const lastClosingPakTime = toPakistanTime(new Date(lastClosing.closing_time));
+        cutoffTime = lastClosingPakTime.toISOString();
+        console.log('Last closing found at (Pakistan time):', formatInPakistanTime(lastClosingPakTime), 'filtering activities after this time');
       } else {
-        // If no previous closing, include activities from the beginning of the selected date
-        cutoffTime = `${targetDate}T00:00:00`;
-        console.log('No previous closing found, using start of selected date:', cutoffTime);
+        // If no previous closing, include activities from the beginning of the selected date in Pakistan time
+        const selectedDatePakTime = toPakistanTime(new Date(`${targetDate}T00:00:00`));
+        cutoffTime = selectedDatePakTime.toISOString();
+        console.log('No previous closing found, using start of selected date (Pakistan time):', cutoffTime);
       }
       
-      // Current time for upper bound (only for today's date)
-      const isToday = targetDate === formatDateForQuery(new Date());
-      const upperBound = isToday ? new Date().toISOString() : `${targetDate}T23:59:59`;
+      // Current time for upper bound (only for today's date) in Pakistani timezone
+      const currentPakTime = getCurrentPakistanTime();
+      const selectedDatePakTime = toPakistanTime(new Date(`${targetDate}T00:00:00`));
+      const isToday = currentPakTime.toDateString() === selectedDatePakTime.toDateString();
+      const upperBound = isToday ? currentPakTime.toISOString() : toPakistanTime(new Date(`${targetDate}T23:59:59`)).toISOString();
       
       console.log('Filtering activities from:', cutoffTime, 'to:', upperBound);
 
@@ -231,19 +236,24 @@ export default function FinanceDaily() {
       const { data: lastClosingData } = await supabase.rpc('get_last_daily_closing');
       const lastClosing = lastClosingData?.[0];
       
-      // Determine the time cutoff for filtering detailed data
+      // Determine the time cutoff for filtering detailed data in Pakistani time
       let cutoffTime: string;
       if (lastClosing) {
         // If there's a previous closing, use activities after that closing time
-        cutoffTime = lastClosing.closing_time;
+        // Convert the closing time to Pakistani timezone for comparison
+        const lastClosingPakTime = toPakistanTime(new Date(lastClosing.closing_time));
+        cutoffTime = lastClosingPakTime.toISOString();
       } else {
-        // If no previous closing, include activities from the beginning of the selected date
-        cutoffTime = `${targetDate}T00:00:00`;
+        // If no previous closing, include activities from the beginning of the selected date in Pakistan time
+        const selectedDatePakTime = toPakistanTime(new Date(`${targetDate}T00:00:00`));
+        cutoffTime = selectedDatePakTime.toISOString();
       }
       
-      // Current time for upper bound (only for today's date)
-      const isToday = targetDate === formatDateForQuery(new Date());
-      const upperBound = isToday ? new Date().toISOString() : `${targetDate}T23:59:59`;
+      // Current time for upper bound (only for today's date) in Pakistani timezone
+      const currentPakTime = getCurrentPakistanTime();
+      const selectedDatePakTime = toPakistanTime(new Date(`${targetDate}T00:00:00`));
+      const isToday = currentPakTime.toDateString() === selectedDatePakTime.toDateString();
+      const upperBound = isToday ? currentPakTime.toISOString() : toPakistanTime(new Date(`${targetDate}T23:59:59`)).toISOString();
 
       // Fetch all detailed transaction data using proper time filtering
       const [
@@ -369,11 +379,12 @@ export default function FinanceDaily() {
     mutationFn: async () => {
       if (!detailedData || !dailyData) throw new Error('No data available');
 
+      // Use Pakistani time for closing
       const pakistanNow = getCurrentPakistanTime();
       const closingData = {
         closingDate: targetDate,
-        closingTime: pakistanNow.toISOString(),
-        dayName: format(selectedDate, 'EEEE'),
+        closingTime: pakistanNow.toISOString(), // Store in ISO format but it's Pakistani time
+        dayName: formatInPakistanTime(pakistanNow, 'EEEE'),
         hospitalRevenue: dailyData.totalHospitalRevenue,
         pharmacyRevenue: dailyData.pharmacyRevenue,
         pharmacyProfit: dailyData.pharmacyProfit,
@@ -447,7 +458,7 @@ export default function FinanceDaily() {
           </p>
           {dailyData?.lastClosing && (
             <p className="text-xs text-blue-600 mt-1">
-              📊 Showing activities since last closing: {format(new Date(dailyData.lastClosing.closing_time), 'MMM d, yyyy HH:mm')}
+              📊 Showing activities since last closing: {formatInPakistanTime(new Date(dailyData.lastClosing.closing_time), 'MMM d, yyyy HH:mm')} (Pakistan time)
             </p>
           )}
         </div>
@@ -903,10 +914,10 @@ export default function FinanceDaily() {
               <div className="space-y-4 p-4">
                 <div className="text-center border-b pb-4">
                   <h3 className="text-xl font-bold">
-                    {format(new Date(lastClosingData.closing_date), 'EEEE, MMMM d, yyyy')}
+                    {formatInPakistanTime(new Date(lastClosingData.closing_date), 'EEEE, MMMM d, yyyy')}
                   </h3>
                   <p className="text-muted-foreground">
-                    Closed at: {format(new Date(lastClosingData.closing_time), 'HH:mm:ss')}
+                    Closed at: {formatInPakistanTime(new Date(lastClosingData.closing_time), 'HH:mm:ss')} (Pakistan time)
                   </p>
                 </div>
                 
