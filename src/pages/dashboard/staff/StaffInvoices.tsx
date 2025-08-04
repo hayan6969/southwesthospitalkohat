@@ -39,26 +39,28 @@ export default function StaffInvoices() {
     }
   });
 
-  // Get lab reports for invoicing
+  // Get lab reports for invoicing (only those without linked invoices)
   const { data: labReports, isLoading: labLoading } = useQuery({
     queryKey: ['lab-reports-invoices'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('lab_reports')
         .select('*')
+        .is('invoice_id', null)  // Only get lab reports that aren't linked to hospital invoices
         .order('created_at', { ascending: false });
       if (error) throw error;
       return data;
     }
   });
 
-  // Get X-ray reports for invoicing
+  // Get X-ray reports for invoicing (only those without linked invoices)
   const { data: xrayReports, isLoading: xrayLoading } = useQuery({
     queryKey: ['xray-reports-invoices'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('xray_reports')
         .select('*')
+        .is('invoice_id', null)  // Only get X-ray reports that aren't linked to hospital invoices
         .order('created_at', { ascending: false });
       if (error) throw error;
       return data;
