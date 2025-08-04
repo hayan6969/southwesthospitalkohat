@@ -307,14 +307,22 @@ export const usePharmacyAnalytics = () => {
         return totalProfit + invoiceProfit;
       }, 0);
       
-      // Subtract returns since last closing (comparing Pakistani time)
-      const sinceClosingReturns = returnExpenses.filter(exp => {
+      // Calculate total returns since last closing (both from negative invoices and return expenses)
+      const sinceClosingReturnExpenses = returnExpenses.filter(exp => {
         const expDate = toPakistanTime(new Date(exp.expense_date));
         return expDate > lastClosingTime;
       }).reduce((sum, exp) => sum + exp.amount, 0);
       
-      // Hospital gets the net profit since last closing
-      const payHospitalAmount = Math.max(0, sinceClosingProfit - sinceClosingReturns);
+      // Get returns from negative invoices since last closing
+      const sinceClosingReturnInvoices = returnInvoices.filter(inv => {
+        const invDate = toPakistanTime(new Date(inv.created_at));
+        return invDate > lastClosingTime;
+      }).reduce((sum, inv) => sum + Math.abs(inv.final_amount), 0);
+      
+      const totalSinceClosingReturns = sinceClosingReturnExpenses + sinceClosingReturnInvoices;
+      
+      // Hospital gets the net profit since last closing (gross profit minus all returns)
+      const payHospitalAmount = Math.max(0, sinceClosingProfit - totalSinceClosingReturns);
 
       return {
         todayRevenue,
