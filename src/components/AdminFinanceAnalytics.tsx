@@ -303,12 +303,19 @@ export function AdminFinanceAnalytics() {
 function calculateAnalytics(data: FinanceData) {
   const { hospitalInvoices, pharmacyInvoices, labReports, otSchedules, expenses } = data;
 
-  // IMPORTANT: Separate doctor revenue from hospital revenue
-  // Doctor revenue: ALL appointment consultation fees (including emergency) + OT doctor expenses
-  // Hospital revenue: Lab tests + OT hospital portion (total - doctor expense) + pharmacy profit
+  // IMPORTANT: Correct revenue flow separation
+  // Doctor revenue: Regular appointment consultation fees + OT doctor expenses
+  // Hospital revenue: EMERGENCY consultations + Lab tests + OT hospital portion (total - doctor expense) + pharmacy profit
 
-  // Hospital invoices are for consultations - these ALL go to doctors, not hospital
-  const doctorConsultationRevenue = hospitalInvoices.filter(inv => inv.status === 'paid').reduce((sum, inv) => sum + Number(inv.amount), 0);
+  // Emergency consultations go to hospital
+  const emergencyConsultationRevenue = hospitalInvoices.filter(inv => 
+    inv.status === 'paid' && inv.description?.toLowerCase().includes('emergency')
+  ).reduce((sum, inv) => sum + Number(inv.amount), 0);
+  
+  // Regular consultations go to doctors (not counted in hospital revenue)
+  const doctorConsultationRevenue = hospitalInvoices.filter(inv => 
+    inv.status === 'paid' && (!inv.description?.toLowerCase().includes('emergency'))
+  ).reduce((sum, inv) => sum + Number(inv.amount), 0);
   
   // Calculate pharmacy revenue and profit
   const pharmacyRevenue = pharmacyInvoices.reduce((sum, inv) => sum + Number(inv.final_amount), 0);
@@ -326,8 +333,8 @@ function calculateAnalytics(data: FinanceData) {
   const otDoctorExpenses = otSchedules.filter(schedule => schedule.doctor_expense)
     .reduce((sum, schedule) => sum + Number(schedule.doctor_expense), 0);
 
-  // Hospital revenue = lab + OT hospital portion + pharmacy profit (excluding doctor consultation fees)
-  const hospitalRevenue = labRevenue + otHospitalRevenue + pharmacyProfit;
+  // Hospital revenue = EMERGENCY consultations + lab + OT hospital portion + pharmacy profit
+  const hospitalRevenue = emergencyConsultationRevenue + labRevenue + otHospitalRevenue + pharmacyProfit;
   
   // Total revenue for display purposes
   const totalRevenue = hospitalRevenue + pharmacyRevenue + doctorConsultationRevenue + otDoctorExpenses;
@@ -426,8 +433,8 @@ function calculateDailyTrends(revenueData: any[], expenseData: any[]) {
 
 // Individual analytics components
 function HospitalAnalytics({ data }: { data: any[] }) {
-  // NOTE: This shows consultation revenue which actually goes to doctors, not hospital
-  // For accurate hospital revenue, use lab + OT (minus doctor expense) + pharmacy profit
+  // NOTE: This shows all invoice revenue. Emergency consultations go to hospital, regular consultations go to doctors
+  // For accurate separation, hospital gets emergency + lab + OT (minus doctor expense) + pharmacy profit
   const totalRevenue = data.filter(inv => inv.status === 'paid').reduce((sum, inv) => sum + Number(inv.amount), 0);
   
   return (

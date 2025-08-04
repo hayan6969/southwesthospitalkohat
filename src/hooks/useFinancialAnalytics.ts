@@ -69,10 +69,12 @@ export const useFinancialAnalytics = () => {
       const expenses = expensesRes.data || [];
       const refunds = refundsRes.data || [];
 
-      // Calculate hospital revenue - EXCLUDING ALL consultation fees (those go to doctors)
-      // Hospital only gets revenue from: lab tests, OT hospital portion (total - doctor expense), pharmacy profit
-      // Emergency consultations also go to doctors, not hospital
-      const emergencyConsultationRevenue = 0; // All consultation fees go to doctors
+      // Calculate hospital revenue - EXCLUDING regular consultation fees (those go to doctors)
+      // Hospital only gets revenue from: EMERGENCY consultations, lab tests, OT hospital portion, pharmacy profit
+      // Regular consultations go to doctors, but emergency consultations go to hospital
+      const emergencyConsultationRevenue = invoices
+        .filter(inv => inv.status === 'paid' && inv.description?.toLowerCase().includes('emergency'))
+        .reduce((sum, inv) => sum + Number(inv.amount), 0);
 
       // Calculate pharmacy profit only (not revenue - hospital gets profit share)
       let pharmacyRevenue = 0;
