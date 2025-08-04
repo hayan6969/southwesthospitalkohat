@@ -32,7 +32,24 @@ export const formatInPakistanTime = (date: Date | string, formatString: string =
  * Gets current time in Pakistani timezone
  */
 export const getCurrentPakistanTime = (): Date => {
-  return toPakistanTime(new Date());
+  const now = new Date();
+  return toZonedTime(now, PAKISTAN_TIMEZONE);
+};
+
+/**
+ * Gets current date in Pakistani timezone formatted for input fields (YYYY-MM-DD)
+ */
+export const getCurrentPakistanDate = (): string => {
+  const pakistanTime = getCurrentPakistanTime();
+  return format(pakistanTime, "yyyy-MM-dd", { timeZone: PAKISTAN_TIMEZONE });
+};
+
+/**
+ * Gets current time in Pakistani timezone formatted for input fields (HH:mm)
+ */
+export const getCurrentPakistanTimeString = (): string => {
+  const pakistanTime = getCurrentPakistanTime();
+  return format(pakistanTime, "HH:mm", { timeZone: PAKISTAN_TIMEZONE });
 };
 
 /**
