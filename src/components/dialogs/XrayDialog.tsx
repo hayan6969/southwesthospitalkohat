@@ -101,6 +101,7 @@ export function XrayDialog({ open, onOpenChange, onSuccess }: XrayDialogProps) {
   const queryClient = useQueryClient();
   const createPatientWithProfile = useCreatePatientWithProfile();
   const { data: searchResults } = useSearchPatientsWithNames(searchTerm);
+  const { data: doctors } = useDoctorNames();
 
   // Fetch X-ray tests
   const { data: xrayTests, isLoading: testsLoading } = useQuery({
@@ -115,18 +116,6 @@ export function XrayDialog({ open, onOpenChange, onSuccess }: XrayDialogProps) {
     },
   });
 
-  // Fetch doctors
-  const { data: doctors } = useQuery({
-    queryKey: ["doctors"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("id, first_name, last_name")
-        .eq("role", "doctor");
-      if (error) throw error;
-      return data;
-    },
-  });
 
   // Set today as default X-ray date when dialog opens
   useEffect(() => {
@@ -248,7 +237,7 @@ export function XrayDialog({ open, onOpenChange, onSuccess }: XrayDialogProps) {
     } : selectedPatient;
 
     const selectedDoctor = doctors?.find(d => d.id === doctorId);
-    const doctorName = externalDoctorName || (selectedDoctor ? `Dr. ${selectedDoctor.first_name} ${selectedDoctor.last_name}` : "External Doctor");
+    const doctorName = externalDoctorName || (selectedDoctor ? selectedDoctor.name : "External Doctor");
     
     const patientName = patientData ? `${patientData.first_name} ${patientData.last_name}` : "Unknown Patient";
 
@@ -529,7 +518,7 @@ export function XrayDialog({ open, onOpenChange, onSuccess }: XrayDialogProps) {
                   <SelectContent>
                     {doctors?.map((doctor) => (
                       <SelectItem key={doctor.id} value={doctor.id}>
-                        Dr. {doctor.first_name} {doctor.last_name}
+                        {doctor.name}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -638,14 +627,12 @@ export function XrayDialog({ open, onOpenChange, onSuccess }: XrayDialogProps) {
                   </div>
                   <div className="flex justify-between">
                     <span>Doctor:</span>
-                    <span className="font-medium">
-                      {doctorId ? 
-                        doctors?.find(d => d.id === doctorId) ? 
-                          `Dr. ${doctors.find(d => d.id === doctorId)?.first_name} ${doctors.find(d => d.id === doctorId)?.last_name}` :
-                          "Unknown Doctor"
-                        : externalDoctorName || "External Doctor"
-                      }
-                    </span>
+                     <span className="font-medium">
+                       {doctorId ? 
+                         doctors?.find(d => d.id === doctorId)?.name || "Unknown Doctor"
+                         : externalDoctorName || "External Doctor"
+                       }
+                     </span>
                   </div>
                   <div className="flex justify-between">
                     <span>X-ray Date:</span>
