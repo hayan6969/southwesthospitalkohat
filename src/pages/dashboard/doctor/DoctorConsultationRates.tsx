@@ -1,6 +1,6 @@
-import { useState } from "react";
-import { useUpdateDoctor } from "@/hooks/useDatabase";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
 import { Banknote, Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,7 +11,33 @@ import { toast } from "sonner";
 export default function DoctorConsultationRates() {
   const { user } = useAuth();
   const [consultationFee, setConsultationFee] = useState("");
-  const updateDoctor = useUpdateDoctor();
+  const [loading, setLoading] = useState(false);
+  const [currentFee, setCurrentFee] = useState<number>(0);
+
+  // Fetch current consultation fee when component mounts
+  useEffect(() => {
+    const fetchCurrentFee = async () => {
+      if (!user?.id) return;
+      
+      try {
+        const { data, error } = await supabase
+          .from('doctors')
+          .select('consultation_fee')
+          .eq('id', user.id)
+          .single();
+
+        if (error) throw error;
+        
+        const fee = data?.consultation_fee || 0;
+        setCurrentFee(fee);
+        setConsultationFee(fee.toString());
+      } catch (error) {
+        console.error('Error fetching consultation fee:', error);
+      }
+    };
+
+    fetchCurrentFee();
+  }, [user?.id]);
 
   const handleSave = async () => {
     if (!user?.id || !consultationFee) {
@@ -20,13 +46,24 @@ export default function DoctorConsultationRates() {
     }
 
     try {
-      await updateDoctor.mutateAsync({
-        id: user.id,
-        consultation_fee: parseFloat(consultationFee)
-      });
+      setLoading(true);
+      
+      const newFee = parseFloat(consultationFee);
+      
+      const { error } = await supabase
+        .from('doctors')
+        .update({ consultation_fee: newFee })
+        .eq('id', user.id);
+
+      if (error) throw error;
+      
+      setCurrentFee(newFee);
       toast.success("Consultation rate updated successfully");
     } catch (error) {
+      console.error("Error updating consultation rate:", error);
       toast.error("Failed to update consultation rate");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -48,6 +85,14 @@ export default function DoctorConsultationRates() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
+          {currentFee > 0 && (
+            <div className="bg-blue-50 p-3 rounded-lg">
+              <p className="text-sm text-blue-700">
+                Current consultation fee: <span className="font-semibold">PKR {currentFee.toLocaleString()}</span>
+              </p>
+            </div>
+          )}
+          
           <div className="space-y-2">
             <Label htmlFor="fee">Consultation Fee (PKR)</Label>
             <Input
@@ -63,11 +108,11 @@ export default function DoctorConsultationRates() {
           
           <Button 
             onClick={handleSave} 
-            disabled={updateDoctor.isPending || !consultationFee}
+            disabled={loading || !consultationFee}
             className="w-full"
           >
             <Save className="w-4 h-4 mr-2" />
-            {updateDoctor.isPending ? "Saving..." : "Save Rate"}
+            {loading ? "Saving..." : "Save Rate"}
           </Button>
         </CardContent>
       </Card>
