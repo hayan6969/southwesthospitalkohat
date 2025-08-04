@@ -3,6 +3,7 @@ import { useState } from "react";
 import AppLayout from "@/layouts/AppLayout";
 import { usePharmacyAnalytics } from "@/hooks/usePharmacyAnalytics";
 import { useFilteredTopProducts } from "@/hooks/useFilteredTopProducts";
+import { useAllMedicinesWithSales } from "@/hooks/useAllMedicinesWithSales";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
@@ -11,13 +12,14 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell, Area, AreaChart } from "recharts";
-import { TrendingUp, TrendingDown, Banknote, Package, ShoppingCart, AlertTriangle, RotateCcw, Calendar, Activity, Percent, Building2, X, Search } from "lucide-react";
+import { TrendingUp, TrendingDown, Banknote, Package, ShoppingCart, AlertTriangle, RotateCcw, Calendar, Activity, Percent, Building2, X, Search, ChevronLeft, ChevronRight } from "lucide-react";
 import { formatPkrAmount } from "@/utils/currency";
 
 export default function PharmacyAnalytics() {
   const [selectedYear, setSelectedYear] = useState<string>("");
   const [selectedMonth, setSelectedMonth] = useState<string>("");
   const [searchQuery, setSearchQuery] = useState<string>("");
+  const [currentPage, setCurrentPage] = useState<number>(1);
   
   // Generate dynamic year range (5 years before current year to 2 years after)
   const currentYear = new Date().getFullYear();
@@ -30,24 +32,30 @@ export default function PharmacyAnalytics() {
   const monthFilter = selectedYear && selectedMonth ? `${selectedYear}-${selectedMonth.padStart(2, '0')}` : "";
   
   const { data: analytics, isLoading } = usePharmacyAnalytics();
-  const { data: filteredTopProducts, isLoading: isLoadingFiltered } = useFilteredTopProducts(monthFilter);
-
-  // Filter products based on search query
-  const getFilteredProducts = () => {
-    const products = monthFilter ? filteredTopProducts : analytics?.topMedicines;
-    if (!searchQuery || !products) return products;
-    
-    return products.filter(medicine => 
-      medicine.name.toLowerCase().includes(searchQuery.toLowerCase())
-    );
-  };
-
-  const displayProducts = getFilteredProducts();
+  const { data: allMedicines, isLoading: isLoadingAllMedicines } = useAllMedicinesWithSales(monthFilter, searchQuery);
+  
+  // Pagination constants
+  const ITEMS_PER_PAGE = 10;
+  const totalPages = Math.ceil((allMedicines?.length || 0) / ITEMS_PER_PAGE);
+  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+  const endIndex = startIndex + ITEMS_PER_PAGE;
+  const currentMedicines = allMedicines?.slice(startIndex, endIndex) || [];
 
   const clearFilters = () => {
     setSelectedYear("");
     setSelectedMonth("");
     setSearchQuery("");
+    setCurrentPage(1);
+  };
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+  };
+
+  // Reset to page 1 when search query changes
+  const handleSearchChange = (query: string) => {
+    setSearchQuery(query);
+    setCurrentPage(1);
   };
 
   if (isLoading) {
@@ -324,8 +332,8 @@ export default function PharmacyAnalytics() {
                 <div className="flex flex-col space-y-4">
                   <div className="flex flex-col space-y-4 sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
                     <div>
-                      <CardTitle>Top Selling Medicines</CardTitle>
-                      <p className="text-sm text-gray-600">Based on revenue and profit contribution</p>
+                      <CardTitle>All Medicines - Sales Ranking</CardTitle>
+                      <p className="text-sm text-gray-600">All medicines ranked by quantity sold (10 per page)</p>
                     </div>
                     <div className="flex flex-col space-y-2 sm:flex-row sm:items-center sm:space-y-0 sm:space-x-2">
                       <Select value={selectedYear} onValueChange={setSelectedYear}>
@@ -376,7 +384,7 @@ export default function PharmacyAnalytics() {
                     <Input
                       placeholder="Search medicine by name..."
                       value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
+                      onChange={(e) => handleSearchChange(e.target.value)}
                       className="pl-10"
                     />
                   </div>
@@ -384,21 +392,24 @@ export default function PharmacyAnalytics() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {isLoadingFiltered ? (
+                  {isLoadingAllMedicines ? (
                     <div className="flex items-center justify-center h-32">
                       <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-gray-900"></div>
                     </div>
                   ) : (
                     <>
-                      {displayProducts?.slice(0, 8).map((medicine, index) => (
-                        <div key={medicine.name} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                      {currentMedicines.map((medicine, index) => (
+                        <div key={medicine.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
                           <div className="flex items-center gap-3">
                             <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                              <span className="text-sm font-bold text-blue-600">#{index + 1}</span>
+                              <span className="text-sm font-bold text-blue-600">#{startIndex + index + 1}</span>
                             </div>
                             <div>
                               <p className="font-medium">{medicine.name}</p>
-                              <p className="text-sm text-gray-600">Qty: {medicine.quantity} units</p>
+                              <div className="flex gap-3 text-sm text-gray-600">
+                                <span>Sold: {medicine.quantity_sold} units</span>
+                                <span>Stock: {medicine.stock_quantity}</span>
+                              </div>
                             </div>
                           </div>
                           <div className="text-right">
@@ -407,9 +418,66 @@ export default function PharmacyAnalytics() {
                           </div>
                         </div>
                       )) || []}
-                      {(displayProducts?.length === 0) && (
+                      
+                      {allMedicines?.length === 0 && (
                         <div className="text-center py-8 text-gray-500">
-                          {searchQuery ? `No medicines found matching "${searchQuery}"` : "No products found for the selected period"}
+                          {searchQuery ? `No medicines found matching "${searchQuery}"` : "No medicines found"}
+                        </div>
+                      )}
+                      
+                      {/* Pagination */}
+                      {totalPages > 1 && (
+                        <div className="flex items-center justify-between pt-4 border-t">
+                          <div className="text-sm text-gray-600">
+                            Showing {startIndex + 1} to {Math.min(endIndex, allMedicines?.length || 0)} of {allMedicines?.length || 0} medicines
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handlePageChange(currentPage - 1)}
+                              disabled={currentPage === 1}
+                            >
+                              <ChevronLeft className="w-4 h-4" />
+                              Previous
+                            </Button>
+                            
+                            <div className="flex items-center gap-1">
+                              {Array.from({ length: totalPages }, (_, i) => i + 1)
+                                .filter(page => 
+                                  page === 1 || 
+                                  page === totalPages || 
+                                  (page >= currentPage - 1 && page <= currentPage + 1)
+                                )
+                                .map((page, index, array) => (
+                                  <>
+                                    {index > 0 && array[index - 1] !== page - 1 && (
+                                      <span key={`ellipsis-${page}`} className="text-gray-400">...</span>
+                                    )}
+                                    <Button
+                                      key={page}
+                                      variant={currentPage === page ? "default" : "outline"}
+                                      size="sm"
+                                      onClick={() => handlePageChange(page)}
+                                      className="w-8 h-8 p-0"
+                                    >
+                                      {page}
+                                    </Button>
+                                  </>
+                                ))
+                              }
+                            </div>
+                            
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handlePageChange(currentPage + 1)}
+                              disabled={currentPage === totalPages}
+                            >
+                              Next
+                              <ChevronRight className="w-4 h-4" />
+                            </Button>
+                          </div>
                         </div>
                       )}
                     </>
