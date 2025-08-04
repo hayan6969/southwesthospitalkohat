@@ -324,15 +324,20 @@ export default function FinanceInvoices() {
 
   // Combine all invoices into a single array with type information
   const allInvoices = [
-    ...(hospitalInvoices?.map(inv => ({
-      ...inv,
-      type: 'hospital',
-      typeLabel: 'Hospital Service',
-      displayAmount: inv.amount,
-      displayNumber: inv.invoice_number,
-      displayDate: inv.created_at,
-      displayStatus: inv.status
-    })) || []),
+    ...(hospitalInvoices?.map(inv => {
+      // Check if this is an emergency consultation
+      const isEmergency = inv.description?.toLowerCase().includes('emergency');
+      
+      return {
+        ...inv,
+        type: isEmergency ? 'emergency' : 'hospital',
+        typeLabel: isEmergency ? 'Emergency' : 'Hospital Service',
+        displayAmount: inv.amount,
+        displayNumber: inv.invoice_number,
+        displayDate: inv.created_at,
+        displayStatus: inv.status
+      };
+    }) || []),
     ...(pharmacyInvoices?.map(inv => ({
       ...inv,
       type: 'pharmacy',
@@ -414,6 +419,7 @@ export default function FinanceInvoices() {
             <div className="text-sm text-gray-600">
               {filterType === 'all' ? 'All Types' : 
                filterType === 'hospital' ? 'Hospital Services' :
+               filterType === 'emergency' ? 'Emergency' :
                filterType === 'pharmacy' ? 'Pharmacy' :
                filterType === 'lab' ? 'Lab Tests' :
                filterType === 'ot' ? 'OT Services' : 'All Types'}
@@ -439,6 +445,7 @@ export default function FinanceInvoices() {
               <SelectContent>
                 <SelectItem value="all">All Types</SelectItem>
                 <SelectItem value="hospital">Hospital Services</SelectItem>
+                <SelectItem value="emergency">Emergency</SelectItem>
                 <SelectItem value="pharmacy">Pharmacy</SelectItem>
                 <SelectItem value="lab">Lab Tests</SelectItem>
                 <SelectItem value="ot">Operation Theater</SelectItem>

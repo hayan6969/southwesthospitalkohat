@@ -41,9 +41,11 @@ export function StaffInvoices() {
       invoices.forEach(invoice => {
         const isLabInvoice = invoice.description && invoice.description.toLowerCase().includes('lab');
         const isOTInvoice = invoice.description && invoice.description.toLowerCase().includes('ot');
+        const isEmergencyInvoice = invoice.description && invoice.description.toLowerCase().includes('emergency');
         
         let type = 'appointment';
-        if (isLabInvoice) type = 'lab';
+        if (isEmergencyInvoice) type = 'emergency';
+        else if (isLabInvoice) type = 'lab';
         else if (isOTInvoice) type = 'ot';
 
         combined.push({
@@ -89,6 +91,8 @@ export function StaffInvoices() {
 
   const getTypeIcon = (type: string) => {
     switch (type) {
+      case 'emergency':
+        return <Receipt className="w-4 h-4 text-red-500" />;
       case 'lab':
         return <TestTube className="w-4 h-4" />;
       case 'ot':
@@ -100,6 +104,7 @@ export function StaffInvoices() {
 
   const getTypeBadge = (type: string) => {
     const config = {
+      emergency: { color: 'bg-red-100 text-red-700', label: 'Emergency' },
       lab: { color: 'bg-blue-100 text-blue-700', label: 'Lab' },
       ot: { color: 'bg-green-100 text-green-700', label: 'OT' },
       appointment: { color: 'bg-purple-100 text-purple-700', label: 'Appointment' }
@@ -202,6 +207,7 @@ export function StaffInvoices() {
               <SelectContent>
                 <SelectItem value="all">All Types</SelectItem>
                 <SelectItem value="appointment">Appointments</SelectItem>
+                <SelectItem value="emergency">Emergency</SelectItem>
                 <SelectItem value="lab">Lab Tests</SelectItem>
                 <SelectItem value="ot">OT Operations</SelectItem>
               </SelectContent>
