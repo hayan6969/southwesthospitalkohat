@@ -16,10 +16,15 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
+import { Input } from "@/components/ui/input";
+import { Search } from "lucide-react";
 
 export default function FinanceInvoices() {
   const [filterDate, setFilterDate] = useState<Date | undefined>();
   const [filterType, setFilterType] = useState<string>("all");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 20;
   const { data: hospitalInvoices, isLoading: hospitalLoading } = useInvoices();
   const { toast } = useToast();
 
