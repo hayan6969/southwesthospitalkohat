@@ -267,20 +267,29 @@ export const generateInvoicePDF = async (invoice: any) => {
   doc.text(new Date(invoice.created_at).toLocaleDateString(), 135, yPosition + 5);
   
   yPosition += 10;
-  const invoicePatientName = `${invoice.patient?.users?.first_name || ''} ${invoice.patient?.users?.last_name || ''}`.trim();
+  // Handle both old structure (patient.users) and new structure (patient.profiles)
+  const patientProfile = invoice.patient?.profiles || invoice.patient?.users;
+  const invoicePatientName = patientProfile ? 
+    `${patientProfile.first_name || ''} ${patientProfile.last_name || ''}`.trim() : 
+    (invoice.patient_name || 'Patient');
+  
   doc.setFont('helvetica', 'bold');
   doc.text('Patient Name:', 20, yPosition + 5);
   doc.setFont('helvetica', 'normal');
-  doc.text(invoicePatientName || 'Patient', 70, yPosition + 5);
+  doc.text(invoicePatientName, 70, yPosition + 5);
   
   doc.setFont('helvetica', 'bold');
   doc.text('Patient ID:', 120, yPosition + 5);
   doc.setFont('helvetica', 'normal');
   doc.text(invoice.patient?.patient_number || 'N/A', 160, yPosition + 5);
   
-  // Third row - Use utility function to get best contact number
+  // Third row - Get contact information from the correct profile structure
   yPosition += 10;
-  const phoneNumber = getPatientContactNumber(invoice.patient, invoice.patient?.users);
+  const patientProfileForContact = invoice.patient?.profiles || invoice.patient?.users;
+  const phoneNumber = patientProfileForContact?.phone || 
+                     getPatientContactNumber(invoice.patient, patientProfileForContact) || 
+                     'N/A';
+  
   doc.setFont('helvetica', 'bold');
   doc.text('Contact:', 20, yPosition + 5);
   doc.setFont('helvetica', 'normal');
