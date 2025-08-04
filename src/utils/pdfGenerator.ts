@@ -147,7 +147,7 @@ export const generateLabInvoicePDF = async (data: {
   doc.setFont('helvetica', 'bold');
   doc.text('Patient ID:', 120, yPosition + 5);
   doc.setFont('helvetica', 'normal');
-  doc.text(data.patientId || 'N/A', 170, yPosition + 5);
+  doc.text(data.patientId || 'N/A', 160, yPosition + 5);
   
   yPosition += 10;
   

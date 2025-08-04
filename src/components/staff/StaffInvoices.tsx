@@ -209,7 +209,7 @@ export function StaffInvoices() {
     doc.setFont('helvetica', 'bold');
     doc.text('Patient ID:', 120, yPosition + 5);
     doc.setFont('helvetica', 'normal');
-    doc.text(invoice.patient_id || 'N/A', 170, yPosition + 5);
+    doc.text(invoice.patient_number || 'N/A', 160, yPosition + 5);
     
     yPosition += 10;
     

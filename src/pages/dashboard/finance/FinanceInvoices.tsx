@@ -212,7 +212,7 @@ export default function FinanceInvoices() {
     
     // Invoice details box
     doc.setDrawColor(0, 0, 0);
-    doc.rect(15, yPosition - 5, pageWidth - 30, 60);
+    doc.rect(15, yPosition - 5, pageWidth - 30, 70);
     
     doc.setFontSize(11);
     doc.setFont('helvetica', 'bold');
@@ -243,7 +243,7 @@ export default function FinanceInvoices() {
       doc.text('Patient ID:', 120, yPosition + 5);
       doc.setFont('helvetica', 'normal');
       const patientId = invoice.patient?.patient_number || 'N/A';
-      doc.text(patientId, 170, yPosition + 5);
+      doc.text(patientId, 160, yPosition + 5);
       
       yPosition += 10;
       
