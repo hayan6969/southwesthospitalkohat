@@ -292,7 +292,7 @@ export default function DashboardAdmin() {
           </div>
 
           <Tabs defaultValue="overview" className="space-y-6">
-            <TabsList className="grid w-full grid-cols-9 h-auto gap-1">
+            <TabsList className="grid w-full grid-cols-8 h-auto gap-1">
               <TabsTrigger value="overview" className="whitespace-nowrap">Overview</TabsTrigger>
               <TabsTrigger value="analytics" className="whitespace-nowrap">Analytics</TabsTrigger>
               {/* <TabsTrigger value="finance" className="whitespace-nowrap">Finance</TabsTrigger> */}
