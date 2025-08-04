@@ -231,34 +231,18 @@ export default function FinanceInvoices() {
     yPosition += 10;
     
     if (invoice.type === 'lab') {
-      // For lab invoices, show patient information instead of test details
       doc.setFont('helvetica', 'bold');
-      doc.text('Patient Name:', 20, yPosition + 5);
+      doc.text('Patient:', 20, yPosition + 5);
       doc.setFont('helvetica', 'normal');
       const patientName = invoice.patient?.profiles?.first_name && invoice.patient?.profiles?.last_name 
         ? `${invoice.patient.profiles.first_name} ${invoice.patient.profiles.last_name}`
         : 'Walk-in Patient';
-      doc.text(patientName, 85, yPosition + 5);
+      doc.text(patientName, 60, yPosition + 5);
       
       doc.setFont('helvetica', 'bold');
-      doc.text('Patient ID:', 120, yPosition + 5);
+      doc.text('Status:', 120, yPosition + 5);
       doc.setFont('helvetica', 'normal');
-      const patientId = invoice.patient?.patient_number || 'N/A';
-      doc.text(patientId, 170, yPosition + 5);
-      
-      yPosition += 10;
-      
-      doc.setFont('helvetica', 'bold');
-      doc.text('Test Date:', 20, yPosition + 5);
-      doc.setFont('helvetica', 'normal');
-      doc.text(format(new Date(invoice.test_date || invoice.displayDate!), 'MMM dd, yyyy'), 70, yPosition + 5);
-      
-      if (invoice.external_doctor_name) {
-        doc.setFont('helvetica', 'bold');
-        doc.text('Referred by:', 120, yPosition + 5);
-        doc.setFont('helvetica', 'normal');
-        doc.text(invoice.external_doctor_name, 175, yPosition + 5);
-      }
+      doc.text(invoice.status?.toUpperCase() || 'COMPLETED', 155, yPosition + 5);
     } else if (invoice.type === 'ot') {
       doc.setFont('helvetica', 'bold');
       doc.text('Operation Date:', 20, yPosition + 5);

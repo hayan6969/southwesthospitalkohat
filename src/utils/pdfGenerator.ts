@@ -118,43 +118,35 @@ export const generateLabInvoicePDF = async (data: {
   let yPosition = await addHospitalHeader(doc, 'LAB TEST INVOICE');
   yPosition += 10;
 
-  // Invoice details in a comprehensive box
+  // Invoice details box (exactly like staff dashboard)
   doc.setDrawColor(0, 0, 0);
-  doc.rect(15, yPosition - 5, pageWidth - 30, 50); // Taller box for more info
+  doc.rect(15, yPosition - 5, pageWidth - 30, 40);
   
   doc.setFontSize(11);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(40, 40, 40);
   
-  // First row
-  doc.text('Invoice Number:', 20, yPosition + 5);
+  // Invoice details
+  doc.text('Invoice #:', 20, yPosition + 5);
   doc.setFont('helvetica', 'normal');
-  doc.text(data.invoiceNumber, 70, yPosition + 5);
+  doc.text(data.invoiceNumber, 60, yPosition + 5);
   
   doc.setFont('helvetica', 'bold');
   doc.text('Date:', 120, yPosition + 5);
   doc.setFont('helvetica', 'normal');
-  doc.text(data.issueDate, 135, yPosition + 5);
+  doc.text(data.issueDate, 140, yPosition + 5);
   
-  // Second row
   yPosition += 10;
-  doc.setFont('helvetica', 'bold');
-  doc.text('Patient Name:', 20, yPosition + 5);
-  doc.setFont('helvetica', 'normal');
-  doc.text(data.patientName, 70, yPosition + 5);
   
   doc.setFont('helvetica', 'bold');
-  doc.text('Patient ID:', 120, yPosition + 5);
+  doc.text('Patient:', 20, yPosition + 5);
   doc.setFont('helvetica', 'normal');
-  doc.text(data.patientId || 'N/A', 160, yPosition + 5);
+  doc.text(data.patientName, 60, yPosition + 5);
   
-  // Third row - Use utility function for better contact extraction
-  yPosition += 10;
-  const phoneNumber = data.patientEmail ? getPatientContactNumber(null, { email: data.patientEmail, phone: data.patientPhone }) : (data.patientPhone || 'N/A');
   doc.setFont('helvetica', 'bold');
-  doc.text('Contact:', 20, yPosition + 5);
+  doc.text('Status:', 120, yPosition + 5);
   doc.setFont('helvetica', 'normal');
-  doc.text(phoneNumber, 60, yPosition + 5);
+  doc.text('COMPLETED', 155, yPosition + 5);
 
   yPosition += 50;
 
