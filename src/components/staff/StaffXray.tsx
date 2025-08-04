@@ -1,0 +1,173 @@
+import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { Button } from "@/components/ui/button";
+import { supabase } from "@/integrations/supabase/client";
+import { XrayDialog } from "@/components/dialogs/XrayDialog";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import { format } from "date-fns";
+import { Input } from "@/components/ui/input";
+import { Search, X } from "lucide-react";
+import { formatPkrAmount } from "@/utils/currency";
+
+export function StaffXray() {
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+
+  const { data: xrayReports, isLoading, refetch } = useQuery({
+    queryKey: ["xray-reports"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("xray_reports")
+        .select(`
+          *,
+          patient:profiles!xray_reports_patient_id_fkey(first_name, last_name, phone),
+          doctor:profiles!xray_reports_doctor_id_fkey(first_name, last_name)
+        `)
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const filteredReports = xrayReports?.filter((report) => {
+    if (!searchTerm) return true;
+    
+    const patientName = `${report.patient?.first_name || ''} ${report.patient?.last_name || ''}`.toLowerCase();
+    const doctorName = `${report.doctor?.first_name || ''} ${report.doctor?.last_name || ''}`.toLowerCase();
+    const testName = report.test_name.toLowerCase();
+    const phone = report.patient?.phone || '';
+    
+    return (
+      patientName.includes(searchTerm.toLowerCase()) ||
+      doctorName.includes(searchTerm.toLowerCase()) ||
+      testName.includes(searchTerm.toLowerCase()) ||
+      phone.includes(searchTerm)
+    );
+  });
+
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'completed':
+        return <Badge variant="default" className="bg-green-100 text-green-800">Completed</Badge>;
+      case 'pending':
+        return <Badge variant="secondary">Pending</Badge>;
+      case 'in_progress':
+        return <Badge variant="outline" className="border-blue-200 text-blue-800">In Progress</Badge>;
+      default:
+        return <Badge variant="secondary">{status}</Badge>;
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-8">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h3 className="text-lg font-semibold text-foreground">X-ray Management</h3>
+          <p className="text-muted-foreground">Schedule and manage X-ray examinations</p>
+        </div>
+        <Button onClick={() => setIsDialogOpen(true)}>
+          Schedule X-ray
+        </Button>
+      </div>
+
+      <div className="flex items-center space-x-2">
+        <div className="relative flex-1 max-w-sm">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+          <Input
+            placeholder="Search by patient, doctor, or test..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-10 pr-10"
+          />
+          {searchTerm && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setSearchTerm("")}
+              className="absolute right-1 top-1/2 transform -translate-y-1/2 h-6 w-6 p-0"
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          )}
+        </div>
+      </div>
+
+      <div className="border rounded-lg overflow-hidden">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Patient</TableHead>
+              <TableHead>Doctor</TableHead>
+              <TableHead>X-ray Test</TableHead>
+              <TableHead>Date</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead>Price</TableHead>
+              <TableHead>Notes</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {filteredReports?.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                  {searchTerm ? "No X-ray reports found matching your search." : "No X-ray reports found."}
+                </TableCell>
+              </TableRow>
+            ) : (
+              filteredReports?.map((report) => (
+                <TableRow key={report.id}>
+                  <TableCell>
+                    <div>
+                      <div className="font-medium">
+                        {report.patient?.first_name} {report.patient?.last_name}
+                      </div>
+                      <div className="text-sm text-muted-foreground">
+                        {report.patient?.phone}
+                      </div>
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    {report.doctor ? (
+                      `Dr. ${report.doctor.first_name} ${report.doctor.last_name}`
+                    ) : (
+                      <span className="text-muted-foreground">{report.external_doctor_name || "External"}</span>
+                    )}
+                  </TableCell>
+                  <TableCell className="font-medium">{report.test_name}</TableCell>
+                  <TableCell>
+                    {format(new Date(report.xray_date), "MMM dd, yyyy 'at' h:mm a")}
+                  </TableCell>
+                  <TableCell>{getStatusBadge(report.status)}</TableCell>
+                  <TableCell className="font-medium">{formatPkrAmount(report.price)}</TableCell>
+                  <TableCell>
+                    <div className="max-w-xs truncate text-sm text-muted-foreground">
+                      {report.notes || "-"}
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
+      </div>
+
+      <XrayDialog
+        open={isDialogOpen}
+        onOpenChange={setIsDialogOpen}
+        onSuccess={() => {
+          refetch();
+          setIsDialogOpen(false);
+        }}
+      />
+    </div>
+  );
+}

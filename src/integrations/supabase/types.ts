@@ -1572,6 +1572,87 @@ export type Database = {
           },
         ]
       }
+      xray_reports: {
+        Row: {
+          created_at: string | null
+          doctor_id: string | null
+          external_doctor_name: string | null
+          id: string
+          invoice_id: string | null
+          notes: string | null
+          patient_id: string
+          price: number | null
+          results: string | null
+          status: string | null
+          test_id: string | null
+          test_name: string
+          xray_date: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          doctor_id?: string | null
+          external_doctor_name?: string | null
+          id?: string
+          invoice_id?: string | null
+          notes?: string | null
+          patient_id: string
+          price?: number | null
+          results?: string | null
+          status?: string | null
+          test_id?: string | null
+          test_name: string
+          xray_date?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          doctor_id?: string | null
+          external_doctor_name?: string | null
+          id?: string
+          invoice_id?: string | null
+          notes?: string | null
+          patient_id?: string
+          price?: number | null
+          results?: string | null
+          status?: string | null
+          test_id?: string | null
+          test_name?: string
+          xray_date?: string | null
+        }
+        Relationships: []
+      }
+      xray_tests: {
+        Row: {
+          category: string | null
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          preparation_instructions: string | null
+          price: number
+          updated_at: string
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          preparation_instructions?: string | null
+          price: number
+          updated_at?: string
+        }
+        Update: {
+          category?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          preparation_instructions?: string | null
+          price?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
