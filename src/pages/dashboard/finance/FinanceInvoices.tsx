@@ -287,7 +287,10 @@ export default function FinanceInvoices() {
     doc.setTextColor(60, 60, 60);
     
     if (invoice.type === 'lab') {
-      const description = `Lab Test: ${invoice.test_name || 'Laboratory Service'}`;
+      // For lab reports, we need to get the actual test name and description
+      const testName = invoice.test_name || invoice.name || 'Laboratory Service';
+      const description = `Lab Test: ${testName}`;
+      
       // Apply text wrapping for lab test descriptions
       const maxWidth = pageWidth - 90; // Leave space for amount column
       const wrappedText = doc.splitTextToSize(description, maxWidth);
