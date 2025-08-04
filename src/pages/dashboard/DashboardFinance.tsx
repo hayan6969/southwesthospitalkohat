@@ -130,7 +130,12 @@ export default function DashboardFinance() {
     }, 0);
   }
   
-  const labRevenue = labReports?.reduce((sum, lab) => sum + (lab.price || 0), 0) || 0;
+  // Calculate lab revenue from paid invoices for lab tests (more accurate)
+  const labRevenue = invoices?.filter(invoice => 
+    invoice.status === 'paid' && 
+    invoice.description && 
+    invoice.description.toLowerCase().includes('lab')
+  ).reduce((sum, invoice) => sum + Number(invoice.amount), 0) || 0;
   
   // Only include hospital's portion of OT revenue (excluding doctor expenses)
   const otHospitalRevenue = otSchedules?.reduce((sum, schedule) => {
@@ -184,10 +189,14 @@ export default function DashboardFinance() {
     return totalProfit + invoiceProfit;
   }, 0) || 0;
   
-  const currentMonthLabRevenue = labReports?.filter(lab => {
-    const labDate = new Date(lab.created_at);
-    return labDate.getMonth() === currentMonth && labDate.getFullYear() === currentYear;
-  }).reduce((sum, lab) => sum + (lab.price || 0), 0) || 0;
+  const currentMonthLabRevenue = invoices?.filter(invoice => {
+    const invoiceDate = new Date(invoice.created_at);
+    return invoiceDate.getMonth() === currentMonth && 
+           invoiceDate.getFullYear() === currentYear && 
+           invoice.status === 'paid' &&
+           invoice.description && 
+           invoice.description.toLowerCase().includes('lab');
+  }).reduce((sum, invoice) => sum + Number(invoice.amount), 0) || 0;
   
   const currentMonthOTHospitalRevenue = otSchedules?.filter(schedule => {
     const scheduleDate = new Date(schedule.created_at);

@@ -311,7 +311,12 @@ function calculateAnalytics(data: FinanceData) {
   // For now, we'll use a simplified estimate until we can fetch the full data
   const pharmacyProfit = pharmacyRevenue * 0.25; // Estimated 25% profit margin as placeholder
   
-  const labRevenue = labReports.filter(lab => lab.price).reduce((sum, lab) => sum + Number(lab.price), 0);
+  // Calculate lab revenue from paid invoices for lab tests (more accurate)
+  const labRevenue = hospitalInvoices.filter(invoice => 
+    invoice.status === 'paid' && 
+    invoice.description && 
+    invoice.description.toLowerCase().includes('lab')
+  ).reduce((sum, invoice) => sum + Number(invoice.amount), 0);
   const otRevenue = otSchedules.filter(schedule => schedule.total_cost && schedule.doctor_expense)
     .reduce((sum, schedule) => sum + (Number(schedule.total_cost) - Number(schedule.doctor_expense)), 0);
 

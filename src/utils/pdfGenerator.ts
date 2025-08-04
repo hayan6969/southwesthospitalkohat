@@ -228,7 +228,12 @@ export const generateLabInvoicePDF = async (data: {
   doc.text('Please bring this invoice when coming for your lab tests.', pageWidth / 2, yPosition, { align: 'center' });
   doc.text('Payment is due before test collection.', pageWidth / 2, yPosition + 8, { align: 'center' });
 
-  return doc.output('blob');
+  // Open PDF in new tab
+  const pdfBlob = doc.output('blob');
+  const pdfUrl = URL.createObjectURL(pdfBlob);
+  window.open(pdfUrl, '_blank');
+  
+  return pdfBlob;
 };
 
 export const generateInvoicePDF = async (invoice: any) => {

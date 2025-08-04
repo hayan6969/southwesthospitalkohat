@@ -95,9 +95,14 @@ export const useFinancialAnalytics = () => {
         }, 0);
       }
 
-      const labRevenue = labReports
-        .filter(report => report.price)
-        .reduce((sum, report) => sum + Number(report.price), 0);
+      // Calculate lab revenue from paid invoices for lab tests (more accurate)
+      const labRevenue = invoices
+        .filter(invoice => 
+          invoice.status === 'paid' && 
+          invoice.description && 
+          invoice.description.toLowerCase().includes('lab')
+        )
+        .reduce((sum, invoice) => sum + Number(invoice.amount), 0);
 
       // Calculate OT revenue (hospital portion only, excluding doctor expenses)
       const otHospitalRevenue = otSchedules
