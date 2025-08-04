@@ -2,8 +2,8 @@
 
 // Extract phone number from system-generated email
 export const extractPhoneFromEmail = (email: string): string | null => {
-  // Pattern: patient{phone}@hims.app
-  const match = email.match(/patient(\d+)@hims\.app/);
+  // Pattern: {phone}@patient.local
+  const match = email.match(/^(\d+)@patient\.local$/);
   return match ? match[1] : null;
 };
 
