@@ -120,13 +120,13 @@ export const generateLabInvoicePDF = async (data: {
 
   // Invoice details box (exactly like staff dashboard)
   doc.setDrawColor(0, 0, 0);
-  doc.rect(15, yPosition - 5, pageWidth - 30, 40);
+  doc.rect(15, yPosition - 5, pageWidth - 30, 50);
   
   doc.setFontSize(11);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(40, 40, 40);
   
-  // Invoice details
+  // First row
   doc.text('Invoice #:', 20, yPosition + 5);
   doc.setFont('helvetica', 'normal');
   doc.text(data.invoiceNumber, 60, yPosition + 5);
@@ -138,15 +138,24 @@ export const generateLabInvoicePDF = async (data: {
   
   yPosition += 10;
   
+  // Second row
   doc.setFont('helvetica', 'bold');
   doc.text('Patient:', 20, yPosition + 5);
   doc.setFont('helvetica', 'normal');
   doc.text(data.patientName, 60, yPosition + 5);
   
   doc.setFont('helvetica', 'bold');
-  doc.text('Status:', 120, yPosition + 5);
+  doc.text('Patient ID:', 120, yPosition + 5);
   doc.setFont('helvetica', 'normal');
-  doc.text('COMPLETED', 155, yPosition + 5);
+  doc.text(data.patientId || 'N/A', 170, yPosition + 5);
+  
+  yPosition += 10;
+  
+  // Third row
+  doc.setFont('helvetica', 'bold');
+  doc.text('Status:', 20, yPosition + 5);
+  doc.setFont('helvetica', 'normal');
+  doc.text('COMPLETED', 60, yPosition + 5);
 
   yPosition += 50;
 

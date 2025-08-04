@@ -240,9 +240,17 @@ export default function FinanceInvoices() {
       doc.text(patientName, 60, yPosition + 5);
       
       doc.setFont('helvetica', 'bold');
-      doc.text('Status:', 120, yPosition + 5);
+      doc.text('Patient ID:', 120, yPosition + 5);
       doc.setFont('helvetica', 'normal');
-      doc.text(invoice.status?.toUpperCase() || 'COMPLETED', 155, yPosition + 5);
+      const patientId = invoice.patient?.patient_number || 'N/A';
+      doc.text(patientId, 170, yPosition + 5);
+      
+      yPosition += 10;
+      
+      doc.setFont('helvetica', 'bold');
+      doc.text('Status:', 20, yPosition + 5);
+      doc.setFont('helvetica', 'normal');
+      doc.text(invoice.status?.toUpperCase() || 'COMPLETED', 60, yPosition + 5);
     } else if (invoice.type === 'ot') {
       doc.setFont('helvetica', 'bold');
       doc.text('Operation Date:', 20, yPosition + 5);
