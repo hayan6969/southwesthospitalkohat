@@ -7,8 +7,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { StaffCounter } from "@/components/staff/StaffCounter";
 import { StaffLab } from "@/components/staff/StaffLab";
 import { StaffOT } from "@/components/staff/StaffOT";
+import { StaffInvoices } from "@/components/staff/StaffInvoices";
 import { PatientSearchDialog } from "@/components/staff/PatientSearchDialog";
-import { Receipt, TestTube, Building2 } from "lucide-react";
+import { Receipt, TestTube, Building2, FileText } from "lucide-react";
 import { useHospitalSettings } from "@/hooks/useHospitalSettings";
 import { AdminDashboardNav } from "@/components/AdminDashboardNav";
 
@@ -74,7 +75,7 @@ export default function DashboardStaff() {
           </div>
 
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid w-full grid-cols-3">
+            <TabsList className="grid w-full grid-cols-4">
               <TabsTrigger value="counter" className="flex items-center gap-2">
                 <Receipt className="w-4 h-4" />
                 Counter
@@ -86,6 +87,10 @@ export default function DashboardStaff() {
               <TabsTrigger value="ot" className="flex items-center gap-2">
                 <Building2 className="w-4 h-4" />
                 OT
+              </TabsTrigger>
+              <TabsTrigger value="invoices" className="flex items-center gap-2">
+                <FileText className="w-4 h-4" />
+                Invoices
               </TabsTrigger>
             </TabsList>
 
@@ -99,6 +104,10 @@ export default function DashboardStaff() {
 
             <TabsContent value="ot" className="mt-6">
               <StaffOT />
+            </TabsContent>
+
+            <TabsContent value="invoices" className="mt-6">
+              <StaffInvoices />
             </TabsContent>
           </Tabs>
         </div>
