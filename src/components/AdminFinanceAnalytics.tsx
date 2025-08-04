@@ -180,7 +180,7 @@ export function AdminFinanceAnalytics() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-2">
-                  <div className="text-2xl font-bold text-green-600">{formatPkrAmount(analytics.totalRevenue)}</div>
+                  <div className="text-2xl font-bold text-green-600">{formatPkrAmount(analytics.todayRevenue)}</div>
                   <div className="text-sm text-gray-600">Total earnings today</div>
                 </div>
               </CardContent>
@@ -192,7 +192,7 @@ export function AdminFinanceAnalytics() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-2">
-                  <div className="text-2xl font-bold text-blue-600">{formatPkrAmount(analytics.totalRevenue)}</div>
+                  <div className="text-2xl font-bold text-blue-600">{formatPkrAmount(analytics.monthlyRevenue)}</div>
                   <div className="text-sm text-gray-600">This month's earnings</div>
                 </div>
               </CardContent>
@@ -302,6 +302,11 @@ export function AdminFinanceAnalytics() {
 
 function calculateAnalytics(data: FinanceData) {
   const { hospitalInvoices, pharmacyInvoices, labReports, otSchedules, expenses } = data;
+  const today = new Date();
+  const startOfToday = startOfDay(today);
+  const endOfToday = endOfDay(today);
+  const startOfThisMonth = startOfMonth(today);
+  const endOfThisMonth = endOfMonth(today);
 
   // IMPORTANT: Correct revenue flow separation
   // Doctor revenue: Regular appointment consultation fees + OT doctor expenses
@@ -322,7 +327,7 @@ function calculateAnalytics(data: FinanceData) {
   // For now, use estimated profit margin - ideally should fetch invoice items
   const pharmacyProfit = pharmacyRevenue * 0.25; // Estimated 25% profit margin
   
-  // Lab revenue goes to hospital
+  // Lab revenue goes to hospital (both completed and pending with prices)
   const labRevenue = labReports.filter(report => report.price).reduce((sum, report) => sum + Number(report.price), 0);
   
   // OT revenue - hospital gets total cost minus doctor expense
@@ -338,6 +343,52 @@ function calculateAnalytics(data: FinanceData) {
   
   // Total revenue for display purposes
   const totalRevenue = hospitalRevenue + pharmacyRevenue + doctorConsultationRevenue + otDoctorExpenses;
+  
+  // Calculate TODAY's revenue
+  const todayEmergencyRevenue = hospitalInvoices.filter(inv => 
+    inv.status === 'paid' && 
+    inv.description?.toLowerCase().includes('emergency') &&
+    new Date(inv.created_at) >= startOfToday && new Date(inv.created_at) <= endOfToday
+  ).reduce((sum, inv) => sum + Number(inv.amount), 0);
+  
+  const todayPharmacyRevenue = pharmacyInvoices.filter(inv =>
+    new Date(inv.created_at) >= startOfToday && new Date(inv.created_at) <= endOfToday
+  ).reduce((sum, inv) => sum + Number(inv.final_amount), 0);
+  
+  const todayLabRevenue = labReports.filter(report => 
+    report.price &&
+    new Date(report.created_at) >= startOfToday && new Date(report.created_at) <= endOfToday
+  ).reduce((sum, report) => sum + Number(report.price), 0);
+  
+  const todayOTRevenue = otSchedules.filter(schedule => 
+    schedule.total_cost && schedule.doctor_expense &&
+    new Date(schedule.created_at) >= startOfToday && new Date(schedule.created_at) <= endOfToday
+  ).reduce((sum, schedule) => sum + (Number(schedule.total_cost) - Number(schedule.doctor_expense)), 0);
+  
+  const todayTotalRevenue = todayEmergencyRevenue + todayPharmacyRevenue + todayLabRevenue + todayOTRevenue;
+  
+  // Calculate MONTHLY revenue
+  const monthlyEmergencyRevenue = hospitalInvoices.filter(inv => 
+    inv.status === 'paid' && 
+    inv.description?.toLowerCase().includes('emergency') &&
+    new Date(inv.created_at) >= startOfThisMonth && new Date(inv.created_at) <= endOfThisMonth
+  ).reduce((sum, inv) => sum + Number(inv.amount), 0);
+  
+  const monthlyPharmacyRevenue = pharmacyInvoices.filter(inv =>
+    new Date(inv.created_at) >= startOfThisMonth && new Date(inv.created_at) <= endOfThisMonth
+  ).reduce((sum, inv) => sum + Number(inv.final_amount), 0);
+  
+  const monthlyLabRevenue = labReports.filter(report => 
+    report.price &&
+    new Date(report.created_at) >= startOfThisMonth && new Date(report.created_at) <= endOfThisMonth
+  ).reduce((sum, report) => sum + Number(report.price), 0);
+  
+  const monthlyOTRevenue = otSchedules.filter(schedule => 
+    schedule.total_cost && schedule.doctor_expense &&
+    new Date(schedule.created_at) >= startOfThisMonth && new Date(schedule.created_at) <= endOfThisMonth
+  ).reduce((sum, schedule) => sum + (Number(schedule.total_cost) - Number(schedule.doctor_expense)), 0);
+  
+  const monthlyTotalRevenue = monthlyEmergencyRevenue + monthlyPharmacyRevenue + monthlyLabRevenue + monthlyOTRevenue;
   
   const totalExpenses = expenses.reduce((sum, exp) => sum + Number(exp.amount), 0);
   const netProfit = hospitalRevenue - totalExpenses; // Hospital profit only
@@ -372,6 +423,8 @@ function calculateAnalytics(data: FinanceData) {
 
   return {
     totalRevenue,
+    todayRevenue: todayTotalRevenue,
+    monthlyRevenue: monthlyTotalRevenue,
     totalExpenses,
     netProfit,
     profitMargin,
