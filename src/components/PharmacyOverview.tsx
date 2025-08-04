@@ -16,10 +16,6 @@ export function PharmacyOverview() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h3 className="text-lg font-semibold">Pharmacy Overview</h3>
-        <Button variant="outline" size="sm">
-          <Calendar className="w-4 h-4 mr-2" />
-          View Full Analytics
-        </Button>
       </div>
 
       {/* Stats Cards */}
