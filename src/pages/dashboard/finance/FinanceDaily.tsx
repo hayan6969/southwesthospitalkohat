@@ -36,10 +36,20 @@ export default function FinanceDaily() {
   const targetDate = formatDateForQuery(selectedDate);
 
   // Fetch daily finance data
-  const { data: dailyData, isLoading, refetch } = useQuery({
-    queryKey: ['daily-finance', targetDate],
+  // First get the last closing info for the query key
+  const { data: lastClosingInfo } = useQuery({
+    queryKey: ['last-closing-info'],
     queryFn: async () => {
-      console.log('Daily Finance Query for date:', targetDate);
+      const { data } = await supabase.rpc('get_last_daily_closing');
+      return data?.[0] || null;
+    }
+  });
+
+  const { data: dailyData, isLoading, refetch } = useQuery({
+    queryKey: ['daily-finance', targetDate, lastClosingInfo?.closing_time],
+    queryFn: async () => {
+      console.log('🔍 Daily Finance Query STARTED for date:', targetDate);
+      console.log('🔍 Last closing info in query key:', lastClosingInfo);
       
       // First, get the last daily closing to determine the cutoff time
       const { data: lastClosingData } = await supabase.rpc('get_last_daily_closing');
