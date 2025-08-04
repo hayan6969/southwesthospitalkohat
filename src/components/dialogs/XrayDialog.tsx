@@ -264,15 +264,15 @@ export function XrayDialog({ open, onOpenChange, onSuccess }: XrayDialogProps) {
     }).filter(Boolean) as any[];
 
     const confirmationData = {
-      patientName,
-      patientPhone: patientData?.phone || "N/A",
-      patientId: patientData?.patient_number || "New Patient",
+      patient: {
+        name: patientName,
+        phone: patientData?.phone || "N/A"
+      },
       doctorName,
-      tests: testsData,
+      selectedTests: testsData,
       totalAmount,
       xrayDate: format(xrayDate, "MMM dd, yyyy"),
-      notes,
-      isNewPatient: activeTab === "register"
+      notes: notes.trim()
     };
 
     setConfirmationData(confirmationData);
