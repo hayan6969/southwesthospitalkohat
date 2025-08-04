@@ -57,6 +57,20 @@ export default function FinanceIncome() {
     }
   });
 
+  // Get X-ray reports for revenue
+  const { data: xrayReports, isLoading: xrayLoading } = useQuery({
+    queryKey: ['xray-reports-revenue'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('xray_reports')
+        .select('*')
+        .not('price', 'is', null)
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return data;
+    }
+  });
+
   // Get OT schedules for revenue
   const { data: otSchedules, isLoading: otLoading } = useQuery({
     queryKey: ['ot-schedules-revenue'],
@@ -139,6 +153,7 @@ export default function FinanceIncome() {
   
   const pharmacyRevenue = pharmacyInvoices?.reduce((sum, invoice) => sum + (invoice.final_amount || 0), 0) || 0;
   const labRevenue = labReports?.reduce((sum, report) => sum + (report.price || 0), 0) || 0;
+  const xrayRevenue = xrayReports?.reduce((sum, report) => sum + (report.price || 0), 0) || 0;
   
   // OT hospital revenue (excluding doctor expenses)
   const otHospitalRevenue = otSchedules?.reduce((sum, schedule) => {
@@ -149,20 +164,20 @@ export default function FinanceIncome() {
   // Miscellaneous income
   const miscellaneousIncome = miscIncome?.reduce((sum, income) => sum + (income.amount || 0), 0) || 0;
   
-  // Hospital revenue = emergency consultations + lab + OT hospital portion + miscellaneous income
-  const hospitalRevenue = emergencyRevenue + labRevenue + otHospitalRevenue + miscellaneousIncome;
+  // Hospital revenue = emergency consultations + lab + xray + OT hospital portion + miscellaneous income
+  const hospitalRevenue = emergencyRevenue + labRevenue + xrayRevenue + otHospitalRevenue + miscellaneousIncome;
   
   // Total revenue for display includes pharmacy sales
   const totalRevenue = hospitalRevenue + pharmacyRevenue;
 
-  if (invoicesLoading || pharmacyLoading || labLoading || otLoading || miscLoading) {
+  if (invoicesLoading || pharmacyLoading || labLoading || xrayLoading || otLoading || miscLoading) {
     return <div className="p-8">Loading...</div>;
   }
 
   return (
     <div className="space-y-6">
       {/* Revenue Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-7 gap-4">
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-gray-600">Total Revenue</CardTitle>
@@ -196,6 +211,15 @@ export default function FinanceIncome() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{formatPkrAmount(labRevenue)}</div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-gray-600">X-ray Tests</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{formatPkrAmount(xrayRevenue)}</div>
           </CardContent>
         </Card>
 
@@ -305,6 +329,23 @@ export default function FinanceIncome() {
                     >
                       <Download className="w-4 h-4" />
                     </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+
+              {xrayReports?.slice(0, 5).map((report) => (
+                <TableRow key={`xray-${report.id}`}>
+                  <TableCell className="font-mono">XR-{report.id.slice(0, 8)}</TableCell>
+                  <TableCell>X-ray</TableCell>
+                  <TableCell>{formatPkrAmount(report.price)}</TableCell>
+                  <TableCell>
+                    <Badge variant={report.status === 'completed' ? 'default' : 'secondary'}>
+                      {report.status}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>{format(new Date(report.created_at), 'MMM dd, yyyy')}</TableCell>
+                  <TableCell>
+                    <span className="text-sm text-gray-500">{report.test_name}</span>
                   </TableCell>
                 </TableRow>
               ))}

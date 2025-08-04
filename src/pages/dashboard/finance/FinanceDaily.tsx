@@ -141,6 +141,16 @@ export default function FinanceDaily() {
 
       console.log('Lab reports found:', labReports?.length, labReports);
 
+      // X-ray reports - filter based on cutoff time (include both completed and pending with prices)
+      const { data: xrayReports } = await supabase
+        .from('xray_reports')
+        .select('price, created_at, test_name, status')
+        .not('price', 'is', null)
+        .gte('created_at', cutoffTime)
+        .lte('created_at', upperBound);
+
+      console.log('X-ray reports found:', xrayReports?.length, xrayReports);
+
       // OT schedules - filter based on cutoff time for creation but still filter by operation_date for the day
       const { data: otSchedules } = await supabase
         .from('ot_schedules')
@@ -226,13 +236,14 @@ export default function FinanceDaily() {
       }
       
       const labRevenue = labReports?.reduce((sum, lab) => sum + (lab.price || 0), 0) || 0;
+      const xrayRevenue = xrayReports?.reduce((sum, xray) => sum + (xray.price || 0), 0) || 0;
       const otHospitalRevenue = otSchedules?.reduce((sum, ot) => sum + ((ot.total_cost || 0) - (ot.doctor_expense || 0)), 0) || 0;
       const miscellaneousIncome = miscIncome?.reduce((sum, income) => sum + (income.amount || 0), 0) || 0;
       const totalExpenses = expenses?.reduce((sum, exp) => sum + exp.amount, 0) || 0;
       const totalRefunds = refunds?.reduce((sum, ref) => sum + ref.amount, 0) || 0;
 
-      // Total hospital revenue = emergency consultations + lab + OT hospital portion + pharmacy profit + miscellaneous income
-      const totalHospitalRevenue = emergencyRevenue + labRevenue + otHospitalRevenue + pharmacyProfit + miscellaneousIncome;
+      // Total hospital revenue = emergency consultations + lab + xray + OT hospital portion + pharmacy profit + miscellaneous income
+      const totalHospitalRevenue = emergencyRevenue + labRevenue + xrayRevenue + otHospitalRevenue + pharmacyProfit + miscellaneousIncome;
       const totalHospitalProfit = totalHospitalRevenue - totalExpenses;
 
       // Categorize refunds
@@ -245,6 +256,7 @@ export default function FinanceDaily() {
         pharmacyRevenue,
         pharmacyProfit,
         labRevenue,
+        xrayRevenue,
         otHospitalRevenue,
         miscellaneousIncome,
         totalHospitalRevenue,
@@ -264,6 +276,7 @@ export default function FinanceDaily() {
         pharmacyRevenue,
         pharmacyProfit,
         labRevenue,
+        xrayRevenue,
         otHospitalRevenue,
         miscellaneousIncome,
         totalHospitalRevenue,
@@ -313,6 +326,7 @@ export default function FinanceDaily() {
         hospitalInvoicesRes,
         pharmacyInvoicesRes,
         labReportsRes,
+        xrayReportsRes,
         otSchedulesRes,
         emergencyAppointmentsRes,
         expensesRes,
@@ -345,6 +359,13 @@ export default function FinanceDaily() {
         
         supabase
           .from('lab_reports')
+          .select('*, patients(id, profiles(first_name, last_name))')
+          .eq('status', 'completed')
+          .gte('created_at', cutoffTime)
+          .lte('created_at', upperBound),
+        
+        supabase
+          .from('xray_reports')
           .select('*, patients(id, profiles(first_name, last_name))')
           .eq('status', 'completed')
           .gte('created_at', cutoffTime)
@@ -403,6 +424,7 @@ export default function FinanceDaily() {
         hospitalInvoices: hospitalInvoicesRes.data || [],
         pharmacyInvoices: pharmacyInvoicesRes.data || [],
         labReports: labReportsRes.data || [],
+        xrayReports: xrayReportsRes.data || [],
         otSchedules: otSchedulesRes.data || [],
         emergencyAppointments: emergencyAppointmentsRes.data || [],
         expenses: expensesRes.data || [],
@@ -448,6 +470,7 @@ export default function FinanceDaily() {
           hospitalInvoices: detailedData.hospitalInvoices,
           pharmacyInvoices: detailedData.pharmacyInvoices,
           labReports: detailedData.labReports,
+          xrayReports: detailedData.xrayReports,
           otSchedules: detailedData.otSchedules,
           emergencyAppointments: detailedData.emergencyAppointments,
           expenses: detailedData.expenses,
@@ -541,7 +564,7 @@ export default function FinanceDaily() {
       {/* Revenue Cards */}
       <div>
         <h2 className="text-xl font-semibold mb-4">Daily Revenue</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
           <StatsCard
             title="Hospital Revenue"
             value={formatPkrAmount(dailyData?.totalHospitalRevenue || 0)}
@@ -558,6 +581,12 @@ export default function FinanceDaily() {
             title="Lab Revenue"
             value={formatPkrAmount(dailyData?.labRevenue || 0)}
             icon={<TestTube className="w-5 h-5 text-green-600" />}
+            loading={isLoading}
+          />
+          <StatsCard
+            title="X-ray Revenue"
+            value={formatPkrAmount(dailyData?.xrayRevenue || 0)}
+            icon={<Activity className="w-5 h-5 text-pink-600" />}
             loading={isLoading}
           />
           <StatsCard
@@ -783,7 +812,7 @@ export default function FinanceDaily() {
                   <Building className="h-5 w-5 text-green-600" />
                   Hospital Department
                 </h3>
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+                <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-4">
                   <Card>
                     <CardContent className="p-4">
                       <div className="text-sm text-muted-foreground">Emergency</div>
@@ -794,6 +823,12 @@ export default function FinanceDaily() {
                     <CardContent className="p-4">
                       <div className="text-sm text-muted-foreground">Lab Revenue</div>
                       <div className="text-lg font-bold">{formatPkrAmount(dailyData?.labRevenue || 0)}</div>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardContent className="p-4">
+                      <div className="text-sm text-muted-foreground">X-ray Revenue</div>
+                      <div className="text-lg font-bold">{formatPkrAmount(dailyData?.xrayRevenue || 0)}</div>
                     </CardContent>
                   </Card>
                   <Card>
@@ -811,7 +846,7 @@ export default function FinanceDaily() {
                 </div>
 
                 {/* Detailed transactions */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   {detailedData?.emergencyAppointments && detailedData.emergencyAppointments.length > 0 && (
                     <Card>
                       <CardHeader>
@@ -841,6 +876,24 @@ export default function FinanceDaily() {
                             <div key={idx} className="flex justify-between p-2 bg-gray-50 rounded">
                               <span className="text-sm">{lab.test_name}</span>
                               <Badge>{formatPkrAmount(lab.price || 0)}</Badge>
+                            </div>
+                          ))}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+
+                  {detailedData?.xrayReports && detailedData.xrayReports.length > 0 && (
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="text-lg">X-ray Reports ({detailedData.xrayReports.length})</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="space-y-2 max-h-32 overflow-y-auto">
+                          {detailedData.xrayReports.map((xray, idx) => (
+                            <div key={idx} className="flex justify-between p-2 bg-gray-50 rounded">
+                              <span className="text-sm">{xray.test_name}</span>
+                              <Badge>{formatPkrAmount(xray.price || 0)}</Badge>
                             </div>
                           ))}
                         </div>
