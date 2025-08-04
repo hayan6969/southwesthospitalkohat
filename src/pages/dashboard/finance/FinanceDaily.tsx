@@ -16,6 +16,7 @@ import { generateDailyClosingPDF } from "@/utils/pdfGenerator";
 import { StatsCard } from "@/components/StatsCard";
 import { toast } from "sonner";
 import { HospitalClosingBalanceDialog } from "@/components/dialogs/HospitalClosingBalanceDialog";
+import { PreviousClosingsDialog } from "@/components/dialogs/PreviousClosingsDialog";
 import { getCurrentPakistanTime, toPakistanTime, formatInPakistanTime } from "@/utils/timezone";
 
 export default function FinanceDaily() {
@@ -538,29 +539,7 @@ export default function FinanceDaily() {
             <FileText className="h-4 w-4" />
             Daily Closing
           </Button>
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button
-                variant="outline"
-                className={cn(
-                  "w-[240px] justify-start text-left font-normal",
-                  !selectedDate && "text-muted-foreground"
-                )}
-              >
-                <Calendar className="mr-2 h-4 w-4" />
-                {selectedDate ? format(selectedDate, "PPP") : "Pick a date"}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0" align="start">
-              <CalendarComponent
-                mode="single"
-                selected={selectedDate}
-                onSelect={(date) => date && setSelectedDate(date)}
-                initialFocus
-                className="p-3 pointer-events-auto"
-              />
-            </PopoverContent>
-          </Popover>
+          <PreviousClosingsDialog />
           <Button onClick={handleRefresh} variant="outline" size="icon">
             <RefreshCw className="h-4 w-4" />
           </Button>
