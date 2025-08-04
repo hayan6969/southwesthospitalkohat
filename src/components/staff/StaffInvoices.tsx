@@ -363,16 +363,37 @@ export function StaffInvoices() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{allInvoices.length}</div>
+            <p className="text-xs text-muted-foreground">All invoice types</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Amount</CardTitle>
-            <Receipt className="w-4 h-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium">Lab Invoices</CardTitle>
+            <TestTube className="w-4 h-4 text-purple-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{formatPkrAmount(totalAmount)}</div>
+            <div className="text-2xl font-bold text-purple-600">
+              {allInvoices.filter(inv => inv.type === 'lab').length}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {formatPkrAmount(allInvoices.filter(inv => inv.type === 'lab').reduce((sum, inv) => sum + Number(inv.amount), 0))}
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">OT Invoices</CardTitle>
+            <Building2 className="w-4 h-4 text-red-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-red-600">
+              {allInvoices.filter(inv => inv.type === 'ot').length}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {formatPkrAmount(allInvoices.filter(inv => inv.type === 'ot').reduce((sum, inv) => sum + Number(inv.amount), 0))}
+            </p>
           </CardContent>
         </Card>
 
@@ -385,16 +406,9 @@ export function StaffInvoices() {
             <div className="text-2xl font-bold text-orange-600">
               {allInvoices.filter(inv => inv.type === 'xray').length}
             </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Applied Filters</CardTitle>
-            <Search className="w-4 h-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{filteredInvoices.length}</div>
+            <p className="text-xs text-muted-foreground">
+              {formatPkrAmount(allInvoices.filter(inv => inv.type === 'xray').reduce((sum, inv) => sum + Number(inv.amount), 0))}
+            </p>
           </CardContent>
         </Card>
       </div>
