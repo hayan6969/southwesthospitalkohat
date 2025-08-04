@@ -632,9 +632,27 @@ function PharmacyAnalytics({ data }: { data: any[] }) {
 }
 
 function LabAnalytics({ data }: { data: any[] }) {
+  const today = new Date();
+  const startOfToday = startOfDay(today);
+  const endOfToday = endOfDay(today);
+  const startOfThisMonth = startOfMonth(today);
+  const endOfThisMonth = endOfMonth(today);
+
   const completedTests = data.filter(lab => lab.status === 'completed').length;
   const pendingTests = data.filter(lab => lab.status === 'pending').length;
   const totalRevenue = data.reduce((sum, lab) => sum + Number(lab.price || 0), 0);
+  
+  // Calculate today's lab revenue
+  const todayRevenue = data.filter(lab => {
+    const labDate = new Date(lab.created_at);
+    return lab.price && labDate >= startOfToday && labDate <= endOfToday;
+  }).reduce((sum, lab) => sum + Number(lab.price || 0), 0);
+  
+  // Calculate monthly lab revenue
+  const monthlyRevenue = data.filter(lab => {
+    const labDate = new Date(lab.created_at);
+    return lab.price && labDate >= startOfThisMonth && labDate <= endOfThisMonth;
+  }).reduce((sum, lab) => sum + Number(lab.price || 0), 0);
   
   return (
     <div className="space-y-6">
@@ -646,7 +664,7 @@ function LabAnalytics({ data }: { data: any[] }) {
           </CardHeader>
           <CardContent>
             <div className="space-y-2">
-              <div className="text-2xl font-bold text-green-600">{formatPkrAmount(totalRevenue)}</div>
+              <div className="text-2xl font-bold text-green-600">{formatPkrAmount(todayRevenue)}</div>
               <div className="text-sm text-gray-600">Lab earnings today</div>
             </div>
           </CardContent>
@@ -658,7 +676,7 @@ function LabAnalytics({ data }: { data: any[] }) {
           </CardHeader>
           <CardContent>
             <div className="space-y-2">
-              <div className="text-2xl font-bold text-blue-600">{formatPkrAmount(totalRevenue)}</div>
+              <div className="text-2xl font-bold text-blue-600">{formatPkrAmount(monthlyRevenue)}</div>
               <div className="text-sm text-gray-600">This month's earnings</div>
             </div>
           </CardContent>
