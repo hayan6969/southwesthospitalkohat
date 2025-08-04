@@ -200,7 +200,9 @@ export function StaffInvoices() {
       doc.setFont('helvetica', 'bold');
       doc.text('Patient ID:', 120, yPosition + 5);
       doc.setFont('helvetica', 'normal');
-      doc.text('N/A', 160, yPosition + 5);
+      // Use the actual patient data instead of hardcoded 'N/A'
+      const patientId = invoice.patient?.patient_number || invoice.patient_number || 'N/A';
+      doc.text(patientId, 160, yPosition + 5);
       
       yPosition += 10;
       
