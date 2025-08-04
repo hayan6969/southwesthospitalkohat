@@ -130,11 +130,11 @@ export default function FinanceDaily() {
         })));
       }
 
-      // Lab reports - filter based on cutoff time
+      // Lab reports - filter based on cutoff time (include both completed and pending with prices)
       const { data: labReports } = await supabase
         .from('lab_reports')
-        .select('price, created_at, test_name')
-        .eq('status', 'completed')
+        .select('price, created_at, test_name, status')
+        .not('price', 'is', null)
         .gte('created_at', cutoffTime)
         .lte('created_at', upperBound);
 

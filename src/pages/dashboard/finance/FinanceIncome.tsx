@@ -43,13 +43,14 @@ export default function FinanceIncome() {
     }
   });
 
-  // Get lab reports for revenue
+  // Get lab reports for revenue (include both completed and pending with prices)
   const { data: labReports, isLoading: labLoading } = useQuery({
     queryKey: ['lab-reports-revenue'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('lab_reports')
         .select('*')
+        .not('price', 'is', null)
         .order('created_at', { ascending: false });
       if (error) throw error;
       return data;
