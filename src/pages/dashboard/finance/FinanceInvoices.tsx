@@ -272,13 +272,15 @@ export default function FinanceInvoices() {
         doc.setFont('helvetica', 'normal');
         const notes = invoice.notes.length > 40 ? invoice.notes.substring(0, 37) + '...' : invoice.notes;
         doc.text(notes, 70, yPosition + 5);
+        
+        yPosition += 10;
       }
+      
+      doc.setFont('helvetica', 'bold');
+      doc.text('Status:', 20, yPosition + 5);
+      doc.setFont('helvetica', 'normal');
+      doc.text(invoice.status?.toUpperCase() || 'COMPLETED', 60, yPosition + 5);
     }
-    
-    doc.setFont('helvetica', 'bold');
-    doc.text('Status:', 20, yPosition + 15);
-    doc.setFont('helvetica', 'normal');
-    doc.text(invoice.displayStatus.toUpperCase(), 55, yPosition + 15);
     
     yPosition += 70;
     
