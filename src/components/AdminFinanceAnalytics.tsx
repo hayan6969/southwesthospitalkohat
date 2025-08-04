@@ -733,16 +733,16 @@ function OTAnalytics({ data }: { data: any[] }) {
   const scheduledOTs = data.filter(ot => ot.status === 'scheduled').length;
   const totalRevenue = data.reduce((sum, ot) => sum + (Number(ot.total_cost || 0) - Number(ot.doctor_expense || 0)), 0);
   
-  // Calculate today's OT revenue
+  // Calculate today's OT revenue (only completed operations)
   const todayRevenue = data.filter(ot => {
     const otDate = new Date(ot.operation_date);
-    return ot.total_cost && ot.doctor_expense && otDate >= startOfToday && otDate <= endOfToday;
+    return ot.status === 'completed' && ot.total_cost && ot.doctor_expense && otDate >= startOfToday && otDate <= endOfToday;
   }).reduce((sum, ot) => sum + (Number(ot.total_cost || 0) - Number(ot.doctor_expense || 0)), 0);
   
-  // Calculate monthly OT revenue
+  // Calculate monthly OT revenue (only completed operations)
   const monthlyRevenue = data.filter(ot => {
     const otDate = new Date(ot.operation_date);
-    return ot.total_cost && ot.doctor_expense && otDate >= startOfThisMonth && otDate <= endOfThisMonth;
+    return ot.status === 'completed' && ot.total_cost && ot.doctor_expense && otDate >= startOfThisMonth && otDate <= endOfThisMonth;
   }).reduce((sum, ot) => sum + (Number(ot.total_cost || 0) - Number(ot.doctor_expense || 0)), 0);
   
   return (
