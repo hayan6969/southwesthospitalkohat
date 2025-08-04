@@ -638,9 +638,33 @@ export function XrayDialog({ open, onOpenChange, onSuccess }: XrayDialogProps) {
                     <span>X-ray Date:</span>
                     <span className="font-medium">{xrayDate ? format(xrayDate, "MMM dd, yyyy") : "Not selected"}</span>
                   </div>
-                  <div className="flex justify-between">
-                    <span>Tests:</span>
-                    <span className="font-medium">{selectedTests.length} selected</span>
+                  
+                  {/* Selected Tests with Individual Costs */}
+                  <div className="space-y-2">
+                    <div className="flex justify-between">
+                      <span>Selected Tests:</span>
+                      <span className="font-medium">{selectedTests.length} test{selectedTests.length !== 1 ? 's' : ''}</span>
+                    </div>
+                    {selectedTests.length > 0 && (
+                      <div className="ml-4 space-y-1">
+                        {selectedTests.map(testId => {
+                          const test = xrayTests?.find(t => t.id === testId);
+                          return test ? (
+                            <div key={test.id} className="flex justify-between items-center text-sm">
+                              <div className="flex-1">
+                                <span className="text-muted-foreground">• {test.name}</span>
+                                {test.category && (
+                                  <span className="text-xs text-muted-foreground ml-2">({test.category})</span>
+                                )}
+                              </div>
+                              <span className="font-medium ml-2">
+                                {formatPkrAmount(test.price)}
+                              </span>
+                            </div>
+                          ) : null;
+                        })}
+                      </div>
+                    )}
                   </div>
                   <Separator />
                   <div className="flex justify-between text-lg font-bold">
