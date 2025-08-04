@@ -114,20 +114,21 @@ export const usePharmacyAnalytics = () => {
 
       // Today's calculations (using Pakistan timezone)
       const todaySalesInvoices = salesInvoices.filter(inv => {
-        const invDate = toPakistanTime(new Date(inv.created_at));
-        const isToday = invDate >= startOfToday && invDate <= endOfToday;
+        const invDate = new Date(inv.created_at);
+        const invPakistanTime = toPakistanTime(invDate);
+        const isToday = invPakistanTime >= startOfToday && invPakistanTime <= endOfToday;
         if (isToday) {
-          console.log('Today sale found:', inv.invoice_number, 'at', invDate, 'amount:', inv.final_amount);
+          console.log('Today sale found:', inv.invoice_number, 'at', invPakistanTime, 'amount:', inv.final_amount);
         }
         return isToday;
       });
       const todayReturnInvoices = returnInvoices.filter(inv => {
-        const invDate = toPakistanTime(new Date(inv.created_at));
-        return invDate >= startOfToday && invDate <= endOfToday;
+        const invPakistanTime = toPakistanTime(new Date(inv.created_at));
+        return invPakistanTime >= startOfToday && invPakistanTime <= endOfToday;
       });
       const todayReturnExpenses = returnExpenses.filter(exp => {
-        const expDate = toPakistanTime(new Date(exp.expense_date));
-        return expDate >= startOfToday && expDate <= endOfToday;
+        const expPakistanTime = toPakistanTime(new Date(exp.expense_date));
+        return expPakistanTime >= startOfToday && expPakistanTime <= endOfToday;
       });
 
       const todayRevenue = todaySalesInvoices.reduce((sum, inv) => sum + inv.final_amount, 0);
@@ -137,8 +138,8 @@ export const usePharmacyAnalytics = () => {
 
       // Calculate today's profit
       const todayInvoiceItems = allInvoiceItems.filter(item => {
-        const invoiceDate = toPakistanTime(new Date(item.created_at));
-        return invoiceDate >= startOfToday && invoiceDate <= endOfToday && item.unit_price > 0;
+        const invoicePakistanTime = toPakistanTime(new Date(item.created_at));
+        return invoicePakistanTime >= startOfToday && invoicePakistanTime <= endOfToday && item.unit_price > 0;
       });
       const todayProfit = todayInvoiceItems.reduce((sum, item) => {
         const profit = (item.unit_price - (item.medicines?.purchase_price || 0)) * item.quantity;
