@@ -29,14 +29,14 @@ export function StaffXray() {
     },
   });
 
-  // Fetch patient and doctor data separately
+  // Fetch patient data with patient numbers
   const { data: patients } = useQuery({
-    queryKey: ["patients"],
+    queryKey: ["patients-with-numbers"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("profiles")
-        .select("id, first_name, last_name, phone")
-        .eq("role", "patient");
+        .from("patients")
+        .select("id, patient_number")
+        .order("patient_number");
       if (error) throw error;
       return data;
     },
@@ -60,16 +60,14 @@ export function StaffXray() {
     const patient = patients?.find(p => p.id === report.patient_id);
     const doctor = doctors?.find(d => d.id === report.doctor_id);
     
-    const patientName = patient ? `${patient.first_name || ''} ${patient.last_name || ''}`.toLowerCase() : '';
+    const patientNumber = patient?.patient_number || '';
     const doctorName = doctor ? `${doctor.first_name || ''} ${doctor.last_name || ''}`.toLowerCase() : '';
     const testName = report.test_name.toLowerCase();
-    const phone = patient?.phone || '';
     
     return (
-      patientName.includes(searchTerm.toLowerCase()) ||
+      patientNumber.includes(searchTerm.toLowerCase()) ||
       doctorName.includes(searchTerm.toLowerCase()) ||
-      testName.includes(searchTerm.toLowerCase()) ||
-      phone.includes(searchTerm)
+      testName.includes(searchTerm.toLowerCase())
     );
   });
 
@@ -91,23 +89,15 @@ export function StaffXray() {
       const patientProfile = patients?.find(p => p.id === report.patient_id);
       const doctorProfile = doctors?.find(d => d.id === report.doctor_id);
       
-      // Provide fallback data when patient profile is not found
-      const patientInfo = patientProfile ? formatPatientInfo(
-        { emergency_contact_phone: patientProfile.phone }, 
-        patientProfile
-      ) : {
-        fullName: 'Unknown Patient',
-        email: 'Not provided',
-        phone: 'Not provided',
-        patientNumber: 'Not assigned'
-      };
+      // Use patient number for patient info
+      const patientId = patientProfile?.patient_number || 'Not assigned';
       
       await generateXrayInvoicePDF({
         invoiceNumber: `XR-${report.id.slice(0, 8)}`,
-        patientName: patientInfo.fullName,
-        patientEmail: patientInfo.email,
-        patientId: patientInfo.patientNumber,
-        patientPhone: patientInfo.phone,
+        patientName: 'Patient',
+        patientEmail: 'Not provided',
+        patientId: patientId,
+        patientPhone: 'Not provided',
         doctorName: report.external_doctor_name || 
           (doctorProfile ? `Dr. ${doctorProfile.first_name} ${doctorProfile.last_name}` : undefined),
         tests: [{
@@ -196,13 +186,8 @@ export function StaffXray() {
                 return (
                   <TableRow key={report.id}>
                     <TableCell>
-                      <div>
-                        <div className="font-medium">
-                          {patient ? `${patient.first_name} ${patient.last_name}` : 'Unknown Patient'}
-                        </div>
-                        <div className="text-sm text-muted-foreground">
-                          {patient?.phone || 'N/A'}
-                        </div>
+                      <div className="font-medium text-blue-600">
+                        {patient?.patient_number || 'N/A'}
                       </div>
                     </TableCell>
                     <TableCell>
