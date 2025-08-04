@@ -67,10 +67,12 @@ export function StaffInvoices() {
   // Filter and paginate invoices
   const filteredInvoices = useMemo(() => {
     return allInvoices.filter(invoice => {
-      const matchesSearch = 
-        invoice.patient_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        invoice.invoice_number?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        invoice.description?.toLowerCase().includes(searchTerm.toLowerCase());
+      // Enhanced search to handle complete invoice numbers like "INV-1754340531651", "LAB-1754320936111"
+      const searchLower = searchTerm.toLowerCase().trim();
+      const matchesSearch = !searchTerm || 
+        invoice.patient_name?.toLowerCase().includes(searchLower) ||
+        invoice.invoice_number?.toLowerCase().includes(searchLower) ||
+        invoice.description?.toLowerCase().includes(searchLower);
 
       const matchesType = filterType === "all" || invoice.type === filterType;
 
