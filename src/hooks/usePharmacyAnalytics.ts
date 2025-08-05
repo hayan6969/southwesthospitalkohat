@@ -320,10 +320,11 @@ export const usePharmacyAnalytics = () => {
       // Calculate profit from all invoice items since last closing (including returns)
       const sinceClosingInvoiceItems = allInvoiceItems.filter(item => {
         const invoiceDate = toPakistanTime(new Date(item.created_at));
-        return invoiceDate > lastClosingTime;
+        return invoiceDate >= lastClosingTime; // Use >= instead of > to match finance daily
       });
       
       const sinceClosingProfit = sinceClosingInvoiceItems.reduce((sum, item) => {
+        // Use the same calculation as finance daily: unit_price from invoice items
         // For returns, quantities are negative, so this automatically subtracts profit lost
         const profit = (item.unit_price - (item.medicines?.purchase_price || 0)) * item.quantity;
         return sum + profit;
