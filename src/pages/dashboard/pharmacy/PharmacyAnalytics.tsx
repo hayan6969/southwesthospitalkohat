@@ -4,6 +4,7 @@ import AppLayout from "@/layouts/AppLayout";
 import { usePharmacyAnalytics } from "@/hooks/usePharmacyAnalytics";
 import { useFilteredTopProducts } from "@/hooks/useFilteredTopProducts";
 import { useAllMedicinesWithSales } from "@/hooks/useAllMedicinesWithSales";
+import { usePaginatedMedicines } from "@/hooks/useDatabase";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
@@ -32,19 +33,17 @@ export default function PharmacyAnalytics() {
   const monthFilter = selectedYear && selectedMonth ? `${selectedYear}-${selectedMonth.padStart(2, '0')}` : "";
   
   const { data: analytics, isLoading } = usePharmacyAnalytics();
-  const { data: allMedicines, isLoading: isLoadingAllMedicines } = useAllMedicinesWithSales(monthFilter, searchQuery);
   
   // Pagination constants
   const ITEMS_PER_PAGE = 10;
   
-  // Debug logging
-  console.log('Analytics: allMedicines length:', allMedicines?.length);
-  console.log('Analytics: totalPages calculated:', Math.ceil((allMedicines?.length || 0) / ITEMS_PER_PAGE));
-  
-  const totalPages = Math.ceil((allMedicines?.length || 0) / ITEMS_PER_PAGE);
+  // Use paginated medicines like stock tracking - ignore filters for now, just show basic table
+  const { data: medicinesResult, isLoading: isLoadingMedicines } = usePaginatedMedicines(currentPage, ITEMS_PER_PAGE, searchQuery);
+  const medicines = medicinesResult?.data || [];
+  const totalCount = medicinesResult?.count || 0;
+  const totalPages = medicinesResult?.totalPages || 1;
   const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
   const endIndex = startIndex + ITEMS_PER_PAGE;
-  const currentMedicines = allMedicines?.slice(startIndex, endIndex) || [];
 
   const clearFilters = () => {
     setSelectedYear("");
@@ -397,13 +396,13 @@ export default function PharmacyAnalytics() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {isLoadingAllMedicines ? (
+                  {isLoadingMedicines ? (
                     <div className="flex items-center justify-center h-32">
                       <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-gray-900"></div>
                     </div>
                   ) : (
                     <>
-                      {currentMedicines.map((medicine, index) => (
+                      {medicines.map((medicine, index) => (
                         <div key={medicine.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
                           <div className="flex items-center gap-3">
                             <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
@@ -417,19 +416,19 @@ export default function PharmacyAnalytics() {
                                 )}
                               </p>
                               <div className="flex gap-3 text-sm text-gray-600">
-                                <span>Sold: {medicine.quantity_sold} units</span>
                                 <span>Stock: {medicine.stock_quantity}</span>
+                                <span>Company: {medicine.company_name || 'N/A'}</span>
                               </div>
                             </div>
                           </div>
                           <div className="text-right">
-                            <p className="font-bold text-green-600">{formatPkrAmount(medicine.revenue)}</p>
-                            <p className="text-sm text-blue-600">Profit: {formatPkrAmount(medicine.profit)}</p>
+                            <p className="font-bold text-green-600">{formatPkrAmount(medicine.selling_price)}</p>
+                            <p className="text-sm text-blue-600">Purchase: {formatPkrAmount(medicine.purchase_price)}</p>
                           </div>
                         </div>
                       )) || []}
                       
-                      {allMedicines?.length === 0 && (
+                      {medicines?.length === 0 && (
                         <div className="text-center py-8 text-gray-500">
                           {searchQuery ? `No medicines found matching "${searchQuery}"` : "No medicines found"}
                         </div>
@@ -439,7 +438,7 @@ export default function PharmacyAnalytics() {
                       {totalPages > 1 && (
                         <div className="flex items-center justify-between pt-4 border-t">
                           <div className="text-sm text-gray-600">
-                            Showing {startIndex + 1} to {Math.min(endIndex, allMedicines?.length || 0)} of {allMedicines?.length || 0} medicines
+                            Showing {startIndex + 1} to {Math.min(endIndex, totalCount)} of {totalCount} medicines
                           </div>
                           <div className="flex items-center gap-2">
                             <Button
