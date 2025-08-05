@@ -587,13 +587,21 @@ export default function FinanceInvoices() {
   // Combine all invoices into a single array with type information
   const allInvoices = [
     ...(hospitalInvoices?.map(inv => {
-      // All hospital invoices from the invoices table are appointments, regardless of description
-      // Invoice number prefix determines type: INV- = appointment, LAB- = lab, etc.
+      // Categorize based on invoice number prefix
       let type = 'appointment';
       let typeLabel = 'Appointment';
       
-      // Only check for emergency consultations in description
-      if (inv.description?.toLowerCase().includes('emergency consultation')) {
+      // Check invoice number prefix to determine actual type
+      if (inv.invoice_number?.startsWith('OT-')) {
+        type = 'ot';
+        typeLabel = 'Operation Theater';
+      } else if (inv.invoice_number?.startsWith('LAB-')) {
+        type = 'lab';
+        typeLabel = 'Laboratory';
+      } else if (inv.invoice_number?.startsWith('XRAY-')) {
+        type = 'xray';
+        typeLabel = 'X-ray';
+      } else if (inv.description?.toLowerCase().includes('emergency consultation')) {
         type = 'emergency';
         typeLabel = 'Emergency Consultation';
       }
