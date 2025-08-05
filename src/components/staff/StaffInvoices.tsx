@@ -107,11 +107,22 @@ export function StaffInvoices() {
   const allInvoices = useMemo(() => {
     const combined: any[] = [];
 
-    // Process all invoices and categorize them
+    // Process all invoices and categorize them by invoice number prefix
     if (hospitalInvoices) {
       hospitalInvoices.forEach(invoice => {
-        // All hospital invoices are appointments, regardless of description
+        // Categorize based on invoice number prefix
         let type = 'appointments';
+        
+        // Check invoice number prefix to determine actual type
+        if (invoice.invoice_number?.startsWith('OT-')) {
+          type = 'ot';
+        } else if (invoice.invoice_number?.startsWith('LAB-')) {
+          type = 'lab';
+        } else if (invoice.invoice_number?.startsWith('XRAY-')) {
+          type = 'xray';
+        } else if (invoice.description?.toLowerCase().includes('emergency consultation')) {
+          type = 'emergency';
+        }
         
         combined.push({
           ...invoice,
