@@ -65,8 +65,8 @@ export function PrescriptionDetailDialog({
           {/* Prescription Content */}
           <div className="space-y-2">
             <h3 className="text-lg font-semibold">Prescription</h3>
-            <div className="p-4 border rounded-lg bg-white">
-              <pre className="whitespace-pre-wrap font-mono text-sm leading-relaxed">
+            <div className="p-4 border rounded-lg bg-white max-w-full overflow-hidden">
+              <pre className="whitespace-pre-wrap font-mono text-sm leading-relaxed break-words break-all overflow-wrap-anywhere max-w-full">
                 {prescription.prescription_text}
               </pre>
             </div>
