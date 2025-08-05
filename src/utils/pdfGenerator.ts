@@ -1108,8 +1108,8 @@ export const generateDailyClosingPDF = async (data: {
     yPosition += 10;
     
     // Detailed pharmacy expenses
-    const pharmacyBillHeaders = ['Type', 'Description', 'Amount', 'Date'];
-    const pharmacyBillColWidths = [45, 70, 35, 30];
+    const pharmacyBillHeaders = ['Type', 'Bill No.', 'Description', 'Amount', 'Date'];
+    const pharmacyBillColWidths = [35, 25, 55, 30, 25];
     const pharmacyBillRows: string[][] = [];
 
     transactionsData.pharmacyExpenses.forEach((expense: any) => {
@@ -1119,6 +1119,7 @@ export const generateDailyClosingPDF = async (data: {
       
       pharmacyBillRows.push([
         typeDisplay,
+        expense.bill_number || 'N/A',
         expense.description || '',
         formatPkrAmount(expense.amount),
         new Date(expense.expense_date).toLocaleDateString()

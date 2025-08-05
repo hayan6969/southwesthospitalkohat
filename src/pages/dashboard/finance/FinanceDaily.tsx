@@ -348,7 +348,8 @@ export default function FinanceDaily() {
         refundsRes,
         pharmacyExpensesRes,
         pharmacyAccountRes,
-        totalStockRes
+        totalStockRes,
+        miscellaneousIncomeRes
       ] = await Promise.all([
         supabase
           .from('invoices')
@@ -427,7 +428,13 @@ export default function FinanceDaily() {
         
         supabase
           .from('medicines')
-          .select('stock_quantity, selling_price')
+          .select('stock_quantity, selling_price'),
+        
+        supabase
+          .from('miscellaneous_income')
+          .select('*')
+          .gte('created_at', cutoffTime)
+          .lte('created_at', upperBound)
       ]);
 
       // Calculate total stock value
@@ -445,6 +452,7 @@ export default function FinanceDaily() {
         expenses: expensesRes.data || [],
         refunds: refundsRes.data || [],
         pharmacyExpenses: pharmacyExpensesRes.data || [],
+        miscellaneousIncome: miscellaneousIncomeRes.data || [],
         pharmacyAccount: pharmacyAccountRes.data?.[0] || null,
         totalStockValue,
         lastClosing: lastClosing,
@@ -491,6 +499,7 @@ export default function FinanceDaily() {
           expenses: detailedData.expenses,
           refunds: detailedData.refunds,
           pharmacyExpenses: detailedData.pharmacyExpenses,
+          miscellaneousIncome: detailedData.miscellaneousIncome,
           pharmacyAccount: detailedData.pharmacyAccount,
           totalStockValue: detailedData.totalStockValue
         }
