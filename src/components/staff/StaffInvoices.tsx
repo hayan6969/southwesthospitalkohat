@@ -41,6 +41,20 @@ export function StaffInvoices() {
     }
   });
 
+  // Fetch Lab reports
+  const { data: labReports, isLoading: labLoading } = useQuery({
+    queryKey: ['lab-reports-staff'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('lab_reports')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      return data;
+    }
+  });
+
   // Fetch patient data for all patients
   const { data: allPatients } = useQuery({
     queryKey: ['all-patients-data'],
@@ -61,15 +75,6 @@ export function StaffInvoices() {
     // Process all invoices and categorize them
     if (hospitalInvoices) {
       hospitalInvoices.forEach(invoice => {
-        // Debug specific invoice
-        if (invoice.invoice_number === 'INV-1754351253847') {
-          console.log('🏥 STAFF INVOICES DEBUG - INV-1754351253847:', {
-            description: invoice.description,
-            originalType: 'appointments',
-            fromHospitalInvoices: true
-          });
-        }
-
         // All hospital invoices are appointments, regardless of description
         let type = 'appointments';
         
@@ -83,6 +88,33 @@ export function StaffInvoices() {
           display_date: format(new Date(invoice.created_at), 'MMM d, yyyy'),
           display_time: format(new Date(invoice.created_at), 'h:mm a'),
           display_amount: formatPkrAmount(invoice.amount)
+        });
+      });
+    }
+
+    // Add Lab reports
+    if (labReports) {
+      labReports.forEach(labReport => {
+        // Get patient name from patient names using the helper
+        const patientName = getPatientName(labReport.patient_id, patientNames || []);
+        
+        // Find patient number from allPatients array
+        const patient = allPatients?.find(p => p.id === labReport.patient_id);
+        
+        combined.push({
+          ...labReport,
+          type: 'lab',
+          invoice_type: 'lab',
+          invoice_date: labReport.created_at,
+          patient_name: patientName || 'Walk-in Patient',
+          patient_id_display: patient?.patient_number || 'N/A',
+          display_date: format(new Date(labReport.created_at), 'MMM d, yyyy'),
+          display_time: format(new Date(labReport.created_at), 'h:mm a'),
+          display_amount: formatPkrAmount(labReport.price || 0),
+          amount: labReport.price || 0,
+          invoice_number: `LAB-${labReport.id.slice(-8).toUpperCase()}`,
+          description: `Lab Test: ${labReport.test_name}`,
+          status: labReport.status === 'completed' ? 'paid' : 'pending'
         });
       });
     }
@@ -115,7 +147,7 @@ export function StaffInvoices() {
     }
 
     return combined.sort((a, b) => new Date(b.invoice_date).getTime() - new Date(a.invoice_date).getTime());
-  }, [hospitalInvoices, patientNames, xrayReports, allPatients]);
+  }, [hospitalInvoices, patientNames, labReports, xrayReports, allPatients]);
 
   // Filter and paginate invoices
   const filteredInvoices = useMemo(() => {
@@ -437,7 +469,7 @@ export function StaffInvoices() {
     return <Badge className={color}>{label}</Badge>;
   };
 
-  const isLoading = hospitalLoading || xrayLoading;
+  const isLoading = hospitalLoading || xrayLoading || labLoading;
   const totalAmount = allInvoices.reduce((sum, invoice) => sum + Number(invoice.amount || 0), 0);
 
   return (
