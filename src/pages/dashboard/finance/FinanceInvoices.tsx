@@ -76,7 +76,7 @@ export default function FinanceInvoices() {
 
   const handleDownloadPDF = async (invoice: any) => {
     try {
-      if (invoice.type === 'hospital') {
+      if (invoice.type === 'appointment' || invoice.type === 'emergency') {
         await generateInvoicePDF(invoice);
       } else if (invoice.type === 'pharmacy') {
         await generatePharmacyInvoiceFromData(invoice);
@@ -403,22 +403,21 @@ export default function FinanceInvoices() {
   // Combine all invoices into a single array with type information
   const allInvoices = [
     ...(hospitalInvoices?.map(inv => {
-      // All hospital invoices keep type 'hospital' for filtering, but get descriptive labels
-      let typeLabel = 'Hospital Service';
+      // Hospital invoices from the invoices table should be categorized as appointments/consultations  
+      let type = 'appointment';
+      let typeLabel = 'Appointment';
       
+      // Only categorize as different types if it's clearly a specific service, not just mentioning it
       if (inv.description?.toLowerCase().includes('emergency consultation')) {
+        type = 'emergency';
         typeLabel = 'Emergency Consultation';
-      } else if (inv.description?.toLowerCase().includes('lab') || inv.description?.toLowerCase().includes('test')) {
-        typeLabel = 'Hospital Lab Service';
-      } else if (inv.description?.toLowerCase().includes('xray') || inv.description?.toLowerCase().includes('x-ray') || inv.description?.toLowerCase().includes('radiology')) {
-        typeLabel = 'Hospital X-ray Service';
-      } else if (inv.description?.toLowerCase().includes('ot') || inv.description?.toLowerCase().includes('operation') || inv.description?.toLowerCase().includes('surgery')) {
-        typeLabel = 'Hospital OT Service';
       }
+      // Most hospital invoices are appointments/consultations, not separate lab/xray services
+      // Actual lab tests and xrays come from separate tables with LAB- and XR- prefixes
       
       return {
         ...inv,
-        type: 'hospital', // Always hospital type for filtering
+        type,
         typeLabel,
         displayAmount: inv.amount,
         displayNumber: inv.invoice_number,
@@ -529,8 +528,8 @@ export default function FinanceInvoices() {
           </CardHeader>
           <CardContent>
             <div className="text-sm text-gray-600">
-              {filterType === 'all' ? 'All Types' : 
-               filterType === 'hospital' ? 'Hospital Services' :
+               {filterType === 'all' ? 'All Types' : 
+                filterType === 'appointment' ? 'Appointments' :
                filterType === 'emergency' ? 'Emergency' :
                filterType === 'pharmacy' ? 'Pharmacy' :
                 filterType === 'lab' ? 'Lab Tests' :
@@ -555,15 +554,15 @@ export default function FinanceInvoices() {
               <SelectTrigger className="w-48">
                 <SelectValue placeholder="Filter by type" />
               </SelectTrigger>
-               <SelectContent>
-                 <SelectItem value="all">All Types</SelectItem>
-                 <SelectItem value="hospital">Hospital Services</SelectItem>
-                 <SelectItem value="emergency">Emergency</SelectItem>
-                 <SelectItem value="pharmacy">Pharmacy</SelectItem>
-                 <SelectItem value="lab">Lab Tests</SelectItem>
-                 <SelectItem value="xray">X-ray</SelectItem>
-                 <SelectItem value="ot">Operation Theater</SelectItem>
-               </SelectContent>
+                 <SelectContent>
+                  <SelectItem value="all">All Types</SelectItem>
+                  <SelectItem value="appointment">Appointments</SelectItem>
+                  <SelectItem value="emergency">Emergency</SelectItem>
+                  <SelectItem value="pharmacy">Pharmacy</SelectItem>
+                  <SelectItem value="lab">Lab Tests</SelectItem>
+                  <SelectItem value="xray">X-ray</SelectItem>
+                  <SelectItem value="ot">Operation Theater</SelectItem>
+                </SelectContent>
             </Select>
 
             {/* Date Filter */}
@@ -625,7 +624,8 @@ export default function FinanceInvoices() {
                   <TableCell className="font-mono">{invoice.displayNumber}</TableCell>
                   <TableCell>
                     <Badge variant={
-                      invoice.type === 'hospital' ? 'default' :
+                      invoice.type === 'appointment' ? 'default' :
+                      invoice.type === 'emergency' ? 'destructive' :
                       invoice.type === 'pharmacy' ? 'secondary' :
                       invoice.type === 'lab' ? 'outline' :
                       invoice.type === 'xray' ? 'default' :
