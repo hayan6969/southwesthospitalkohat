@@ -182,7 +182,16 @@ export function StaffInvoices() {
           amount: otSchedule.total_cost || 0,
           invoice_number: `OT-${otSchedule.id.slice(-8).toUpperCase()}`,
           description: `Operation Theater Service`,
-          status: otSchedule.status === 'completed' ? 'paid' : 'pending'
+          status: otSchedule.status === 'completed' ? 'paid' : 'pending',
+          // Add fields needed for finance-style PDF
+          displayAmount: otSchedule.total_cost || 0,
+          displayNumber: `OT-${otSchedule.id.slice(-8).toUpperCase()}`,
+          displayDate: otSchedule.created_at,
+          displayStatus: otSchedule.status,
+          operation_date: otSchedule.operation_date || otSchedule.created_at,
+          doctor_name: otSchedule.doctor_name,
+          notes: otSchedule.notes,
+          ot_notes: otSchedule.ot_notes
         });
       });
     }
@@ -338,6 +347,35 @@ export function StaffInvoices() {
       doc.text('Status:', 20, yPosition + 5);
       doc.setFont('helvetica', 'normal');
       doc.text(invoice.status?.toUpperCase() || 'COMPLETED', 60, yPosition + 5);
+    } else if (invoice.type === 'ot') {
+      doc.setFont('helvetica', 'bold');
+      doc.text('Operation Date:', 20, yPosition + 5);
+      doc.setFont('helvetica', 'normal');
+      doc.text(format(new Date(invoice.operation_date), 'MMM dd, yyyy'), 85, yPosition + 5);
+      
+      if (invoice.doctor_name) {
+        doc.setFont('helvetica', 'bold');
+        doc.text('Doctor:', 120, yPosition + 5);
+        doc.setFont('helvetica', 'normal');
+        doc.text(invoice.doctor_name, 155, yPosition + 5);
+      }
+      
+      yPosition += 10;
+      
+      if (invoice.notes) {
+        doc.setFont('helvetica', 'bold');
+        doc.text('Procedure:', 20, yPosition + 5);
+        doc.setFont('helvetica', 'normal');
+        const notes = invoice.notes.length > 40 ? invoice.notes.substring(0, 37) + '...' : invoice.notes;
+        doc.text(notes, 70, yPosition + 5);
+        
+        yPosition += 10;
+      }
+      
+      doc.setFont('helvetica', 'bold');
+      doc.text('Status:', 20, yPosition + 5);
+      doc.setFont('helvetica', 'normal');
+      doc.text(invoice.status?.toUpperCase() || 'COMPLETED', 60, yPosition + 5);
     }
     
     yPosition += 70;
@@ -369,14 +407,14 @@ export function StaffInvoices() {
       const textHeight = wrappedText.length * 5;
       
       doc.text(wrappedText, 20, yPosition);
-      doc.text(formatPkrAmount(invoice.amount || 0), pageWidth - 50, yPosition);
+      doc.text(formatPkrAmount(invoice.displayAmount || invoice.amount || 0), pageWidth - 50, yPosition);
       
       yPosition += textHeight + 2;
     } else {
       // OT Service
       const description = 'Operation Theater Service';
       doc.text(description, 20, yPosition);
-      doc.text(formatPkrAmount(invoice.amount || 0), pageWidth - 50, yPosition);
+      doc.text(formatPkrAmount(invoice.displayAmount || invoice.amount || 0), pageWidth - 50, yPosition);
       
       yPosition += 8;
     }
@@ -395,7 +433,7 @@ export function StaffInvoices() {
     doc.setTextColor(40, 40, 40);
     doc.rect(totalsX, yPosition - 5, 80, 18);
     doc.text('Total Amount:', totalsX + 5, yPosition + 4);
-    doc.text(formatPkrAmount(invoice.amount || 0), totalsX + 5, yPosition + 12);
+    doc.text(formatPkrAmount(invoice.displayAmount || invoice.amount || 0), totalsX + 5, yPosition + 12);
     
     yPosition += 30;
     
@@ -470,11 +508,8 @@ export function StaffInvoices() {
           notes: invoice.notes
         });
       } else if (invoice.type === 'ot') {
-        // For OT invoices, use the detailed PDF generation
-        await generateDetailedInvoicePDF({
-          ...invoice,
-          type: 'ot'
-        });
+        // For OT invoices, use the detailed PDF generation exactly like finance
+        await generateDetailedInvoicePDF(invoice);
       } else {
         await generateInvoicePDF(invoice);
       }
