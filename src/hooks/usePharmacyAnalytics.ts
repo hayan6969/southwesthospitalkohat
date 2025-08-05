@@ -329,8 +329,14 @@ export const usePharmacyAnalytics = () => {
         return sum + profit;
       }, 0);
       
-      // Hospital gets the net profit since last closing
-      const payHospitalAmount = Math.max(0, sinceClosingProfit);
+      // Get pharmacy expenses since last closing
+      const sinceClosingPharmacyExpenses = returnExpenses.filter(exp => {
+        const expDate = toPakistanTime(new Date(exp.expense_date));
+        return expDate > lastClosingTime;
+      }).reduce((sum, exp) => sum + exp.amount, 0);
+      
+      // Hospital gets the net profit since last closing minus pharmacy expenses
+      const payHospitalAmount = Math.max(0, sinceClosingProfit - sinceClosingPharmacyExpenses);
 
       return {
         todayRevenue,
