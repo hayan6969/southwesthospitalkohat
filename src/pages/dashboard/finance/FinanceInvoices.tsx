@@ -308,6 +308,22 @@ export default function FinanceInvoices() {
       doc.text(invoice.status?.toUpperCase() || 'COMPLETED', 60, yPosition + 5);
     } else if (invoice.type === 'ot') {
       doc.setFont('helvetica', 'bold');
+      doc.text('Patient:', 20, yPosition + 5);
+      doc.setFont('helvetica', 'normal');
+      const patientName = invoice.patient?.profiles?.first_name && invoice.patient?.profiles?.last_name 
+        ? `${invoice.patient.profiles.first_name} ${invoice.patient.profiles.last_name}`
+        : 'Unknown Patient';
+      doc.text(patientName, 60, yPosition + 5);
+      
+      doc.setFont('helvetica', 'bold');
+      doc.text('Patient ID:', 120, yPosition + 5);
+      doc.setFont('helvetica', 'normal');
+      const patientId = invoice.patient?.patient_number || 'N/A';
+      doc.text(patientId, 160, yPosition + 5);
+      
+      yPosition += 10;
+      
+      doc.setFont('helvetica', 'bold');
       doc.text('Operation Date:', 20, yPosition + 5);
       doc.setFont('helvetica', 'normal');
       doc.text(format(new Date(invoice.operation_date), 'MMM dd, yyyy'), 85, yPosition + 5);
@@ -370,12 +386,30 @@ export default function FinanceInvoices() {
       
       yPosition += textHeight + 2;
     } else {
-      // OT Service
-      const description = 'Operation Theater Service';
-      doc.text(description, 20, yPosition);
-      doc.text(formatPkrAmount(invoice.displayAmount || 0), pageWidth - 50, yPosition);
+      // OT Service with detailed charge breakdown
+      const doctorFee = invoice.doctor_expense || 0;
+      const otCharges = (invoice.total_cost || 0) - doctorFee;
       
-      yPosition += 8;
+      // Doctor fee line
+      if (doctorFee > 0) {
+        doc.text('Doctor Fee', 20, yPosition);
+        doc.text(formatPkrAmount(doctorFee), pageWidth - 50, yPosition);
+        yPosition += 8;
+      }
+      
+      // OT charges line
+      if (otCharges > 0) {
+        doc.text('Operation Theater Charges', 20, yPosition);
+        doc.text(formatPkrAmount(otCharges), pageWidth - 50, yPosition);
+        yPosition += 8;
+      }
+      
+      // If no breakdown available, show total as OT service
+      if (doctorFee === 0 && otCharges === 0) {
+        doc.text('Operation Theater Service', 20, yPosition);
+        doc.text(formatPkrAmount(invoice.displayAmount || 0), pageWidth - 50, yPosition);
+        yPosition += 8;
+      }
     }
     
     // Draw table border
