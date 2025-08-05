@@ -353,7 +353,42 @@ export function StaffInvoices() {
           type: 'lab'
         });
       } else if (invoice.type === 'xray') {
-        await generateInvoicePDF(invoice);
+        // For X-ray invoices, fetch patient and doctor data for proper PDF generation
+        const [patientRes, patientProfileRes, doctorRes] = await Promise.all([
+          supabase.from('patients').select('patient_number').eq('id', invoice.patient_id).single(),
+          supabase.from('profiles').select('first_name, last_name, phone').eq('id', invoice.patient_id).single(),
+          invoice.doctor_id ? 
+            supabase.from('profiles').select('first_name, last_name').eq('id', invoice.doctor_id).single() :
+            Promise.resolve({ data: null })
+        ]);
+
+        const patientNumber = patientRes.data?.patient_number || 'Walk-in';
+        const patientProfile = patientProfileRes.data;
+        const patientName = patientProfile ? `${patientProfile.first_name || ''} ${patientProfile.last_name || ''}`.trim() : 'Walk-in Patient';
+        const doctorProfile = doctorRes.data;
+        const doctorName = invoice.external_doctor_name || 
+          (doctorProfile ? `Dr. ${doctorProfile.first_name} ${doctorProfile.last_name}` : 'External Doctor');
+
+        // Import the generateXrayInvoicePDF function
+        const { generateXrayInvoicePDF } = await import('@/utils/pdfGenerator');
+        
+        await generateXrayInvoicePDF({
+          invoiceNumber: invoice.invoice_number,
+          patientName: patientName,
+          patientEmail: 'Not provided',
+          patientId: patientNumber,
+          patientPhone: patientProfile?.phone || 'Not provided',
+          doctorName: doctorName,
+          tests: [{
+            name: invoice.test_name,
+            price: invoice.price || 0,
+            description: invoice.notes || undefined
+          }],
+          totalAmount: invoice.price || 0,
+          issueDate: format(new Date(invoice.created_at), 'MMM dd, yyyy'),
+          xrayDate: format(new Date(invoice.xray_date || invoice.created_at), 'MMM dd, yyyy'),
+          notes: invoice.notes
+        });
       } else {
         await generateInvoicePDF(invoice);
       }
