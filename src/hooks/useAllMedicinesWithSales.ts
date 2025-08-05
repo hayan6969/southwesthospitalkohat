@@ -15,8 +15,9 @@ interface MedicineWithSales {
 
 export const useAllMedicinesWithSales = (selectedMonth?: string, searchQuery?: string) => {
   return useQuery({
-    queryKey: ['all-medicines-with-sales-v2', selectedMonth, searchQuery], // Updated cache key to force refresh
+    queryKey: ['all-medicines-with-sales-v4', selectedMonth, searchQuery], // Updated cache key
     queryFn: async (): Promise<MedicineWithSales[]> => {
+      console.log('Starting medicines fetch...');
       // First, get all medicines
       const { data: medicines, error: medicinesError } = await supabase
         .from('medicines')
@@ -24,8 +25,11 @@ export const useAllMedicinesWithSales = (selectedMonth?: string, searchQuery?: s
         .order('name')
         .limit(10000); // Set a high limit to fetch all medicines
 
-      if (medicinesError) throw medicinesError;
-      console.log(`Fetched ${medicines?.length || 0} medicines from database`);
+      if (medicinesError) {
+        console.error('Error fetching medicines:', medicinesError);
+        throw medicinesError;
+      }
+      console.log(`✅ Fetched ${medicines?.length || 0} medicines from database`);
 
       // Then get sales data
       const { data: invoices, error: invoicesError } = await supabase
@@ -128,6 +132,8 @@ export const useAllMedicinesWithSales = (selectedMonth?: string, searchQuery?: s
         return b.revenue - a.revenue;
       });
     },
+    staleTime: 0, // Force fresh data
+    gcTime: 0, // Don't cache
     refetchInterval: 30000, // Refresh every 30 seconds
   });
 };
