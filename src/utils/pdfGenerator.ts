@@ -1046,20 +1046,28 @@ export const generateDailyClosingPDF = async (data: {
 
   // Hospital Services Summary
   const labCount = transactionsData?.labReports?.length || 0;
+  const xrayCount = transactionsData?.xrayReports?.length || 0;
   const otCount = transactionsData?.otSchedules?.length || 0;
   const emergencyCount = transactionsData?.emergencyAppointments?.length || 0;
   
   const labRevenue = transactionsData?.labReports?.reduce((sum: number, lab: any) => sum + (lab.price || 0), 0) || 0;
+  const xrayRevenue = transactionsData?.xrayReports?.reduce((sum: number, xray: any) => sum + (xray.price || 0), 0) || 0;
   const otRevenue = transactionsData?.otSchedules?.reduce((sum: number, ot: any) => sum + ((ot.total_cost || 0) - (ot.doctor_expense || 0)), 0) || 0;
   const emergencyRevenue = transactionsData?.emergencyAppointments?.reduce((sum: number, emergency: any) => sum + (emergency.consultation_fee_at_time || 0), 0) || 0;
+  
+  // Calculate correct hospital services revenue (excluding pharmacy profit and misc income)
+  const hospitalServicesRevenue = labRevenue + xrayRevenue + otRevenue + emergencyRevenue;
 
-  if (labCount > 0 || otCount > 0 || emergencyCount > 0) {
+  if (labCount > 0 || xrayCount > 0 || otCount > 0 || emergencyCount > 0) {
     const servicesSummaryHeaders = ['Service Type', 'Count', 'Revenue'];
     const servicesSummaryColWidths = [80, 30, 40];
     const servicesSummaryRows = [];
 
     if (labCount > 0) {
       servicesSummaryRows.push(['Laboratory Tests', labCount.toString(), formatPkrAmount(labRevenue)]);
+    }
+    if (xrayCount > 0) {
+      servicesSummaryRows.push(['X-ray Services', xrayCount.toString(), formatPkrAmount(xrayRevenue)]);
     }
     if (otCount > 0) {
       servicesSummaryRows.push(['OT Operations', otCount.toString(), formatPkrAmount(otRevenue)]);
@@ -1068,7 +1076,7 @@ export const generateDailyClosingPDF = async (data: {
       servicesSummaryRows.push(['Emergency Services', emergencyCount.toString(), formatPkrAmount(emergencyRevenue)]);
     }
     
-    servicesSummaryRows.push(['Total Hospital Services', (labCount + otCount + emergencyCount).toString(), formatPkrAmount(data.hospitalRevenue)]);
+    servicesSummaryRows.push(['Total Hospital Services', (labCount + xrayCount + otCount + emergencyCount).toString(), formatPkrAmount(hospitalServicesRevenue)]);
 
     drawTable(servicesSummaryHeaders, servicesSummaryRows, servicesSummaryColWidths);
   } else {
@@ -1199,8 +1207,18 @@ export const generateDailyClosingPDF = async (data: {
   
   const summaryHeaders = ['Description', 'Amount'];
   const summaryColWidths = [130, 50]; // Increased width for description
+  // Calculate correct values for summary (recalculate to ensure accuracy)
+  const correctLabRevenue = transactionsData?.labReports?.reduce((sum: number, lab: any) => sum + (lab.price || 0), 0) || 0;
+  const correctXrayRevenue = transactionsData?.xrayReports?.reduce((sum: number, xray: any) => sum + (xray.price || 0), 0) || 0;
+  const correctOtRevenue = transactionsData?.otSchedules?.reduce((sum: number, ot: any) => sum + ((ot.total_cost || 0) - (ot.doctor_expense || 0)), 0) || 0;
+  const correctEmergencyRevenue = transactionsData?.emergencyAppointments?.reduce((sum: number, emergency: any) => sum + (emergency.consultation_fee_at_time || 0), 0) || 0;
+  const correctMiscIncome = transactionsData?.miscellaneousIncome?.reduce((sum: number, income: any) => sum + (income.amount || 0), 0) || 0;
+  
+  // Hospital services revenue (excludes pharmacy profit but includes misc income)
+  const correctHospitalServicesRevenue = correctLabRevenue + correctXrayRevenue + correctOtRevenue + correctEmergencyRevenue + correctMiscIncome;
+  
   const summaryRows = [
-    ['Hospital Services Revenue', formatPkrAmount(data.hospitalRevenue)],
+    ['Hospital Services Revenue', formatPkrAmount(correctHospitalServicesRevenue)],
     ['Pharmacy Revenue', formatPkrAmount(data.pharmacyRevenue)],
     ['Pharmacy Profit', formatPkrAmount(data.pharmacyProfit)],
     ['Total Daily Expenses', `(${formatPkrAmount(data.totalExpenses)})`],
@@ -1216,7 +1234,8 @@ export const generateDailyClosingPDF = async (data: {
   
   drawSectionHeader('HOSPITAL CLOSING BALANCE CALCULATION');
 
-  // Calculate hospital net profit (excluding pharmacy)
+  // Calculate hospital net profit (using correct hospital revenue calculation)
+  // Hospital revenue for balance calculation should include pharmacy profit as per original logic
   const hospitalNetProfit = data.hospitalRevenue - data.totalExpenses - data.totalRefunds;
   const newClosingBalance = previousClosingBalance + hospitalNetProfit;
 
