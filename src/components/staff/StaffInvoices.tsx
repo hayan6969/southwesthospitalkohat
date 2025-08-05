@@ -29,14 +29,11 @@ export function StaffInvoices() {
 
   // Fetch X-ray reports
   const { data: xrayReports, isLoading: xrayLoading } = useQuery({
-    queryKey: ['xray-reports'],
+    queryKey: ['xray-reports-staff'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('xray_reports')
-        .select(`
-          *,
-          profiles!xray_reports_patient_id_fkey(first_name, last_name)
-        `)
+        .select('*')
         .order('created_at', { ascending: false });
       
       if (error) throw error;
@@ -44,9 +41,9 @@ export function StaffInvoices() {
     }
   });
 
-  // Fetch patients data separately for X-ray reports
-  const { data: patients } = useQuery({
-    queryKey: ['patients'],
+  // Fetch patient data for all patients
+  const { data: allPatients } = useQuery({
+    queryKey: ['all-patients-data'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('patients')
@@ -95,19 +92,18 @@ export function StaffInvoices() {
     // Add X-ray reports
     if (xrayReports) {
       xrayReports.forEach(xrayReport => {
-        const patientName = xrayReport.profiles 
-          ? `${xrayReport.profiles.first_name} ${xrayReport.profiles.last_name}`.trim()
-          : 'Walk-in Patient';
+        // Get patient name from patient names using the helper
+        const patientName = getPatientName(xrayReport.patient_id, patientNames || []);
         
-        // Find patient number from patients array
-        const patient = patients?.find(p => p.id === xrayReport.patient_id);
+        // Find patient number from allPatients array
+        const patient = allPatients?.find(p => p.id === xrayReport.patient_id);
         
         combined.push({
           ...xrayReport,
           type: 'xray',
           invoice_type: 'xray',
           invoice_date: xrayReport.created_at,
-          patient_name: patientName,
+          patient_name: patientName || 'Walk-in Patient',
           patient_id_display: patient?.patient_number || 'N/A',
           display_date: format(new Date(xrayReport.created_at), 'MMM d, yyyy'),
           display_time: format(new Date(xrayReport.created_at), 'h:mm a'),
@@ -121,7 +117,7 @@ export function StaffInvoices() {
     }
 
     return combined.sort((a, b) => new Date(b.invoice_date).getTime() - new Date(a.invoice_date).getTime());
-  }, [hospitalInvoices, patientNames, xrayReports, patients]);
+  }, [hospitalInvoices, patientNames, xrayReports, allPatients]);
 
   // Filter and paginate invoices
   const filteredInvoices = useMemo(() => {

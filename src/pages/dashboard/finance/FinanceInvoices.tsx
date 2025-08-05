@@ -103,9 +103,9 @@ export default function FinanceInvoices() {
             Promise.resolve({ data: null })
         ]);
 
-        const patientNumber = patientRes.data?.patient_number || 'N/A';
+        const patientNumber = patientRes.data?.patient_number || 'Walk-in';
         const patientProfile = patientProfileRes.data;
-        const patientName = patientProfile ? `${patientProfile.first_name || ''} ${patientProfile.last_name || ''}`.trim() : 'Unknown Patient';
+        const patientName = patientProfile ? `${patientProfile.first_name || ''} ${patientProfile.last_name || ''}`.trim() : 'Walk-in Patient';
         const doctorProfile = doctorRes.data;
         const doctorName = invoice.external_doctor_name || 
           (doctorProfile ? `Dr. ${doctorProfile.first_name} ${doctorProfile.last_name}` : 'External Doctor');
