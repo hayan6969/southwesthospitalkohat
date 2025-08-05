@@ -175,6 +175,14 @@ export function EnhancedLabDialog() {
 
   // Process the actual lab order creation
   const handleConfirmOrder = async () => {
+    console.log("🚀 handleConfirmOrder called, isPending:", createLabOrderWithInvoice.isPending);
+    
+    // Prevent double submission
+    if (createLabOrderWithInvoice.isPending || createPatientWithProfile.isPending) {
+      console.log("⏸️ Already processing, ignoring duplicate call");
+      return;
+    }
+    
     let patientId = selectedPatient?.id;
     let patientNumber = selectedPatient?.patient_number;
     
