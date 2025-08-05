@@ -150,11 +150,11 @@ export default function FinanceDaily() {
 
       console.log('X-ray reports found:', xrayReports?.length, xrayReports);
 
-      // OT schedules - filter based on cutoff time for creation but still filter by operation_date for the day
+      // OT schedules - filter based on cutoff time and include both completed and scheduled
       const { data: otSchedules } = await supabase
         .from('ot_schedules')
-        .select('total_cost, doctor_expense, created_at, operation_date')
-        .eq('status', 'completed')
+        .select('total_cost, doctor_expense, created_at, operation_date, status')
+        .in('status', ['completed', 'scheduled'])
         .gte('created_at', cutoffTime)
         .lte('created_at', upperBound);
 
@@ -389,7 +389,7 @@ export default function FinanceDaily() {
         supabase
           .from('ot_schedules')
           .select('*, patients(id, profiles(first_name, last_name)), ot_operations(operation_name)')
-          .eq('status', 'completed')
+          .in('status', ['completed', 'scheduled'])
           .gte('created_at', cutoffTime)
           .lte('created_at', upperBound),
         
