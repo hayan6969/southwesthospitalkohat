@@ -36,6 +36,11 @@ export default function PharmacyAnalytics() {
   
   // Pagination constants
   const ITEMS_PER_PAGE = 10;
+  
+  // Debug logging
+  console.log('Analytics: allMedicines length:', allMedicines?.length);
+  console.log('Analytics: totalPages calculated:', Math.ceil((allMedicines?.length || 0) / ITEMS_PER_PAGE));
+  
   const totalPages = Math.ceil((allMedicines?.length || 0) / ITEMS_PER_PAGE);
   const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
   const endIndex = startIndex + ITEMS_PER_PAGE;
