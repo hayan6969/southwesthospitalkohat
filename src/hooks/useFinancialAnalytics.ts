@@ -94,6 +94,7 @@ export const useFinancialAnalytics = () => {
           const invoiceProfit = (invoice.pharmacy_invoice_items || []).reduce((itemsProfit, item) => {
             if (item.medicines && item.medicines.selling_price && item.medicines.purchase_price) {
               const profitPerUnit = Number(item.medicines.selling_price) - Number(item.medicines.purchase_price);
+              // For returns (negative quantities), calculate profit lost
               return itemsProfit + (profitPerUnit * item.quantity);
             }
             return itemsProfit;

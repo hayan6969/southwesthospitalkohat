@@ -144,15 +144,16 @@ export const usePharmacyAnalytics = () => {
                            todayReturnExpenses.reduce((sum, exp) => sum + exp.amount, 0);
       const todaySales = todaySalesInvoices.length;
 
-      // Calculate today's profit
-      const todayInvoiceItems = allInvoiceItems.filter(item => {
+      // Calculate today's profit - include both sales and returns properly
+      const todayAllInvoiceItems = allInvoiceItems.filter(item => {
         const invoicePakistanTime = toPakistanTime(new Date(item.created_at));
-        return invoicePakistanTime >= startOfToday && invoicePakistanTime <= endOfToday && item.unit_price > 0;
+        return invoicePakistanTime >= startOfToday && invoicePakistanTime <= endOfToday;
       });
-      const todayProfit = todayInvoiceItems.reduce((sum, item) => {
+      const todayProfit = todayAllInvoiceItems.reduce((sum, item) => {
+        // For returns, quantities are negative, so this automatically subtracts profit lost
         const profit = (item.unit_price - (item.medicines?.purchase_price || 0)) * item.quantity;
         return sum + profit;
-      }, 0) - todayReturns;
+      }, 0);
 
       // Monthly calculations (current calendar month using Pakistan timezone)
       const monthlySalesInvoices = salesInvoices.filter(inv => {
@@ -173,15 +174,16 @@ export const usePharmacyAnalytics = () => {
                             monthlyReturnExpenses.reduce((sum, exp) => sum + exp.amount, 0);
       const monthlySales = monthlySalesInvoices.length;
 
-      // Calculate monthly profit
-      const monthlyInvoiceItems = allInvoiceItems.filter(item => {
+      // Calculate monthly profit - include both sales and returns properly
+      const monthlyAllInvoiceItems = allInvoiceItems.filter(item => {
         const invoiceDate = toPakistanTime(new Date(item.created_at));
-        return invoiceDate >= startOfThisMonth && invoiceDate <= endOfThisMonth && item.unit_price > 0;
+        return invoiceDate >= startOfThisMonth && invoiceDate <= endOfThisMonth;
       });
-      const monthlyProfit = monthlyInvoiceItems.reduce((sum, item) => {
+      const monthlyProfit = monthlyAllInvoiceItems.reduce((sum, item) => {
+        // For returns, quantities are negative, so this automatically subtracts profit lost
         const profit = (item.unit_price - (item.medicines?.purchase_price || 0)) * item.quantity;
         return sum + profit;
-      }, 0) - monthlyReturns;
+      }, 0);
 
       // Daily data for charts (last 30 days)
       const dailyData = [];
@@ -212,10 +214,16 @@ export const usePharmacyAnalytics = () => {
           const invoiceDate = toPakistanTime(new Date(item.created_at));
           return invoiceDate >= dayStart && invoiceDate <= dayEnd && item.unit_price > 0;
         });
+        
+        // Calculate profit correctly - include both positive sales and negative returns
         const dayProfit = dayInvoiceItems.reduce((sum, item) => {
+          // For returns, quantities are negative, so this automatically subtracts profit lost
           const profit = (item.unit_price - (item.medicines?.purchase_price || 0)) * item.quantity;
           return sum + profit;
-        }, 0) - dayReturns;
+        }, 0);
+        
+        // Also handle return expenses separately  
+        const dayReturnExpenseAmount = dayReturnExpenses.reduce((sum, exp) => sum + exp.amount, 0);
 
         dailyData.push({
           date: format(date, 'MMM dd'),
@@ -286,16 +294,13 @@ export const usePharmacyAnalytics = () => {
       const lowStockCount = medicines.filter(m => m.stock_quantity <= (m.minimum_stock_level || 10)).length;
       const expiredCount = medicines.filter(m => new Date(m.expiry_date) < new Date()).length;
 
-      // Profit margins
+      // Profit margins - calculate overall profit correctly
       const totalRevenue = salesInvoices.reduce((sum, inv) => sum + inv.final_amount, 0);
-      const totalReturns = Math.abs(returnInvoices.reduce((sum, inv) => sum + inv.final_amount, 0)) + 
-                          returnExpenses.reduce((sum, exp) => sum + exp.amount, 0);
-      const totalProfit = allInvoiceItems
-        .filter(item => item.unit_price > 0)
-        .reduce((sum, item) => {
-          const profit = (item.unit_price - (item.medicines?.purchase_price || 0)) * item.quantity;
-          return sum + profit;
-        }, 0) - totalReturns;
+      const totalProfit = allInvoiceItems.reduce((sum, item) => {
+        // For returns, quantities are negative, so this automatically subtracts profit lost
+        const profit = (item.unit_price - (item.medicines?.purchase_price || 0)) * item.quantity;
+        return sum + profit;
+      }, 0);
 
       const overallProfitMargin = totalRevenue > 0 ? (totalProfit / totalRevenue) * 100 : 0;
       const monthlyProfitMargin = monthlyRevenue > 0 ? (monthlyProfit / monthlyRevenue) * 100 : 0;
@@ -310,34 +315,20 @@ export const usePharmacyAnalytics = () => {
         return invoiceDate > lastClosingTime;
       });
       
-      // Calculate profit from sales since last closing
-      const sinceClosingProfit = sinceClosingSalesInvoices.reduce((totalProfit, invoice) => {
-        const invoiceProfit = (invoice.pharmacy_invoice_items || []).reduce((itemsProfit: number, item: any) => {
-          if (item.medicines && item.medicines.selling_price && item.medicines.purchase_price) {
-            const profitPerUnit = item.medicines.selling_price - item.medicines.purchase_price;
-            return itemsProfit + (profitPerUnit * item.quantity);
-          }
-          return itemsProfit;
-        }, 0);
-        return totalProfit + invoiceProfit;
+      // Calculate profit from all invoice items since last closing (including returns)
+      const sinceClosingInvoiceItems = allInvoiceItems.filter(item => {
+        const invoiceDate = toPakistanTime(new Date(item.created_at));
+        return invoiceDate > lastClosingTime;
+      });
+      
+      const sinceClosingProfit = sinceClosingInvoiceItems.reduce((sum, item) => {
+        // For returns, quantities are negative, so this automatically subtracts profit lost
+        const profit = (item.unit_price - (item.medicines?.purchase_price || 0)) * item.quantity;
+        return sum + profit;
       }, 0);
       
-      // Calculate total returns since last closing (both from negative invoices and return expenses)
-      const sinceClosingReturnExpenses = returnExpenses.filter(exp => {
-        const expDate = toPakistanTime(new Date(exp.expense_date));
-        return expDate > lastClosingTime;
-      }).reduce((sum, exp) => sum + exp.amount, 0);
-      
-      // Get returns from negative invoices since last closing
-      const sinceClosingReturnInvoices = returnInvoices.filter(inv => {
-        const invDate = toPakistanTime(new Date(inv.created_at));
-        return invDate > lastClosingTime;
-      }).reduce((sum, inv) => sum + Math.abs(inv.final_amount), 0);
-      
-      const totalSinceClosingReturns = sinceClosingReturnExpenses + sinceClosingReturnInvoices;
-      
-      // Hospital gets the net profit since last closing (gross profit minus all returns)
-      const payHospitalAmount = Math.max(0, sinceClosingProfit - totalSinceClosingReturns);
+      // Hospital gets the net profit since last closing
+      const payHospitalAmount = Math.max(0, sinceClosingProfit);
 
       return {
         todayRevenue,

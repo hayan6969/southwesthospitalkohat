@@ -122,6 +122,7 @@ export default function DashboardFinance() {
       const invoiceProfit = (invoice.pharmacy_invoice_items || []).reduce((itemsProfit, item) => {
         if (item.medicines && item.medicines.selling_price && item.medicines.purchase_price) {
           const profitPerUnit = item.medicines.selling_price - item.medicines.purchase_price;
+          // For returns (negative quantities), calculate profit lost correctly
           return itemsProfit + (profitPerUnit * item.quantity);
         }
         return itemsProfit;
