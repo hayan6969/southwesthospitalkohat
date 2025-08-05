@@ -56,19 +56,18 @@ export default function FinanceDaily() {
       const { data: lastClosingData } = await supabase.rpc('get_last_daily_closing');
       const lastClosing = lastClosingData?.[0];
       
-      // Determine the time cutoff for filtering in Pakistani time
+      // Determine the time cutoff for filtering - use the same logic as detailed query
       let cutoffTime: string;
-      if (lastClosing) {
-        // If there's a previous closing, use activities after that closing time
-        // Convert the closing time to Pakistani timezone for comparison
-        const lastClosingPakTime = toPakistanTime(new Date(lastClosing.closing_time));
-        cutoffTime = lastClosingPakTime.toISOString();
-        console.log('Last closing found at (Pakistan time):', formatInPakistanTime(lastClosingPakTime), 'filtering activities after this time');
+      if (lastClosing && lastClosing.closing_date !== targetDate) {
+        // If there's a previous closing for a different date, use activities after that closing time
+        cutoffTime = lastClosing.closing_time;
+      } else if (lastClosing && lastClosing.closing_date === targetDate) {
+        // If there's already a closing for the same date, use that closing time as cutoff
+        cutoffTime = lastClosing.closing_time;
       } else {
         // If no previous closing, include activities from the beginning of the selected date in Pakistan time
         const selectedDatePakTime = toPakistanTime(new Date(`${targetDate}T00:00:00`));
         cutoffTime = selectedDatePakTime.toISOString();
-        console.log('No previous closing found, using start of selected date (Pakistan time):', cutoffTime);
       }
       
       // Current time for upper bound (only for today's date) in Pakistani timezone
@@ -313,17 +312,17 @@ export default function FinanceDaily() {
   const { data: detailedData } = useQuery({
     queryKey: ['daily-detailed', targetDate],
     queryFn: async () => {
-      // First, get the last daily closing to determine the cutoff time for detailed data
       const { data: lastClosingData } = await supabase.rpc('get_last_daily_closing');
       const lastClosing = lastClosingData?.[0];
       
-      // Determine the time cutoff for filtering detailed data in Pakistani time
+      // Determine the time cutoff for filtering detailed data
       let cutoffTime: string;
-      if (lastClosing) {
-        // If there's a previous closing, use activities after that closing time
-        // Convert the closing time to Pakistani timezone for comparison
-        const lastClosingPakTime = toPakistanTime(new Date(lastClosing.closing_time));
-        cutoffTime = lastClosingPakTime.toISOString();
+      if (lastClosing && lastClosing.closing_date !== targetDate) {
+        // If there's a previous closing for a different date, use activities after that closing time
+        cutoffTime = lastClosing.closing_time;
+      } else if (lastClosing && lastClosing.closing_date === targetDate) {
+        // If there's already a closing for the same date, use that closing time as cutoff
+        cutoffTime = lastClosing.closing_time;
       } else {
         // If no previous closing, include activities from the beginning of the selected date in Pakistan time
         const selectedDatePakTime = toPakistanTime(new Date(`${targetDate}T00:00:00`));
