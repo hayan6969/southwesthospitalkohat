@@ -990,52 +990,21 @@ export const generateDailyClosingPDF = async (data: {
   // ===========================================
   drawSectionHeader('PHARMACY TRANSACTIONS');
 
-  // Pharmacy Sales Table
+  // Pharmacy Sales Summary
   if (data.transactionsData?.pharmacyInvoices?.length > 0) {
-    drawSubHeader('Sales Transactions');
-
-    const pharmacyHeaders = ['Invoice No.', 'Customer Name', 'Items Count', 'Total Amount'];
-    const pharmacyColWidths = [40, 60, 30, 40];
-    const pharmacyRows: string[][] = [];
-
-    data.transactionsData.pharmacyInvoices.forEach((invoice: any) => {
-      const customerName = invoice.customer_name || 'Walk-in Customer';
-      const itemsCount = invoice.pharmacy_invoice_items?.length || 0;
-      
-      pharmacyRows.push([
-        invoice.invoice_number,
-        customerName,
-        `${itemsCount} items`,
-        formatPkrAmount(invoice.final_amount)
-      ]);
-    });
-
-    drawTable(pharmacyHeaders, pharmacyRows, pharmacyColWidths);
+    const totalInvoices = data.transactionsData.pharmacyInvoices.length;
+    const totalItems = data.transactionsData.pharmacyInvoices.reduce((sum: number, invoice: any) => 
+      sum + (invoice.pharmacy_invoice_items?.length || 0), 0);
     
-    // Medicine Details Table
-    drawSubHeader('Medicine Sales Detail');
+    const pharmacySummaryHeaders = ['Summary', 'Count', 'Amount'];
+    const pharmacySummaryColWidths = [80, 30, 40];
+    const pharmacySummaryRows = [
+      ['Total Invoices', totalInvoices.toString(), formatPkrAmount(data.pharmacyRevenue)],
+      ['Total Items Sold', totalItems.toString(), '-'],
+      ['Gross Profit', '-', formatPkrAmount(data.pharmacyProfit)]
+    ];
 
-    const itemHeaders = ['Medicine Name', 'Quantity', 'Unit Price', 'Total Price'];
-    const itemColWidths = [80, 25, 30, 35];
-    const itemRows: string[][] = [];
-
-    data.transactionsData.pharmacyInvoices.forEach((invoice: any) => {
-      if (invoice.pharmacy_invoice_items?.length > 0) {
-        invoice.pharmacy_invoice_items.forEach((item: any) => {
-          const medicineName = item.medicines?.name || 'Unknown Medicine';
-          itemRows.push([
-            medicineName,
-            item.quantity.toString(),
-            formatPkrAmount(item.unit_price),
-            formatPkrAmount(item.total_price)
-          ]);
-        });
-      }
-    });
-
-    if (itemRows.length > 0) {
-      drawTable(itemHeaders, itemRows, itemColWidths);
-    }
+    drawTable(pharmacySummaryHeaders, pharmacySummaryRows, pharmacySummaryColWidths);
   } else {
     doc.setFont('helvetica', 'italic');
     doc.setFontSize(10);
@@ -1049,85 +1018,34 @@ export const generateDailyClosingPDF = async (data: {
   // ===========================================
   drawSectionHeader('HOSPITAL SERVICES');
 
-  // Lab Reports Table
-  if (data.transactionsData?.labReports?.length > 0) {
-    drawSubHeader('Laboratory Tests');
+  // Hospital Services Summary
+  const labCount = data.transactionsData?.labReports?.length || 0;
+  const otCount = data.transactionsData?.otSchedules?.length || 0;
+  const emergencyCount = data.transactionsData?.emergencyAppointments?.length || 0;
+  
+  const labRevenue = data.transactionsData?.labReports?.reduce((sum: number, lab: any) => sum + (lab.price || 0), 0) || 0;
+  const otRevenue = data.transactionsData?.otSchedules?.reduce((sum: number, ot: any) => sum + ((ot.total_cost || 0) - (ot.doctor_expense || 0)), 0) || 0;
+  const emergencyRevenue = data.transactionsData?.emergencyAppointments?.reduce((sum: number, emergency: any) => sum + (emergency.consultation_fee_at_time || 0), 0) || 0;
 
-    const labHeaders = ['Test Name', 'Patient Name', 'Status', 'Amount'];
-    const labColWidths = [60, 50, 30, 30];
-    const labRows: string[][] = [];
+  if (labCount > 0 || otCount > 0 || emergencyCount > 0) {
+    const servicesSummaryHeaders = ['Service Type', 'Count', 'Revenue'];
+    const servicesSummaryColWidths = [80, 30, 40];
+    const servicesSummaryRows = [];
 
-    data.transactionsData.labReports.forEach((lab: any) => {
-      const patientName = lab.patients?.profiles?.first_name && lab.patients?.profiles?.last_name 
-        ? `${lab.patients.profiles.first_name} ${lab.patients.profiles.last_name}`
-        : 'Unknown Patient';
-      
-      labRows.push([
-        lab.test_name,
-        patientName,
-        lab.status || 'Completed',
-        formatPkrAmount(lab.price || 0)
-      ]);
-    });
+    if (labCount > 0) {
+      servicesSummaryRows.push(['Laboratory Tests', labCount.toString(), formatPkrAmount(labRevenue)]);
+    }
+    if (otCount > 0) {
+      servicesSummaryRows.push(['OT Operations', otCount.toString(), formatPkrAmount(otRevenue)]);
+    }
+    if (emergencyCount > 0) {
+      servicesSummaryRows.push(['Emergency Services', emergencyCount.toString(), formatPkrAmount(emergencyRevenue)]);
+    }
+    
+    servicesSummaryRows.push(['Total Hospital Services', (labCount + otCount + emergencyCount).toString(), formatPkrAmount(data.hospitalRevenue)]);
 
-    drawTable(labHeaders, labRows, labColWidths);
-  }
-
-  // OT Schedules Table
-  if (data.transactionsData?.otSchedules?.length > 0) {
-    drawSubHeader('Operation Theater Services');
-
-    const otHeaders = ['Operation', 'Patient', 'Total Cost', 'Doctor Fee', 'Hospital Revenue'];
-    const otColWidths = [40, 40, 30, 30, 30];
-    const otRows: string[][] = [];
-
-    data.transactionsData.otSchedules.forEach((ot: any) => {
-      const patientName = ot.patients?.profiles?.first_name && ot.patients?.profiles?.last_name 
-        ? `${ot.patients.profiles.first_name} ${ot.patients.profiles.last_name}`
-        : 'Unknown Patient';
-      const operationName = ot.ot_operations?.operation_name || 'Operation';
-      const hospitalRevenue = (ot.total_cost || 0) - (ot.doctor_expense || 0);
-      
-      otRows.push([
-        operationName,
-        patientName,
-        formatPkrAmount(ot.total_cost || 0),
-        formatPkrAmount(ot.doctor_expense || 0),
-        formatPkrAmount(hospitalRevenue)
-      ]);
-    });
-
-    drawTable(otHeaders, otRows, otColWidths);
-  }
-
-  // Emergency Services (if any)
-  if (data.transactionsData?.emergencyAppointments?.length > 0) {
-    drawSubHeader('Emergency Services');
-
-    const emergencyHeaders = ['Patient Name', 'Service Time', 'Facility Fee'];
-    const emergencyColWidths = [60, 50, 40];
-    const emergencyRows: string[][] = [];
-
-    data.transactionsData.emergencyAppointments.forEach((emergency: any) => {
-      const patientName = emergency.patients?.profiles?.first_name && emergency.patients?.profiles?.last_name 
-        ? `${emergency.patients.profiles.first_name} ${emergency.patients.profiles.last_name}`
-        : 'Unknown Patient';
-      const appointmentTime = new Date(emergency.appointment_date).toLocaleTimeString();
-      
-      emergencyRows.push([
-        patientName,
-        appointmentTime,
-        formatPkrAmount(emergency.consultation_fee_at_time || 0)
-      ]);
-    });
-
-    drawTable(emergencyHeaders, emergencyRows, emergencyColWidths);
-  }
-
-  // Check if no hospital services
-  if ((!data.transactionsData?.labReports?.length) && 
-      (!data.transactionsData?.otSchedules?.length) && 
-      (!data.transactionsData?.emergencyAppointments?.length)) {
+    drawTable(servicesSummaryHeaders, servicesSummaryRows, servicesSummaryColWidths);
+  } else {
     doc.setFont('helvetica', 'italic');
     doc.setFontSize(10);
     doc.setTextColor(150, 150, 150);
