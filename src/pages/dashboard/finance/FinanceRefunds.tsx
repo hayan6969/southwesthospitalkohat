@@ -1,21 +1,25 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/useAuth";
+import { useAuditLogger } from "@/hooks/useAuditLogger";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { formatPkrAmount } from "@/utils/currency";
 import { getCurrentPakistanTime } from "@/utils/timezone";
-import { RefreshCw, Plus } from "lucide-react";
+import { RefreshCw, Plus, Filter, Search, Calendar as CalendarIcon, ChevronLeft, ChevronRight } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface RefundFormData {
   amount: string;
@@ -26,6 +30,7 @@ interface RefundFormData {
 
 export default function FinanceRefunds() {
   const { profile } = useAuth();
+  const { logCreate } = useAuditLogger();
   const queryClient = useQueryClient();
   const [formData, setFormData] = useState<RefundFormData>({
     amount: "",
@@ -34,6 +39,14 @@ export default function FinanceRefunds() {
     doctorId: ""
   });
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  
+  // Filtering and pagination state
+  const [filteredRefunds, setFilteredRefunds] = useState<any[]>([]);
+  const [startDate, setStartDate] = useState<Date>();
+  const [endDate, setEndDate] = useState<Date>();
+  const [searchTerm, setSearchTerm] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   // Fetch doctors for dropdown
   const { data: doctors } = useQuery({
@@ -68,6 +81,51 @@ export default function FinanceRefunds() {
     }
   });
 
+  // Filter refunds based on date range and search term
+  useEffect(() => {
+    if (!refunds) {
+      setFilteredRefunds([]);
+      return;
+    }
+
+    let filtered = [...refunds];
+
+    // Filter by date range
+    if (startDate && endDate) {
+      filtered = filtered.filter(refund => {
+        const refundDate = new Date(refund.created_at);
+        return refundDate >= startDate && refundDate <= endDate;
+      });
+    }
+
+    // Filter by search term (description, refund type, doctor name)
+    if (searchTerm) {
+      const search = searchTerm.toLowerCase();
+      filtered = filtered.filter(refund => 
+        refund.description?.toLowerCase().includes(search) ||
+        getRefundTypeLabel(refund.refund_type).toLowerCase().includes(search) ||
+        (refund.doctor && `Dr. ${refund.doctor.first_name} ${refund.doctor.last_name}`.toLowerCase().includes(search)) ||
+        formatPkrAmount(refund.amount).toLowerCase().includes(search)
+      );
+    }
+
+    setFilteredRefunds(filtered);
+    setCurrentPage(1); // Reset to first page when filters change
+  }, [refunds, startDate, endDate, searchTerm]);
+
+  // Clear filters function
+  const clearFilters = () => {
+    setStartDate(undefined);
+    setEndDate(undefined);
+    setSearchTerm("");
+  };
+
+  // Pagination logic for filtered data
+  const totalPages = Math.ceil(filteredRefunds.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedRefunds = filteredRefunds.slice(startIndex, endIndex);
+
   // Create refund mutation
   const createRefundMutation = useMutation({
     mutationFn: async (refundData: RefundFormData) => {
@@ -85,6 +143,17 @@ export default function FinanceRefunds() {
         .single();
 
       if (refundError) throw refundError;
+
+      // Log the refund creation for audit trail
+      const doctorName = refundData.doctorId ? 
+        `Dr. ${doctors?.find(d => d.id === refundData.doctorId)?.first_name} ${doctors?.find(d => d.id === refundData.doctorId)?.last_name}` : 
+        'N/A';
+      
+      await logCreate(
+        'Refund',
+        `${getRefundTypeLabel(refundData.refundType)} refund of ${formatPkrAmount(parseFloat(refundData.amount))} processed. Doctor: ${doctorName}. Description: ${refundData.description}`,
+        profile?.id
+      );
 
       // If it's a hospital-related refund, also create an expense record
       if (['ot_simple', 'lab', 'pharmacy', 'other'].includes(refundData.refundType)) {
@@ -300,65 +369,228 @@ export default function FinanceRefunds() {
             All processed refunds and their impact on revenue
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-6">
+          {/* Filters */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Filter className="w-5 h-5" />
+                Filters
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                {/* Start Date */}
+                <div>
+                  <Label>Start Date</Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className={cn(
+                          "w-full justify-start text-left font-normal mt-2",
+                          !startDate && "text-muted-foreground"
+                        )}
+                      >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {startDate ? format(startDate, "PPP") : "Pick a date"}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0">
+                      <Calendar
+                        mode="single"
+                        selected={startDate}
+                        onSelect={setStartDate}
+                        initialFocus
+                        className={cn("p-3 pointer-events-auto")}
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+
+                {/* End Date */}
+                <div>
+                  <Label>End Date</Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className={cn(
+                          "w-full justify-start text-left font-normal mt-2",
+                          !endDate && "text-muted-foreground"
+                        )}
+                      >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {endDate ? format(endDate, "PPP") : "Pick a date"}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0">
+                      <Calendar
+                        mode="single"
+                        selected={endDate}
+                        onSelect={setEndDate}
+                        initialFocus
+                        className={cn("p-3 pointer-events-auto")}
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+
+                {/* Search */}
+                <div>
+                  <Label>Search</Label>
+                  <div className="relative mt-2">
+                    <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                    <Input
+                      placeholder="Search refunds..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="pl-10"
+                    />
+                  </div>
+                </div>
+
+                {/* Clear Filters */}
+                <div className="flex items-end">
+                  <Button 
+                    variant="outline" 
+                    onClick={clearFilters}
+                    className="mt-2 w-full"
+                  >
+                    Clear Filters
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Summary */}
+          <div className="text-sm text-gray-600">
+            Total refunds: <span className="font-semibold">{refunds?.length || 0}</span>
+            {(startDate || endDate || searchTerm) && (
+              <span className="ml-2">
+                (Filtered: <span className="font-semibold">{filteredRefunds.length}</span>)
+              </span>
+            )}
+          </div>
+
           {isLoading ? (
             <div className="flex items-center justify-center py-8">
               <RefreshCw className="w-6 h-6 animate-spin" />
               <span className="ml-2">Loading refunds...</span>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Date</TableHead>
-                    <TableHead>Amount</TableHead>
-                    <TableHead>Type</TableHead>
-                    <TableHead>Doctor</TableHead>
-                    <TableHead>Description</TableHead>
-                    <TableHead>Processed By</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {refunds?.length === 0 ? (
+            <>
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
                     <TableRow>
-                      <TableCell colSpan={6} className="text-center py-8 text-gray-500">
-                        No refunds processed yet
-                      </TableCell>
+                      <TableHead>Date</TableHead>
+                      <TableHead>Amount</TableHead>
+                      <TableHead>Type</TableHead>
+                      <TableHead>Doctor</TableHead>
+                      <TableHead>Description</TableHead>
+                      <TableHead>Processed By</TableHead>
                     </TableRow>
-                  ) : (
-                    refunds?.map((refund) => (
-                      <TableRow key={refund.id}>
-                        <TableCell>
-                          {format(new Date(refund.created_at), "MMM dd, yyyy HH:mm")}
-                        </TableCell>
-                        <TableCell className="font-mono">
-                          {formatPkrAmount(refund.amount)}
-                        </TableCell>
-                        <TableCell>
-                          <Badge className={getRefundTypeColor(refund.refund_type)}>
-                            {getRefundTypeLabel(refund.refund_type)}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          {refund.doctor ? (
-                            `Dr. ${refund.doctor.first_name} ${refund.doctor.last_name}`
-                          ) : (
-                            <span className="text-gray-500">N/A</span>
-                          )}
-                        </TableCell>
-                        <TableCell className="max-w-xs truncate">
-                          {refund.description}
-                        </TableCell>
-                        <TableCell>
-                          {refund.processed_by_profile.first_name} {refund.processed_by_profile.last_name}
+                  </TableHeader>
+                  <TableBody>
+                    {filteredRefunds.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={6} className="text-center py-8 text-gray-500">
+                          {refunds?.length === 0 
+                            ? "No refunds processed yet" 
+                            : "No refunds found for the selected filters"
+                          }
                         </TableCell>
                       </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-            </div>
+                    ) : (
+                      paginatedRefunds.map((refund) => (
+                        <TableRow key={refund.id}>
+                          <TableCell>
+                            {format(new Date(refund.created_at), "MMM dd, yyyy HH:mm")}
+                          </TableCell>
+                          <TableCell className="font-mono">
+                            {formatPkrAmount(refund.amount)}
+                          </TableCell>
+                          <TableCell>
+                            <Badge className={getRefundTypeColor(refund.refund_type)}>
+                              {getRefundTypeLabel(refund.refund_type)}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            {refund.doctor ? (
+                              `Dr. ${refund.doctor.first_name} ${refund.doctor.last_name}`
+                            ) : (
+                              <span className="text-gray-500">N/A</span>
+                            )}
+                          </TableCell>
+                          <TableCell className="max-w-xs truncate">
+                            {refund.description}
+                          </TableCell>
+                          <TableCell>
+                            {refund.processed_by_profile.first_name} {refund.processed_by_profile.last_name}
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+
+              {/* Pagination Controls */}
+              {totalPages > 1 && (
+                <div className="flex items-center justify-between px-2 py-4 border-t">
+                  <div className="text-sm text-gray-700">
+                    Showing {startIndex + 1} to {Math.min(endIndex, filteredRefunds.length)} of {filteredRefunds.length} refunds
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage(currentPage - 1)}
+                      disabled={currentPage === 1}
+                      className="flex items-center gap-1"
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                      Previous
+                    </Button>
+                    
+                    <div className="flex items-center gap-1">
+                      {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                        const pageNum = Math.max(1, Math.min(totalPages - 4, currentPage - 2)) + i;
+                        if (pageNum > totalPages) return null;
+                        
+                        return (
+                          <Button
+                            key={pageNum}
+                            variant={currentPage === pageNum ? "default" : "outline"}
+                            size="sm"
+                            onClick={() => setCurrentPage(pageNum)}
+                            className="w-8 h-8 p-0"
+                          >
+                            {pageNum}
+                          </Button>
+                        );
+                      })}
+                      {totalPages > 5 && currentPage < totalPages - 2 && (
+                        <span className="px-2 text-gray-500">...</span>
+                      )}
+                    </div>
+                    
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage(currentPage + 1)}
+                      disabled={currentPage === totalPages}
+                      className="flex items-center gap-1"
+                    >
+                      Next
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </CardContent>
       </Card>
