@@ -405,7 +405,12 @@ export default function PharmacyAnalytics() {
                               <span className="text-sm font-bold text-blue-600">#{startIndex + index + 1}</span>
                             </div>
                             <div>
-                              <p className="font-medium">{medicine.name}</p>
+                              <p className="font-medium">
+                                {medicine.name}
+                                {medicine.batch_number && (
+                                  <span className="text-gray-500 ml-1">({medicine.batch_number})</span>
+                                )}
+                              </p>
                               <div className="flex gap-3 text-sm text-gray-600">
                                 <span>Sold: {medicine.quantity_sold} units</span>
                                 <span>Stock: {medicine.stock_quantity}</span>

@@ -6,6 +6,7 @@ import { toPakistanTime } from "@/utils/timezone";
 interface MedicineWithSales {
   id: string;
   name: string;
+  batch_number: string;
   stock_quantity: number;
   quantity_sold: number;
   revenue: number;
@@ -19,7 +20,7 @@ export const useAllMedicinesWithSales = (selectedMonth?: string, searchQuery?: s
       // First, get all medicines
       const { data: medicines, error: medicinesError } = await supabase
         .from('medicines')
-        .select('id, name, stock_quantity, purchase_price, selling_price')
+        .select('id, name, batch_number, stock_quantity, purchase_price, selling_price')
         .order('name');
 
       if (medicinesError) throw medicinesError;
@@ -101,6 +102,7 @@ export const useAllMedicinesWithSales = (selectedMonth?: string, searchQuery?: s
         return {
           id: medicine.id,
           name: medicine.name,
+          batch_number: medicine.batch_number,
           stock_quantity: medicine.stock_quantity,
           quantity_sold: salesData.quantity_sold,
           revenue: salesData.revenue,
