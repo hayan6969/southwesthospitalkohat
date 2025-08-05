@@ -11,7 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { ShoppingCart, Plus, Trash2, Receipt, Download, Calendar as CalendarIcon, Filter } from "lucide-react";
+import { ShoppingCart, Plus, Trash2, Receipt, Download, Calendar as CalendarIcon, Filter, Search, ChevronLeft, ChevronRight } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { generatePharmacyInvoicePDF } from "@/utils/pharmacyPdfGenerator";
 import { formatPkrAmount, convertUsdToPkr } from "@/utils/currency";
@@ -43,6 +43,9 @@ export default function PharmacyInvoices() {
   const [selectedMedicineId, setSelectedMedicineId] = useState("");
   const [quantity, setQuantity] = useState(1);
   const [filterDate, setFilterDate] = useState<Date | undefined>();
+  const [searchTerm, setSearchTerm] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 20;
 
   const addItem = () => {
     if (!selectedMedicineId) return;
@@ -196,17 +199,33 @@ export default function PharmacyInvoices() {
     logDownload('Pharmacy Invoice PDF', `Downloaded PDF for invoice ${invoice.invoice_number}`, user?.id);
   };
 
-  // Filter invoices by date if selected
-  const filteredInvoices = filterDate
-    ? invoices?.filter(invoice => {
-        const invoiceDate = new Date(invoice.created_at!);
-        return invoiceDate.toDateString() === filterDate.toDateString();
-      })
-    : invoices;
+  // Filter and search invoices
+  const filteredInvoices = invoices?.filter(invoice => {
+    // Filter by date if selected
+    const matchesDate = !filterDate || 
+      new Date(invoice.created_at!).toDateString() === filterDate.toDateString();
+    
+    // Filter by search term (invoice number)
+    const matchesSearch = !searchTerm || 
+      invoice.invoice_number?.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    return matchesDate && matchesSearch;
+  }) || [];
+
+  // Pagination
+  const totalPages = Math.ceil(filteredInvoices.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedInvoices = filteredInvoices.slice(startIndex, endIndex);
 
   // Calculate totals for filtered invoices
-  const totalAmount = filteredInvoices?.reduce((sum, invoice) => sum + (invoice.final_amount || 0), 0) || 0;
-  const totalCount = filteredInvoices?.length || 0;
+  const totalAmount = filteredInvoices.reduce((sum, invoice) => sum + (invoice.final_amount || 0), 0);
+  const totalCount = filteredInvoices.length;
+
+  // Reset current page when search or filter changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, filterDate]);
 
   return (
     <AppLayout sidebarRole="head_pharmacist">
@@ -259,6 +278,17 @@ export default function PharmacyInvoices() {
               Pharmacy Invoices
             </CardTitle>
             <div className="flex items-center gap-4">
+              {/* Search by Invoice Number */}
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                <Input
+                  placeholder="Search by invoice number..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10 w-64"
+                />
+              </div>
+              
               {/* Date Filter */}
               <Popover>
                 <PopoverTrigger asChild>
@@ -285,19 +315,32 @@ export default function PharmacyInvoices() {
               </Popover>
 
               {/* Clear Filter */}
-              {filterDate && (
+              {(filterDate || searchTerm) && (
                 <Button 
                   variant="outline" 
-                  onClick={() => setFilterDate(undefined)}
+                  onClick={() => {
+                    setFilterDate(undefined);
+                    setSearchTerm("");
+                  }}
                   className="flex items-center gap-2"
                 >
                   <Filter className="w-4 h-4" />
-                  Clear Filter
+                  Clear Filters
                 </Button>
               )}
             </div>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-4">
+            {/* Results count */}
+            <div className="flex items-center justify-between text-sm text-gray-600">
+              <span>
+                Showing {startIndex + 1} to {Math.min(endIndex, filteredInvoices.length)} of {filteredInvoices.length} invoices
+                {searchTerm && ` (filtered by "${searchTerm}")`}
+              </span>
+              {totalPages > 1 && (
+                <span>Page {currentPage} of {totalPages}</span>
+              )}
+            </div>
             <Table>
               <TableHeader>
                 <TableRow>
@@ -310,7 +353,7 @@ export default function PharmacyInvoices() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredInvoices?.map((invoice) => (
+                {paginatedInvoices.map((invoice) => (
                   <TableRow key={invoice.id}>
                     <TableCell className="font-mono">{invoice.invoice_number}</TableCell>
                     <TableCell>{invoice.customer_name || 'Walk-in Customer'}</TableCell>
@@ -330,15 +373,67 @@ export default function PharmacyInvoices() {
                     </TableCell>
                   </TableRow>
                 ))}
-                {(!filteredInvoices || filteredInvoices.length === 0) && (
+                {paginatedInvoices.length === 0 && (
                   <TableRow>
                     <TableCell colSpan={6} className="text-center py-8 text-gray-500">
-                      {filterDate ? 'No invoices found for the selected date' : 'No invoices created yet'}
+                      {searchTerm ? `No invoices found matching "${searchTerm}"` :
+                       filterDate ? 'No invoices found for the selected date' : 
+                       'No invoices created yet'}
                     </TableCell>
                   </TableRow>
                 )}
               </TableBody>
             </Table>
+            
+            {/* Pagination Controls */}
+            {totalPages > 1 && (
+              <div className="flex items-center justify-between px-2">
+                <div className="text-sm text-gray-700">
+                  Showing {startIndex + 1} to {Math.min(endIndex, filteredInvoices.length)} of {filteredInvoices.length} results
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCurrentPage(currentPage - 1)}
+                    disabled={currentPage === 1}
+                    className="flex items-center gap-1"
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                    Previous
+                  </Button>
+                  
+                  <div className="flex items-center gap-1">
+                    {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                      const pageNum = i + 1;
+                      return (
+                        <Button
+                          key={pageNum}
+                          variant={currentPage === pageNum ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => setCurrentPage(pageNum)}
+                          className="w-8 h-8 p-0"
+                        >
+                          {pageNum}
+                        </Button>
+                      );
+                    })}
+                    {totalPages > 5 && <span className="px-2">...</span>}
+                  </div>
+                  
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCurrentPage(currentPage + 1)}
+                    disabled={currentPage === totalPages}
+                    className="flex items-center gap-1"
+                  >
+                    Next
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
