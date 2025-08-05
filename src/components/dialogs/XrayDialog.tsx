@@ -7,17 +7,17 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Calendar, Search, UserPlus, X, CalendarIcon } from "lucide-react";
+import { Calendar, Search, X, CalendarIcon } from "lucide-react";
 import { formatPkrAmount } from "@/utils/currency";
 import { generateXrayInvoicePDF } from "@/utils/pdfGenerator";
 import { XrayOrderConfirmationDialog } from "./XrayOrderConfirmationDialog";
-import { useCreatePatientWithProfile } from "@/hooks/useDatabase";
+
 import { useSearchPatientsWithNames } from "@/hooks/useDisplayHelpers";
 import { useAuditLogger } from "@/hooks/useAuditLogger";
 import { useAuth } from "@/hooks/useAuth";
@@ -60,21 +60,8 @@ interface XrayDialogProps {
 }
 
 export function XrayDialog({ open, onOpenChange, onSuccess }: XrayDialogProps) {
-  const [activeTab, setActiveTab] = useState("search");
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedPatient, setSelectedPatient] = useState<any>(null);
-  
-  // New patient registration
-  const [newPatient, setNewPatient] = useState({
-    first_name: "",
-    last_name: "",
-    phone: "",
-    cnic: "",
-    date_of_birth: "",
-    address: "",
-    blood_type: "",
-    allergies: ""
-  });
   
   const [selectedTests, setSelectedTests] = useState<string[]>([]);
   const [xrayDate, setXrayDate] = useState<Date>();
@@ -84,7 +71,6 @@ export function XrayDialog({ open, onOpenChange, onSuccess }: XrayDialogProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const queryClient = useQueryClient();
-  const createPatientWithProfile = useCreatePatientWithProfile();
   const { data: searchResults } = useSearchPatientsWithNames(searchTerm);
   
   const { logCreate } = useAuditLogger();
@@ -137,20 +123,9 @@ export function XrayDialog({ open, onOpenChange, onSuccess }: XrayDialogProps) {
   const resetForm = () => {
     setSearchTerm("");
     setSelectedPatient(null);
-    setNewPatient({
-      first_name: "",
-      last_name: "",
-      phone: "",
-      cnic: "",
-      date_of_birth: "",
-      address: "",
-      blood_type: "",
-      allergies: ""
-    });
     setSelectedTests([]);
     setXrayDate(undefined);
     setNotes("");
-    setActiveTab("search");
     setShowConfirmation(false);
     setConfirmationData(null);
   };
@@ -177,49 +152,13 @@ export function XrayDialog({ open, onOpenChange, onSuccess }: XrayDialogProps) {
       return;
     }
 
-    let patientId = selectedPatient?.id;
-    
-    // If registering new patient, create them first
-    if (activeTab === "register") {
-      if (!newPatient.first_name.trim() || !newPatient.last_name.trim() || !newPatient.phone.trim() || !newPatient.cnic.trim()) {
-        toast.error("Please fill in all required patient information");
-        return;
-      }
-
-      try {
-        const newPatientData = await createPatientWithProfile.mutateAsync({
-          first_name: newPatient.first_name.trim(),
-          last_name: newPatient.last_name.trim(),
-          phone: newPatient.phone.trim(),
-          cnic: newPatient.cnic.trim(),
-        });
-
-        if (newPatientData && newPatientData.patient) {
-          patientId = newPatientData.patient.id;
-        } else {
-          toast.error("Failed to register patient");
-          return;
-        }
-      } catch (error) {
-        toast.error("Failed to register patient");
-        console.error("Error creating patient:", error);
-        return;
-      }
-    }
-
-    if (!patientId) {
-      toast.error("Please select or register a patient");
+    if (!selectedPatient?.id) {
+      toast.error("Please select a patient");
       return;
     }
 
     // Prepare confirmation data
-    const patientData = activeTab === "register" ? {
-      id: patientId,
-      first_name: newPatient.first_name,
-      last_name: newPatient.last_name,
-      phone: newPatient.phone,
-      patient_number: 'New Patient'
-    } : selectedPatient;
+    const patientData = selectedPatient;
 
     
     const patientName = patientData ? `${patientData.first_name} ${patientData.last_name}` : "Unknown Patient";
@@ -254,24 +193,7 @@ export function XrayDialog({ open, onOpenChange, onSuccess }: XrayDialogProps) {
     setIsSubmitting(true);
     
     try {
-      let patientId = selectedPatient?.id;
-      let patientData = selectedPatient;
-      
-      // If registering new patient, create them first
-      if (activeTab === "register") {
-        const newPatientData = await createPatientWithProfile.mutateAsync({
-          first_name: newPatient.first_name.trim(),
-          last_name: newPatient.last_name.trim(),
-          phone: newPatient.phone.trim(),
-          cnic: newPatient.cnic.trim(),
-        });
-
-        if (newPatientData && newPatientData.patient) {
-          patientId = newPatientData.patient.id;
-        } else {
-          throw new Error("Failed to create patient");
-        }
-      }
+      const patientId = selectedPatient?.id;
       
       // Create X-ray reports for each selected test
       const createdReports = [];
@@ -293,11 +215,9 @@ export function XrayDialog({ open, onOpenChange, onSuccess }: XrayDialogProps) {
         createdReports.push(report);
         
         // Log the X-ray creation
-        const patientName = activeTab === "register" 
-          ? `${newPatient.first_name} ${newPatient.last_name}`.trim()
-          : selectedPatient?.profile?.first_name && selectedPatient?.profile?.last_name
-            ? `${selectedPatient.profile.first_name} ${selectedPatient.profile.last_name}`.trim()
-            : "Unknown Patient";
+        const patientName = selectedPatient?.profile?.first_name && selectedPatient?.profile?.last_name
+          ? `${selectedPatient.profile.first_name} ${selectedPatient.profile.last_name}`.trim()
+          : "Unknown Patient";
             
         logCreate(
           'X-ray Report', 
@@ -309,15 +229,11 @@ export function XrayDialog({ open, onOpenChange, onSuccess }: XrayDialogProps) {
       // Generate and open PDF invoice
       if (createdReports.length > 0) {
         
-        const patientName = activeTab === "register" 
-          ? `${newPatient.first_name} ${newPatient.last_name}`.trim()
-          : selectedPatient?.profile?.first_name && selectedPatient?.profile?.last_name
-            ? `${selectedPatient.profile.first_name} ${selectedPatient.profile.last_name}`.trim()
-            : "Unknown Patient";
+        const patientName = selectedPatient?.profile?.first_name && selectedPatient?.profile?.last_name
+          ? `${selectedPatient.profile.first_name} ${selectedPatient.profile.last_name}`.trim()
+          : "Unknown Patient";
 
-        const patientPhone = activeTab === "register" 
-          ? newPatient.phone 
-          : selectedPatient?.profile?.phone || "N/A";
+        const patientPhone = selectedPatient?.profile?.phone || "N/A";
 
         const testsForPDF = selectedTests.map(testId => {
           const test = xrayTests?.find(t => t.id === testId);
@@ -332,7 +248,7 @@ export function XrayDialog({ open, onOpenChange, onSuccess }: XrayDialogProps) {
           invoiceNumber: `XR-${createdReports[0].id.slice(0, 8)}`,
           patientName: patientName,
           patientEmail: "N/A",
-          patientId: activeTab === "register" ? "New Patient" : selectedPatient?.patient_number || "N/A",
+          patientId: selectedPatient?.patient_number || "N/A",
           patientPhone: patientPhone,
           doctorName: undefined,
           tests: testsForPDF,
@@ -364,19 +280,7 @@ export function XrayDialog({ open, onOpenChange, onSuccess }: XrayDialogProps) {
             <DialogTitle>Schedule X-ray Examination</DialogTitle>
           </DialogHeader>
 
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="search" className="flex items-center gap-2">
-                <Search className="h-4 w-4" />
-                Search Patient
-              </TabsTrigger>
-              <TabsTrigger value="register" className="flex items-center gap-2">
-                <UserPlus className="h-4 w-4" />
-                Register New Patient
-              </TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="search" className="space-y-4">
+          <div className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="search">Search Patient</Label>
                 <Input
@@ -437,105 +341,7 @@ export function XrayDialog({ open, onOpenChange, onSuccess }: XrayDialogProps) {
                   </div>
                 </div>
               )}
-            </TabsContent>
-            
-            <TabsContent value="register" className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="firstName">First Name *</Label>
-                  <Input
-                    id="firstName"
-                    value={newPatient.first_name}
-                    onChange={(e) => setNewPatient(prev => ({ ...prev, first_name: e.target.value }))}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="lastName">Last Name *</Label>
-                  <Input
-                    id="lastName"
-                    value={newPatient.last_name}
-                    onChange={(e) => setNewPatient(prev => ({ ...prev, last_name: e.target.value }))}
-                    required
-                  />
-                </div>
-              </div>
-              
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="phone">Phone Number *</Label>
-                  <Input
-                    id="phone"
-                    value={newPatient.phone}
-                    onChange={(e) => setNewPatient(prev => ({ ...prev, phone: e.target.value }))}
-                    placeholder="03001234567"
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="cnic">CNIC *</Label>
-                  <Input
-                    id="cnic"
-                    value={newPatient.cnic}
-                    onChange={(e) => setNewPatient(prev => ({ ...prev, cnic: e.target.value }))}
-                    placeholder="12345-6789012-3"
-                    required
-                  />
-                </div>
-              </div>
-              
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="dob">Date of Birth</Label>
-                  <Input
-                    id="dob"
-                    type="date"
-                    value={newPatient.date_of_birth}
-                    onChange={(e) => setNewPatient(prev => ({ ...prev, date_of_birth: e.target.value }))}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="bloodType">Blood Type</Label>
-                  <Select value={newPatient.blood_type} onValueChange={(value) => setNewPatient(prev => ({ ...prev, blood_type: value }))}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select blood type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="A+">A+</SelectItem>
-                      <SelectItem value="A-">A-</SelectItem>
-                      <SelectItem value="B+">B+</SelectItem>
-                      <SelectItem value="B-">B-</SelectItem>
-                      <SelectItem value="AB+">AB+</SelectItem>
-                      <SelectItem value="AB-">AB-</SelectItem>
-                      <SelectItem value="O+">O+</SelectItem>
-                      <SelectItem value="O-">O-</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="address">Address</Label>
-                <Input
-                  id="address"
-                  value={newPatient.address}
-                  onChange={(e) => setNewPatient(prev => ({ ...prev, address: e.target.value }))}
-                  placeholder="Patient address"
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="allergies">Allergies</Label>
-                <Textarea
-                  id="allergies"
-                  value={newPatient.allergies}
-                  onChange={(e) => setNewPatient(prev => ({ ...prev, allergies: e.target.value }))}
-                  placeholder="Any known allergies"
-                  rows={2}
-                />
-              </div>
-            </TabsContent>
-          </Tabs>
+          </div>
 
           <Separator />
 
@@ -609,7 +415,7 @@ export function XrayDialog({ open, onOpenChange, onSuccess }: XrayDialogProps) {
             </div>
 
             {/* Summary */}
-            {(selectedPatient || (activeTab === "register" && newPatient.first_name)) && (
+            {selectedPatient && (
               <Card className="bg-blue-50">
                 <CardHeader>
                   <CardTitle className="text-lg">Order Summary</CardTitle>
@@ -618,15 +424,10 @@ export function XrayDialog({ open, onOpenChange, onSuccess }: XrayDialogProps) {
                   <div className="flex justify-between">
                     <span>Patient:</span>
                     <span className="font-medium">
-                      {activeTab === "register" 
-                        ? `${newPatient.first_name} ${newPatient.last_name}`.trim()
-                        : selectedPatient 
-                          ? `${selectedPatient.profile?.first_name} ${selectedPatient.profile?.last_name}`.trim()
-                          : "Not selected"
+                      {selectedPatient 
+                        ? `${selectedPatient.profile?.first_name} ${selectedPatient.profile?.last_name}`.trim()
+                        : "Not selected"
                       }
-                      {activeTab === "register" && (
-                        <Badge variant="secondary" className="ml-2">New Patient</Badge>
-                      )}
                     </span>
                   </div>
                   <div className="flex justify-between">
@@ -680,8 +481,7 @@ export function XrayDialog({ open, onOpenChange, onSuccess }: XrayDialogProps) {
                   testsLoading || 
                   selectedTests.length === 0 || 
                   !xrayDate || 
-                  (activeTab === "search" && !selectedPatient) ||
-                  (activeTab === "register" && (!newPatient.first_name.trim() || !newPatient.last_name.trim() || !newPatient.phone.trim() || !newPatient.cnic.trim()))
+                  !selectedPatient
                 }
               >
                 Continue to Confirmation
