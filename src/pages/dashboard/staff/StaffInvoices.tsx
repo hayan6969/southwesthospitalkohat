@@ -70,6 +70,7 @@ export default function StaffInvoices() {
         .select('*')
         .order('created_at', { ascending: false });
       if (error) throw error;
+      console.log('OT Schedules fetched:', data?.length, data);
       return data;
     }
   });
@@ -157,9 +158,12 @@ export default function StaffInvoices() {
     }) || []),
     ...(otSchedules?.map(ot => {
       const displayNumber = `OT-${ot.id.slice(0, 8)}`;
-      if (displayNumber === 'INV-1754351253847') {
-        console.log('🏥 OT SOURCE - INV-1754351253847');
-      }
+      console.log('Mapping OT Schedule:', { 
+        id: ot.id, 
+        displayNumber, 
+        total_cost: ot.total_cost, 
+        status: ot.status 
+      });
       return {
         ...ot,
         type: 'ot',
@@ -197,6 +201,11 @@ export default function StaffInvoices() {
     }
     return true;
   }).sort((a, b) => new Date(b.displayDate).getTime() - new Date(a.displayDate).getTime());
+  
+  console.log('All invoices count:', allInvoices.length);
+  console.log('OT invoices in all:', allInvoices.filter(inv => inv.type === 'ot').length);
+  console.log('Filtered invoices:', filteredInvoices.length);
+  console.log('Filter type:', filterType);
 
   // Pagination logic
   const totalPages = Math.ceil(filteredInvoices.length / itemsPerPage);
