@@ -1251,41 +1251,46 @@ export const generateDailyClosingPDF = async (data: {
 
   yPosition += 35;
 
-  // Save the new closing balance to database (single updatable value)
-  try {
-    const { supabase } = await import('@/integrations/supabase/client');
-    
-    // Get the latest record to update
-    const { data: latestRecord } = await supabase
-      .from('hospital_closing_balance')
-      .select('id')
-      .order('closing_date', { ascending: false })
-      .limit(1)
-      .maybeSingle();
+  // Save the new closing balance to database ONLY if this is a new closing (not viewing historical)
+  // If transactionsData was provided, this is a historical view and should not update the database
+  if (!data.transactionsData) {
+    try {
+      const { supabase } = await import('@/integrations/supabase/client');
+      
+      // Get the latest record to update
+      const { data: latestRecord } = await supabase
+        .from('hospital_closing_balance')
+        .select('id')
+        .order('closing_date', { ascending: false })
+        .limit(1)
+        .maybeSingle();
 
-    if (latestRecord) {
-      // Update the existing record with new balance
-      await supabase
-        .from('hospital_closing_balance')
-        .update({ 
-          closing_date: data.closingDate,
-          closing_balance: newClosingBalance,
-          notes: `Updated from daily closing on ${data.closingDate}`,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', latestRecord.id);
-    } else {
-      // Create the first record
-      await supabase
-        .from('hospital_closing_balance')
-        .insert({ 
-          closing_date: data.closingDate,
-          closing_balance: newClosingBalance,
-          notes: `First closing balance created on ${data.closingDate}`
-        });
+      if (latestRecord) {
+        // Update the existing record with new balance
+        await supabase
+          .from('hospital_closing_balance')
+          .update({ 
+            closing_date: data.closingDate,
+            closing_balance: newClosingBalance,
+            notes: `Updated from daily closing on ${data.closingDate}`,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', latestRecord.id);
+      } else {
+        // Create the first record
+        await supabase
+          .from('hospital_closing_balance')
+          .insert({ 
+            closing_date: data.closingDate,
+            closing_balance: newClosingBalance,
+            notes: `First closing balance created on ${data.closingDate}`
+          });
+      }
+    } catch (error) {
+      console.error('Error updating closing balance:', error);
     }
-  } catch (error) {
-    console.error('Error updating closing balance:', error);
+  } else {
+    console.log('Historical closing view - skipping database update for closing balance');
   }
 
   // ===========================================
