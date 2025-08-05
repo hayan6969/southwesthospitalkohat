@@ -18,7 +18,7 @@ import { toast } from "sonner";
 import { Plus, Search, UserPlus, Check, ChevronsUpDown } from "lucide-react";
 import { formatCurrency } from "@/utils/currency";
 import { generateInvoicePDF } from "@/utils/pdfGenerator";
-import { getCurrentPakistanDate, getCurrentPakistanTimeString, formatDateForDisplay, formatTimeForDisplay } from "@/utils/timezone";
+import { getCurrentPakistanDate, getCurrentPakistanTimeString, formatDateForDisplay, formatTimeForDisplay, fromPakistanTime } from "@/utils/timezone";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 
@@ -168,14 +168,16 @@ export function EnhancedAppointmentDialog() {
       return;
     }
 
-    const fullDateTime = `${appointmentDate}T${appointmentTime}:00`;
+    // Convert Pakistani time to UTC for database storage
+    const localDateTime = `${appointmentDate}T${appointmentTime}:00`;
+    const utcDateTime = fromPakistanTime(localDateTime).toISOString();
 
     try {
       const appointmentData = {
         appointment: {
           patient_id: patientId,
           doctor_id: doctorId,
-          appointment_date: fullDateTime,
+          appointment_date: utcDateTime,
           type: type.trim(),
           notes: notes.trim() || undefined,
           status: 'scheduled'

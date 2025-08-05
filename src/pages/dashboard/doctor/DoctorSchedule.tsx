@@ -19,7 +19,7 @@ import { toast } from "sonner";
 import { PatientDetailDialog } from "@/components/dialogs/PatientDetailDialog";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
-import { getCurrentPakistanTime } from "@/utils/timezone";
+import { getCurrentPakistanTime, formatInPakistanTime } from "@/utils/timezone";
 import { PrescriptionDialog } from "@/components/dialogs/PrescriptionDialog";
 
 export default function DoctorSchedule() { // Fixed ordering syntax
@@ -311,7 +311,7 @@ export default function DoctorSchedule() { // Fixed ordering syntax
 
   const upcomingAppointments = appointmentsWithQueue?.filter(apt => {
     const selectedDateStr = format(selectedDate, 'yyyy-MM-dd');
-    const aptDateStr = format(new Date(apt.appointment_date), 'yyyy-MM-dd');
+    const aptDateStr = formatInPakistanTime(apt.appointment_date, 'yyyy-MM-dd');
     return apt.status === 'scheduled' && aptDateStr === selectedDateStr;
   }).sort((a, b) => {
     // Sort by queue position first, then by appointment time
@@ -329,7 +329,7 @@ export default function DoctorSchedule() { // Fixed ordering syntax
     if (!isPastAppointment) return false;
     
     // Apply filters
-    if (dateFilter && !format(new Date(apt.appointment_date), 'yyyy-MM-dd').includes(dateFilter)) {
+    if (dateFilter && !formatInPakistanTime(apt.appointment_date, 'yyyy-MM-dd').includes(dateFilter)) {
       return false;
     }
     
