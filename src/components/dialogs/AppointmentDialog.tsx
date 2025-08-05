@@ -14,7 +14,7 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { toast } from "sonner";
 import { Plus, Check, ChevronsUpDown } from "lucide-react";
-import { getCurrentPakistanDate, getCurrentPakistanTimeString } from "@/utils/timezone";
+import { getCurrentPakistanDate, getCurrentPakistanTimeString, formatDateForDisplay, formatTimeForDisplay } from "@/utils/timezone";
 import { cn } from "@/lib/utils";
 
 const appointmentTypes = [
@@ -212,7 +212,10 @@ export function AppointmentDialog() {
           <div className="space-y-2 bg-muted/30 p-3 rounded-lg">
             <Label className="text-sm font-medium">Scheduled for:</Label>
             <div className="text-sm text-muted-foreground">
-              <div>{appointmentDate && appointmentTime ? `${appointmentDate} at ${appointmentTime}` : 'No date/time selected'}</div>
+              <div>{appointmentDate && appointmentTime ? 
+                `${formatDateForDisplay(appointmentDate)} at ${formatTimeForDisplay(`2000-01-01T${appointmentTime}:00`)}` : 
+                'No date/time selected'
+              }</div>
               <div className="text-xs mt-1">Using Pakistani date and time</div>
             </div>
           </div>
