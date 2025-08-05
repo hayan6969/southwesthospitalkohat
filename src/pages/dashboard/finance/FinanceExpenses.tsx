@@ -18,6 +18,7 @@ import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
+import { useAuditLogger } from "@/hooks/useAuditLogger";
 import { AllExpensesDialog } from "@/components/dialogs/AllExpensesDialog";
 
 interface Expense {
@@ -43,6 +44,7 @@ export default function FinanceExpenses() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { user } = useAuth();
+  const { logCreate, logDelete } = useAuditLogger();
 
   // Fetch expenses from database
   const { data: allExpenses, isLoading } = useQuery({
@@ -84,7 +86,7 @@ export default function FinanceExpenses() {
       if (error) throw error;
       return data;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['expenses'] });
       setIsAddDialogOpen(false);
       setFormData({
@@ -93,6 +95,14 @@ export default function FinanceExpenses() {
         amount: "",
       });
       setSelectedDate(new Date());
+      
+      // Log expense creation
+      logCreate(
+        'Expense', 
+        `Created expense: ${data.category} - ${data.description} (${formatPkrAmount(data.amount)})`,
+        user?.id
+      );
+      
       toast({
         title: "Success",
         description: "Expense added successfully",
@@ -109,16 +119,25 @@ export default function FinanceExpenses() {
   });
 
   const deleteExpenseMutation = useMutation({
-    mutationFn: async (expenseId: string) => {
+    mutationFn: async (expense: Expense) => {
       const { error } = await supabase
         .from('expenses')
         .delete()
-        .eq('id', expenseId);
+        .eq('id', expense.id);
       
       if (error) throw error;
+      return expense; // Return the expense data for logging
     },
-    onSuccess: () => {
+    onSuccess: (deletedExpense) => {
       queryClient.invalidateQueries({ queryKey: ['expenses'] });
+      
+      // Log expense deletion
+      logDelete(
+        'Expense', 
+        `Deleted expense: ${deletedExpense.category} - ${deletedExpense.description} (${formatPkrAmount(deletedExpense.amount)})`,
+        user?.id
+      );
+      
       toast({
         title: "Success",
         description: "Expense deleted successfully",
@@ -362,7 +381,7 @@ export default function FinanceExpenses() {
                     <Button 
                       size="sm" 
                       variant="outline"
-                      onClick={() => deleteExpenseMutation.mutate(expense.id)}
+                      onClick={() => deleteExpenseMutation.mutate(expense)}
                       disabled={deleteExpenseMutation.isPending}
                     >
                       <Trash2 className="w-4 h-4" />
