@@ -55,6 +55,20 @@ export function StaffInvoices() {
     }
   });
 
+  // Fetch OT schedules
+  const { data: otSchedules, isLoading: otLoading } = useQuery({
+    queryKey: ['ot-schedules-staff'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('ot_schedules')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      return data;
+    }
+  });
+
   // Fetch patient data for all patients
   const { data: allPatients } = useQuery({
     queryKey: ['all-patients-data'],
@@ -146,8 +160,35 @@ export function StaffInvoices() {
       });
     }
 
+    // Add OT schedules
+    if (otSchedules) {
+      otSchedules.forEach(otSchedule => {
+        // Get patient name from patient names using the helper
+        const patientName = getPatientName(otSchedule.patient_id, patientNames || []);
+        
+        // Find patient number from allPatients array
+        const patient = allPatients?.find(p => p.id === otSchedule.patient_id);
+        
+        combined.push({
+          ...otSchedule,
+          type: 'ot',
+          invoice_type: 'ot',
+          invoice_date: otSchedule.created_at,
+          patient_name: patientName || 'Unknown Patient',
+          patient_id_display: patient?.patient_number || 'N/A',
+          display_date: format(new Date(otSchedule.created_at), 'MMM d, yyyy'),
+          display_time: format(new Date(otSchedule.created_at), 'h:mm a'),
+          display_amount: formatPkrAmount(otSchedule.total_cost || 0),
+          amount: otSchedule.total_cost || 0,
+          invoice_number: `OT-${otSchedule.id.slice(-8).toUpperCase()}`,
+          description: `Operation Theater Service`,
+          status: otSchedule.status === 'completed' ? 'paid' : 'pending'
+        });
+      });
+    }
+
     return combined.sort((a, b) => new Date(b.invoice_date).getTime() - new Date(a.invoice_date).getTime());
-  }, [hospitalInvoices, patientNames, labReports, xrayReports, allPatients]);
+  }, [hospitalInvoices, patientNames, labReports, xrayReports, otSchedules, allPatients]);
 
   // Filter and paginate invoices
   const filteredInvoices = useMemo(() => {
@@ -428,6 +469,12 @@ export function StaffInvoices() {
           xrayDate: format(new Date(invoice.xray_date || invoice.created_at), 'MMM dd, yyyy'),
           notes: invoice.notes
         });
+      } else if (invoice.type === 'ot') {
+        // For OT invoices, use the detailed PDF generation
+        await generateDetailedInvoicePDF({
+          ...invoice,
+          type: 'ot'
+        });
       } else {
         await generateInvoicePDF(invoice);
       }
@@ -478,7 +525,7 @@ export function StaffInvoices() {
     return <Badge className={color}>{label}</Badge>;
   };
 
-  const isLoading = hospitalLoading || xrayLoading || labLoading;
+  const isLoading = hospitalLoading || xrayLoading || labLoading || otLoading;
   const totalAmount = allInvoices.reduce((sum, invoice) => sum + Number(invoice.amount || 0), 0);
 
   return (
@@ -573,8 +620,7 @@ export function StaffInvoices() {
                 <SelectItem value="appointments">Appointments</SelectItem>
                 <SelectItem value="pharmacy">Pharmacy</SelectItem>
                 <SelectItem value="lab">Lab</SelectItem>
-                <SelectItem value="xray">X-ray</SelectItem>
-                <SelectItem value="ot">OT</SelectItem>
+                <SelectItem value="ot">Operation Theater</SelectItem>
               </SelectContent>
             </Select>
 
