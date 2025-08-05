@@ -9,7 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { formatPkrAmount } from "@/utils/currency";
 import { Download, Receipt, Calendar as CalendarIcon, Filter, ChevronLeft, ChevronRight } from "lucide-react";
 import { format } from "date-fns";
-import { generateInvoicePDF, generateXrayInvoicePDF } from "@/utils/pdfGenerator";
+import { generateInvoicePDF, generateXrayInvoicePDF, generateOTPDF } from "@/utils/pdfGenerator";
 import { generatePharmacyInvoicePDF } from "@/utils/pharmacyPdfGenerator";
 import { useToast } from "@/hooks/use-toast";
 import { Calendar } from "@/components/ui/calendar";
@@ -141,20 +141,89 @@ export default function FinanceInvoices() {
           notes: invoice.notes
         });
       } else if (invoice.type === 'ot') {
-        // For OT invoices, fetch patient data first
+        // For OT invoices, use the exact same PDF generator as when scheduling OT
         const [patientRes, patientProfileRes] = await Promise.all([
           supabase.from('patients').select('patient_number').eq('id', invoice.patient_id).single(),
           supabase.from('profiles').select('first_name, last_name').eq('id', invoice.patient_id).single()
         ]);
 
-        await generateDetailedInvoicePDF({
-          ...invoice,
-          type: 'ot',
-          patient: {
-            patient_number: patientRes.data?.patient_number || 'N/A',
-            profiles: patientProfileRes.data
+        const otExpenses = invoice.ot_expenses || [];
+        
+        // Prepare items array in the format expected by generateOTPDF
+        const items: Array<{
+          description: string;
+          quantity: number | string;
+          unitPrice: number | string;
+          totalPrice: number | string;
+          isHeader?: boolean;
+        }> = [];
+
+        // Add doctor fee if present
+        if (invoice.doctor_expense && invoice.doctor_expense > 0) {
+          items.push({
+            description: 'Doctor Fee',
+            quantity: 1,
+            unitPrice: invoice.doctor_expense,
+            totalPrice: invoice.doctor_expense
+          });
+        }
+
+        // Add detailed expenses
+        if (otExpenses && otExpenses.length > 0) {
+          otExpenses.forEach((expense: any) => {
+            items.push({
+              description: expense.expense_name || 'OT Expense',
+              quantity: 1,
+              unitPrice: expense.cost || 0,
+              totalPrice: expense.cost || 0
+            });
+          });
+        } else {
+          // Fallback if no detailed expenses
+          const otCharges = (invoice.total_cost || 0) - (invoice.doctor_expense || 0);
+          if (otCharges > 0) {
+            items.push({
+              description: 'Operation Theater Charges',
+              quantity: 1,
+              unitPrice: otCharges,
+              totalPrice: otCharges
+            });
           }
-        });
+        }
+
+        // If no items were added, add a generic one
+        if (items.length === 0) {
+          items.push({
+            description: 'Operation Theater Service',
+            quantity: 1,
+            unitPrice: invoice.total_cost || 0,
+            totalPrice: invoice.total_cost || 0
+          });
+        }
+
+        // Get patient information
+        const patientName = patientProfileRes.data ? 
+          `${patientProfileRes.data.first_name} ${patientProfileRes.data.last_name}`.trim() : 
+          'Unknown Patient';
+        const patientId = patientRes.data?.patient_number || 'N/A';
+        
+        // Fetch room name
+        const roomName = 'Unknown Room'; // Will be fetched from room_id if needed
+        
+        const otInvoiceData = {
+          invoiceNumber: invoice.displayNumber,
+          patientName: patientName,
+          patientId: patientId,
+          patientPhone: 'Not provided', // Not available in this context
+          doctorName: invoice.doctor_name || 'Unknown Doctor',
+          procedure: invoice.operation_name || invoice.notes || 'Surgery',
+          room: roomName,
+          date: format(new Date(invoice.operation_date || invoice.created_at), 'MMM dd, yyyy'),
+          totalAmount: invoice.total_cost || 0,
+          items: items
+        };
+
+        await generateOTPDF(otInvoiceData);
       } else {
         // Default to detailed invoice PDF for any other types
         await generateDetailedInvoicePDF(invoice);
