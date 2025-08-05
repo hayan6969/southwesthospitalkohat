@@ -942,10 +942,13 @@ export const generateDailyClosingPDF = async (data: {
         
         xPos = startX + 2;
         row.forEach((cell, colIndex) => {
-          // Truncate long text to fit in column
+          // Adjust text truncation based on column width and content
           let displayText = cell;
-          if (typeof cell === 'string' && cell.length > 20 && !cell.includes('Rs.')) {
-            displayText = cell.substring(0, 17) + '...';
+          let maxLength = Math.floor(colWidths[colIndex] * 0.8); // Adjust based on column width
+          
+          // Don't truncate amounts or short text
+          if (typeof cell === 'string' && cell.length > maxLength && !cell.includes('Rs.') && !cell.includes('(') && maxLength > 10) {
+            displayText = cell.substring(0, maxLength - 3) + '...';
           }
           
           // Right align numeric values (amounts)
@@ -1054,13 +1057,28 @@ export const generateDailyClosingPDF = async (data: {
   }
 
   // ===========================================
-  // PHARMACY BILLS SECTION
+  // PHARMACY EXPENSES SECTION
   // ===========================================
   if (data.transactionsData?.pharmacyExpenses?.length > 0) {
-    drawSectionHeader('PHARMACY BILLS');
+    drawSectionHeader('PHARMACY EXPENSES');
 
+    const totalPharmacyExpenses = data.transactionsData.pharmacyExpenses.reduce((sum: number, exp: any) => sum + exp.amount, 0);
+    const expenseCount = data.transactionsData.pharmacyExpenses.length;
+    
+    const pharmacyExpensesSummaryHeaders = ['Summary', 'Count', 'Amount'];
+    const pharmacyExpensesSummaryColWidths = [80, 30, 40];
+    const pharmacyExpensesSummaryRows = [
+      ['Total Pharmacy Bills', expenseCount.toString(), formatPkrAmount(totalPharmacyExpenses)],
+      ['Bills Breakdown', 'See Details Below', '-']
+    ];
+
+    drawTable(pharmacyExpensesSummaryHeaders, pharmacyExpensesSummaryRows, pharmacyExpensesSummaryColWidths);
+    
+    yPosition += 10;
+    
+    // Detailed pharmacy expenses
     const pharmacyBillHeaders = ['Type', 'Description', 'Amount', 'Date'];
-    const pharmacyBillColWidths = [50, 60, 30, 30];
+    const pharmacyBillColWidths = [45, 70, 35, 30];
     const pharmacyBillRows: string[][] = [];
 
     data.transactionsData.pharmacyExpenses.forEach((expense: any) => {
@@ -1139,11 +1157,11 @@ export const generateDailyClosingPDF = async (data: {
   const netPharmacyBalance = pharmacyStartingBalance + data.pharmacyProfit - pharmacyExpenses;
   
   const pharmacySummaryHeaders = ['Description', 'Amount'];
-  const pharmacySummaryColWidths = [120, 50];
+  const pharmacySummaryColWidths = [130, 50]; // Increased width for description
   const pharmacySummaryRows = [
     ['Opening Balance', formatPkrAmount(pharmacyStartingBalance)],
-    ['Today\'s Sales Revenue', formatPkrAmount(data.pharmacyRevenue)],
-    ['Today\'s Gross Profit', formatPkrAmount(data.pharmacyProfit)],
+    ['Todays Sales Revenue', formatPkrAmount(data.pharmacyRevenue)],
+    ['Todays Gross Profit', formatPkrAmount(data.pharmacyProfit)],
     ['Bills Paid Today', `(${formatPkrAmount(pharmacyExpenses)})`],
     ['Current Account Balance', formatPkrAmount(netPharmacyBalance)],
     ['Total Medicines Stock Value', formatPkrAmount(data.transactionsData?.totalStockValue || 0)]
@@ -1157,13 +1175,13 @@ export const generateDailyClosingPDF = async (data: {
   drawSubHeader('Overall Daily Summary');
   
   const summaryHeaders = ['Description', 'Amount'];
-  const summaryColWidths = [120, 50];
+  const summaryColWidths = [130, 50]; // Increased width for description
   const summaryRows = [
     ['Hospital Services Revenue', formatPkrAmount(data.hospitalRevenue)],
     ['Pharmacy Revenue', formatPkrAmount(data.pharmacyRevenue)],
     ['Pharmacy Profit', formatPkrAmount(data.pharmacyProfit)],
     ['Total Daily Expenses', `(${formatPkrAmount(data.totalExpenses)})`],
-    ['Total Refunds & Returns', `(${formatPkrAmount(data.totalRefunds)})`]
+    ['Total Refunds and Returns', `(${formatPkrAmount(data.totalRefunds)})`]
   ];
 
   drawTable(summaryHeaders, summaryRows, summaryColWidths);
@@ -1181,13 +1199,13 @@ export const generateDailyClosingPDF = async (data: {
 
   // Hospital Balance Summary
   const balanceHeaders = ['Description', 'Amount'];
-  const balanceColWidths = [120, 50];
+  const balanceColWidths = [130, 50]; // Increased width for description
   const balanceRows = [
     ['Opening Balance (Previous Day)', formatPkrAmount(previousClosingBalance)],
-    ['Today\'s Hospital Revenue', formatPkrAmount(data.hospitalRevenue)],
-    ['Today\'s Hospital Expenses', `(${formatPkrAmount(data.totalExpenses)})`],
-    ['Today\'s Refunds', `(${formatPkrAmount(data.totalRefunds)})`],
-    ['Today\'s Hospital Net Profit/Loss', formatPkrAmount(hospitalNetProfit)]
+    ['Todays Hospital Revenue', formatPkrAmount(data.hospitalRevenue)],
+    ['Todays Hospital Expenses', `(${formatPkrAmount(data.totalExpenses)})`],
+    ['Todays Refunds', `(${formatPkrAmount(data.totalRefunds)})`],
+    ['Todays Hospital Net Profit/Loss', formatPkrAmount(hospitalNetProfit)]
   ];
 
   drawTable(balanceHeaders, balanceRows, balanceColWidths);
