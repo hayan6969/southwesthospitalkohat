@@ -21,7 +21,8 @@ export const useAllMedicinesWithSales = (selectedMonth?: string, searchQuery?: s
       const { data: medicines, error: medicinesError } = await supabase
         .from('medicines')
         .select('id, name, batch_number, stock_quantity, purchase_price, selling_price')
-        .order('name');
+        .order('name')
+        .limit(10000); // Set a high limit to fetch all medicines
 
       if (medicinesError) throw medicinesError;
 
