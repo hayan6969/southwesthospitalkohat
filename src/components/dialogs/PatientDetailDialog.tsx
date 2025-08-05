@@ -288,7 +288,7 @@ export function PatientDetailDialog({ isOpen, onClose, patient }: PatientDetailD
                       <TableHead>Date</TableHead>
                       <TableHead>Appointment</TableHead>
                       <TableHead>Doctor</TableHead>
-                      <TableHead>Prescription</TableHead>
+                      <TableHead>Action</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -324,11 +324,10 @@ export function PatientDetailDialog({ isOpen, onClose, patient }: PatientDetailD
                               variant="outline"
                               size="sm"
                               onClick={() => handlePrescriptionClick(prescription)}
-                              className="text-left justify-start h-auto p-2"
+                              className="flex items-center gap-2"
                             >
-                              <div className="max-w-md truncate">
-                                {prescription.prescription_text}
-                              </div>
+                              <Eye className="w-4 h-4" />
+                              View Prescription
                             </Button>
                           </TableCell>
                         </TableRow>
