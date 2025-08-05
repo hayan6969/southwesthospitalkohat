@@ -410,7 +410,14 @@ export default function FinanceInvoices() {
     } else {
       // OT Service with detailed charge breakdown from ot_expenses
       const doctorFee = invoice.doctor_expense || 0;
-      const otExpenses = invoice.ot_operations?.[0]?.ot_expenses || [];
+      const otExpenses = invoice.ot_expenses || [];
+      
+      // Show operation name if available
+      if (invoice.operation_name) {
+        doc.setFont('helvetica', 'bold');
+        doc.text(`Operation: ${invoice.operation_name}`, 20, yPosition);
+        yPosition += 10;
+      }
       
       // Doctor fee line
       if (doctorFee > 0) {
@@ -533,7 +540,10 @@ export default function FinanceInvoices() {
       displayAmount: ot.total_cost,
       displayNumber: `OT-${ot.id.slice(0, 8)}`,
       displayDate: ot.created_at,
-      displayStatus: ot.status
+      displayStatus: ot.status,
+      // Include operation details for detailed breakdown
+      operation_name: ot.ot_operations?.[0]?.operation_name,
+      ot_expenses: ot.ot_operations?.[0]?.ot_expenses || []
     })) || [])
   ];
 

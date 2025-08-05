@@ -190,7 +190,7 @@ export function StaffInvoices() {
           display_amount: formatPkrAmount(otSchedule.total_cost || 0),
           amount: otSchedule.total_cost || 0,
           invoice_number: `OT-${otSchedule.id.slice(-8).toUpperCase()}`,
-          description: `Operation Theater Service`,
+          description: `Operation Theater Service - ${otSchedule.ot_operations?.[0]?.operation_name || 'Surgery'}`,
           status: otSchedule.status === 'completed' ? 'paid' : 'pending',
           // Add fields needed for finance-style PDF
           displayAmount: otSchedule.total_cost || 0,
@@ -201,7 +201,10 @@ export function StaffInvoices() {
           doctor_name: otSchedule.doctor_name,
           notes: otSchedule.notes,
           ot_notes: otSchedule.ot_notes,
-          doctor_expense: otSchedule.doctor_expense
+          doctor_expense: otSchedule.doctor_expense,
+          // Include operation details for detailed breakdown
+          operation_name: otSchedule.ot_operations?.[0]?.operation_name,
+          ot_expenses: otSchedule.ot_operations?.[0]?.ot_expenses || []
         });
       });
     }
@@ -435,7 +438,14 @@ export function StaffInvoices() {
     } else {
       // OT Service with detailed charge breakdown from ot_expenses
       const doctorFee = invoice.doctor_expense || 0;
-      const otExpenses = invoice.ot_operations?.[0]?.ot_expenses || [];
+      const otExpenses = invoice.ot_expenses || [];
+      
+      // Show operation name if available
+      if (invoice.operation_name) {
+        doc.setFont('helvetica', 'bold');
+        doc.text(`Operation: ${invoice.operation_name}`, 20, yPosition);
+        yPosition += 10;
+      }
       
       // Doctor fee line
       if (doctorFee > 0) {
