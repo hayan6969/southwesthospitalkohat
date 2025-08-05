@@ -575,9 +575,13 @@ export function XrayDialog({ open, onOpenChange, onSuccess }: XrayDialogProps) {
                   <SelectTrigger>
                     <SelectValue placeholder="Select a doctor (optional)" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="bg-white border border-gray-200 shadow-lg z-50">
                     {doctors?.map((doctor) => (
-                      <SelectItem key={doctor.id} value={doctor.id}>
+                      <SelectItem 
+                        key={doctor.id} 
+                        value={doctor.id}
+                        className="bg-white hover:bg-gray-100 cursor-pointer"
+                      >
                         {doctor.name}
                       </SelectItem>
                     ))}
