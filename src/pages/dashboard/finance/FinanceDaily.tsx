@@ -231,8 +231,20 @@ export default function FinanceDaily() {
           return totalProfit + invoiceProfit;
         }, 0);
         
-        // Calculate NET pharmacy profit (gross profit minus returns)
-        pharmacyProfit = grossPharmacyProfit - pharmacyReturnsFromInvoices;
+        // Calculate profit portion of returns (only the profit lost, not the full return amount)
+        const returnsProfit = negativeInvoices.reduce((totalProfit, invoice) => {
+          const invoiceProfit = (invoice.pharmacy_invoice_items || []).reduce((itemsProfit, item) => {
+            if (item.medicines && item.medicines.selling_price && item.medicines.purchase_price) {
+              const profitPerUnit = item.medicines.selling_price - item.medicines.purchase_price;
+              return itemsProfit + (profitPerUnit * Math.abs(item.quantity)); // Use absolute value for returns
+            }
+            return itemsProfit;
+          }, 0);
+          return totalProfit + invoiceProfit;
+        }, 0);
+        
+        // Calculate NET pharmacy profit (gross profit minus only the profit portion of returns)
+        pharmacyProfit = grossPharmacyProfit - returnsProfit;
       }
       
       const labRevenue = labReports?.reduce((sum, lab) => sum + (lab.price || 0), 0) || 0;
