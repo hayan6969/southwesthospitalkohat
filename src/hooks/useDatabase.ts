@@ -258,7 +258,7 @@ export const usePaginatedMedicines = (page: number = 1, pageSize: number = 10, s
 // Hook for paginated invoices with search
 export const usePaginatedInvoices = (page: number = 1, pageSize: number = 20, searchTerm: string = '') => {
   return useQuery({
-    queryKey: ['invoices-paginated', page, pageSize, searchTerm],
+    queryKey: ['invoices-paginated-v2', page, pageSize, searchTerm], // Updated cache key to force refresh
     queryFn: async () => {
       console.log(`🔍 Fetching invoices page ${page} with search: "${searchTerm}"`);
       

@@ -88,15 +88,6 @@ export default function StaffInvoices() {
         typeLabel = 'Emergency Consultation';
       }
       
-      // Debug log for the specific invoice
-      if (inv.invoice_number === 'INV-1754351253847') {
-        console.log('🔍 Processing invoice INV-1754351253847:', {
-          description: inv.description,
-          assignedType: type,
-          assignedLabel: typeLabel
-        });
-      }
-      
       return {
         ...inv,
         type,
