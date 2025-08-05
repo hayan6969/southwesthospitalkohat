@@ -62,14 +62,17 @@ export default function StaffInvoices() {
   });
 
   // Get OT schedules for invoicing
-  const { data: otSchedules, isLoading: otLoading } = useQuery({
+  const { data: otSchedules, isLoading: otLoading, error: otError } = useQuery({
     queryKey: ['ot-schedules-invoices'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('ot_schedules')
         .select('*')
         .order('created_at', { ascending: false });
-      if (error) throw error;
+      if (error) {
+        console.error('OT Schedules query error:', error);
+        throw error;
+      }
       console.log('OT Schedules fetched:', data?.length, data);
       return data;
     }
@@ -178,6 +181,11 @@ export default function StaffInvoices() {
   ];
 
   const isLoading = hospitalLoading || pharmacyLoading || labLoading || xrayLoading || otLoading;
+  
+  // Debug OT error
+  if (otError) {
+    console.error('OT query error:', otError);
+  }
   
   // Final check - find where INV-1754351253847 ended up
   const targetInvoice = allInvoices.find(inv => inv.displayNumber === 'INV-1754351253847');
