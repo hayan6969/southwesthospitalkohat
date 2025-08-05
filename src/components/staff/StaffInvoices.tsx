@@ -69,6 +69,9 @@ export function StaffInvoices() {
               expense_name,
               cost
             )
+          ),
+          ot_rooms!inner (
+            room_name
           )
         `)
         .order('created_at', { ascending: false });
@@ -204,7 +207,8 @@ export function StaffInvoices() {
           doctor_expense: otSchedule.doctor_expense,
           // Include operation details for detailed breakdown
           operation_name: otSchedule.ot_operations?.[0]?.operation_name,
-          ot_expenses: otSchedule.ot_operations?.[0]?.ot_expenses || []
+          ot_expenses: otSchedule.ot_operations?.[0]?.ot_expenses || [],
+          room_name: otSchedule.ot_rooms?.[0]?.room_name
         });
       });
     }
@@ -571,7 +575,7 @@ export function StaffInvoices() {
         // For OT invoices, use the exact same PDF generator as when scheduling OT
         const otExpenses = invoice.ot_expenses || [];
         
-        // Prepare items array in the format expected by generateOTPDF
+        // Prepare items array in the EXACT format used by OT scheduling
         const items: Array<{
           description: string;
           quantity: number | string;
@@ -580,32 +584,56 @@ export function StaffInvoices() {
           isHeader?: boolean;
         }> = [];
 
-        // Add doctor fee if present
-        if (invoice.doctor_expense && invoice.doctor_expense > 0) {
+        // Doctor Charges Section (exactly like OT scheduling)
+        const doctorCharges = invoice.doctor_expense || 0;
+        if (doctorCharges > 0) {
           items.push({
-            description: 'Doctor Fee',
+            description: `--- DOCTOR CHARGES ---`,
+            quantity: '',
+            unitPrice: '',
+            totalPrice: '',
+            isHeader: true
+          });
+          items.push({
+            description: `Doctor Fee (${invoice.doctor_name || 'Dr. Unknown'})`,
             quantity: 1,
-            unitPrice: invoice.doctor_expense,
-            totalPrice: invoice.doctor_expense
+            unitPrice: doctorCharges,
+            totalPrice: doctorCharges
           });
         }
 
-        // Add detailed expenses
+        // Hospital Charges Section (exactly like OT scheduling)
         if (otExpenses && otExpenses.length > 0) {
+          items.push({
+            description: `--- ${(invoice.operation_name || 'SURGERY').toUpperCase()} ---`,
+            quantity: '',
+            unitPrice: '',
+            totalPrice: '',
+            isHeader: true
+          });
+
+          // Add expenses for this operation
           otExpenses.forEach((expense: any) => {
             items.push({
-              description: expense.expense_name || 'OT Expense',
+              description: expense.expense_name,
               quantity: 1,
-              unitPrice: expense.cost || 0,
-              totalPrice: expense.cost || 0
+              unitPrice: expense.cost,
+              totalPrice: expense.cost
             });
           });
         } else {
           // Fallback if no detailed expenses
-          const otCharges = (invoice.total_cost || 0) - (invoice.doctor_expense || 0);
+          const otCharges = (invoice.total_cost || 0) - doctorCharges;
           if (otCharges > 0) {
             items.push({
-              description: 'Operation Theater Charges',
+              description: `--- ${(invoice.operation_name || 'SURGERY').toUpperCase()} ---`,
+              quantity: '',
+              unitPrice: '',
+              totalPrice: '',
+              isHeader: true
+            });
+            items.push({
+              description: 'Operation Charges',
               quantity: 1,
               unitPrice: otCharges,
               totalPrice: otCharges
@@ -623,9 +651,6 @@ export function StaffInvoices() {
           });
         }
 
-        // Fetch room name and other details
-        const roomName = invoice.room?.room_name || 'Unknown Room';
-        
         const otInvoiceData = {
           invoiceNumber: invoice.invoice_number,
           patientName: invoice.patient_name || 'Unknown Patient',
@@ -633,7 +658,7 @@ export function StaffInvoices() {
           patientPhone: 'Not provided', // Not available in this context
           doctorName: invoice.doctor_name || 'Unknown Doctor',
           procedure: invoice.operation_name || invoice.notes || 'Surgery',
-          room: roomName,
+          room: invoice.room_name || 'Unknown Room',
           date: format(new Date(invoice.operation_date || invoice.created_at), 'MMM dd, yyyy'),
           totalAmount: invoice.total_cost || 0,
           items: items
