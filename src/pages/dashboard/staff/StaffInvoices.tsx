@@ -77,27 +77,22 @@ export default function StaffInvoices() {
   // Combine all invoices into a single array with type information
   const allInvoices = [
     ...(hospitalInvoices?.map(inv => {
-      // Determine invoice type based on description and content
-      let type = 'hospital';
+      // All hospital invoices keep type 'hospital' for filtering, but get descriptive labels
       let typeLabel = 'Hospital Service';
       
       if (inv.description?.toLowerCase().includes('emergency consultation')) {
-        type = 'emergency';
-        typeLabel = 'Emergency';
+        typeLabel = 'Emergency Consultation';
       } else if (inv.description?.toLowerCase().includes('lab') || inv.description?.toLowerCase().includes('test')) {
-        type = 'lab';
-        typeLabel = 'Lab Service';
+        typeLabel = 'Hospital Lab Service';
       } else if (inv.description?.toLowerCase().includes('xray') || inv.description?.toLowerCase().includes('x-ray') || inv.description?.toLowerCase().includes('radiology')) {
-        type = 'xray';
-        typeLabel = 'X-ray Service';
+        typeLabel = 'Hospital X-ray Service';
       } else if (inv.description?.toLowerCase().includes('ot') || inv.description?.toLowerCase().includes('operation') || inv.description?.toLowerCase().includes('surgery')) {
-        type = 'ot';
-        typeLabel = 'Operation Theater';
+        typeLabel = 'Hospital OT Service';
       }
       
       return {
         ...inv,
-        type,
+        type: 'hospital', // Always hospital type for filtering
         typeLabel,
         displayAmount: inv.amount,
         displayNumber: inv.invoice_number,
