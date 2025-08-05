@@ -44,7 +44,7 @@ const usePatientNames = () => {
   });
 };
 
-const useDoctorNames = () => {
+const useDoctorNames = (enabled: boolean = true) => {
   return useQuery({
     queryKey: ["doctor-names"],
     queryFn: async () => {
@@ -64,8 +64,11 @@ const useDoctorNames = () => {
           name: `Dr. ${doctor.first_name.trim()} ${doctor.last_name.trim()}`
         }));
     },
+    enabled,
     staleTime: 5 * 60 * 1000, // 5 minutes
     gcTime: 10 * 60 * 1000, // 10 minutes
+    refetchOnMount: true,
+    refetchOnWindowFocus: false,
   });
 };
 
@@ -112,7 +115,7 @@ export function XrayDialog({ open, onOpenChange, onSuccess }: XrayDialogProps) {
   const queryClient = useQueryClient();
   const createPatientWithProfile = useCreatePatientWithProfile();
   const { data: searchResults } = useSearchPatientsWithNames(searchTerm);
-  const { data: doctors, isLoading: doctorsLoading, error: doctorsError } = useDoctorNames();
+  const { data: doctors, isLoading: doctorsLoading, error: doctorsError } = useDoctorNames(open);
   const { logCreate } = useAuditLogger();
   const { user } = useAuth();
 
