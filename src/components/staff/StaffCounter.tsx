@@ -599,8 +599,8 @@ export function StaffCounter() {
                               <Badge variant={appointment.payment_status === 'paid' ? 'default' : 'destructive'}>
                                 {appointment.payment_status || 'pending'}
                               </Badge>
-                              {/* Check if appointment is marked as free */}
-                              {(appointment.invoice?.amount === 0 || appointment.invoice?.description?.includes('Free')) && (
+                              {/* Check if appointment is marked as free by doctor */}
+                              {appointment.cleared_at && (
                                 <Badge className="bg-yellow-100 text-yellow-700 text-xs">
                                   <Gift className="w-3 h-3 mr-1" />
                                   Marked as Free
