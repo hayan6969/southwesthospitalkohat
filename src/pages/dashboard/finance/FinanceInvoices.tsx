@@ -81,11 +81,20 @@ export default function FinanceInvoices() {
       } else if (invoice.type === 'pharmacy') {
         await generatePharmacyInvoiceFromData(invoice);
       } else if (invoice.type === 'lab') {
-        // For lab invoices, use the detailed invoice PDF with lab-specific formatting
+        // For lab invoices, fetch patient data first
+        const [patientRes, patientProfileRes] = await Promise.all([
+          supabase.from('patients').select('patient_number').eq('id', invoice.patient_id).single(),
+          supabase.from('profiles').select('first_name, last_name').eq('id', invoice.patient_id).single()
+        ]);
+
         await generateDetailedInvoicePDF({
           ...invoice,
-          test_name: invoice.description || 'Laboratory Service', // Use description as test name
-          type: 'lab'
+          test_name: invoice.test_name || invoice.description || 'Laboratory Service',
+          type: 'lab',
+          patient: {
+            patient_number: patientRes.data?.patient_number || 'Walk-in',
+            profiles: patientProfileRes.data
+          }
         });
       } else if (invoice.type === 'xray') {
         // For X-ray invoices, fetch patient and doctor data for proper PDF generation
