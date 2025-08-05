@@ -146,12 +146,7 @@ export function LabOrderConfirmationDialog({
               Back to Edit
             </Button>
             <Button
-              onClick={() => {
-                console.log("🔘 Confirm button clicked, isProcessing:", isProcessing);
-                if (!isProcessing) {
-                  onConfirm();
-                }
-              }}
+              onClick={onConfirm}
               disabled={isProcessing}
               className="bg-green-600 hover:bg-green-700 text-white"
             >
