@@ -76,6 +76,8 @@ export default function DashboardAdmin() {
   // Account management filters
   const [roleFilter, setRoleFilter] = useState("all");
   const [searchTerm, setSearchTerm] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
   
   // System logs filters
   const [actionFilter, setActionFilter] = useState("all");
@@ -95,6 +97,13 @@ export default function DashboardAdmin() {
       user.email.toLowerCase().includes(searchTerm.toLowerCase());
     return matchesRole && matchesSearch;
   }) || [];
+
+  // Pagination for users
+  const totalPages = Math.ceil(filteredUsers.length / itemsPerPage);
+  const paginatedUsers = filteredUsers.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
 
   // Filter audit logs
   const filteredLogs = auditLogs?.filter(log => {
@@ -517,14 +526,20 @@ export default function DashboardAdmin() {
                 <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
                   <div className="flex flex-col sm:flex-row gap-4 mb-6">
                     <div className="flex-1">
-                      <Input
-                        placeholder="Search users..."
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        className="w-full"
-                      />
+                       <Input
+                         placeholder="Search users..."
+                         value={searchTerm}
+                         onChange={(e) => {
+                           setSearchTerm(e.target.value);
+                           setCurrentPage(1);
+                         }}
+                         className="w-full"
+                       />
                     </div>
-                    <Select value={roleFilter} onValueChange={setRoleFilter}>
+                     <Select value={roleFilter} onValueChange={(value) => {
+                       setRoleFilter(value);
+                       setCurrentPage(1);
+                     }}>
                       <SelectTrigger className="w-48">
                         <SelectValue placeholder="Filter by role" />
                       </SelectTrigger>
@@ -558,7 +573,7 @@ export default function DashboardAdmin() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {filteredUsers.map((user) => (
+                        {paginatedUsers.map((user) => (
                           <TableRow key={user.id}>
                             <TableCell className="font-medium">
                               {user.first_name} {user.last_name}
@@ -614,9 +629,49 @@ export default function DashboardAdmin() {
                           </TableRow>
                         ))}
                       </TableBody>
-                    </Table>
-                  </div>
-                </div>
+                     </Table>
+                   </div>
+                   
+                   {/* Pagination */}
+                   {totalPages > 1 && (
+                     <div className="flex items-center justify-between pt-4 border-t">
+                       <div className="text-sm text-gray-600">
+                         Showing {(currentPage - 1) * itemsPerPage + 1} to {Math.min(currentPage * itemsPerPage, filteredUsers.length)} of {filteredUsers.length} users
+                       </div>
+                       <div className="flex items-center gap-2">
+                         <Button
+                           variant="outline"
+                           size="sm"
+                           onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                           disabled={currentPage === 1}
+                         >
+                           Previous
+                         </Button>
+                         <div className="flex items-center gap-1">
+                           {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                             <Button
+                               key={page}
+                               variant={currentPage === page ? "default" : "outline"}
+                               size="sm"
+                               onClick={() => setCurrentPage(page)}
+                               className="w-8 h-8 p-0"
+                             >
+                               {page}
+                             </Button>
+                           ))}
+                         </div>
+                         <Button
+                           variant="outline"
+                           size="sm"
+                           onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                           disabled={currentPage === totalPages}
+                         >
+                           Next
+                         </Button>
+                       </div>
+                     </div>
+                   )}
+                 </div>
               </div>
             </TabsContent>
 
