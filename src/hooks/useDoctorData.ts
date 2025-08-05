@@ -9,7 +9,12 @@ export const useDoctorPatients = (searchTerm: string = '', page: number = 1, pag
   return useQuery({
     queryKey: ['doctor-patients', profile?.id, searchTerm, page, pageSize],
     queryFn: async () => {
-      if (!profile?.id) return { patients: [], totalCount: 0 };
+      if (!profile?.id) {
+        console.log('Doctor patients: No profile ID found');
+        return { patients: [], totalCount: 0 };
+      }
+      
+      console.log('Doctor patients: Fetching for doctor ID:', profile.id);
       
       // First, get all appointments for this doctor to find all their patients
       const { data: appointments, error: appointmentsError } = await supabase
@@ -18,12 +23,20 @@ export const useDoctorPatients = (searchTerm: string = '', page: number = 1, pag
         .eq('doctor_id', profile.id)
         .not('patient_id', 'is', null);
 
-      if (appointmentsError) throw appointmentsError;
+      if (appointmentsError) {
+        console.error('Doctor patients: Appointments error:', appointmentsError);
+        throw appointmentsError;
+      }
+
+      console.log('Doctor patients: Found appointments:', appointments?.length || 0);
 
       // Get unique patient IDs
       const uniquePatientIds = appointments ? [...new Set(appointments.map(apt => apt.patient_id).filter(Boolean))] : [];
       
+      console.log('Doctor patients: Unique patient IDs:', uniquePatientIds.length);
+      
       if (uniquePatientIds.length === 0) {
+        console.log('Doctor patients: No patients found for this doctor');
         return { patients: [], totalCount: 0 };
       }
 
@@ -38,6 +51,7 @@ export const useDoctorPatients = (searchTerm: string = '', page: number = 1, pag
 
       // Add search filter if provided
       if (searchTerm.trim()) {
+        console.log('Doctor patients: Applying search term:', searchTerm);
         // Search by patient number, first name, last name, or phone
         query = query.or(`
           patient_number.ilike.%${searchTerm}%,
@@ -55,7 +69,15 @@ export const useDoctorPatients = (searchTerm: string = '', page: number = 1, pag
 
       const { data, error, count } = await query;
 
-      if (error) throw error;
+      if (error) {
+        console.error('Doctor patients: Query error:', error);
+        throw error;
+      }
+
+      console.log('Doctor patients: Final result:', { 
+        patientsCount: data?.length || 0, 
+        totalCount: count 
+      });
 
       return {
         patients: data || [],
