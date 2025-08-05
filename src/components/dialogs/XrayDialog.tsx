@@ -51,13 +51,21 @@ const useDoctorNames = () => {
       const { data, error } = await supabase
         .from("profiles")
         .select("id, first_name, last_name")
-        .eq("role", "doctor");
+        .eq("role", "doctor")
+        .eq("is_active", true)
+        .order("first_name");
       if (error) throw error;
-      return data.map(doctor => ({
-        id: doctor.id,
-        name: `Dr. ${doctor.first_name} ${doctor.last_name}`
-      }));
+      
+      // Filter out any doctors with missing names and format properly
+      return data
+        .filter(doctor => doctor.first_name && doctor.last_name)
+        .map(doctor => ({
+          id: doctor.id,
+          name: `Dr. ${doctor.first_name.trim()} ${doctor.last_name.trim()}`
+        }));
     },
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    gcTime: 10 * 60 * 1000, // 10 minutes
   });
 };
 
@@ -104,7 +112,7 @@ export function XrayDialog({ open, onOpenChange, onSuccess }: XrayDialogProps) {
   const queryClient = useQueryClient();
   const createPatientWithProfile = useCreatePatientWithProfile();
   const { data: searchResults } = useSearchPatientsWithNames(searchTerm);
-  const { data: doctors } = useDoctorNames();
+  const { data: doctors, isLoading: doctorsLoading, error: doctorsError } = useDoctorNames();
   const { logCreate } = useAuditLogger();
   const { user } = useAuth();
 
@@ -573,18 +581,36 @@ export function XrayDialog({ open, onOpenChange, onSuccess }: XrayDialogProps) {
                 <Label htmlFor="doctor">Doctor</Label>
                 <Select value={doctorId} onValueChange={setDoctorId}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Select a doctor (optional)" />
+                    <SelectValue placeholder={
+                      doctorsLoading ? "Loading doctors..." : 
+                      doctorsError ? "Error loading doctors" : 
+                      "Select a doctor (optional)"
+                    } />
                   </SelectTrigger>
-                  <SelectContent className="bg-white border border-gray-200 shadow-lg z-50">
-                    {doctors?.map((doctor) => (
-                      <SelectItem 
-                        key={doctor.id} 
-                        value={doctor.id}
-                        className="bg-white hover:bg-gray-100 cursor-pointer"
-                      >
-                        {doctor.name}
+                  <SelectContent className="bg-white border border-gray-200 shadow-lg z-50 max-h-60 overflow-y-auto">
+                    {doctorsLoading ? (
+                      <SelectItem value="loading" disabled className="text-gray-500">
+                        Loading doctors...
                       </SelectItem>
-                    ))}
+                    ) : doctorsError ? (
+                      <SelectItem value="error" disabled className="text-red-500">
+                        Error loading doctors
+                      </SelectItem>
+                    ) : doctors && doctors.length > 0 ? (
+                      doctors.map((doctor) => (
+                        <SelectItem 
+                          key={doctor.id} 
+                          value={doctor.id}
+                          className="bg-white hover:bg-gray-100 cursor-pointer px-3 py-2"
+                        >
+                          {doctor.name}
+                        </SelectItem>
+                      ))
+                    ) : (
+                      <SelectItem value="no-doctors" disabled className="text-gray-500">
+                        No doctors available
+                      </SelectItem>
+                    )}
                   </SelectContent>
                 </Select>
               </div>
