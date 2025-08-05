@@ -403,12 +403,23 @@ export default function FinanceInvoices() {
   // Combine all invoices into a single array with type information
   const allInvoices = [
     ...(hospitalInvoices?.map(inv => {
-      // Check if this is an emergency consultation
-      const isEmergency = inv.description?.toLowerCase().includes('emergency consultation');
+      // Determine invoice type based on description and content  
+      let type = 'hospital';
+      let typeLabel = 'Hospital Service';
       
-      // Hospital invoices should stay as hospital type unless explicitly marked as emergency
-      const type = isEmergency ? 'emergency' : 'hospital';
-      const typeLabel = isEmergency ? 'Emergency' : 'Hospital Service';
+      if (inv.description?.toLowerCase().includes('emergency consultation')) {
+        type = 'emergency';
+        typeLabel = 'Emergency';
+      } else if (inv.description?.toLowerCase().includes('lab') || inv.description?.toLowerCase().includes('test')) {
+        type = 'lab';
+        typeLabel = 'Lab Service';
+      } else if (inv.description?.toLowerCase().includes('xray') || inv.description?.toLowerCase().includes('x-ray') || inv.description?.toLowerCase().includes('radiology')) {
+        type = 'xray';
+        typeLabel = 'X-ray Service';
+      } else if (inv.description?.toLowerCase().includes('ot') || inv.description?.toLowerCase().includes('operation') || inv.description?.toLowerCase().includes('surgery')) {
+        type = 'ot';
+        typeLabel = 'Operation Theater';
+      }
       
       return {
         ...inv,
