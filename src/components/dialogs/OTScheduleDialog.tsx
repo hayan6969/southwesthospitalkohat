@@ -283,24 +283,8 @@ export function OTScheduleDialog() {
 
       const scheduleData = scheduleResults.map(result => result.data);
 
-      // Generate invoice for total hospital portion
+      // Generate invoice number for OT scheduling (but don't create duplicate in invoices table)
       const invoiceNumber = `OT-${Date.now()}`;
-      const hospitalAmount = getTotalOperationCost(); // Total hospital portion
-      const { data: invoiceData, error: invoiceError } = await supabase
-        .from("invoices")
-        .insert({
-          patient_id: patientId,
-          amount: hospitalAmount, // Only hospital portion
-          status: 'paid',
-          paid_at: new Date().toISOString(),
-          invoice_number: invoiceNumber,
-          description: `OT Operations: ${getSelectedOperationsDetails().map(op => op.operation_name).join(', ')} - Dr. ${doctorNames?.find(d => d.id === doctorId)?.first_name} ${doctorNames?.find(d => d.id === doctorId)?.last_name}`,
-          due_date: new Date().toISOString().split('T')[0]
-        })
-        .select()
-        .single();
-
-      if (invoiceError) throw invoiceError;
 
       // Create doctor payment record for OT
       const doctorExpenseAmount = parseFloat(doctorExpense) || 0;
