@@ -848,7 +848,7 @@ export const generateDailyClosingPDF = async (data: {
   const checkNewPage = (requiredSpace: number = 30) => {
     if (yPosition + requiredSpace > pageHeight - 20) {
       doc.addPage();
-      yPosition = 30;
+      yPosition = 20;
       return true;
     }
     return false;
@@ -856,103 +856,132 @@ export const generateDailyClosingPDF = async (data: {
 
   // Helper function to draw section header
   const drawSectionHeader = (title: string) => {
-    checkNewPage(35);
+    checkNewPage(25);
     
     // Draw background for section header
     doc.setFillColor(240, 240, 240);
-    doc.rect(15, yPosition - 5, pageWidth - 30, 18, 'F');
+    doc.rect(15, yPosition - 2, pageWidth - 30, 12, 'F');
     doc.setDrawColor(200, 200, 200);
-    doc.rect(15, yPosition - 5, pageWidth - 30, 18);
+    doc.rect(15, yPosition - 2, pageWidth - 30, 12);
     
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(14);
+    doc.setFontSize(12);
     doc.setTextColor(40, 40, 40);
     doc.text(title, pageWidth / 2, yPosition + 6, { align: 'center' });
-    yPosition += 25;
+    yPosition += 15;
   };
 
   // Helper function to draw subsection header
   const drawSubHeader = (title: string) => {
-    checkNewPage(20);
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(12);
-    doc.setTextColor(60, 60, 60);
-    doc.text(title, 20, yPosition);
-    yPosition += 15;
-  };
-
-  // Helper function to draw professional tables
-  const drawTable = (headers: string[], rows: string[][], colWidths: number[], startX: number = 20) => {
-    const tableWidth = colWidths.reduce((sum, width) => sum + width, 0);
-    const headerHeight = 12;
-    const rowHeight = 10;
-    let tableY = yPosition;
-    
-    checkNewPage(headerHeight + (rows.length * rowHeight) + 10);
-    tableY = yPosition;
-    
-    // Draw header background
-    doc.setFillColor(50, 50, 50);
-    doc.rect(startX, tableY, tableWidth, headerHeight, 'F');
-    
-    // Draw header text
+    checkNewPage(15);
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(10);
-    doc.setTextColor(255, 255, 255);
+    doc.setTextColor(60, 60, 60);
+    doc.text(title, 20, yPosition);
+    yPosition += 8;
+  };
+
+  // Helper function to draw professional tables with proper page breaks
+  const drawTable = (headers: string[], rows: string[][], colWidths: number[], startX: number = 20) => {
+    const tableWidth = colWidths.reduce((sum, width) => sum + width, 0);
+    const headerHeight = 10;
+    const rowHeight = 8;
+    const maxRowsPerPage = Math.floor((pageHeight - yPosition - 40) / rowHeight);
     
-    let xPos = startX + 3;
-    headers.forEach((header, i) => {
-      doc.text(header, xPos, tableY + 8);
-      xPos += colWidths[i];
-    });
+    let currentRows = [...rows];
+    let isFirstPage = true;
     
-    tableY += headerHeight;
-    
-    // Draw rows
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(9);
-    doc.setTextColor(40, 40, 40);
-    
-    rows.forEach((row, rowIndex) => {
-      // Alternate row colors
-      if (rowIndex % 2 === 0) {
-        doc.setFillColor(248, 248, 248);
-        doc.rect(startX, tableY, tableWidth, rowHeight, 'F');
+    while (currentRows.length > 0) {
+      // Check if we need a new page (only for subsequent tables)
+      if (!isFirstPage) {
+        checkNewPage(headerHeight + rowHeight + 10);
+      } else {
+        // For first page, ensure we have space for header + at least 2 rows
+        checkNewPage(headerHeight + (2 * rowHeight) + 10);
       }
       
-      xPos = startX + 3;
-      row.forEach((cell, colIndex) => {
-        // Right align numeric values (amounts)
-        if (cell.includes('Rs.') || cell.includes('(') || !isNaN(parseFloat(cell))) {
-          doc.text(cell, xPos + colWidths[colIndex] - 6, tableY + 7, { align: 'right' });
-        } else {
-          doc.text(cell, xPos, tableY + 7);
-        }
-        xPos += colWidths[colIndex];
+      const availableRows = Math.floor((pageHeight - yPosition - 40) / rowHeight) - 1; // -1 for header
+      const rowsToRender = Math.min(currentRows.length, availableRows);
+      const pageRows = currentRows.splice(0, rowsToRender);
+      
+      let tableY = yPosition;
+      
+      // Draw header background
+      doc.setFillColor(50, 50, 50);
+      doc.rect(startX, tableY, tableWidth, headerHeight, 'F');
+      
+      // Draw header text
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(9);
+      doc.setTextColor(255, 255, 255);
+      
+      let xPos = startX + 2;
+      headers.forEach((header, i) => {
+        doc.text(header, xPos, tableY + 7);
+        xPos += colWidths[i];
       });
       
-      tableY += rowHeight;
-    });
-    
-    // Draw table border
-    doc.setDrawColor(150, 150, 150);
-    doc.setLineWidth(0.5);
-    doc.rect(startX, yPosition, tableWidth, tableY - yPosition);
-    
-    // Draw column lines
-    xPos = startX;
-    for (let i = 0; i < colWidths.length - 1; i++) {
-      xPos += colWidths[i];
-      doc.line(xPos, yPosition, xPos, tableY);
+      tableY += headerHeight;
+      
+      // Draw rows
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8);
+      doc.setTextColor(40, 40, 40);
+      
+      pageRows.forEach((row, rowIndex) => {
+        // Skip if we're running out of space
+        if (tableY + rowHeight > pageHeight - 20) {
+          return;
+        }
+        
+        // Alternate row colors
+        if (rowIndex % 2 === 0) {
+          doc.setFillColor(248, 248, 248);
+          doc.rect(startX, tableY, tableWidth, rowHeight, 'F');
+        }
+        
+        xPos = startX + 2;
+        row.forEach((cell, colIndex) => {
+          // Truncate long text to fit in column
+          let displayText = cell;
+          if (typeof cell === 'string' && cell.length > 20 && !cell.includes('Rs.')) {
+            displayText = cell.substring(0, 17) + '...';
+          }
+          
+          // Right align numeric values (amounts)
+          if (cell.includes('Rs.') || cell.includes('(') || !isNaN(parseFloat(cell))) {
+            doc.text(displayText, xPos + colWidths[colIndex] - 4, tableY + 6, { align: 'right' });
+          } else {
+            doc.text(displayText, xPos, tableY + 6);
+          }
+          xPos += colWidths[colIndex];
+        });
+        
+        tableY += rowHeight;
+      });
+      
+      // Draw table border
+      doc.setDrawColor(150, 150, 150);
+      doc.setLineWidth(0.3);
+      doc.rect(startX, yPosition, tableWidth, tableY - yPosition);
+      
+      // Draw column lines
+      xPos = startX;
+      for (let i = 0; i < colWidths.length - 1; i++) {
+        xPos += colWidths[i];
+        doc.line(xPos, yPosition, xPos, tableY);
+      }
+      
+      // Draw horizontal lines
+      for (let i = 0; i <= pageRows.length; i++) {
+        const lineY = yPosition + headerHeight + (i * rowHeight);
+        doc.line(startX, lineY, startX + tableWidth, lineY);
+      }
+      
+      yPosition = tableY + 10; // Reduced spacing after table
+      isFirstPage = false;
     }
     
-    // Draw horizontal lines
-    for (let i = 0; i <= rows.length; i++) {
-      const lineY = yPosition + headerHeight + (i * rowHeight);
-      doc.line(startX, lineY, startX + tableWidth, lineY);
-    }
-    
-    yPosition = tableY + 20;
     return yPosition;
   };
 
