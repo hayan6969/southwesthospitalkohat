@@ -1,6 +1,6 @@
 
 import AppLayout from "@/layouts/AppLayout";
-import { useInvoices, useUpdateInvoice } from "@/hooks/useDatabase";
+import { usePaginatedInvoices, usePaginatedPharmacyInvoices, useUpdateInvoice } from "@/hooks/useDatabase";
 import { InvoiceDialog } from "@/components/dialogs/InvoiceDialog";
 import { generateInvoicePDF, generateXrayInvoicePDF } from "@/utils/pdfGenerator";
 import { generatePharmacyInvoicePDF } from "@/utils/pharmacyPdfGenerator";
@@ -23,21 +23,15 @@ export default function StaffInvoices() {
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 20;
-  const { data: hospitalInvoices, isLoading: hospitalLoading } = useInvoices();
+  const { data: hospitalInvoicesResult, isLoading: hospitalLoading } = usePaginatedInvoices(currentPage, itemsPerPage, searchTerm);
+  const hospitalInvoices = hospitalInvoicesResult?.data || [];
+  const hospitalTotalCount = hospitalInvoicesResult?.count || 0;
   const updateInvoice = useUpdateInvoice();
 
-  // Get pharmacy invoices
-  const { data: pharmacyInvoices, isLoading: pharmacyLoading } = useQuery({
-    queryKey: ['pharmacy-invoices'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('pharmacy_invoices')
-        .select('*')
-        .order('created_at', { ascending: false });
-      if (error) throw error;
-      return data;
-    }
-  });
+  // Get pharmacy invoices with pagination
+  const { data: pharmacyInvoicesResult, isLoading: pharmacyLoading } = usePaginatedPharmacyInvoices(currentPage, itemsPerPage, searchTerm);
+  const pharmacyInvoices = pharmacyInvoicesResult?.data || [];
+  const pharmacyTotalCount = pharmacyInvoicesResult?.count || 0;
 
   // Get lab reports for invoicing (only those without linked invoices)
   const { data: labReports, isLoading: labLoading } = useQuery({
@@ -391,7 +385,7 @@ export default function StaffInvoices() {
             {totalPages > 1 && (
               <div className="flex items-center justify-between px-6 py-4 border-t">
                 <div className="text-sm text-gray-700">
-                  Showing {startIndex + 1} to {Math.min(endIndex, filteredInvoices.length)} of {filteredInvoices.length} results
+                  Showing {startIndex + 1} to {Math.min(endIndex, filteredInvoices.length)} of {hospitalTotalCount + pharmacyTotalCount}+ total invoices
                 </div>
                 <div className="flex items-center gap-2">
                   <Button

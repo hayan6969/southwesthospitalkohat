@@ -255,6 +255,93 @@ export const usePaginatedMedicines = (page: number = 1, pageSize: number = 10, s
   });
 };
 
+// Hook for paginated invoices with search
+export const usePaginatedInvoices = (page: number = 1, pageSize: number = 20, searchTerm: string = '') => {
+  return useQuery({
+    queryKey: ['invoices-paginated', page, pageSize, searchTerm],
+    queryFn: async () => {
+      console.log(`🔍 Fetching invoices page ${page} with search: "${searchTerm}"`);
+      
+      let query = supabase
+        .from('invoices')
+        .select(`
+          *,
+          patient:patients(*,profiles(first_name, last_name, phone, email))
+        `, { count: 'exact' })
+        .order('created_at', { ascending: false });
+
+      // Apply search filter if provided
+      if (searchTerm.trim()) {
+        query = query.or(`invoice_number.ilike.%${searchTerm}%,description.ilike.%${searchTerm}%`);
+      }
+
+      // Apply pagination
+      const from = (page - 1) * pageSize;
+      const to = from + pageSize - 1;
+      query = query.range(from, to);
+
+      const { data, error, count } = await query;
+
+      if (error) {
+        console.error('❌ Error fetching paginated invoices:', error);
+        throw error;
+      }
+      
+      console.log(`✅ Page ${page} fetched: ${data?.length} records, Total: ${count}`);
+      
+      return {
+        data: data || [],
+        count: count || 0,
+        page,
+        pageSize,
+        totalPages: Math.ceil((count || 0) / pageSize)
+      };
+    }
+  });
+};
+
+// Hook for paginated pharmacy invoices
+export const usePaginatedPharmacyInvoices = (page: number = 1, pageSize: number = 20, searchTerm: string = '') => {
+  return useQuery({
+    queryKey: ['pharmacy-invoices-paginated', page, pageSize, searchTerm],
+    queryFn: async () => {
+      console.log(`🔍 Fetching pharmacy invoices page ${page} with search: "${searchTerm}"`);
+      
+      let query = supabase
+        .from('pharmacy_invoices')
+        .select('*', { count: 'exact' })
+        .order('created_at', { ascending: false });
+
+      // Apply search filter if provided
+      if (searchTerm.trim()) {
+        query = query.or(`invoice_number.ilike.%${searchTerm}%,customer_name.ilike.%${searchTerm}%`);
+      }
+
+      // Apply pagination
+      const from = (page - 1) * pageSize;
+      const to = from + pageSize - 1;
+      query = query.range(from, to);
+
+      const { data, error, count } = await query;
+
+      if (error) {
+        console.error('❌ Error fetching paginated pharmacy invoices:', error);
+        throw error;
+      }
+      
+      console.log(`✅ Pharmacy page ${page} fetched: ${data?.length} records, Total: ${count}`);
+      
+      return {
+        data: data || [],
+        count: count || 0,
+        page,
+        pageSize,
+        totalPages: Math.ceil((count || 0) / pageSize)
+      };
+    }
+  });
+};
+
 // Hook for all medicines (used for counts and quick searches)
 export const useAllMedicines = () => {
   return useQuery({
