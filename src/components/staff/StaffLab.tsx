@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -67,6 +67,29 @@ export function StaffLab() {
            report.test_name.toLowerCase().includes(query) ||
            report.patient_id.toLowerCase().includes(query);
   });
+
+  // Group filtered reports by patient to avoid duplicate rows
+  const groupedReports = useMemo(() => {
+    const grouped = new Map();
+    
+    filteredReports.forEach(report => {
+      const key = `${report.patient_id}_${report.doctor_id}_${format(new Date(report.test_date), 'yyyy-MM-dd')}`;
+      
+      if (!grouped.has(key)) {
+        grouped.set(key, {
+          ...report,
+          tests: [report.test_name]
+        });
+      } else {
+        const existing = grouped.get(key);
+        if (!existing.tests.includes(report.test_name)) {
+          existing.tests.push(report.test_name);
+        }
+      }
+    });
+    
+    return Array.from(grouped.values());
+  }, [filteredReports]);
 
   // Get unique patients from pending reports
   const uniquePatients = Array.from(new Set(pendingReports.map(r => r.patient_id)))
@@ -432,8 +455,8 @@ export function StaffLab() {
                         ))}
                       </TableRow>
                     ))
-                  ) : filteredReports.length > 0 ? (
-                    filteredReports.map((report) => (
+                   ) : groupedReports.length > 0 ? (
+                    groupedReports.map((report) => (
                       <TableRow key={report.id}>
                         <TableCell>
                           <div>
@@ -445,16 +468,11 @@ export function StaffLab() {
                             </div>
                           </div>
                         </TableCell>
-                        <TableCell>
-                          <div className="max-w-xs">
-                            {/* Group reports by patient and show comma-separated tests */}
-                            {filteredReports
-                              .filter(r => r.patient_id === report.patient_id)
-                              .map(r => r.test_name)
-                              .filter((value, index, array) => array.indexOf(value) === index)
-                              .join(', ')}
-                          </div>
-                        </TableCell>
+                         <TableCell>
+                           <div className="max-w-xs">
+                             {report.tests.join(', ')}
+                           </div>
+                         </TableCell>
                         <TableCell>
                           {getDoctorName(report.doctor_id, doctorNames || [])}
                         </TableCell>
