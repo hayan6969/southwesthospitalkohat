@@ -88,6 +88,11 @@ export default function StaffInvoices() {
         typeLabel = 'Emergency Consultation';
       }
       
+      // Debug specific invoice
+      if (inv.invoice_number === 'INV-1754351253847') {
+        console.log('🏥 HOSPITAL SOURCE - INV-1754351253847:', { type, typeLabel, description: inv.description });
+      }
+      
       return {
         ...inv,
         type,
@@ -95,48 +100,90 @@ export default function StaffInvoices() {
         displayAmount: inv.amount,
         displayNumber: inv.invoice_number,
         displayDate: inv.created_at,
-        displayStatus: inv.status
+        displayStatus: inv.status,
+        source: 'hospital' // Add source tracking
       };
     }) || []),
-    ...(pharmacyInvoices?.map(inv => ({
-      ...inv,
-      type: 'pharmacy',
-      typeLabel: 'Pharmacy',
-      displayAmount: inv.final_amount,
-      displayNumber: inv.invoice_number,
-      displayDate: inv.created_at,
-      displayStatus: inv.status
-    })) || []),
-    ...(labReports?.map(lab => ({
-      ...lab,
-      type: 'lab',
-      typeLabel: 'Lab Test',
-      displayAmount: lab.price,
-      displayNumber: `LAB-${lab.id.slice(0, 8)}`,
-      displayDate: lab.created_at,
-      displayStatus: lab.status
-    })) || []),
-    ...(xrayReports?.map(xray => ({
-      ...xray,
-      type: 'xray',
-      typeLabel: 'X-ray',
-      displayAmount: xray.price,
-      displayNumber: `XR-${xray.id.slice(0, 8)}`,
-      displayDate: xray.created_at,
-      displayStatus: xray.status
-    })) || []),
-    ...(otSchedules?.map(ot => ({
-      ...ot,
-      type: 'ot',
-      typeLabel: 'Operation Theater',
-      displayAmount: ot.total_cost,
-      displayNumber: `OT-${ot.id.slice(0, 8)}`,
-      displayDate: ot.created_at,
-      displayStatus: ot.status
-    })) || [])
+    ...(pharmacyInvoices?.map(inv => {
+      if (inv.invoice_number === 'INV-1754351253847') {
+        console.log('💊 PHARMACY SOURCE - INV-1754351253847');
+      }
+      return {
+        ...inv,
+        type: 'pharmacy',
+        typeLabel: 'Pharmacy',
+        displayAmount: inv.final_amount,
+        displayNumber: inv.invoice_number,
+        displayDate: inv.created_at,
+        displayStatus: inv.status,
+        source: 'pharmacy'
+      };
+    }) || []),
+    ...(labReports?.map(lab => {
+      const displayNumber = `LAB-${lab.id.slice(0, 8)}`;
+      if (displayNumber === 'INV-1754351253847' || lab.id === 'INV-1754351253847') {
+        console.log('🧪 LAB SOURCE - Found match:', { 
+          id: lab.id, 
+          displayNumber, 
+          originalData: lab 
+        });
+      }
+      return {
+        ...lab,
+        type: 'lab',
+        typeLabel: 'Lab Test',
+        displayAmount: lab.price,
+        displayNumber,
+        displayDate: lab.created_at,
+        displayStatus: lab.status,
+        source: 'lab'
+      };
+    }) || []),
+    ...(xrayReports?.map(xray => {
+      const displayNumber = `XR-${xray.id.slice(0, 8)}`;
+      if (displayNumber === 'INV-1754351253847') {
+        console.log('📷 XRAY SOURCE - INV-1754351253847');
+      }
+      return {
+        ...xray,
+        type: 'xray',
+        typeLabel: 'X-ray',
+        displayAmount: xray.price,
+        displayNumber,
+        displayDate: xray.created_at,
+        displayStatus: xray.status,
+        source: 'xray'
+      };
+    }) || []),
+    ...(otSchedules?.map(ot => {
+      const displayNumber = `OT-${ot.id.slice(0, 8)}`;
+      if (displayNumber === 'INV-1754351253847') {
+        console.log('🏥 OT SOURCE - INV-1754351253847');
+      }
+      return {
+        ...ot,
+        type: 'ot',
+        typeLabel: 'Operation Theater',
+        displayAmount: ot.total_cost,
+        displayNumber,
+        displayDate: ot.created_at,
+        displayStatus: ot.status,
+        source: 'ot'
+      };
+    }) || [])
   ];
 
   const isLoading = hospitalLoading || pharmacyLoading || labLoading || xrayLoading || otLoading;
+  
+  // Final check - find where INV-1754351253847 ended up
+  const targetInvoice = allInvoices.find(inv => inv.displayNumber === 'INV-1754351253847');
+  if (targetInvoice) {
+    console.log('🎯 FINAL RESULT - INV-1754351253847:', {
+      source: (targetInvoice as any).source,
+      type: targetInvoice.type,
+      typeLabel: targetInvoice.typeLabel
+    });
+  }
 
   // Filter invoices based on type and search
   const filteredInvoices = allInvoices.filter(invoice => {
