@@ -14,6 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { format } from "date-fns";
+import { formatDateForDisplay, formatTimeForDisplay } from "@/utils/timezone";
 import { toast } from "sonner";
 import { PatientDetailDialog } from "@/components/dialogs/PatientDetailDialog";
 import { supabase } from "@/integrations/supabase/client";
@@ -402,10 +403,10 @@ export default function DoctorSchedule() { // Fixed ordering syntax
                       <Clock className="w-4 h-4 text-gray-400" />
                       <div>
                         <div className="font-medium">
-                          {format(new Date(appointment.appointment_date), 'MMM d, yyyy')}
+                          {formatDateForDisplay(appointment.appointment_date)}
                         </div>
                         <div className="text-sm text-gray-500">
-                          {format(new Date(appointment.appointment_date), 'h:mm a')}
+                          {formatTimeForDisplay(appointment.appointment_date)}
                         </div>
                       </div>
                     </div>
