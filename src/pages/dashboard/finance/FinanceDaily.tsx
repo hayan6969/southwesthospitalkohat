@@ -213,11 +213,14 @@ export default function FinanceDaily() {
         const positiveInvoices = pharmacyInvoicesWithItems.filter(inv => (inv.final_amount || 0) >= 0);
         const negativeInvoices = pharmacyInvoicesWithItems.filter(inv => (inv.final_amount || 0) < 0);
         
-        // Revenue only from positive sales
-        pharmacyRevenue = positiveInvoices.reduce((sum, inv) => sum + (inv.final_amount || 0), 0);
-        
         // Returns from negative invoices (make positive for display)
         pharmacyReturnsFromInvoices = Math.abs(negativeInvoices.reduce((sum, inv) => sum + (inv.final_amount || 0), 0));
+        
+        // Calculate gross revenue from positive sales
+        const grossPharmacyRevenue = positiveInvoices.reduce((sum, inv) => sum + (inv.final_amount || 0), 0);
+        
+        // Net revenue after subtracting full return amounts
+        pharmacyRevenue = grossPharmacyRevenue - pharmacyReturnsFromInvoices;
         
         // Calculate gross profit only from positive sales based on selling price - purchase price
         const grossPharmacyProfit = positiveInvoices.reduce((totalProfit, invoice) => {
