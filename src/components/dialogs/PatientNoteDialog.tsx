@@ -17,7 +17,8 @@ export function PatientNoteDialog({ isOpen, onClose }: PatientNoteDialogProps) {
   const [selectedPatientId, setSelectedPatientId] = useState('');
   const [note, setNote] = useState('');
 
-  const { data: doctorPatients, isLoading: patientsLoading } = useDoctorPatients();
+  const { data: doctorPatientsData, isLoading: patientsLoading } = useDoctorPatients();
+  const doctorPatients = doctorPatientsData?.patients || [];
   const createNote = useCreatePatientNote();
 
   const handleSave = async () => {

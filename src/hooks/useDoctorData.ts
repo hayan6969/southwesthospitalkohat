@@ -2,38 +2,65 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 
-// Hook to get patients who have had appointments with the current doctor
-export const useDoctorPatients = () => {
+// Enhanced hook to get patients who have had appointments with the current doctor
+export const useDoctorPatients = (searchTerm: string = '', page: number = 1, pageSize: number = 20) => {
   const { profile } = useAuth();
   
   return useQuery({
-    queryKey: ['doctor-patients', profile?.id],
+    queryKey: ['doctor-patients', profile?.id, searchTerm, page, pageSize],
     queryFn: async () => {
-      if (!profile?.id) return [];
+      if (!profile?.id) return { patients: [], totalCount: 0 };
       
-      const { data, error } = await supabase
+      // First, get all appointments for this doctor to find all their patients
+      const { data: appointments, error: appointmentsError } = await supabase
         .from('appointments')
-        .select(`
-          patient_id,
-          patients (
-            *,
-            profiles (first_name, last_name, email, phone)
-          )
-        `)
+        .select('patient_id')
         .eq('doctor_id', profile.id)
-        .not('patients', 'is', null);
+        .not('patient_id', 'is', null);
+
+      if (appointmentsError) throw appointmentsError;
+
+      // Get unique patient IDs
+      const uniquePatientIds = appointments ? [...new Set(appointments.map(apt => apt.patient_id).filter(Boolean))] : [];
+      
+      if (uniquePatientIds.length === 0) {
+        return { patients: [], totalCount: 0 };
+      }
+
+      // Build query for patients with search functionality
+      let query = supabase
+        .from('patients')
+        .select(`
+          *,
+          profiles (first_name, last_name, email, phone)
+        `, { count: 'exact' })
+        .in('id', uniquePatientIds);
+
+      // Add search filter if provided
+      if (searchTerm.trim()) {
+        // Search by patient number, first name, last name, or phone
+        query = query.or(`
+          patient_number.ilike.%${searchTerm}%,
+          profiles.first_name.ilike.%${searchTerm}%,
+          profiles.last_name.ilike.%${searchTerm}%,
+          profiles.phone.ilike.%${searchTerm}%
+        `);
+      }
+
+      // Add pagination
+      const from = (page - 1) * pageSize;
+      const to = from + pageSize - 1;
+      
+      query = query.range(from, to).order('created_at', { ascending: false });
+
+      const { data, error, count } = await query;
 
       if (error) throw error;
 
-      // Get unique patients
-      const uniquePatientsMap = new Map();
-      data?.forEach(appointment => {
-        if (appointment.patients && !uniquePatientsMap.has(appointment.patient_id)) {
-          uniquePatientsMap.set(appointment.patient_id, appointment.patients);
-        }
-      });
-
-      return Array.from(uniquePatientsMap.values());
+      return {
+        patients: data || [],
+        totalCount: count || 0
+      };
     },
     enabled: !!profile?.id
   });
