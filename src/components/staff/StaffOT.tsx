@@ -421,7 +421,7 @@ export function StaffOT() {
                     </TableHeader>
                     <TableBody>
                       {filteredOtSchedule
-                        .filter(ot => ot.status === 'scheduled' || ot.status === 'in_progress')
+                        .filter(ot => ot.status === 'pending' || ot.status === 'in_progress')
                         .map((ot) => {
                           const patientName = getPatientName(ot.patient_id, patientNames || []);
                           
@@ -436,6 +436,7 @@ export function StaffOT() {
                               <TableCell>
                                 <Badge variant={
                                   ot.status === 'in_progress' ? 'default' :
+                                  ot.status === 'pending' ? 'secondary' :
                                   ot.status === 'scheduled' ? 'secondary' :
                                   'destructive'
                                 }>
