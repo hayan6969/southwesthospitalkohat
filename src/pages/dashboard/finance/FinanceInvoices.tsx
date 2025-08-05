@@ -67,7 +67,10 @@ export default function FinanceInvoices() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('ot_schedules')
-        .select('*')
+        .select(`
+          *,
+          doctor_name
+        `)
         .order('created_at', { ascending: false });
       if (error) throw error;
       return data;
@@ -131,8 +134,20 @@ export default function FinanceInvoices() {
           notes: invoice.notes
         });
       } else if (invoice.type === 'ot') {
-        // For OT types, create detailed invoice PDF
-        await generateDetailedInvoicePDF(invoice);
+        // For OT invoices, fetch patient data first
+        const [patientRes, patientProfileRes] = await Promise.all([
+          supabase.from('patients').select('patient_number').eq('id', invoice.patient_id).single(),
+          supabase.from('profiles').select('first_name, last_name').eq('id', invoice.patient_id).single()
+        ]);
+
+        await generateDetailedInvoicePDF({
+          ...invoice,
+          type: 'ot',
+          patient: {
+            patient_number: patientRes.data?.patient_number || 'N/A',
+            profiles: patientProfileRes.data
+          }
+        });
       } else {
         // Default to detailed invoice PDF for any other types
         await generateDetailedInvoicePDF(invoice);
