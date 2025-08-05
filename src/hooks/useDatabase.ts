@@ -732,6 +732,13 @@ export const useCreateLabOrderWithInvoice = () => {
       }
 
       // Create invoice first
+      console.log("📝 Creating invoice with data:", {
+        patient_id: labOrderData.patient_id,
+        amount: labOrderData.totalAmount,
+        description: labOrderData.invoiceDescription,
+        invoice_number: labOrderData.invoiceNumber
+      });
+      
       const { data: invoice, error: invoiceError } = await supabase
         .from('invoices')
         .insert([{
@@ -744,6 +751,8 @@ export const useCreateLabOrderWithInvoice = () => {
         }])
         .select()
         .single();
+
+      console.log("💰 Invoice created:", invoice);
 
       if (invoiceError) throw invoiceError;
 
@@ -760,10 +769,14 @@ export const useCreateLabOrderWithInvoice = () => {
         status: 'pending'
       }));
 
+      console.log("🧪 Creating lab reports with data:", labReportsData);
+      
       const { data: labReports, error: labReportsError } = await supabase
         .from('lab_reports')
         .insert(labReportsData)
         .select();
+
+      console.log("✅ Lab reports created:", labReports);
 
       if (labReportsError) throw labReportsError;
 

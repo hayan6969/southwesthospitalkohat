@@ -219,7 +219,9 @@ export function EnhancedLabDialog() {
         invoiceDescription: `Lab Tests: ${selectedLabTests.map(test => test.name).join(', ')}`
       };
 
+      console.log("🔄 Creating lab order with data:", labOrderData);
       const result = await createLabOrderWithInvoice.mutateAsync(labOrderData);
+      console.log("✅ Lab order creation result:", result);
 
       // Log the audit event
       await logCreate(
