@@ -63,18 +63,27 @@ export function StaffInvoices() {
         .from('ot_schedules')
         .select(`
           *,
-          ot_operations!inner (
-            operation_name,
-            ot_expenses (
-              expense_name,
-              cost
-            )
+          ot_operations (
+            operation_name
           ),
-          ot_rooms!inner (
+          ot_rooms (
             room_name
           )
         `)
         .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      return data;
+    }
+  });
+
+  // Fetch OT expenses separately
+  const { data: otExpenses } = useQuery({
+    queryKey: ['ot-expenses-staff'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('ot_expenses')
+        .select('*');
       
       if (error) throw error;
       return data;
@@ -206,15 +215,15 @@ export function StaffInvoices() {
           ot_notes: otSchedule.ot_notes,
           doctor_expense: otSchedule.doctor_expense,
           // Include operation details for detailed breakdown
-          operation_name: otSchedule.ot_operations?.[0]?.operation_name,
-          ot_expenses: otSchedule.ot_operations?.[0]?.ot_expenses || [],
-          room_name: otSchedule.ot_rooms?.[0]?.room_name
+          operation_name: otSchedule.ot_operations?.operation_name,
+          ot_expenses: otExpenses?.filter(expense => expense.operation_id === otSchedule.operation_id) || [],
+          room_name: otSchedule.ot_rooms?.room_name
         });
       });
     }
 
     return combined.sort((a, b) => new Date(b.invoice_date).getTime() - new Date(a.invoice_date).getTime());
-  }, [hospitalInvoices, patientNames, labReports, xrayReports, otSchedules, allPatients]);
+  }, [hospitalInvoices, patientNames, labReports, xrayReports, otSchedules, allPatients, otExpenses]);
 
   // Filter and paginate invoices
   const filteredInvoices = useMemo(() => {
@@ -657,7 +666,7 @@ export function StaffInvoices() {
           patientId: invoice.patient_id_display || 'N/A',
           patientPhone: 'Not provided', // Not available in this context
           doctorName: invoice.doctor_name || 'Unknown Doctor',
-          procedure: invoice.operation_name || invoice.notes || 'Surgery',
+          procedure: invoice.operation_name || 'Surgery',
           room: invoice.room_name || 'Unknown Room',
           date: format(new Date(invoice.operation_date || invoice.created_at), 'MMM dd, yyyy'),
           totalAmount: invoice.total_cost || 0,

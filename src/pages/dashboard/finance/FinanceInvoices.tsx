@@ -70,18 +70,27 @@ export default function FinanceInvoices() {
         .select(`
           *,
           doctor_name,
-          ot_operations!inner (
-            operation_name,
-            ot_expenses (
-              expense_name,
-              cost
-            )
+          ot_operations (
+            operation_name
           ),
-          ot_rooms!inner (
+          ot_rooms (
             room_name
           )
         `)
         .order('created_at', { ascending: false });
+      if (error) throw error;
+      return data;
+    }
+  });
+
+  // Fetch OT expenses separately
+  const { data: otExpenses } = useQuery({
+    queryKey: ['ot-expenses-finance'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('ot_expenses')
+        .select('*');
+      
       if (error) throw error;
       return data;
     }
@@ -240,7 +249,7 @@ export default function FinanceInvoices() {
           patientId: patientId,
           patientPhone: 'Not provided', // Not available in this context
           doctorName: invoice.doctor_name || 'Unknown Doctor',
-          procedure: invoice.operation_name || invoice.notes || 'Surgery',
+          procedure: invoice.operation_name || 'Surgery',
           room: invoice.room_name || 'Unknown Room',
           date: format(new Date(invoice.operation_date || invoice.created_at), 'MMM dd, yyyy'),
           totalAmount: invoice.total_cost || 0,
@@ -635,9 +644,9 @@ export default function FinanceInvoices() {
       displayDate: ot.created_at,
       displayStatus: ot.status,
       // Include operation details for detailed breakdown
-      operation_name: ot.ot_operations?.[0]?.operation_name,
-      ot_expenses: ot.ot_operations?.[0]?.ot_expenses || [],
-      room_name: ot.ot_rooms?.[0]?.room_name
+      operation_name: ot.ot_operations?.operation_name,
+      ot_expenses: otExpenses?.filter(expense => expense.operation_id === ot.operation_id) || [],
+      room_name: ot.ot_rooms?.room_name
     })) || [])
   ];
 
