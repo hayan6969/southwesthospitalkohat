@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import AppLayout from "@/layouts/AppLayout";
 import { useMedicines, usePharmacyInvoices, useCreatePharmacyInvoice } from "@/hooks/useDatabase";
 import { useAuditLogger } from "@/hooks/useAuditLogger";
+import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -32,6 +33,7 @@ export default function PharmacyInvoices() {
   const createInvoice = useCreatePharmacyInvoice();
   const { toast } = useToast();
   const { logCreate, logDownload } = useAuditLogger();
+  const { user } = useAuth();
 
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [customerName, setCustomerName] = useState("");
@@ -191,7 +193,7 @@ export default function PharmacyInvoices() {
     };
 
     await generatePharmacyInvoicePDF(invoiceData);
-    logDownload('Pharmacy Invoice PDF', `Downloaded PDF for invoice ${invoice.invoice_number}`);
+    logDownload('Pharmacy Invoice PDF', `Downloaded PDF for invoice ${invoice.invoice_number}`, user?.id);
   };
 
   // Filter invoices by date if selected

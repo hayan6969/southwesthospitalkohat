@@ -19,6 +19,8 @@ import { generateXrayInvoicePDF } from "@/utils/pdfGenerator";
 import { XrayOrderConfirmationDialog } from "./XrayOrderConfirmationDialog";
 import { useCreatePatientWithProfile } from "@/hooks/useDatabase";
 import { useSearchPatientsWithNames } from "@/hooks/useDisplayHelpers";
+import { useAuditLogger } from "@/hooks/useAuditLogger";
+import { useAuth } from "@/hooks/useAuth";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { format } from "date-fns";
@@ -103,6 +105,8 @@ export function XrayDialog({ open, onOpenChange, onSuccess }: XrayDialogProps) {
   const createPatientWithProfile = useCreatePatientWithProfile();
   const { data: searchResults } = useSearchPatientsWithNames(searchTerm);
   const { data: doctors } = useDoctorNames();
+  const { logCreate } = useAuditLogger();
+  const { user } = useAuth();
 
   // Fetch X-ray tests
   const { data: xrayTests, isLoading: testsLoading } = useQuery({
@@ -312,6 +316,19 @@ export function XrayDialog({ open, onOpenChange, onSuccess }: XrayDialogProps) {
 
         const report = await createXrayReport.mutateAsync(xrayData);
         createdReports.push(report);
+        
+        // Log the X-ray creation
+        const patientName = activeTab === "register" 
+          ? `${newPatient.first_name} ${newPatient.last_name}`.trim()
+          : selectedPatient?.profile?.first_name && selectedPatient?.profile?.last_name
+            ? `${selectedPatient.profile.first_name} ${selectedPatient.profile.last_name}`.trim()
+            : "Unknown Patient";
+            
+        logCreate(
+          'X-ray Report', 
+          `X-ray scheduled: ${test.name} for patient ${patientName} (${formatPkrAmount(test.price)})`,
+          user?.id
+        );
       }
 
       // Generate and open PDF invoice
