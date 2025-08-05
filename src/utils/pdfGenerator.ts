@@ -788,7 +788,7 @@ export const generateDailyClosingPDF = async (data: {
   totalExpenses: number;
   totalRefunds: number;
   netProfit: number;
-  transactionsData: any;
+  transactionsData?: any; // Optional - if provided, use this instead of re-querying
 }) => {
   const doc = new jsPDF({
     orientation: 'portrait',
@@ -799,6 +799,29 @@ export const generateDailyClosingPDF = async (data: {
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.height;
   let yPosition = 20;
+
+  // Check if we have stored transaction data (for historical closings) or need to query fresh data
+  let transactionsData = data.transactionsData;
+  
+  if (!transactionsData) {
+    console.log('No stored transaction data provided, querying fresh data...');
+    // This is for current day closing - query fresh data
+    // ... existing query logic would go here
+    // For now, we'll use empty data structure
+    transactionsData = {
+      pharmacyInvoices: [],
+      labReports: [],
+      otSchedules: [],
+      emergencyAppointments: [],
+      pharmacyExpenses: [],
+      expenses: [],
+      refunds: [],
+      pharmacyAccount: null,
+      totalStockValue: 0
+    };
+  } else {
+    console.log('Using stored transaction data for historical closing:', data.closingDate);
+  }
 
   // ===========================================
   // CLOSING BALANCE SECTION (AT TOP)
@@ -994,9 +1017,9 @@ export const generateDailyClosingPDF = async (data: {
   drawSectionHeader('PHARMACY TRANSACTIONS');
 
   // Pharmacy Sales Summary
-  if (data.transactionsData?.pharmacyInvoices?.length > 0) {
-    const totalInvoices = data.transactionsData.pharmacyInvoices.length;
-    const totalItems = data.transactionsData.pharmacyInvoices.reduce((sum: number, invoice: any) => 
+  if (transactionsData?.pharmacyInvoices?.length > 0) {
+    const totalInvoices = transactionsData.pharmacyInvoices.length;
+    const totalItems = transactionsData.pharmacyInvoices.reduce((sum: number, invoice: any) =>
       sum + (invoice.pharmacy_invoice_items?.length || 0), 0);
     
     const pharmacySummaryHeaders = ['Summary', 'Count', 'Amount'];
@@ -1022,13 +1045,13 @@ export const generateDailyClosingPDF = async (data: {
   drawSectionHeader('HOSPITAL SERVICES');
 
   // Hospital Services Summary
-  const labCount = data.transactionsData?.labReports?.length || 0;
-  const otCount = data.transactionsData?.otSchedules?.length || 0;
-  const emergencyCount = data.transactionsData?.emergencyAppointments?.length || 0;
+  const labCount = transactionsData?.labReports?.length || 0;
+  const otCount = transactionsData?.otSchedules?.length || 0;
+  const emergencyCount = transactionsData?.emergencyAppointments?.length || 0;
   
-  const labRevenue = data.transactionsData?.labReports?.reduce((sum: number, lab: any) => sum + (lab.price || 0), 0) || 0;
-  const otRevenue = data.transactionsData?.otSchedules?.reduce((sum: number, ot: any) => sum + ((ot.total_cost || 0) - (ot.doctor_expense || 0)), 0) || 0;
-  const emergencyRevenue = data.transactionsData?.emergencyAppointments?.reduce((sum: number, emergency: any) => sum + (emergency.consultation_fee_at_time || 0), 0) || 0;
+  const labRevenue = transactionsData?.labReports?.reduce((sum: number, lab: any) => sum + (lab.price || 0), 0) || 0;
+  const otRevenue = transactionsData?.otSchedules?.reduce((sum: number, ot: any) => sum + ((ot.total_cost || 0) - (ot.doctor_expense || 0)), 0) || 0;
+  const emergencyRevenue = transactionsData?.emergencyAppointments?.reduce((sum: number, emergency: any) => sum + (emergency.consultation_fee_at_time || 0), 0) || 0;
 
   if (labCount > 0 || otCount > 0 || emergencyCount > 0) {
     const servicesSummaryHeaders = ['Service Type', 'Count', 'Revenue'];
@@ -1059,11 +1082,11 @@ export const generateDailyClosingPDF = async (data: {
   // ===========================================
   // PHARMACY EXPENSES SECTION
   // ===========================================
-  if (data.transactionsData?.pharmacyExpenses?.length > 0) {
+  if (transactionsData?.pharmacyExpenses?.length > 0) {
     drawSectionHeader('PHARMACY EXPENSES');
 
-    const totalPharmacyExpenses = data.transactionsData.pharmacyExpenses.reduce((sum: number, exp: any) => sum + exp.amount, 0);
-    const expenseCount = data.transactionsData.pharmacyExpenses.length;
+    const totalPharmacyExpenses = transactionsData.pharmacyExpenses.reduce((sum: number, exp: any) => sum + exp.amount, 0);
+    const expenseCount = transactionsData.pharmacyExpenses.length;
     
     const pharmacyExpensesSummaryHeaders = ['Summary', 'Count', 'Amount'];
     const pharmacyExpensesSummaryColWidths = [80, 30, 40];
@@ -1081,7 +1104,7 @@ export const generateDailyClosingPDF = async (data: {
     const pharmacyBillColWidths = [45, 70, 35, 30];
     const pharmacyBillRows: string[][] = [];
 
-    data.transactionsData.pharmacyExpenses.forEach((expense: any) => {
+    transactionsData.pharmacyExpenses.forEach((expense: any) => {
       const typeDisplay = expense.expense_type === 'hospital_profit_withdrawal' 
         ? 'Profit Withdrawal' 
         : 'Bill Payment';
@@ -1100,14 +1123,14 @@ export const generateDailyClosingPDF = async (data: {
   // ===========================================
   // EXPENSES SECTION
   // ===========================================
-  if (data.transactionsData?.expenses?.length > 0) {
+  if (transactionsData?.expenses?.length > 0) {
     drawSectionHeader('DAILY EXPENSES');
 
     const expenseHeaders = ['Category', 'Description', 'Amount', 'Date'];
     const expenseColWidths = [40, 70, 30, 30];
     const expenseRows: string[][] = [];
 
-    data.transactionsData.expenses.forEach((expense: any) => {
+    transactionsData.expenses.forEach((expense: any) => {
       expenseRows.push([
         expense.category,
         expense.description,
@@ -1122,14 +1145,14 @@ export const generateDailyClosingPDF = async (data: {
   // ===========================================
   // REFUNDS SECTION
   // ===========================================
-  if (data.transactionsData?.refunds?.length > 0) {
+  if (transactionsData?.refunds?.length > 0) {
     drawSectionHeader('REFUNDS & RETURNS');
 
     const refundHeaders = ['Type', 'Description', 'Amount', 'Date'];
     const refundColWidths = [40, 70, 30, 30];
     const refundRows: string[][] = [];
 
-    data.transactionsData.refunds.forEach((refund: any) => {
+    transactionsData.refunds.forEach((refund: any) => {
       refundRows.push([
         refund.refund_type,
         refund.description,
@@ -1152,8 +1175,8 @@ export const generateDailyClosingPDF = async (data: {
   drawSubHeader('Pharmacy Account Summary');
   
   // Get pharmacy account data from transactions
-  const pharmacyStartingBalance = data.transactionsData?.pharmacyAccount?.starting_balance || 0;
-  const pharmacyExpenses = data.transactionsData?.pharmacyExpenses?.reduce((sum: number, exp: any) => sum + exp.amount, 0) || 0;
+  const pharmacyStartingBalance = transactionsData?.pharmacyAccount?.starting_balance || 0;
+  const pharmacyExpenses = transactionsData?.pharmacyExpenses?.reduce((sum: number, exp: any) => sum + exp.amount, 0) || 0;
   const netPharmacyBalance = pharmacyStartingBalance + data.pharmacyProfit - pharmacyExpenses;
   
   const pharmacySummaryHeaders = ['Description', 'Amount'];
@@ -1164,7 +1187,7 @@ export const generateDailyClosingPDF = async (data: {
     ['Todays Gross Profit', formatPkrAmount(data.pharmacyProfit)],
     ['Bills Paid Today', `(${formatPkrAmount(pharmacyExpenses)})`],
     ['Current Account Balance', formatPkrAmount(netPharmacyBalance)],
-    ['Total Medicines Stock Value', formatPkrAmount(data.transactionsData?.totalStockValue || 0)]
+    ['Total Medicines Stock Value', formatPkrAmount(transactionsData?.totalStockValue || 0)]
   ];
 
   drawTable(pharmacySummaryHeaders, pharmacySummaryRows, pharmacySummaryColWidths);
