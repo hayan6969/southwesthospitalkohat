@@ -187,6 +187,10 @@ export default function StaffInvoices() {
     console.error('OT query error:', otError);
   }
   
+  console.log('OT Schedules data:', otSchedules);
+  console.log('OT Loading:', otLoading);
+  console.log('OT Error:', otError);
+  
   // Final check - find where INV-1754351253847 ended up
   const targetInvoice = allInvoices.find(inv => inv.displayNumber === 'INV-1754351253847');
   if (targetInvoice) {
