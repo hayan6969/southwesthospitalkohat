@@ -368,20 +368,41 @@ export const usePatientPrescriptions = (patientId?: string) => {
       if (!patientId || !profile?.id) return [];
       
       // Allow both doctors and admins to view prescriptions
-      let query = supabase
+      const { data: prescriptionsData, error } = await supabase
         .from('prescriptions')
         .select('*')
         .eq('patient_id', patientId);
+
+      if (error) throw error;
+
+      // Get doctor names separately to avoid complex joins
+      const doctorIds = [...new Set(prescriptionsData?.map(p => p.doctor_id).filter(Boolean))];
+      let doctorProfiles: any[] = [];
+      
+      if (doctorIds.length > 0) {
+        const { data: profiles, error: profilesError } = await supabase
+          .from('profiles')
+          .select('id, first_name, last_name')
+          .in('id', doctorIds);
+        
+        if (!profilesError) {
+          doctorProfiles = profiles || [];
+        }
+      }
+
+      // Merge doctor profile data with prescriptions
+      const prescriptionsWithDoctors = prescriptionsData?.map(prescription => ({
+        ...prescription,
+        doctor_profile: doctorProfiles.find(profile => profile.id === prescription.doctor_id)
+      })) || [];
       
       // If user is doctor, filter by doctor_id, if admin show all prescriptions for the patient
       if (profile.role === 'doctor') {
-        query = query.eq('doctor_id', profile.id);
+        const filteredPrescriptions = prescriptionsWithDoctors.filter(p => p.doctor_id === profile.id);
+        return filteredPrescriptions.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
       }
       
-      const { data, error } = await query.order('created_at', { ascending: false });
-
-      if (error) throw error;
-      return data || [];
+      return prescriptionsWithDoctors.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
     },
     enabled: !!patientId && !!profile?.id
   });

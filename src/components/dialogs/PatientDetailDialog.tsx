@@ -13,6 +13,7 @@ import { format } from "date-fns";
 import { toast } from "sonner";
 import { formatPatientInfo } from "@/utils/patientUtils";
 import { PdfViewerDialog } from "@/components/dialogs/PdfViewerDialog";
+import { PrescriptionDetailDialog } from "@/components/dialogs/PrescriptionDetailDialog";
 import { supabase } from "@/integrations/supabase/client";
 
 interface PatientDetailDialogProps {
@@ -26,6 +27,8 @@ export function PatientDetailDialog({ isOpen, onClose, patient }: PatientDetailD
   const [isCreatingRecord, setIsCreatingRecord] = useState(false);
   const [isCreatingNote, setIsCreatingNote] = useState(false);
   const [newNote, setNewNote] = useState('');
+  const [selectedPrescription, setSelectedPrescription] = useState<any>(null);
+  const [isPrescriptionDialogOpen, setIsPrescriptionDialogOpen] = useState(false);
   const [recordForm, setRecordForm] = useState({
     diagnosis: '',
     treatment: '',
@@ -129,6 +132,11 @@ export function PatientDetailDialog({ isOpen, onClose, patient }: PatientDetailD
       console.error('Error getting PDF URL:', error);
       return null;
     }
+  };
+
+  const handlePrescriptionClick = (prescription: any) => {
+    setSelectedPrescription(prescription);
+    setIsPrescriptionDialogOpen(true);
   };
 
   if (!patient) return null;
@@ -306,17 +314,22 @@ export function PatientDetailDialog({ isOpen, onClose, patient }: PatientDetailD
                             }
                           </TableCell>
                           <TableCell>
-                            {prescription.doctor_id ? 
-                              `Doctor ID: ${prescription.doctor_id}` :
-                              'Unknown Doctor'
+                            {prescription.doctor_profile?.first_name && prescription.doctor_profile?.last_name 
+                              ? `Dr. ${prescription.doctor_profile.first_name} ${prescription.doctor_profile.last_name}`
+                              : 'Unknown Doctor'
                             }
                           </TableCell>
                           <TableCell>
-                            <div className="max-w-md">
-                              <div className="whitespace-pre-wrap text-sm p-2 bg-muted/50 rounded border">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handlePrescriptionClick(prescription)}
+                              className="text-left justify-start h-auto p-2"
+                            >
+                              <div className="max-w-md truncate">
                                 {prescription.prescription_text}
                               </div>
-                            </div>
+                            </Button>
                           </TableCell>
                         </TableRow>
                       ))
@@ -680,6 +693,13 @@ export function PatientDetailDialog({ isOpen, onClose, patient }: PatientDetailD
             </Card>
           </TabsContent>
         </Tabs>
+
+        {/* Prescription Detail Dialog */}
+        <PrescriptionDetailDialog
+          open={isPrescriptionDialogOpen}
+          onOpenChange={setIsPrescriptionDialogOpen}
+          prescription={selectedPrescription}
+        />
       </DialogContent>
     </Dialog>
   );
