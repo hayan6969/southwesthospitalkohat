@@ -61,7 +61,16 @@ export function StaffInvoices() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('ot_schedules')
-        .select('*')
+        .select(`
+          *,
+          ot_operations!inner (
+            operation_name,
+            ot_expenses (
+              expense_name,
+              cost
+            )
+          )
+        `)
         .order('created_at', { ascending: false });
       
       if (error) throw error;
@@ -424,9 +433,9 @@ export function StaffInvoices() {
       
       yPosition += textHeight + 2;
     } else {
-      // OT Service with detailed charge breakdown
+      // OT Service with detailed charge breakdown from ot_expenses
       const doctorFee = invoice.doctor_expense || 0;
-      const otCharges = (invoice.total_cost || 0) - doctorFee;
+      const otExpenses = invoice.ot_operations?.[0]?.ot_expenses || [];
       
       // Doctor fee line
       if (doctorFee > 0) {
@@ -435,15 +444,25 @@ export function StaffInvoices() {
         yPosition += 8;
       }
       
-      // OT charges line
-      if (otCharges > 0) {
-        doc.text('Operation Theater Charges', 20, yPosition);
-        doc.text(formatPkrAmount(otCharges), pageWidth - 50, yPosition);
-        yPosition += 8;
+      // Detailed OT expenses
+      if (otExpenses && otExpenses.length > 0) {
+        otExpenses.forEach((expense: any) => {
+          doc.text(expense.expense_name || 'OT Expense', 20, yPosition);
+          doc.text(formatPkrAmount(expense.cost || 0), pageWidth - 50, yPosition);
+          yPosition += 8;
+        });
+      } else {
+        // Fallback to basic OT charges if no detailed expenses
+        const otCharges = (invoice.total_cost || 0) - doctorFee;
+        if (otCharges > 0) {
+          doc.text('Operation Theater Charges', 20, yPosition);
+          doc.text(formatPkrAmount(otCharges), pageWidth - 50, yPosition);
+          yPosition += 8;
+        }
       }
       
-      // If no breakdown available, show total as OT service
-      if (doctorFee === 0 && otCharges === 0) {
+      // If no breakdown available at all, show total as OT service
+      if (doctorFee === 0 && (!otExpenses || otExpenses.length === 0) && (invoice.total_cost || 0) > 0) {
         doc.text('Operation Theater Service', 20, yPosition);
         doc.text(formatPkrAmount(invoice.displayAmount || invoice.amount || 0), pageWidth - 50, yPosition);
         yPosition += 8;
