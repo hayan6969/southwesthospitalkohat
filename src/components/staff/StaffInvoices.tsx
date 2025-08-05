@@ -61,20 +61,18 @@ export function StaffInvoices() {
     // Process all invoices and categorize them
     if (hospitalInvoices) {
       hospitalInvoices.forEach(invoice => {
-        // Determine type based on description or other properties
-        let type = 'appointments'; // Changed from 'hospital' to 'appointments'
-        const desc = invoice.description?.toLowerCase() || '';
-        
-        if (desc.includes('pharmacy') || desc.includes('medicine')) {
-          type = 'pharmacy';
-        } else if (desc.includes('lab') || desc.includes('test')) {
-          type = 'lab';
-        } else if (desc.includes('xray') || desc.includes('x-ray') || desc.includes('radiology')) {
-          type = 'xray';
-        } else if (desc.includes('ot') || desc.includes('operation') || desc.includes('surgery')) {
-          type = 'ot';
+        // Debug specific invoice
+        if (invoice.invoice_number === 'INV-1754351253847') {
+          console.log('🏥 STAFF INVOICES DEBUG - INV-1754351253847:', {
+            description: invoice.description,
+            originalType: 'appointments',
+            fromHospitalInvoices: true
+          });
         }
 
+        // All hospital invoices are appointments, regardless of description
+        let type = 'appointments';
+        
         combined.push({
           ...invoice,
           type,
