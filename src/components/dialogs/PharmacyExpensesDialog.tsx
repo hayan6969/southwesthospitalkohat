@@ -37,7 +37,7 @@ export function PharmacyExpensesDialog({ open, onOpenChange }: PharmacyExpensesD
   const [endDate, setEndDate] = useState<Date>();
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 40;
+  const itemsPerPage = 15;
   const { toast } = useToast();
 
   // Fetch pharmacy expenses
