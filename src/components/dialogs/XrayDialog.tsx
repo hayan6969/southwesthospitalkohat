@@ -62,6 +62,7 @@ interface XrayDialogProps {
 export function XrayDialog({ open, onOpenChange, onSuccess }: XrayDialogProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedPatient, setSelectedPatient] = useState<any>(null);
+  const [doctorName, setDoctorName] = useState("");
   
   const [selectedTests, setSelectedTests] = useState<string[]>([]);
   const [xrayDate, setXrayDate] = useState<Date>();
@@ -123,6 +124,7 @@ export function XrayDialog({ open, onOpenChange, onSuccess }: XrayDialogProps) {
   const resetForm = () => {
     setSearchTerm("");
     setSelectedPatient(null);
+    setDoctorName("");
     setSelectedTests([]);
     setXrayDate(undefined);
     setNotes("");
@@ -161,7 +163,9 @@ export function XrayDialog({ open, onOpenChange, onSuccess }: XrayDialogProps) {
     const patientData = selectedPatient;
 
     
-    const patientName = patientData ? `${patientData.first_name} ${patientData.last_name}` : "Unknown Patient";
+    const patientName = patientData?.profile?.first_name && patientData?.profile?.last_name
+      ? `${patientData.profile.first_name} ${patientData.profile.last_name}`.trim()
+      : "Unknown Patient";
 
     const testsData = selectedTests.map(testId => {
       const test = xrayTests?.find(t => t.id === testId);
@@ -177,8 +181,9 @@ export function XrayDialog({ open, onOpenChange, onSuccess }: XrayDialogProps) {
     const confirmationData = {
       patient: {
         name: patientName,
-        phone: patientData?.phone || "N/A"
+        phone: patientData?.profile?.phone || "N/A"
       },
+      doctorName: doctorName.trim() || "Not specified",
       selectedTests: testsData,
       totalAmount,
       xrayDate: format(xrayDate, "MMM dd, yyyy"),
@@ -250,7 +255,7 @@ export function XrayDialog({ open, onOpenChange, onSuccess }: XrayDialogProps) {
           patientEmail: "N/A",
           patientId: selectedPatient?.patient_number || "N/A",
           patientPhone: patientPhone,
-          doctorName: undefined,
+          doctorName: doctorName.trim() || undefined,
           tests: testsForPDF,
           totalAmount: totalAmount,
           issueDate: new Date().toLocaleDateString(),
@@ -346,6 +351,16 @@ export function XrayDialog({ open, onOpenChange, onSuccess }: XrayDialogProps) {
           <Separator />
 
           <div className="space-y-4">
+            {/* Doctor Name (Optional) */}
+            <div className="space-y-2">
+              <Label htmlFor="doctorName">Doctor Name (Optional)</Label>
+              <Input
+                id="doctorName"
+                value={doctorName}
+                onChange={(e) => setDoctorName(e.target.value)}
+                placeholder="Enter referring doctor's name..."
+              />
+            </div>
 
             {/* Date Selection */}
             <div className="space-y-2">
@@ -430,6 +445,12 @@ export function XrayDialog({ open, onOpenChange, onSuccess }: XrayDialogProps) {
                       }
                     </span>
                   </div>
+                  {doctorName.trim() && (
+                    <div className="flex justify-between">
+                      <span>Doctor:</span>
+                      <span className="font-medium">{doctorName.trim()}</span>
+                    </div>
+                  )}
                   <div className="flex justify-between">
                     <span>X-ray Date:</span>
                     <span className="font-medium">{xrayDate ? format(xrayDate, "MMM dd, yyyy") : "Not selected"}</span>
