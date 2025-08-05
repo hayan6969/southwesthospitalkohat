@@ -264,6 +264,25 @@ export function StaffCounter() {
   const handleGenerateInvoice = async (appointment: any) => {
     setProcessingInvoice(appointment.id);
     try {
+      // Get doctor's consultation fee
+      const { data: doctorData, error: doctorError } = await supabase
+        .from('doctors')
+        .select('consultation_fee')
+        .eq('id', appointment.doctor_id)
+        .single();
+
+      if (doctorError) {
+        console.error('Error fetching doctor data:', doctorError);
+        toast({
+          title: "Error",
+          description: "Failed to fetch doctor consultation fee",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const consultationFee = doctorData?.consultation_fee || 0;
+
       // Get complete patient data with patient_number and profile information
       const { data: patientData, error: patientError } = await supabase
         .from('patients')
@@ -317,7 +336,7 @@ export function StaffCounter() {
           .from('invoices')
           .insert({
             patient_id: appointment.patient_id,
-            amount: 5000, // Default consultation fee
+            amount: consultationFee, // Use doctor's actual consultation fee
             status: 'paid',
             paid_at: new Date().toISOString(),
             invoice_number: `INV-${Date.now()}`,
