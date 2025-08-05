@@ -151,8 +151,8 @@ export const usePharmacyAnalytics = () => {
         return invoicePakistanTime >= startOfToday && invoicePakistanTime <= endOfToday;
       });
       const todayProfit = todayAllInvoiceItems.reduce((sum, item) => {
-        // For returns, quantities are negative, so this automatically subtracts profit lost
-        const profit = (item.unit_price - (item.medicines?.purchase_price || 0)) * item.quantity;
+        // Use selling_price instead of unit_price to exclude discounts
+        const profit = (item.medicines?.selling_price - (item.medicines?.purchase_price || 0)) * item.quantity;
         return sum + profit;
       }, 0);
 
@@ -182,8 +182,8 @@ export const usePharmacyAnalytics = () => {
         return invoiceDate >= startOfThisMonth && invoiceDate <= endOfThisMonth;
       });
       const monthlyProfit = monthlyAllInvoiceItems.reduce((sum, item) => {
-        // For returns, quantities are negative, so this automatically subtracts profit lost
-        const profit = (item.unit_price - (item.medicines?.purchase_price || 0)) * item.quantity;
+        // Use selling_price instead of unit_price to exclude discounts
+        const profit = (item.medicines?.selling_price - (item.medicines?.purchase_price || 0)) * item.quantity;
         return sum + profit;
       }, 0);
 
@@ -250,7 +250,7 @@ export const usePharmacyAnalytics = () => {
             profit: 0 
           };
           
-          const profit = (item.unit_price - (item.medicines?.purchase_price || 0)) * item.quantity;
+          const profit = (item.medicines?.selling_price - (item.medicines?.purchase_price || 0)) * item.quantity;
           
           medicinesSold.set(medicineId, {
             name: medicineName,
@@ -299,8 +299,8 @@ export const usePharmacyAnalytics = () => {
       // Profit margins - calculate overall profit correctly
       const totalRevenue = salesInvoices.reduce((sum, inv) => sum + inv.final_amount, 0);
       const totalProfit = allInvoiceItems.reduce((sum, item) => {
-        // For returns, quantities are negative, so this automatically subtracts profit lost
-        const profit = (item.unit_price - (item.medicines?.purchase_price || 0)) * item.quantity;
+        // Use selling_price instead of unit_price to exclude discounts
+        const profit = (item.medicines?.selling_price - (item.medicines?.purchase_price || 0)) * item.quantity;
         return sum + profit;
       }, 0);
 
@@ -324,9 +324,9 @@ export const usePharmacyAnalytics = () => {
       });
       
       const sinceClosingProfit = sinceClosingInvoiceItems.reduce((sum, item) => {
-        // Use the same calculation as finance daily: unit_price from invoice items
+        // Use selling_price instead of unit_price to exclude discounts
         // For returns, quantities are negative, so this automatically subtracts profit lost
-        const profit = (item.unit_price - (item.medicines?.purchase_price || 0)) * item.quantity;
+        const profit = (item.medicines?.selling_price - (item.medicines?.purchase_price || 0)) * item.quantity;
         return sum + profit;
       }, 0);
       
