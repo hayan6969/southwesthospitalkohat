@@ -357,3 +357,32 @@ export const usePatientDocuments = (patientId?: string) => {
     enabled: !!patientId
   });
 };
+
+// Hook to get patient prescriptions
+export const usePatientPrescriptions = (patientId?: string) => {
+  const { profile } = useAuth();
+  
+  return useQuery({
+    queryKey: ['patient-prescriptions', patientId, profile?.id],
+    queryFn: async () => {
+      if (!patientId || !profile?.id) return [];
+      
+      // Allow both doctors and admins to view prescriptions
+      let query = supabase
+        .from('prescriptions')
+        .select('*')
+        .eq('patient_id', patientId);
+      
+      // If user is doctor, filter by doctor_id, if admin show all prescriptions for the patient
+      if (profile.role === 'doctor') {
+        query = query.eq('doctor_id', profile.id);
+      }
+      
+      const { data, error } = await query.order('created_at', { ascending: false });
+
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!patientId && !!profile?.id
+  });
+};

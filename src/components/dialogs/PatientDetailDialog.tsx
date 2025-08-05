@@ -7,8 +7,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { usePatientAppointmentHistory, usePatientMedicalRecords, useCreateUpdateMedicalRecord, usePatientNotes, useCreatePatientNote, usePatientDocuments, usePatientLabReports } from "@/hooks/useDoctorData";
-import { User, Calendar, FileText, Clock, Plus, Save, File, Eye } from "lucide-react";
+import { usePatientAppointmentHistory, usePatientMedicalRecords, useCreateUpdateMedicalRecord, usePatientNotes, useCreatePatientNote, usePatientDocuments, usePatientLabReports, usePatientPrescriptions } from "@/hooks/useDoctorData";
+import { User, Calendar, FileText, Clock, Plus, Save, File, Eye, Pill } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { formatPatientInfo } from "@/utils/patientUtils";
@@ -38,6 +38,7 @@ export function PatientDetailDialog({ isOpen, onClose, patient }: PatientDetailD
   const { data: patientNotes, isLoading: notesLoading } = usePatientNotes(patient?.id);
   const { data: patientDocuments, isLoading: documentsLoading } = usePatientDocuments(patient?.id);
   const { data: patientLabReports, isLoading: labReportsLoading } = usePatientLabReports(patient?.id);
+  const { data: patientPrescriptions, isLoading: prescriptionsLoading } = usePatientPrescriptions(patient?.id);
   const createUpdateRecord = useCreateUpdateMedicalRecord();
   const createPatientNote = useCreatePatientNote();
 
@@ -143,9 +144,10 @@ export function PatientDetailDialog({ isOpen, onClose, patient }: PatientDetailD
         </DialogHeader>
 
         <Tabs defaultValue="overview" className="space-y-4">
-          <TabsList className="grid w-full grid-cols-6">
+          <TabsList className="grid w-full grid-cols-7">
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="appointments">Appointments</TabsTrigger>
+            <TabsTrigger value="prescriptions">Prescriptions</TabsTrigger>
             <TabsTrigger value="labreports">Lab Reports</TabsTrigger>
             <TabsTrigger value="diagnoses">Diagnoses & Rx</TabsTrigger>
             <TabsTrigger value="notes">Patient Notes</TabsTrigger>
@@ -254,6 +256,74 @@ export function PatientDetailDialog({ isOpen, onClose, patient }: PatientDetailD
                       <TableRow>
                         <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
                           No appointment history found
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="prescriptions">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Pill className="w-5 h-5" />
+                  Prescriptions
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Date</TableHead>
+                      <TableHead>Appointment</TableHead>
+                      <TableHead>Doctor</TableHead>
+                      <TableHead>Prescription</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {prescriptionsLoading ? (
+                      Array.from({ length: 3 }).map((_, i) => (
+                        <TableRow key={i}>
+                          <TableCell><div className="h-4 bg-gray-200 rounded animate-pulse"></div></TableCell>
+                          <TableCell><div className="h-4 bg-gray-200 rounded animate-pulse"></div></TableCell>
+                          <TableCell><div className="h-4 bg-gray-200 rounded animate-pulse"></div></TableCell>
+                          <TableCell><div className="h-4 bg-gray-200 rounded animate-pulse"></div></TableCell>
+                        </TableRow>
+                      ))
+                    ) : patientPrescriptions && patientPrescriptions.length > 0 ? (
+                      patientPrescriptions.map((prescription) => (
+                        <TableRow key={prescription.id}>
+                          <TableCell>
+                            {format(new Date(prescription.created_at), 'MMM d, yyyy')}
+                          </TableCell>
+                          <TableCell>
+                            {prescription.appointment_id ? 
+                              `Appointment ID: ${prescription.appointment_id}` :
+                              'Direct Prescription'
+                            }
+                          </TableCell>
+                          <TableCell>
+                            {prescription.doctor_id ? 
+                              `Doctor ID: ${prescription.doctor_id}` :
+                              'Unknown Doctor'
+                            }
+                          </TableCell>
+                          <TableCell>
+                            <div className="max-w-md">
+                              <div className="whitespace-pre-wrap text-sm p-2 bg-muted/50 rounded border">
+                                {prescription.prescription_text}
+                              </div>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    ) : (
+                      <TableRow>
+                        <TableCell colSpan={4} className="text-center text-muted-foreground py-8">
+                          No prescriptions found for this patient
                         </TableCell>
                       </TableRow>
                     )}
