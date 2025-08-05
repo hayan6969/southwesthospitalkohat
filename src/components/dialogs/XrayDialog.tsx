@@ -44,33 +44,6 @@ const usePatientNames = () => {
   });
 };
 
-const useDoctorNames = (enabled: boolean = true) => {
-  return useQuery({
-    queryKey: ["doctor-names"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("id, first_name, last_name")
-        .eq("role", "doctor")
-        .eq("is_active", true)
-        .order("first_name");
-      if (error) throw error;
-      
-      // Filter out any doctors with missing names and format properly
-      return data
-        .filter(doctor => doctor.first_name && doctor.last_name)
-        .map(doctor => ({
-          id: doctor.id,
-          name: `Dr. ${doctor.first_name.trim()} ${doctor.last_name.trim()}`
-        }));
-    },
-    enabled,
-    staleTime: 5 * 60 * 1000, // 5 minutes
-    gcTime: 10 * 60 * 1000, // 10 minutes
-    refetchOnMount: true,
-    refetchOnWindowFocus: false,
-  });
-};
 
 interface XrayTest {
   id: string;
@@ -103,8 +76,6 @@ export function XrayDialog({ open, onOpenChange, onSuccess }: XrayDialogProps) {
     allergies: ""
   });
   
-  const [doctorId, setDoctorId] = useState("");
-  const [externalDoctorName, setExternalDoctorName] = useState("");
   const [selectedTests, setSelectedTests] = useState<string[]>([]);
   const [xrayDate, setXrayDate] = useState<Date>();
   const [notes, setNotes] = useState("");
@@ -115,7 +86,7 @@ export function XrayDialog({ open, onOpenChange, onSuccess }: XrayDialogProps) {
   const queryClient = useQueryClient();
   const createPatientWithProfile = useCreatePatientWithProfile();
   const { data: searchResults } = useSearchPatientsWithNames(searchTerm);
-  const { data: doctors, isLoading: doctorsLoading, error: doctorsError } = useDoctorNames(open);
+  
   const { logCreate } = useAuditLogger();
   const { user } = useAuth();
 
@@ -176,8 +147,6 @@ export function XrayDialog({ open, onOpenChange, onSuccess }: XrayDialogProps) {
       blood_type: "",
       allergies: ""
     });
-    setDoctorId("");
-    setExternalDoctorName("");
     setSelectedTests([]);
     setXrayDate(undefined);
     setNotes("");
@@ -252,8 +221,6 @@ export function XrayDialog({ open, onOpenChange, onSuccess }: XrayDialogProps) {
       patient_number: 'New Patient'
     } : selectedPatient;
 
-    const selectedDoctor = doctors?.find(d => d.id === doctorId);
-    const doctorName = externalDoctorName || (selectedDoctor ? selectedDoctor.name : "External Doctor");
     
     const patientName = patientData ? `${patientData.first_name} ${patientData.last_name}` : "Unknown Patient";
 
@@ -273,7 +240,6 @@ export function XrayDialog({ open, onOpenChange, onSuccess }: XrayDialogProps) {
         name: patientName,
         phone: patientData?.phone || "N/A"
       },
-      doctorName,
       selectedTests: testsData,
       totalAmount,
       xrayDate: format(xrayDate, "MMM dd, yyyy"),
@@ -315,8 +281,6 @@ export function XrayDialog({ open, onOpenChange, onSuccess }: XrayDialogProps) {
 
         const xrayData = {
           patient_id: patientId,
-          doctor_id: doctorId || null,
-          external_doctor_name: externalDoctorName || null,
           test_id: testId,
           test_name: test.name,
           price: test.price,
@@ -344,8 +308,6 @@ export function XrayDialog({ open, onOpenChange, onSuccess }: XrayDialogProps) {
 
       // Generate and open PDF invoice
       if (createdReports.length > 0) {
-        const selectedDoctor = doctors?.find(d => d.id === doctorId);
-        const doctorName = externalDoctorName || (selectedDoctor ? selectedDoctor.name : undefined);
         
         const patientName = activeTab === "register" 
           ? `${newPatient.first_name} ${newPatient.last_name}`.trim()
@@ -372,7 +334,7 @@ export function XrayDialog({ open, onOpenChange, onSuccess }: XrayDialogProps) {
           patientEmail: "N/A",
           patientId: activeTab === "register" ? "New Patient" : selectedPatient?.patient_number || "N/A",
           patientPhone: patientPhone,
-          doctorName: doctorName,
+          doctorName: undefined,
           tests: testsForPDF,
           totalAmount: totalAmount,
           issueDate: new Date().toLocaleDateString(),
@@ -578,57 +540,6 @@ export function XrayDialog({ open, onOpenChange, onSuccess }: XrayDialogProps) {
           <Separator />
 
           <div className="space-y-4">
-            {/* Doctor Selection */}
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="doctor">Doctor</Label>
-                <Select value={doctorId} onValueChange={setDoctorId}>
-                  <SelectTrigger>
-                    <SelectValue placeholder={
-                      doctorsLoading ? "Loading doctors..." : 
-                      doctorsError ? "Error loading doctors" : 
-                      "Select a doctor (optional)"
-                    } />
-                  </SelectTrigger>
-                  <SelectContent className="bg-white border border-gray-200 shadow-lg z-50 max-h-60 overflow-y-auto">
-                    {doctorsLoading ? (
-                      <SelectItem value="loading" disabled className="text-gray-500">
-                        Loading doctors...
-                      </SelectItem>
-                    ) : doctorsError ? (
-                      <SelectItem value="error" disabled className="text-red-500">
-                        Error loading doctors
-                      </SelectItem>
-                    ) : doctors && doctors.length > 0 ? (
-                      doctors.map((doctor) => (
-                        <SelectItem 
-                          key={doctor.id} 
-                          value={doctor.id}
-                          className="bg-white hover:bg-gray-100 cursor-pointer px-3 py-2"
-                        >
-                          {doctor.name}
-                        </SelectItem>
-                      ))
-                    ) : (
-                      <SelectItem value="no-doctors" disabled className="text-gray-500">
-                        No doctors available
-                      </SelectItem>
-                    )}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="external-doctor">External Doctor Name</Label>
-                <Input
-                  id="external-doctor"
-                  value={externalDoctorName}
-                  onChange={(e) => setExternalDoctorName(e.target.value)}
-                  placeholder="Enter external doctor name"
-                  disabled={!!doctorId}
-                />
-              </div>
-            </div>
 
             {/* Date Selection */}
             <div className="space-y-2">
@@ -717,15 +628,6 @@ export function XrayDialog({ open, onOpenChange, onSuccess }: XrayDialogProps) {
                         <Badge variant="secondary" className="ml-2">New Patient</Badge>
                       )}
                     </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Doctor:</span>
-                     <span className="font-medium">
-                       {doctorId ? 
-                         doctors?.find(d => d.id === doctorId)?.name || "Unknown Doctor"
-                         : externalDoctorName || "External Doctor"
-                       }
-                     </span>
                   </div>
                   <div className="flex justify-between">
                     <span>X-ray Date:</span>
