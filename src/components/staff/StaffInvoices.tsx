@@ -138,30 +138,34 @@ export function StaffInvoices() {
       });
     }
 
-    // Add Lab reports
+    // Add Lab reports that have proper invoices (not orphaned ones)
     if (labReports) {
       labReports.forEach(labReport => {
-        // Get patient name from patient names using the helper
-        const patientName = getPatientName(labReport.patient_id, patientNames || []);
-        
-        // Find patient number from allPatients array
-        const patient = allPatients?.find(p => p.id === labReport.patient_id);
-        
-        combined.push({
-          ...labReport,
-          type: 'lab',
-          invoice_type: 'lab',
-          invoice_date: labReport.created_at,
-          patient_name: patientName || 'Walk-in Patient',
-          patient_id_display: patient?.patient_number || 'N/A',
-          display_date: format(new Date(labReport.created_at), 'MMM d, yyyy'),
-          display_time: format(new Date(labReport.created_at), 'h:mm a'),
-          display_amount: formatPkrAmount(labReport.price || 0),
-          amount: labReport.price || 0,
-          invoice_number: `LAB-${labReport.id.slice(-8).toUpperCase()}`,
-          description: `Lab Test: ${labReport.test_name}`,
-          status: labReport.status === 'completed' ? 'paid' : 'pending'
-        });
+        // Only show lab reports that have a proper invoice_id (not orphaned)
+        if (labReport.invoice_id) {
+          // Get patient name from patient names using the helper
+          const patientName = getPatientName(labReport.patient_id, patientNames || []);
+          
+          // Find patient number from allPatients array
+          const patient = allPatients?.find(p => p.id === labReport.patient_id);
+          
+          combined.push({
+            ...labReport,
+            type: 'lab',
+            invoice_type: 'lab',
+            invoice_date: labReport.created_at,
+            patient_name: patientName || 'Walk-in Patient',
+            patient_id_display: patient?.patient_number || 'N/A',
+            display_date: format(new Date(labReport.created_at), 'MMM d, yyyy'),
+            display_time: format(new Date(labReport.created_at), 'h:mm a'),
+            display_amount: formatPkrAmount(labReport.price || 0),
+            amount: labReport.price || 0,
+            // Use the actual invoice number from the linked invoice instead of generating fake ones
+            invoice_number: `LAB-${labReport.invoice_id?.slice(-8).toUpperCase() || 'UNKNOWN'}`,
+            description: `Lab Test: ${labReport.test_name}`,
+            status: 'paid' // Lab reports with invoices are always paid
+          });
+        }
       });
     }
 
