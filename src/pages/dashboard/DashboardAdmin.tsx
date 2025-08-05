@@ -77,7 +77,7 @@ export default function DashboardAdmin() {
   const [roleFilter, setRoleFilter] = useState("all");
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 10;
+  const itemsPerPage = 30;
   
   // System logs filters
   const [actionFilter, setActionFilter] = useState("all");
