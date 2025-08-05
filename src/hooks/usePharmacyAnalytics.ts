@@ -139,7 +139,8 @@ export const usePharmacyAnalytics = () => {
         return expPakistanTime >= startOfToday && expPakistanTime <= endOfToday;
       });
 
-      const todayRevenue = todaySalesInvoices.reduce((sum, inv) => sum + inv.final_amount, 0);
+      const todayGrossRevenue = todaySalesInvoices.reduce((sum, inv) => sum + inv.final_amount, 0);
+      const todayRevenue = todayGrossRevenue - Math.abs(todayReturnInvoices.reduce((sum, inv) => sum + inv.final_amount, 0));
       const todayReturns = Math.abs(todayReturnInvoices.reduce((sum, inv) => sum + inv.final_amount, 0)) + 
                            todayReturnExpenses.reduce((sum, exp) => sum + exp.amount, 0);
       const todaySales = todaySalesInvoices.length;
@@ -169,7 +170,8 @@ export const usePharmacyAnalytics = () => {
         return expDate >= startOfThisMonth && expDate <= endOfThisMonth;
       });
 
-      const monthlyRevenue = monthlySalesInvoices.reduce((sum, inv) => sum + inv.final_amount, 0);
+      const monthlyGrossRevenue = monthlySalesInvoices.reduce((sum, inv) => sum + inv.final_amount, 0);
+      const monthlyRevenue = monthlyGrossRevenue - Math.abs(monthlyReturnInvoices.reduce((sum, inv) => sum + inv.final_amount, 0));
       const monthlyReturns = Math.abs(monthlyReturnInvoices.reduce((sum, inv) => sum + inv.final_amount, 0)) + 
                             monthlyReturnExpenses.reduce((sum, exp) => sum + exp.amount, 0);
       const monthlySales = monthlySalesInvoices.length;
