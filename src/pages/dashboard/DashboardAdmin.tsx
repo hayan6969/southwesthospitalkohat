@@ -671,6 +671,7 @@ export default function DashboardAdmin() {
                           <SelectItem value="create">Create</SelectItem>
                           <SelectItem value="update">Update</SelectItem>
                           <SelectItem value="delete">Delete</SelectItem>
+                          <SelectItem value="expense">Expense</SelectItem>
                           <SelectItem value="medicine">Medicine</SelectItem>
                           <SelectItem value="pharmacy">Pharmacy</SelectItem>
                           <SelectItem value="ot">OT Operations</SelectItem>
