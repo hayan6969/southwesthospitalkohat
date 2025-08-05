@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { format } from "date-fns";
+import { formatTimeForDisplay } from "@/utils/timezone";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { EnhancedAppointmentDialog } from "@/components/dialogs/EnhancedAppointmentDialog";
 import { AppointmentDetailDialog } from "@/components/dialogs/AppointmentDetailDialog";
@@ -242,9 +243,9 @@ export default function DashboardDoctor() {
                                className="cursor-pointer hover:bg-gray-50"
                                onClick={() => handleAppointmentClick(appointment)}
                              >
-                               <TableCell className="font-medium whitespace-nowrap">
-                                 {format(new Date(appointment.appointment_date), 'h:mm a')}
-                               </TableCell>
+                                <TableCell className="font-medium whitespace-nowrap">
+                                  {formatTimeForDisplay(appointment.appointment_date)}
+                                </TableCell>
                                <TableCell className="max-w-[120px] truncate">
                                  {getPatientName(appointment.patient_id, patientNames || [])}
                                </TableCell>
