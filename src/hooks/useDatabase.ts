@@ -1009,25 +1009,7 @@ export const useCreateInvoice = () => {
   });
 };
 
-export const useCreateLabReport = () => {
-  const queryClient = useQueryClient();
-  
-  return useMutation({
-    mutationFn: async (labReport: any) => {
-      const { data, error } = await supabase
-        .from('lab_reports')
-        .insert([labReport])
-        .select()
-        .single();
-
-      if (error) throw error;
-      return data;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['lab-reports'] });
-    },
-  });
-};
+// Legacy useCreateLabReport hook removed - use useCreateLabOrderWithInvoice instead
 
 export const useCreatePatient = () => {
   const queryClient = useQueryClient();
