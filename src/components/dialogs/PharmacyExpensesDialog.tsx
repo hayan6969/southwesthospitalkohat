@@ -9,7 +9,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
-import { Calendar as CalendarIcon, Receipt, DollarSign, Filter, Search } from "lucide-react";
+import { Calendar as CalendarIcon, Receipt, DollarSign, Filter, Search, ChevronLeft, ChevronRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { formatPkrAmount } from "@/utils/currency";
 import { useToast } from "@/hooks/use-toast";
@@ -36,6 +36,8 @@ export function PharmacyExpensesDialog({ open, onOpenChange }: PharmacyExpensesD
   const [startDate, setStartDate] = useState<Date>();
   const [endDate, setEndDate] = useState<Date>();
   const [searchTerm, setSearchTerm] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 40;
   const { toast } = useToast();
 
   // Fetch pharmacy expenses
@@ -68,6 +70,7 @@ export function PharmacyExpensesDialog({ open, onOpenChange }: PharmacyExpensesD
     }
 
     setFilteredExpenses(filtered);
+    setCurrentPage(1); // Reset to first page when filters change
   }, [expenses, startDate, endDate, searchTerm]);
 
   const fetchPharmacyExpenses = async () => {
@@ -98,6 +101,12 @@ export function PharmacyExpensesDialog({ open, onOpenChange }: PharmacyExpensesD
     setEndDate(undefined);
     setSearchTerm("");
   };
+
+  // Pagination calculations
+  const totalPages = Math.ceil(filteredExpenses.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedExpenses = filteredExpenses.slice(startIndex, endIndex);
 
   const totalExpenses = filteredExpenses.reduce((sum, expense) => sum + expense.amount, 0);
   const totalHospitalWithdrawals = filteredExpenses
@@ -287,51 +296,113 @@ export function PharmacyExpensesDialog({ open, onOpenChange }: PharmacyExpensesD
                   No expenses found for the selected filters
                 </div>
               ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Date</TableHead>
-                      <TableHead>Type</TableHead>
-                      <TableHead>Description</TableHead>
-                      <TableHead>Bill Number</TableHead>
-                      <TableHead>Amount</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredExpenses.map((expense) => (
-                      <TableRow key={expense.id}>
-                        <TableCell>
-                          {format(new Date(expense.expense_date), 'MMM dd, yyyy')}
-                        </TableCell>
-                        <TableCell>
-                          <span className={cn(
-                            "px-2 py-1 rounded-full text-xs font-medium",
-                            expense.expense_type === 'hospital_profit_withdrawal' 
-                              ? "bg-blue-100 text-blue-800" 
-                              : "bg-orange-100 text-orange-800"
-                          )}>
-                            {expense.expense_type === 'hospital_profit_withdrawal' 
-                              ? 'Hospital Withdrawal' 
-                              : 'Bill Payment'}
-                          </span>
-                        </TableCell>
-                        <TableCell>{expense.description}</TableCell>
-                        <TableCell>
-                          {expense.bill_number ? (
-                            <span className="font-mono text-sm bg-gray-100 px-2 py-1 rounded">
-                              {expense.bill_number}
-                            </span>
-                          ) : (
-                            <span className="text-gray-400">-</span>
-                          )}
-                        </TableCell>
-                        <TableCell className="font-medium text-red-600">
-                          {formatPkrAmount(expense.amount)}
-                        </TableCell>
+                <>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Date</TableHead>
+                        <TableHead>Type</TableHead>
+                        <TableHead>Description</TableHead>
+                        <TableHead>Bill Number</TableHead>
+                        <TableHead>Amount</TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                    </TableHeader>
+                    <TableBody>
+                      {paginatedExpenses.map((expense) => (
+                        <TableRow key={expense.id}>
+                          <TableCell>
+                            {format(new Date(expense.expense_date), 'MMM dd, yyyy')}
+                          </TableCell>
+                          <TableCell>
+                            <span className={cn(
+                              "px-2 py-1 rounded-full text-xs font-medium",
+                              expense.expense_type === 'hospital_profit_withdrawal' 
+                                ? "bg-blue-100 text-blue-800" 
+                                : "bg-orange-100 text-orange-800"
+                            )}>
+                              {expense.expense_type === 'hospital_profit_withdrawal' 
+                                ? 'Hospital Withdrawal' 
+                                : 'Bill Payment'}
+                            </span>
+                          </TableCell>
+                          <TableCell>{expense.description}</TableCell>
+                          <TableCell>
+                            {expense.bill_number ? (
+                              <span className="font-mono text-sm bg-gray-100 px-2 py-1 rounded">
+                                {expense.bill_number}
+                              </span>
+                            ) : (
+                              <span className="text-gray-400">-</span>
+                            )}
+                          </TableCell>
+                          <TableCell className="font-medium text-red-600">
+                            {formatPkrAmount(expense.amount)}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+
+                  {/* Pagination Controls */}
+                  {totalPages > 1 && (
+                    <div className="flex items-center justify-between px-2 py-4 border-t">
+                      <div className="text-sm text-gray-700">
+                        Showing {startIndex + 1} to {Math.min(endIndex, filteredExpenses.length)} of {filteredExpenses.length} expenses
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setCurrentPage(currentPage - 1)}
+                          disabled={currentPage === 1}
+                          className="flex items-center gap-1"
+                        >
+                          <ChevronLeft className="h-4 w-4" />
+                          Previous
+                        </Button>
+                        
+                        <div className="flex items-center gap-1">
+                          {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                            const pageNum = i + 1;
+                            return (
+                              <Button
+                                key={pageNum}
+                                variant={currentPage === pageNum ? "default" : "outline"}
+                                size="sm"
+                                onClick={() => setCurrentPage(pageNum)}
+                                className="w-8 h-8 p-0"
+                              >
+                                {pageNum}
+                              </Button>
+                            );
+                          })}
+                          {totalPages > 5 && <span className="px-2">...</span>}
+                          {totalPages > 5 && (
+                            <Button
+                              variant={currentPage === totalPages ? "default" : "outline"}
+                              size="sm"
+                              onClick={() => setCurrentPage(totalPages)}
+                              className="w-8 h-8 p-0"
+                            >
+                              {totalPages}
+                            </Button>
+                          )}
+                        </div>
+                        
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setCurrentPage(currentPage + 1)}
+                          disabled={currentPage === totalPages}
+                          className="flex items-center gap-1"
+                        >
+                          Next
+                          <ChevronRight className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </>
               )}
             </CardContent>
           </Card>
