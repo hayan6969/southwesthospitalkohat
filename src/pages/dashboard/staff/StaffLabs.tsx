@@ -1,7 +1,7 @@
 import AppLayout from "@/layouts/AppLayout";
 import { useLabReports, useUpdateLabReport } from "@/hooks/useDatabase";
 import { usePatientNames, getPatientName } from "@/hooks/useDisplayHelpers";
-import { LabDialog } from "@/components/dialogs/LabDialog";
+import { EnhancedLabDialog } from "@/components/dialogs/EnhancedLabDialog";
 import { Activity, User, Calendar, CheckCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -34,7 +34,7 @@ export default function StaffLabs() {
             <h1 className="text-3xl font-bold text-gray-900">Lab Management</h1>
             <p className="text-gray-600 mt-1">Process and manage laboratory reports</p>
           </div>
-          <LabDialog />
+          <EnhancedLabDialog />
         </div>
 
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
