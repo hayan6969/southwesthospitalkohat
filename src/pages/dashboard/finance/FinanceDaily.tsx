@@ -154,7 +154,7 @@ export default function FinanceDaily() {
       const { data: otSchedules } = await supabase
         .from('ot_schedules')
         .select('total_cost, doctor_expense, created_at, operation_date, status')
-        .in('status', ['completed', 'scheduled'])
+        .in('status', ['completed', 'pending'])
         .gte('created_at', cutoffTime)
         .lte('created_at', upperBound);
 
@@ -389,7 +389,7 @@ export default function FinanceDaily() {
         supabase
           .from('ot_schedules')
           .select('*, patients(id, profiles(first_name, last_name)), ot_operations(operation_name)')
-          .in('status', ['completed', 'scheduled'])
+          .in('status', ['completed', 'pending'])
           .gte('created_at', cutoffTime)
           .lte('created_at', upperBound),
         

@@ -268,7 +268,7 @@ export function OTScheduleDialog() {
             queue_position: queuePosition + index, // Sequential positions
             notes: notes.trim() || null,
             total_cost: operationCost + (selectedOperations.length > 1 && index > 0 ? 0 : (parseFloat(doctorExpense) || 0)),
-            status: 'scheduled'
+            status: 'pending'
           })
           .select()
           .single();
