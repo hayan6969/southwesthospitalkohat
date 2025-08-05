@@ -15,7 +15,7 @@ interface MedicineWithSales {
 
 export const useAllMedicinesWithSales = (selectedMonth?: string, searchQuery?: string) => {
   return useQuery({
-    queryKey: ['all-medicines-with-sales', selectedMonth, searchQuery],
+    queryKey: ['all-medicines-with-sales-v2', selectedMonth, searchQuery], // Updated cache key to force refresh
     queryFn: async (): Promise<MedicineWithSales[]> => {
       // First, get all medicines
       const { data: medicines, error: medicinesError } = await supabase
@@ -25,6 +25,7 @@ export const useAllMedicinesWithSales = (selectedMonth?: string, searchQuery?: s
         .limit(10000); // Set a high limit to fetch all medicines
 
       if (medicinesError) throw medicinesError;
+      console.log(`Fetched ${medicines?.length || 0} medicines from database`);
 
       // Then get sales data
       const { data: invoices, error: invoicesError } = await supabase
