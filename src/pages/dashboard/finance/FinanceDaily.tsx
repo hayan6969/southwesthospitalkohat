@@ -375,14 +375,14 @@ export default function FinanceDaily() {
         supabase
           .from('lab_reports')
           .select('*, patients(id, profiles(first_name, last_name))')
-          .eq('status', 'completed')
+          .not('price', 'is', null)
           .gte('created_at', cutoffTime)
           .lte('created_at', upperBound),
         
         supabase
           .from('xray_reports')
           .select('*, patients(id, profiles(first_name, last_name))')
-          .eq('status', 'completed')
+          .not('price', 'is', null)
           .gte('created_at', cutoffTime)
           .lte('created_at', upperBound),
         
