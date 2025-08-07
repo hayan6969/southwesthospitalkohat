@@ -921,14 +921,18 @@ export const generateDailyClosingPDF = async (data: {
     transactionsData = await queryTransactionDataForDate(data.closingDate, data.closingTime);
   } else {
     console.log('Using stored transaction data for historical closing:', data.closingDate);
+    console.log('Stored xray reports count:', transactionsData.xrayReports?.length || 0);
+    console.log('Stored xray reports:', transactionsData.xrayReports);
     
     // Check if stored data is missing xray reports and supplement if needed
     if (!transactionsData.xrayReports || transactionsData.xrayReports.length === 0) {
-      console.log('Stored data missing xray reports, querying xrays for date:', data.closingDate);
+      console.log('⚠️ Stored data missing xray reports, querying xrays for date:', data.closingDate);
       const supplementalData = await queryTransactionDataForDate(data.closingDate, data.closingTime);
-      console.log('Supplemental xray data found:', supplementalData.xrayReports?.length || 0, supplementalData.xrayReports);
+      console.log('✅ Supplemental xray data found:', supplementalData.xrayReports?.length || 0, supplementalData.xrayReports);
       transactionsData.xrayReports = supplementalData.xrayReports || [];
-      console.log('Final xray reports in transactions data:', transactionsData.xrayReports?.length || 0);
+      console.log('🎯 Final xray reports in transactions data:', transactionsData.xrayReports?.length || 0);
+    } else {
+      console.log('✅ Stored data has xray reports:', transactionsData.xrayReports?.length || 0);
     }
   }
 
