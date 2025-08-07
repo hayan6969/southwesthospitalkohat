@@ -381,7 +381,7 @@ export default function FinanceDaily() {
         
         supabase
           .from('xray_reports')
-          .select('*, patients(id, profiles(first_name, last_name))')
+          .select('*')
           .not('price', 'is', null)
           .gte('created_at', cutoffTime)
           .lte('created_at', upperBound),
