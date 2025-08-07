@@ -777,6 +777,117 @@ export const generateOTPDF = async (data: {
   window.open(pdfUrl, '_blank');
 };
 
+// Helper function to query transaction data for a specific date
+const queryTransactionDataForDate = async (closingDate: string, closingTime: string) => {
+  // Get the previous closing to determine cutoff time
+  const { data: previousClosings } = await supabase
+    .from('daily_closings')
+    .select('closing_time')
+    .lt('closing_date', closingDate)
+    .order('closing_date', { ascending: false })
+    .limit(1);
+  
+  const previousClosing = previousClosings?.[0];
+  const cutoffTime = previousClosing?.closing_time || `${closingDate}T00:00:00Z`;
+  const upperBound = closingTime;
+  
+  console.log(`Querying transaction data from ${cutoffTime} to ${upperBound}`);
+  
+  // Query all transaction types with the same logic as FinanceDaily
+  const [
+    hospitalInvoicesRes,
+    pharmacyInvoicesRes,
+    labReportsRes,
+    xrayReportsRes,
+    otSchedulesRes,
+    emergencyAppointmentsRes,
+    expensesRes,
+    refundsRes,
+    miscellaneousIncomeRes
+  ] = await Promise.all([
+    supabase
+      .from('invoices')
+      .select('*, patients(id, profiles(first_name, last_name))')
+      .eq('status', 'paid')
+      .gte('created_at', cutoffTime)
+      .lte('created_at', upperBound),
+    
+    supabase
+      .from('pharmacy_invoices')
+      .select(`
+        *,
+        pharmacy_invoice_items(
+          quantity,
+          unit_price,
+          total_price,
+          medicine_id,
+          medicines(name, purchase_price, selling_price)
+        )
+      `)
+      .gte('created_at', cutoffTime)
+      .lte('created_at', upperBound),
+    
+    supabase
+      .from('lab_reports')
+      .select('*, patients(id, profiles(first_name, last_name))')
+      .not('price', 'is', null)
+      .gte('created_at', cutoffTime)
+      .lte('created_at', upperBound),
+    
+    supabase
+      .from('xray_reports')
+      .select('*, patients(id, profiles(first_name, last_name))')
+      .not('price', 'is', null)
+      .gte('created_at', cutoffTime)
+      .lte('created_at', upperBound),
+    
+    supabase
+      .from('ot_schedules')
+      .select('*')
+      .in('status', ['completed', 'pending'])
+      .gte('created_at', cutoffTime)
+      .lte('created_at', upperBound),
+    
+    supabase
+      .from('appointments')
+      .select('*')
+      .ilike('type', 'emergency')
+      .eq('status', 'completed')
+      .gte('appointment_date', cutoffTime)
+      .lte('appointment_date', upperBound),
+    
+    supabase
+      .from('expenses')
+      .select('*')
+      .gte('created_at', cutoffTime)
+      .lte('created_at', upperBound),
+    
+    supabase
+      .from('refunds')
+      .select('*')
+      .gte('created_at', cutoffTime)
+      .lte('created_at', upperBound),
+    
+    supabase
+      .from('miscellaneous_income')
+      .select('*')
+      .gte('created_at', cutoffTime)
+      .lte('created_at', upperBound)
+  ]);
+  
+  return {
+    hospitalInvoices: hospitalInvoicesRes.data || [],
+    pharmacyInvoices: pharmacyInvoicesRes.data || [],
+    labReports: labReportsRes.data || [],
+    xrayReports: xrayReportsRes.data || [],
+    otSchedules: otSchedulesRes.data || [],
+    emergencyAppointments: emergencyAppointmentsRes.data || [],
+    expenses: expensesRes.data || [],
+    refunds: refundsRes.data || [],
+    miscellaneousIncome: miscellaneousIncomeRes.data || []
+  };
+};
+
 // Generate daily closing PDF
 export const generateDailyClosingPDF = async (data: {
   closingDate: string;
@@ -804,23 +915,18 @@ export const generateDailyClosingPDF = async (data: {
   let transactionsData = data.transactionsData;
   
   if (!transactionsData) {
-    console.log('No stored transaction data provided, querying fresh data...');
-    // This is for current day closing - query fresh data
-    // ... existing query logic would go here
-    // For now, we'll use empty data structure
-    transactionsData = {
-      pharmacyInvoices: [],
-      labReports: [],
-      otSchedules: [],
-      emergencyAppointments: [],
-      pharmacyExpenses: [],
-      expenses: [],
-      refunds: [],
-      pharmacyAccount: null,
-      totalStockValue: 0
-    };
+    console.log('No stored transaction data provided, querying fresh data for:', data.closingDate);
+    // Query fresh data for the specific closing date
+    transactionsData = await queryTransactionDataForDate(data.closingDate, data.closingTime);
   } else {
     console.log('Using stored transaction data for historical closing:', data.closingDate);
+    
+    // Check if stored data is missing xray reports and supplement if needed
+    if (!transactionsData.xrayReports || transactionsData.xrayReports.length === 0) {
+      console.log('Stored data missing xray reports, querying xrays for date:', data.closingDate);
+      const supplementalData = await queryTransactionDataForDate(data.closingDate, data.closingTime);
+      transactionsData.xrayReports = supplementalData.xrayReports || [];
+    }
   }
 
   // ===========================================
