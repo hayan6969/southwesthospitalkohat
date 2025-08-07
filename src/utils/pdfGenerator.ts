@@ -792,6 +792,7 @@ const queryTransactionDataForDate = async (closingDate: string, closingTime: str
   const upperBound = closingTime;
   
   console.log(`Querying transaction data from ${cutoffTime} to ${upperBound}`);
+  console.log(`PDF Query - Closing Date: ${closingDate}, Closing Time: ${closingTime}`);
   
   // Query all transaction types with the same logic as FinanceDaily
   const [
@@ -925,7 +926,9 @@ export const generateDailyClosingPDF = async (data: {
     if (!transactionsData.xrayReports || transactionsData.xrayReports.length === 0) {
       console.log('Stored data missing xray reports, querying xrays for date:', data.closingDate);
       const supplementalData = await queryTransactionDataForDate(data.closingDate, data.closingTime);
+      console.log('Supplemental xray data found:', supplementalData.xrayReports?.length || 0, supplementalData.xrayReports);
       transactionsData.xrayReports = supplementalData.xrayReports || [];
+      console.log('Final xray reports in transactions data:', transactionsData.xrayReports?.length || 0);
     }
   }
 
