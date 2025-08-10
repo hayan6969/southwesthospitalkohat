@@ -143,7 +143,7 @@ export function EmergencyConsultationDialog() {
           Emergency
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-hidden flex flex-col">
+      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-hidden flex flex-col">
         <DialogHeader className="flex-shrink-0">
           <DialogTitle className="flex items-center gap-2 text-red-600">
             <AlertTriangle className="w-5 h-5" />
@@ -151,7 +151,7 @@ export function EmergencyConsultationDialog() {
           </DialogTitle>
         </DialogHeader>
         
-        <div className="flex-1 overflow-y-auto pr-2 -mr-2">
+        <div className="flex-1 overflow-y-auto px-1">
           <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
             <div className="space-y-2">
               <div className="flex justify-between text-sm text-red-800">
@@ -234,21 +234,21 @@ export function EmergencyConsultationDialog() {
               </div>
               
               {additionalExpenses.length > 0 && (
-                <div className="max-h-32 overflow-y-auto space-y-2 border rounded-md p-2">
+                <div className="max-h-32 overflow-y-auto space-y-2 border rounded-md p-3">
                   {additionalExpenses.map((expense) => (
-                    <div key={expense.id} className="flex gap-2 items-center">
+                    <div key={expense.id} className="flex gap-3 items-center">
                       <Input
                         placeholder="Expense name"
                         value={expense.name}
                         onChange={(e) => updateAdditionalExpense(expense.id, 'name', e.target.value)}
-                        className="flex-1 min-w-0 text-sm"
+                        className="flex-1 min-w-0"
                       />
                       <Input
                         type="number"
                         placeholder="Cost"
                         value={expense.cost || ''}
                         onChange={(e) => updateAdditionalExpense(expense.id, 'cost', parseFloat(e.target.value) || 0)}
-                        className="w-20 text-sm"
+                        className="w-24"
                         min="0"
                       />
                       <Button
