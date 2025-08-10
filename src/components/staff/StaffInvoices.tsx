@@ -110,18 +110,24 @@ export function StaffInvoices() {
     // Process all invoices and categorize them by invoice number prefix
     if (hospitalInvoices) {
       hospitalInvoices.forEach(invoice => {
-        // Categorize based on invoice number prefix
+        // Check for emergency consultations first (most specific)
         let type = 'appointments';
         
-        // Check invoice number prefix to determine actual type
-        if (invoice.invoice_number?.startsWith('OT-')) {
+        // Emergency consultation detection - check description, emergency_patient_data, AND invoice number patterns
+        if (invoice.description?.toLowerCase().includes('emergency consultation') || 
+            invoice.description?.toLowerCase().includes('emergency') ||
+            invoice.emergency_patient_data ||
+            invoice.invoice_number?.startsWith('EMG-') ||
+            invoice.invoice_number?.startsWith('EMERGENCY-')) {
+          type = 'emergency';
+        }
+        // Check for other invoice number prefixes
+        else if (invoice.invoice_number?.startsWith('OT-')) {
           type = 'ot';
         } else if (invoice.invoice_number?.startsWith('LAB-')) {
           type = 'lab';
         } else if (invoice.invoice_number?.startsWith('XRAY-')) {
           type = 'xray';
-        } else if (invoice.description?.toLowerCase().includes('emergency consultation')) {
-          type = 'emergency';
         }
         
         combined.push({
@@ -674,6 +680,8 @@ export function StaffInvoices() {
     switch (type) {
       case 'appointments':
         return <Receipt className="w-4 h-4 text-blue-500" />;
+      case 'emergency':
+        return <Zap className="w-4 h-4 text-red-500" />;
       case 'pharmacy':
         return <Receipt className="w-4 h-4 text-green-500" />;
       case 'lab':
@@ -690,6 +698,7 @@ export function StaffInvoices() {
   const getTypeBadge = (type: string) => {
     const config = {
       appointments: { color: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300', label: 'Appointments' },
+      emergency: { color: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300', label: 'Emergency' },
       pharmacy: { color: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300', label: 'Pharmacy' },
       lab: { color: 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300', label: 'Lab' },
       xray: { color: 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300', label: 'X-ray' },
@@ -804,6 +813,7 @@ export function StaffInvoices() {
               <SelectContent>
                 <SelectItem value="all">All Types</SelectItem>
                 <SelectItem value="appointments">Appointments</SelectItem>
+                <SelectItem value="emergency">Emergency</SelectItem>
                 <SelectItem value="pharmacy">Pharmacy</SelectItem>
                 <SelectItem value="lab">Lab</SelectItem>
                 <SelectItem value="ot">Operation Theater</SelectItem>
