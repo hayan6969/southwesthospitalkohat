@@ -152,18 +152,24 @@ export function EmergencyConsultationDialog() {
 
       if (invoiceError) throw invoiceError;
 
-      // Generate and open PDF
+      // Generate and open PDF with actual patient data
       const invoiceForPDF = {
         ...invoiceData,
         patient: {
           patient_number: 'EMERGENCY',
-          users: {
+          profiles: {
             first_name: patientName.split(' ')[0] || '',
             last_name: patientName.split(' ').slice(1).join(' ') || '',
             email: '',
             phone: contactNumber
           },
           cnic: cnic
+        },
+        // Store actual emergency patient data for PDF generation
+        emergency_patient_data: {
+          name: patientName,
+          cnic: cnic,
+          phone: contactNumber
         }
       };
 

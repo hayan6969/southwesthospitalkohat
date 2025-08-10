@@ -285,11 +285,35 @@ export const generateInvoicePDF = async (invoice: any) => {
   doc.text(new Date(invoice.created_at).toLocaleDateString(), 135, yPosition + 5);
   
   yPosition += 10;
-  // Handle both old structure (patient.users) and new structure (patient.profiles)
-  const patientProfile = invoice.patient?.profiles || invoice.patient?.users;
-  const invoicePatientName = patientProfile ? 
-    `${patientProfile.first_name || ''} ${patientProfile.last_name || ''}`.trim() : 
-    (invoice.patient_name || 'Patient');
+  
+  // Check if this is an emergency consultation by looking for emergency patient data
+  const isEmergencyConsultation = invoice.patient_id === '00000000-0000-0000-0000-000000000001' || 
+                                   invoice.emergency_patient_data ||
+                                   (invoice.description && invoice.description.includes('Emergency Consultation'));
+
+  let invoicePatientName, patientPhone, patientCnic;
+  
+  if (isEmergencyConsultation && invoice.emergency_patient_data) {
+    // Use the actual emergency patient data stored in the invoice
+    invoicePatientName = invoice.emergency_patient_data.name;
+    patientPhone = invoice.emergency_patient_data.phone;
+    patientCnic = invoice.emergency_patient_data.cnic;
+  } else if (isEmergencyConsultation && invoice.patient?.profiles) {
+    // Fallback to patient profiles data (for older emergency invoices)
+    const patientProfile = invoice.patient.profiles;
+    invoicePatientName = `${patientProfile.first_name || ''} ${patientProfile.last_name || ''}`.trim();
+    patientPhone = patientProfile.phone;
+    patientCnic = invoice.patient.cnic;
+  } else {
+    // Handle both old structure (patient.users) and new structure (patient.profiles)
+    const patientProfile = invoice.patient?.profiles || invoice.patient?.users;
+    invoicePatientName = patientProfile ? 
+      `${patientProfile.first_name || ''} ${patientProfile.last_name || ''}`.trim() : 
+      (invoice.patient_name || 'Patient');
+    const patientProfileForContact = invoice.patient?.profiles || invoice.patient?.users;
+    patientPhone = getPatientContactNumber(invoice.patient, patientProfileForContact);
+    patientCnic = invoice.patient?.cnic;
+  }
   
   doc.setFont('helvetica', 'bold');
   doc.text('Patient Name:', 20, yPosition + 5);
@@ -301,15 +325,13 @@ export const generateInvoicePDF = async (invoice: any) => {
   doc.setFont('helvetica', 'normal');
   doc.text(invoice.patient?.patient_number || 'N/A', 160, yPosition + 5);
   
-  // Third row - Get contact information from the correct profile structure
+  // Third row - Get contact information
   yPosition += 10;
-  const patientProfileForContact = invoice.patient?.profiles || invoice.patient?.users;
-  const phoneNumber = getPatientContactNumber(invoice.patient, patientProfileForContact);
   
   doc.setFont('helvetica', 'bold');
   doc.text('Contact:', 20, yPosition + 5);
   doc.setFont('helvetica', 'normal');
-  doc.text(phoneNumber, 60, yPosition + 5);
+  doc.text(patientPhone || 'N/A', 60, yPosition + 5);
   
   doc.setFont('helvetica', 'bold');
   doc.text('Status:', 120, yPosition + 5);
@@ -317,12 +339,12 @@ export const generateInvoicePDF = async (invoice: any) => {
   doc.text(invoice.status, 155, yPosition + 5);
   
   // Fourth row - Add CNIC if available (for emergency consultations)
-  if (invoice.patient?.cnic) {
+  if (patientCnic) {
     yPosition += 10;
     doc.setFont('helvetica', 'bold');
     doc.text('CNIC:', 20, yPosition + 5);
     doc.setFont('helvetica', 'normal');
-    doc.text(invoice.patient.cnic, 50, yPosition + 5);
+    doc.text(patientCnic, 50, yPosition + 5);
   }
   
   // Fifth row (if due date exists) - adjusted for CNIC addition
