@@ -5,24 +5,52 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, Plus, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { generateInvoicePDF } from "@/utils/pdfGenerator";
 import { formatPkrAmount } from "@/utils/currency";
+
+interface AdditionalExpense {
+  id: string;
+  name: string;
+  cost: number;
+}
 
 export function EmergencyConsultationDialog() {
   const [open, setOpen] = useState(false);
   const [patientName, setPatientName] = useState("");
   const [cnic, setCnic] = useState("");
   const [contactNumber, setContactNumber] = useState("");
+  const [additionalExpenses, setAdditionalExpenses] = useState<AdditionalExpense[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const { settings: hospitalSettings } = useHospitalSettings();
 
   const emergencyFee = hospitalSettings?.emergency_consultation_fee || 10000;
+  const totalAdditionalCost = additionalExpenses.reduce((sum, expense) => sum + expense.cost, 0);
+  const grandTotal = emergencyFee + totalAdditionalCost;
 
   const generateInvoiceNumber = () => {
     const timestamp = Date.now().toString().slice(-6);
     return `EMG-${timestamp}`;
+  };
+
+  const addAdditionalExpense = () => {
+    const newExpense: AdditionalExpense = {
+      id: Date.now().toString(),
+      name: "",
+      cost: 0
+    };
+    setAdditionalExpenses([...additionalExpenses, newExpense]);
+  };
+
+  const removeAdditionalExpense = (id: string) => {
+    setAdditionalExpenses(additionalExpenses.filter(expense => expense.id !== id));
+  };
+
+  const updateAdditionalExpense = (id: string, field: 'name' | 'cost', value: string | number) => {
+    setAdditionalExpenses(additionalExpenses.map(expense => 
+      expense.id === id ? { ...expense, [field]: value } : expense
+    ));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -44,14 +72,26 @@ export function EmergencyConsultationDialog() {
     try {
       const invoiceNumber = generateInvoiceNumber();
       
-      // Create invoice for emergency consultation
+      // Create detailed description including additional expenses
+      let description = `Emergency Consultation - ${patientName}`;
+      if (additionalExpenses.length > 0) {
+        const expenseDetails = additionalExpenses
+          .filter(exp => exp.name.trim() && exp.cost > 0)
+          .map(exp => `${exp.name}: ${formatPkrAmount(exp.cost)}`)
+          .join(', ');
+        if (expenseDetails) {
+          description += ` | Additional: ${expenseDetails}`;
+        }
+      }
+      
+      // Create invoice for emergency consultation with total amount
       const { data: invoiceData, error: invoiceError } = await supabase
         .from('invoices')
         .insert({
           patient_id: '00000000-0000-0000-0000-000000000001', // Default emergency patient ID
           invoice_number: invoiceNumber,
-          amount: emergencyFee,
-          description: `Emergency Consultation - ${patientName}`,
+          amount: grandTotal,
+          description: description,
           status: 'paid',
           paid_at: new Date().toISOString(),
           due_date: new Date().toISOString().split('T')[0]
@@ -78,7 +118,7 @@ export function EmergencyConsultationDialog() {
 
       await generateInvoicePDF(invoiceForPDF);
       
-      toast.success(`Emergency consultation invoice generated for ${formatPkrAmount(emergencyFee)}`);
+      toast.success(`Emergency consultation invoice generated for ${formatPkrAmount(grandTotal)}`);
       
       setOpen(false);
       
@@ -86,6 +126,7 @@ export function EmergencyConsultationDialog() {
       setPatientName("");
       setCnic("");
       setContactNumber("");
+      setAdditionalExpenses([]);
     } catch (error) {
       console.error('Error creating emergency consultation:', error);
       toast.error("Failed to create emergency consultation invoice");
@@ -110,10 +151,29 @@ export function EmergencyConsultationDialog() {
           </DialogTitle>
         </DialogHeader>
         <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
-          <p className="text-sm text-red-800">
-            <strong>Emergency Fee:</strong> {formatPkrAmount(emergencyFee)}
-          </p>
-          <p className="text-xs text-red-600 mt-1">
+          <div className="space-y-2">
+            <div className="flex justify-between text-sm text-red-800">
+              <span>Emergency Consultation Fee:</span>
+              <span className="font-medium">{formatPkrAmount(emergencyFee)}</span>
+            </div>
+            {additionalExpenses.filter(exp => exp.name.trim() && exp.cost > 0).map(expense => (
+              <div key={expense.id} className="flex justify-between text-sm text-red-700">
+                <span>{expense.name}:</span>
+                <span>{formatPkrAmount(expense.cost)}</span>
+              </div>
+            ))}
+            {totalAdditionalCost > 0 && (
+              <div className="flex justify-between text-sm text-red-800 border-t pt-2">
+                <span>Additional Expenses:</span>
+                <span className="font-medium">{formatPkrAmount(totalAdditionalCost)}</span>
+              </div>
+            )}
+            <div className="flex justify-between text-base font-bold text-red-900 border-t pt-2">
+              <span>Total Amount:</span>
+              <span>{formatPkrAmount(grandTotal)}</span>
+            </div>
+          </div>
+          <p className="text-xs text-red-600 mt-2">
             This amount will be added to hospital revenue immediately.
           </p>
         </div>
@@ -154,12 +214,57 @@ export function EmergencyConsultationDialog() {
             />
           </div>
 
+          {/* Additional Expenses Section */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <Label className="text-sm font-medium">Additional Expenses</Label>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={addAdditionalExpense}
+                className="h-8 px-3"
+              >
+                <Plus className="w-4 h-4 mr-1" />
+                Add Expense
+              </Button>
+            </div>
+            
+            {additionalExpenses.map((expense) => (
+              <div key={expense.id} className="flex gap-2 items-center">
+                <Input
+                  placeholder="Expense name"
+                  value={expense.name}
+                  onChange={(e) => updateAdditionalExpense(expense.id, 'name', e.target.value)}
+                  className="flex-1"
+                />
+                <Input
+                  type="number"
+                  placeholder="Cost"
+                  value={expense.cost || ''}
+                  onChange={(e) => updateAdditionalExpense(expense.id, 'cost', parseFloat(e.target.value) || 0)}
+                  className="w-24"
+                  min="0"
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => removeAdditionalExpense(expense.id)}
+                  className="h-8 w-8 p-0 text-red-500 hover:text-red-700"
+                >
+                  <X className="w-4 h-4" />
+                </Button>
+              </div>
+            ))}
+          </div>
+
           <div className="flex justify-end space-x-2">
             <Button type="button" variant="outline" onClick={() => setOpen(false)}>
               Cancel
             </Button>
             <Button type="submit" disabled={isProcessing} variant="destructive">
-              {isProcessing ? "Processing..." : `Generate Invoice (${formatPkrAmount(emergencyFee)})`}
+              {isProcessing ? "Processing..." : `Generate Invoice (${formatPkrAmount(grandTotal)})`}
             </Button>
           </div>
         </form>
