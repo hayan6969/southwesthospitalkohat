@@ -145,7 +145,12 @@ export function EmergencyConsultationDialog() {
           description: description,
           status: 'paid',
           paid_at: new Date().toISOString(),
-          due_date: new Date().toISOString().split('T')[0]
+          due_date: new Date().toISOString().split('T')[0],
+          emergency_patient_data: {
+            name: patientName,
+            cnic: cnic,
+            phone: contactNumber
+          }
         })
         .select()
         .single();

@@ -580,6 +580,7 @@ export type Database = {
           created_at: string | null
           description: string | null
           due_date: string | null
+          emergency_patient_data: Json | null
           id: string
           invoice_number: string
           paid_at: string | null
@@ -591,6 +592,7 @@ export type Database = {
           created_at?: string | null
           description?: string | null
           due_date?: string | null
+          emergency_patient_data?: Json | null
           id?: string
           invoice_number: string
           paid_at?: string | null
@@ -602,6 +604,7 @@ export type Database = {
           created_at?: string | null
           description?: string | null
           due_date?: string | null
+          emergency_patient_data?: Json | null
           id?: string
           invoice_number?: string
           paid_at?: string | null
