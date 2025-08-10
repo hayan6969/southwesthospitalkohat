@@ -143,131 +143,150 @@ export function EmergencyConsultationDialog() {
           Emergency
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[425px]">
-        <DialogHeader>
+      <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-hidden flex flex-col">
+        <DialogHeader className="flex-shrink-0">
           <DialogTitle className="flex items-center gap-2 text-red-600">
             <AlertTriangle className="w-5 h-5" />
             Emergency Consultation
           </DialogTitle>
         </DialogHeader>
-        <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
-          <div className="space-y-2">
-            <div className="flex justify-between text-sm text-red-800">
-              <span>Emergency Consultation Fee:</span>
-              <span className="font-medium">{formatPkrAmount(emergencyFee)}</span>
-            </div>
-            {additionalExpenses.filter(exp => exp.name.trim() && exp.cost > 0).map(expense => (
-              <div key={expense.id} className="flex justify-between text-sm text-red-700">
-                <span>{expense.name}:</span>
-                <span>{formatPkrAmount(expense.cost)}</span>
+        
+        <div className="flex-1 overflow-y-auto pr-2 -mr-2">
+          <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+            <div className="space-y-2">
+              <div className="flex justify-between text-sm text-red-800">
+                <span>Emergency Consultation Fee:</span>
+                <span className="font-medium">{formatPkrAmount(emergencyFee)}</span>
               </div>
-            ))}
-            {totalAdditionalCost > 0 && (
-              <div className="flex justify-between text-sm text-red-800 border-t pt-2">
-                <span>Additional Expenses:</span>
-                <span className="font-medium">{formatPkrAmount(totalAdditionalCost)}</span>
+              {additionalExpenses.filter(exp => exp.name.trim() && exp.cost > 0).map(expense => (
+                <div key={expense.id} className="flex justify-between text-sm text-red-700">
+                  <span className="truncate mr-2">{expense.name}:</span>
+                  <span className="flex-shrink-0">{formatPkrAmount(expense.cost)}</span>
+                </div>
+              ))}
+              {totalAdditionalCost > 0 && (
+                <div className="flex justify-between text-sm text-red-800 border-t pt-2">
+                  <span>Additional Expenses:</span>
+                  <span className="font-medium">{formatPkrAmount(totalAdditionalCost)}</span>
+                </div>
+              )}
+              <div className="flex justify-between text-base font-bold text-red-900 border-t pt-2">
+                <span>Total Amount:</span>
+                <span>{formatPkrAmount(grandTotal)}</span>
               </div>
-            )}
-            <div className="flex justify-between text-base font-bold text-red-900 border-t pt-2">
-              <span>Total Amount:</span>
-              <span>{formatPkrAmount(grandTotal)}</span>
             </div>
+            <p className="text-xs text-red-600 mt-2">
+              This amount will be added to hospital revenue immediately.
+            </p>
           </div>
-          <p className="text-xs text-red-600 mt-2">
-            This amount will be added to hospital revenue immediately.
-          </p>
-        </div>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="patientName">Patient Name *</Label>
-            <Input
-              id="patientName"
-              type="text"
-              value={patientName}
-              onChange={(e) => setPatientName(e.target.value)}
-              placeholder="Enter patient full name"
-              required
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="cnic">CNIC *</Label>
-            <Input
-              id="cnic"
-              type="text"
-              value={cnic}
-              onChange={(e) => setCnic(e.target.value)}
-              placeholder="XXXXX-XXXXXXX-X"
-              required
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="contactNumber">Contact Number *</Label>
-            <Input
-              id="contactNumber"
-              type="tel"
-              value={contactNumber}
-              onChange={(e) => setContactNumber(e.target.value)}
-              placeholder="03XXXXXXXXX"
-              required
-            />
-          </div>
-
-          {/* Additional Expenses Section */}
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <Label className="text-sm font-medium">Additional Expenses</Label>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={addAdditionalExpense}
-                className="h-8 px-3"
-              >
-                <Plus className="w-4 h-4 mr-1" />
-                Add Expense
-              </Button>
+          
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="patientName">Patient Name *</Label>
+              <Input
+                id="patientName"
+                type="text"
+                value={patientName}
+                onChange={(e) => setPatientName(e.target.value)}
+                placeholder="Enter patient full name"
+                required
+              />
             </div>
-            
-            {additionalExpenses.map((expense) => (
-              <div key={expense.id} className="flex gap-2 items-center">
-                <Input
-                  placeholder="Expense name"
-                  value={expense.name}
-                  onChange={(e) => updateAdditionalExpense(expense.id, 'name', e.target.value)}
-                  className="flex-1"
-                />
-                <Input
-                  type="number"
-                  placeholder="Cost"
-                  value={expense.cost || ''}
-                  onChange={(e) => updateAdditionalExpense(expense.id, 'cost', parseFloat(e.target.value) || 0)}
-                  className="w-24"
-                  min="0"
-                />
+
+            <div className="space-y-2">
+              <Label htmlFor="cnic">CNIC *</Label>
+              <Input
+                id="cnic"
+                type="text"
+                value={cnic}
+                onChange={(e) => setCnic(e.target.value)}
+                placeholder="XXXXX-XXXXXXX-X"
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="contactNumber">Contact Number *</Label>
+              <Input
+                id="contactNumber"
+                type="tel"
+                value={contactNumber}
+                onChange={(e) => setContactNumber(e.target.value)}
+                placeholder="03XXXXXXXXX"
+                required
+              />
+            </div>
+
+            {/* Additional Expenses Section */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <Label className="text-sm font-medium">Additional Expenses</Label>
                 <Button
                   type="button"
-                  variant="ghost"
+                  variant="outline"
                   size="sm"
-                  onClick={() => removeAdditionalExpense(expense.id)}
-                  className="h-8 w-8 p-0 text-red-500 hover:text-red-700"
+                  onClick={addAdditionalExpense}
+                  className="h-8 px-3"
                 >
-                  <X className="w-4 h-4" />
+                  <Plus className="w-4 h-4 mr-1" />
+                  Add
                 </Button>
               </div>
-            ))}
-          </div>
-
-          <div className="flex justify-end space-x-2">
-            <Button type="button" variant="outline" onClick={() => setOpen(false)}>
-              Cancel
-            </Button>
-            <Button type="submit" disabled={isProcessing} variant="destructive">
+              
+              {additionalExpenses.length > 0 && (
+                <div className="max-h-32 overflow-y-auto space-y-2 border rounded-md p-2">
+                  {additionalExpenses.map((expense) => (
+                    <div key={expense.id} className="flex gap-2 items-center">
+                      <Input
+                        placeholder="Expense name"
+                        value={expense.name}
+                        onChange={(e) => updateAdditionalExpense(expense.id, 'name', e.target.value)}
+                        className="flex-1 min-w-0 text-sm"
+                      />
+                      <Input
+                        type="number"
+                        placeholder="Cost"
+                        value={expense.cost || ''}
+                        onChange={(e) => updateAdditionalExpense(expense.id, 'cost', parseFloat(e.target.value) || 0)}
+                        className="w-20 text-sm"
+                        min="0"
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => removeAdditionalExpense(expense.id)}
+                        className="h-8 w-8 p-0 text-red-500 hover:text-red-700 flex-shrink-0"
+                      >
+                        <X className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </form>
+        </div>
+        
+        <div className="flex justify-end space-x-2 pt-4 border-t flex-shrink-0">
+          <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+            Cancel
+          </Button>
+          <Button 
+            type="submit" 
+            disabled={isProcessing} 
+            variant="destructive"
+            onClick={handleSubmit}
+            className="min-w-0"
+          >
+            <span className="hidden sm:inline">
               {isProcessing ? "Processing..." : `Generate Invoice (${formatPkrAmount(grandTotal)})`}
-            </Button>
-          </div>
-        </form>
+            </span>
+            <span className="sm:hidden">
+              {isProcessing ? "Processing..." : `Generate (${formatPkrAmount(grandTotal)})`}
+            </span>
+          </Button>
+        </div>
       </DialogContent>
     </Dialog>
   );
