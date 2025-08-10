@@ -81,18 +81,20 @@ export default function StaffInvoices() {
   // Combine all invoices into a single array with type information
   const allInvoices = [
     ...(hospitalInvoices?.map(inv => {
-      // Check for emergency consultations first (more specific)
+      // Check for emergency consultations first (most specific)
       let type = 'appointment';
       let typeLabel = 'Appointment';
       
-      // Emergency consultation detection - check both description and emergency_patient_data
+      // Emergency consultation detection - check description, emergency_patient_data, AND invoice number patterns
       if (inv.description?.toLowerCase().includes('emergency consultation') || 
           inv.description?.toLowerCase().includes('emergency') ||
-          inv.emergency_patient_data) {
+          inv.emergency_patient_data ||
+          inv.invoice_number?.startsWith('EMG-') ||
+          inv.invoice_number?.startsWith('EMERGENCY-')) {
         type = 'emergency';
         typeLabel = 'Emergency Consultation';
       }
-      // Check for invoice number prefix to determine type
+      // Check for other invoice number prefixes
       else if (inv.invoice_number?.startsWith('OT-')) {
         type = 'ot';
         typeLabel = 'Operation Theater';
