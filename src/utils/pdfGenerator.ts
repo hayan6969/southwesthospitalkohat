@@ -362,12 +362,24 @@ export const generateInvoicePDF = async (invoice: any) => {
   xPosition = 20;
   
   const description = invoice.description || 'Medical services';
-  doc.text(description, xPosition, yPosition);
-  xPosition += colWidths[0];
   
+  // Wrap text to fit within the description column (120 width)
+  const maxLineWidth = colWidths[0] - 10; // Leave some padding
+  const wrappedLines = doc.splitTextToSize(description, maxLineWidth);
+  
+  // Calculate the height needed for all lines
+  const lineHeight = 5;
+  const textHeight = wrappedLines.length * lineHeight;
+  
+  // Draw the wrapped description text
+  doc.text(wrappedLines, xPosition, yPosition);
+  
+  // Draw the amount aligned to the top of the description
+  xPosition += colWidths[0];
   doc.text(formatPkrAmount(invoice.amount), xPosition, yPosition);
   
-  yPosition += 8;
+  // Update yPosition based on the text height (minimum 8 for single line)
+  yPosition += Math.max(textHeight, 8);
   
   // Draw table border
   doc.setDrawColor(0, 0, 0);
