@@ -842,7 +842,7 @@ const queryTransactionDataForDate = async (closingDate: string, closingTime: str
   ] = await Promise.all([
     supabase
       .from('invoices')
-      .select('*, patients(id, profiles(first_name, last_name))')
+      .select('*, patients(id, profiles(first_name, last_name)), emergency_patient_data')
       .eq('status', 'paid')
       .gte('created_at', cutoffTime)
       .lte('created_at', upperBound),
@@ -1195,17 +1195,29 @@ export const generateDailyClosingPDF = async (data: {
   const labCount = transactionsData?.labReports?.length || 0;
   const xrayCount = transactionsData?.xrayReports?.length || 0;
   const otCount = transactionsData?.otSchedules?.length || 0;
-  const emergencyCount = transactionsData?.emergencyAppointments?.length || 0;
+  const emergencyAppointmentCount = transactionsData?.emergencyAppointments?.length || 0;
+  
+  // Count emergency invoices from hospital invoices
+  const emergencyInvoices = transactionsData?.hospitalInvoices?.filter((inv: any) => 
+    inv.description?.toLowerCase().includes('emergency') || 
+    inv.emergency_patient_data ||
+    inv.invoice_number?.startsWith('EMG-') ||
+    inv.invoice_number?.startsWith('EMERGENCY-')
+  ) || [];
+  const emergencyInvoiceCount = emergencyInvoices.length;
+  const totalEmergencyCount = emergencyAppointmentCount + emergencyInvoiceCount;
   
   const labRevenue = transactionsData?.labReports?.reduce((sum: number, lab: any) => sum + (lab.price || 0), 0) || 0;
   const xrayRevenue = transactionsData?.xrayReports?.reduce((sum: number, xray: any) => sum + (xray.price || 0), 0) || 0;
   const otRevenue = transactionsData?.otSchedules?.reduce((sum: number, ot: any) => sum + ((ot.total_cost || 0) - (ot.doctor_expense || 0)), 0) || 0;
-  const emergencyRevenue = transactionsData?.emergencyAppointments?.reduce((sum: number, emergency: any) => sum + (emergency.consultation_fee_at_time || 0), 0) || 0;
+  const emergencyAppointmentRevenue = transactionsData?.emergencyAppointments?.reduce((sum: number, emergency: any) => sum + (emergency.consultation_fee_at_time || 0), 0) || 0;
+  const emergencyInvoiceRevenue = emergencyInvoices.reduce((sum: number, inv: any) => sum + (inv.amount || 0), 0);
+  const totalEmergencyRevenue = emergencyAppointmentRevenue + emergencyInvoiceRevenue;
   
   // Calculate correct hospital services revenue (excluding pharmacy profit and misc income)
-  const hospitalServicesRevenue = labRevenue + xrayRevenue + otRevenue + emergencyRevenue;
+  const hospitalServicesRevenue = labRevenue + xrayRevenue + otRevenue + totalEmergencyRevenue;
 
-  if (labCount > 0 || xrayCount > 0 || otCount > 0 || emergencyCount > 0) {
+  if (labCount > 0 || xrayCount > 0 || otCount > 0 || totalEmergencyCount > 0) {
     const servicesSummaryHeaders = ['Service Type', 'Count', 'Revenue'];
     const servicesSummaryColWidths = [80, 30, 40];
     const servicesSummaryRows = [];
@@ -1219,11 +1231,11 @@ export const generateDailyClosingPDF = async (data: {
     if (otCount > 0) {
       servicesSummaryRows.push(['OT Operations', otCount.toString(), formatPkrAmount(otRevenue)]);
     }
-    if (emergencyCount > 0) {
-      servicesSummaryRows.push(['Emergency Services', emergencyCount.toString(), formatPkrAmount(emergencyRevenue)]);
+    if (totalEmergencyCount > 0) {
+      servicesSummaryRows.push(['Emergency Services', totalEmergencyCount.toString(), formatPkrAmount(totalEmergencyRevenue)]);
     }
     
-    servicesSummaryRows.push(['Total Hospital Services', (labCount + xrayCount + otCount + emergencyCount).toString(), formatPkrAmount(hospitalServicesRevenue)]);
+    servicesSummaryRows.push(['Total Hospital Services', (labCount + xrayCount + otCount + totalEmergencyCount).toString(), formatPkrAmount(hospitalServicesRevenue)]);
 
     drawTable(servicesSummaryHeaders, servicesSummaryRows, servicesSummaryColWidths);
   } else {
