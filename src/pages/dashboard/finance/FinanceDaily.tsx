@@ -87,7 +87,7 @@ export default function FinanceDaily() {
       // Hospital invoices (consultations) - filter based on cutoff time
       const { data: hospitalInvoices } = await supabase
         .from('invoices')
-        .select('amount, created_at, description')
+        .select('amount, created_at, description, emergency_patient_data')
         .eq('status', 'paid')
         .gte('created_at', cutoffTime)
         .lte('created_at', upperBound);
@@ -200,7 +200,13 @@ export default function FinanceDaily() {
 
       // Calculate totals
       // Hospital revenue ONLY from emergency consultations (regular consultations go to doctors)
-      const emergencyRevenue = emergencyAppointments?.reduce((sum, apt) => sum + (apt.consultation_fee_at_time || 0), 0) || 0;
+      // Include both emergency appointments and emergency invoices
+      const emergencyAppointmentRevenue = emergencyAppointments?.reduce((sum, apt) => sum + (apt.consultation_fee_at_time || 0), 0) || 0;
+      const emergencyInvoiceRevenue = hospitalInvoices?.filter(inv => 
+        inv.description?.toLowerCase().includes('emergency') || 
+        inv.emergency_patient_data
+      )?.reduce((sum, inv) => sum + Number(inv.amount), 0) || 0;
+      const emergencyRevenue = emergencyAppointmentRevenue + emergencyInvoiceRevenue;
       
       // Calculate pharmacy revenue and profit correctly
       let pharmacyRevenue = 0;

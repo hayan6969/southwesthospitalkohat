@@ -79,7 +79,10 @@ export const useFinancialAnalytics = () => {
       // Hospital only gets revenue from: EMERGENCY consultations, lab tests, OT hospital portion, pharmacy profit
       // Regular consultations go to doctors, but emergency consultations go to hospital
       const emergencyConsultationRevenue = invoices
-        .filter(inv => inv.status === 'paid' && inv.description?.toLowerCase().includes('emergency'))
+        .filter(inv => inv.status === 'paid' && (
+          inv.description?.toLowerCase().includes('emergency') ||
+          inv.emergency_patient_data
+        ))
         .reduce((sum, inv) => sum + Number(inv.amount), 0);
 
       // Calculate pharmacy profit only (not revenue - hospital gets profit share)
