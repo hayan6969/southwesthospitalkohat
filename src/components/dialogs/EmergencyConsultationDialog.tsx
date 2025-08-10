@@ -4,16 +4,25 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { AlertTriangle, Plus, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { generateInvoicePDF } from "@/utils/pdfGenerator";
 import { formatPkrAmount } from "@/utils/currency";
+import { useQuery } from "@tanstack/react-query";
 
 interface AdditionalExpense {
   id: string;
   name: string;
   cost: number;
+}
+
+interface EmergencyExpense {
+  id: string;
+  name: string;
+  cost: number;
+  selected?: boolean;
 }
 
 export function EmergencyConsultationDialog() {
@@ -22,12 +31,30 @@ export function EmergencyConsultationDialog() {
   const [cnic, setCnic] = useState("");
   const [contactNumber, setContactNumber] = useState("");
   const [additionalExpenses, setAdditionalExpenses] = useState<AdditionalExpense[]>([]);
+  const [selectedEmergencyExpenses, setSelectedEmergencyExpenses] = useState<EmergencyExpense[]>([]);
+  const [includeDoctorFee, setIncludeDoctorFee] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const { settings: hospitalSettings } = useHospitalSettings();
 
+  // Fetch emergency expenses from admin
+  const { data: emergencyExpenses = [] } = useQuery({
+    queryKey: ['emergency-expenses'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('emergency_expenses')
+        .select('*')
+        .order('name');
+      
+      if (error) throw error;
+      return data as EmergencyExpense[];
+    }
+  });
+
   const emergencyFee = hospitalSettings?.emergency_consultation_fee || 10000;
+  const doctorFee = includeDoctorFee ? emergencyFee : 0;
   const totalAdditionalCost = additionalExpenses.reduce((sum, expense) => sum + expense.cost, 0);
-  const grandTotal = emergencyFee + totalAdditionalCost;
+  const totalSelectedEmergencyExpenses = selectedEmergencyExpenses.reduce((sum, expense) => sum + expense.cost, 0);
+  const grandTotal = doctorFee + totalAdditionalCost + totalSelectedEmergencyExpenses;
 
   const generateInvoiceNumber = () => {
     const timestamp = Date.now().toString().slice(-6);
@@ -53,6 +80,15 @@ export function EmergencyConsultationDialog() {
     ));
   };
 
+  const toggleEmergencyExpense = (expense: EmergencyExpense) => {
+    const isSelected = selectedEmergencyExpenses.some(sel => sel.id === expense.id);
+    if (isSelected) {
+      setSelectedEmergencyExpenses(selectedEmergencyExpenses.filter(sel => sel.id !== expense.id));
+    } else {
+      setSelectedEmergencyExpenses([...selectedEmergencyExpenses, expense]);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -72,8 +108,23 @@ export function EmergencyConsultationDialog() {
     try {
       const invoiceNumber = generateInvoiceNumber();
       
-      // Create detailed description including additional expenses
+      // Create detailed description including all expenses
       let description = `Emergency Consultation - ${patientName}`;
+      
+      // Add doctor fee if included
+      if (includeDoctorFee) {
+        description += ` | Doctor Fee: ${formatPkrAmount(emergencyFee)}`;
+      }
+      
+      // Add emergency expenses
+      if (selectedEmergencyExpenses.length > 0) {
+        const emergencyDetails = selectedEmergencyExpenses
+          .map(exp => `${exp.name}: ${formatPkrAmount(exp.cost)}`)
+          .join(', ');
+        description += ` | Emergency Services: ${emergencyDetails}`;
+      }
+      
+      // Add additional expenses
       if (additionalExpenses.length > 0) {
         const expenseDetails = additionalExpenses
           .filter(exp => exp.name.trim() && exp.cost > 0)
@@ -127,6 +178,8 @@ export function EmergencyConsultationDialog() {
       setCnic("");
       setContactNumber("");
       setAdditionalExpenses([]);
+      setSelectedEmergencyExpenses([]);
+      setIncludeDoctorFee(false);
     } catch (error) {
       console.error('Error creating emergency consultation:', error);
       toast.error("Failed to create emergency consultation invoice");
@@ -154,20 +207,28 @@ export function EmergencyConsultationDialog() {
         <div className="flex-1 overflow-y-auto px-1">
           <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
             <div className="space-y-2">
-              <div className="flex justify-between text-sm text-red-800">
-                <span>Emergency Consultation Fee:</span>
-                <span className="font-medium">{formatPkrAmount(emergencyFee)}</span>
-              </div>
+              {includeDoctorFee && (
+                <div className="flex justify-between text-sm text-red-800">
+                  <span>Doctor Fee:</span>
+                  <span className="font-medium">{formatPkrAmount(emergencyFee)}</span>
+                </div>
+              )}
+              {selectedEmergencyExpenses.map(expense => (
+                <div key={expense.id} className="flex justify-between text-sm text-red-700">
+                  <span className="truncate mr-2">{expense.name}:</span>
+                  <span className="flex-shrink-0">{formatPkrAmount(expense.cost)}</span>
+                </div>
+              ))}
               {additionalExpenses.filter(exp => exp.name.trim() && exp.cost > 0).map(expense => (
                 <div key={expense.id} className="flex justify-between text-sm text-red-700">
                   <span className="truncate mr-2">{expense.name}:</span>
                   <span className="flex-shrink-0">{formatPkrAmount(expense.cost)}</span>
                 </div>
               ))}
-              {totalAdditionalCost > 0 && (
+              {(totalSelectedEmergencyExpenses > 0 || totalAdditionalCost > 0) && (
                 <div className="flex justify-between text-sm text-red-800 border-t pt-2">
-                  <span>Additional Expenses:</span>
-                  <span className="font-medium">{formatPkrAmount(totalAdditionalCost)}</span>
+                  <span>Services & Expenses:</span>
+                  <span className="font-medium">{formatPkrAmount(totalSelectedEmergencyExpenses + totalAdditionalCost)}</span>
                 </div>
               )}
               <div className="flex justify-between text-base font-bold text-red-900 border-t pt-2">
@@ -216,6 +277,46 @@ export function EmergencyConsultationDialog() {
                 required
               />
             </div>
+
+            {/* Doctor Fee Checkbox */}
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="includeDoctorFee"
+                checked={includeDoctorFee}
+                onCheckedChange={(checked) => setIncludeDoctorFee(checked as boolean)}
+              />
+              <Label 
+                htmlFor="includeDoctorFee" 
+                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+              >
+                Include Doctor Fee ({formatPkrAmount(emergencyFee)})
+              </Label>
+            </div>
+
+            {/* Emergency Expenses Section */}
+            {emergencyExpenses.length > 0 && (
+              <div className="space-y-3">
+                <Label className="text-sm font-medium">Emergency Services</Label>
+                <div className="max-h-32 overflow-y-auto space-y-2 border rounded-md p-3">
+                  {emergencyExpenses.map((expense) => (
+                    <div key={expense.id} className="flex items-center space-x-2">
+                      <Checkbox
+                        id={`emergency-${expense.id}`}
+                        checked={selectedEmergencyExpenses.some(sel => sel.id === expense.id)}
+                        onCheckedChange={() => toggleEmergencyExpense(expense)}
+                      />
+                      <Label 
+                        htmlFor={`emergency-${expense.id}`}
+                        className="text-sm flex-1 flex justify-between"
+                      >
+                        <span>{expense.name}</span>
+                        <span className="font-medium">{formatPkrAmount(expense.cost)}</span>
+                      </Label>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Additional Expenses Section */}
             <div className="space-y-3">

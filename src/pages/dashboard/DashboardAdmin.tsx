@@ -33,6 +33,7 @@ import AdminLabs from "./admin/AdminLabs";
 import { AdminOT } from "./admin/AdminOT";
 import AdminXrays from "./admin/AdminXrays";
 import { AdminFinanceAnalytics } from "@/components/AdminFinanceAnalytics";
+import { EmergencyExpensesManager } from "@/components/admin/EmergencyExpensesManager";
 import { AuditLogDetailDialog } from "@/components/dialogs/AuditLogDetailDialog";
 import { AdminDashboardNav } from "@/components/AdminDashboardNav";
 
@@ -302,7 +303,7 @@ export default function DashboardAdmin() {
           </div>
 
           <Tabs defaultValue="overview" className="space-y-6">
-            <TabsList className="grid w-full grid-cols-9 h-auto gap-1">
+            <TabsList className="grid w-full grid-cols-10 h-auto gap-1">
               <TabsTrigger value="overview" className="whitespace-nowrap">Overview</TabsTrigger>
               <TabsTrigger value="analytics" className="whitespace-nowrap">Analytics</TabsTrigger>
               {/* <TabsTrigger value="finance" className="whitespace-nowrap">Finance</TabsTrigger> */}
@@ -311,6 +312,7 @@ export default function DashboardAdmin() {
               <TabsTrigger value="lab" className="whitespace-nowrap">Lab</TabsTrigger>
               <TabsTrigger value="xray" className="whitespace-nowrap">X-ray</TabsTrigger>
               <TabsTrigger value="ot" className="whitespace-nowrap">OT</TabsTrigger>
+              <TabsTrigger value="emergency" className="whitespace-nowrap">Emergency</TabsTrigger>
               <TabsTrigger value="logs" className="whitespace-nowrap">System Logs</TabsTrigger>
               <TabsTrigger value="settings" className="whitespace-nowrap">Settings</TabsTrigger>
             </TabsList>
@@ -689,6 +691,10 @@ export default function DashboardAdmin() {
 
             <TabsContent value="ot">
               <AdminOT />
+            </TabsContent>
+
+            <TabsContent value="emergency">
+              <EmergencyExpensesManager />
             </TabsContent>
 
             <TabsContent value="logs">
