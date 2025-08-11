@@ -217,15 +217,57 @@ export function StaffLabReports() {
     }
   };
 
-  const handleDownloadResult = (resultFileUrl: string, testName: string) => {
-    if (resultFileUrl) {
+  const handleDownloadResult = async (resultFileUrl: string, testName: string) => {
+    if (!resultFileUrl) {
+      toast({
+        title: "Error",
+        description: "No file URL available",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      let downloadUrl = resultFileUrl;
+      
+      // If it's not already a full URL, get the public URL using the same method as getPdfUrl
+      if (!resultFileUrl.startsWith('http')) {
+        const { data } = supabase.storage
+          .from('lab-results')
+          .getPublicUrl(resultFileUrl);
+        
+        if (data?.publicUrl) {
+          downloadUrl = data.publicUrl;
+          console.log('Successfully got public URL for download:', resultFileUrl, '-> URL:', downloadUrl);
+        } else {
+          throw new Error('Failed to get public URL');
+        }
+      }
+
+      // Create download link
       const link = document.createElement('a');
-      link.href = resultFileUrl;
+      link.href = downloadUrl;
       link.download = `${testName}-result.pdf`;
       link.target = '_blank';
+      
+      // Force download by setting the download attribute
+      link.setAttribute('download', `${testName}-result.pdf`);
+      
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
+      
+      toast({
+        title: "Download Started",
+        description: `Downloading ${testName} lab result`,
+      });
+    } catch (error) {
+      console.error('Error downloading file:', error);
+      toast({
+        title: "Download Failed",
+        description: "Failed to download the lab result file",
+        variant: "destructive",
+      });
     }
   };
 
