@@ -428,6 +428,42 @@ export function StaffCounter() {
     }
   };
 
+  const handleReprintEmergencyInvoice = async (invoice: any) => {
+    setProcessingInvoice(invoice.id);
+    try {
+      // Emergency invoices contain patient data in emergency_patient_data
+      if (invoice.emergency_patient_data) {
+        // Use the emergency patient data directly for PDF generation
+        const invoiceForPDF = {
+          ...invoice,
+          patient: invoice.emergency_patient_data
+        };
+        
+        await generateInvoicePDF(invoiceForPDF);
+        
+        toast({
+          title: "Invoice Reprinted",
+          description: "Emergency consultation invoice has been reprinted",
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: "Emergency patient data not found for this invoice",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error('Error reprinting emergency invoice:', error);
+      toast({
+        title: "Error",
+        description: "Failed to reprint emergency invoice",
+        variant: "destructive",
+      });
+    } finally {
+      setProcessingInvoice(null);
+    }
+  };
+
   // Removed cancel appointment function - doctors can now cancel their own appointments
 
   return (
@@ -699,7 +735,12 @@ export function StaffCounter() {
                             </Badge>
                           </TableCell>
                           <TableCell>
-                            <Button size="sm" variant="outline">
+                            <Button 
+                              size="sm" 
+                              variant="outline"
+                              onClick={() => handleReprintEmergencyInvoice(invoice)}
+                              disabled={processingInvoice === invoice.id}
+                            >
                               <Printer className="w-3 h-3 mr-1" />
                               Reprint
                             </Button>
