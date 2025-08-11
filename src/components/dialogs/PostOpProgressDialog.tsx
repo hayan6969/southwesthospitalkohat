@@ -204,7 +204,7 @@ export function PostOpProgressDialog({
                   <Printer className="w-4 h-4" />
                   Print
                 </Button>
-                {(profile?.role as string) === 'nursing' && (
+                {((profile?.role as string) === 'nursing' || profile?.role === 'staff') && (
                   <Button 
                     onClick={() => setShowAddDialog(true)}
                     className="flex items-center gap-2"
