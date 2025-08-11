@@ -13,12 +13,32 @@ export const usePatientNames = () => {
       }
 
       try {
-        const { data, error } = await supabase
-          .from('profiles')
-          .select('id, first_name, last_name, phone, email, created_at')
-          .eq('role', 'patient');
+        // Fetch all patients without limit to ensure we get everyone
+        let allPatients: any[] = [];
+        let start = 0;
+        const batchSize = 1000;
+        let hasMore = true;
 
-        if (error) throw error;
+        while (hasMore) {
+          const { data, error } = await supabase
+            .from('profiles')
+            .select('id, first_name, last_name, phone, email, created_at')
+            .eq('role', 'patient')
+            .range(start, start + batchSize - 1)
+            .order('created_at', { ascending: true });
+
+          if (error) throw error;
+          
+          if (data && data.length > 0) {
+            allPatients = [...allPatients, ...data];
+            start += batchSize;
+            hasMore = data.length === batchSize;
+          } else {
+            hasMore = false;
+          }
+        }
+
+        const data = allPatients;
         
         // Cache the data for offline use
         if (data) {
