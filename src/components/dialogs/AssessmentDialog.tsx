@@ -53,7 +53,7 @@ export function AssessmentDialog({
   const [loading, setLoading] = useState(false);
   const [addDialogOpen, setAddDialogOpen] = useState(false);
 
-  const canAddEntry = profile?.role === 'staff' || profile?.role === 'admin';
+  const canAddEntry = profile?.role === 'staff' || profile?.role === 'admin' || profile?.role === 'nursing' || profile?.role === 'ota';
 
   useEffect(() => {
     if (open && otSchedule) {
