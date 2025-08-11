@@ -15,7 +15,7 @@ const dashboards = [
   { path: "/dashboard/finance", label: "Finance", icon: DollarSign },
   { path: "/dashboard/pharmacy", label: "Pharmacy", icon: Pill },
   { path: "/dashboard/staff", label: "Staff", icon: UserCog },
-  { path: "/dashboard/ota", label: "OTA", icon: Calendar },
+  { path: "/dashboard/ota", label: "OT", icon: Calendar },
 ];
 
 export function AdminDashboardNav() {
