@@ -1560,32 +1560,44 @@ export type Database = {
       }
       treatment_chart_entries: {
         Row: {
+          blood_pressure: string | null
           created_at: string
           entry_date: string
           id: string
-          investigation: string | null
-          medicine: string | null
+          input_data: string | null
           ot_schedule_id: string
+          output_data: string | null
+          pulses: string | null
+          remarks: string | null
+          temperature: string | null
           updated_at: string
           user_email: string
         }
         Insert: {
+          blood_pressure?: string | null
           created_at?: string
           entry_date: string
           id?: string
-          investigation?: string | null
-          medicine?: string | null
+          input_data?: string | null
           ot_schedule_id: string
+          output_data?: string | null
+          pulses?: string | null
+          remarks?: string | null
+          temperature?: string | null
           updated_at?: string
           user_email: string
         }
         Update: {
+          blood_pressure?: string | null
           created_at?: string
           entry_date?: string
           id?: string
-          investigation?: string | null
-          medicine?: string | null
+          input_data?: string | null
           ot_schedule_id?: string
+          output_data?: string | null
+          pulses?: string | null
+          remarks?: string | null
+          temperature?: string | null
           updated_at?: string
           user_email?: string
         }
