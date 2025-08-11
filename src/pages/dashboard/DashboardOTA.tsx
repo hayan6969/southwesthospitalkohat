@@ -146,7 +146,7 @@ export default function DashboardOTA() {
         `);
 
       // Apply filters
-      if (selectedRoom) {
+      if (selectedRoom && selectedRoom !== "") {
         query = query.eq('room_id', selectedRoom);
       }
 
@@ -156,7 +156,7 @@ export default function DashboardOTA() {
       }
 
       if (searchPatientId.trim()) {
-        // First get patient IDs that match the search
+        // Use a simpler approach - just filter by patient number for now
         const { data: patients } = await supabase
           .from('patients')
           .select('id')
@@ -166,7 +166,7 @@ export default function DashboardOTA() {
           const patientIds = patients.map(p => p.id);
           query = query.in('patient_id', patientIds);
         } else {
-          // No matching patients found
+          // No matching patients found, return empty results
           setOtSchedules([]);
           setLoading(false);
           return;
@@ -233,7 +233,10 @@ export default function DashboardOTA() {
   const clearFilters = () => {
     setSearchPatientId("");
     setSelectedDate(null);
-    // Keep room selection as is
+    // Reset to first room to show all rooms
+    if (otRooms.length > 0) {
+      setSelectedRoom(otRooms[0].id);
+    }
   };
 
   const handleTreatmentChart = (ot: OTScheduleWithDetails) => {
