@@ -200,7 +200,7 @@ export function TreatmentChartDialog({
                   <Printer className="w-4 h-4" />
                   Print
                 </Button>
-                {profile?.role === 'staff' && (
+                {(profile?.role === 'staff' || (profile?.role as string) === 'nursing') && (
                   <Button 
                     onClick={() => setShowAddDialog(true)}
                     className="flex items-center gap-2"
