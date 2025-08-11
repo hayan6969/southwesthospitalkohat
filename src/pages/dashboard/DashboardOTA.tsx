@@ -220,7 +220,11 @@ export default function DashboardOTA() {
   };
 
   const handlePreOpOrders = (ot: OTScheduleWithDetails) => {
+    console.log('Pre-Op Orders clicked for:', ot);
+    console.log('Current profile role:', profile?.role);
+    console.log('Setting selectedOT to:', ot);
     setSelectedOT(ot);
+    console.log('Opening Pre-Op Orders dialog');
     setShowPreOpOrdersDialog(true);
   };
 
@@ -625,7 +629,10 @@ export default function DashboardOTA() {
         {/* Pre Operation Orders Dialog */}
         <PreOperationOrdersDialog 
           open={showPreOpOrdersDialog}
-          onOpenChange={setShowPreOpOrdersDialog}
+          onOpenChange={(open) => {
+            console.log('Pre-Op Orders dialog open state changing to:', open);
+            setShowPreOpOrdersDialog(open);
+          }}
           otSchedule={selectedOT}
           onSave={fetchOTSchedules}
         />
