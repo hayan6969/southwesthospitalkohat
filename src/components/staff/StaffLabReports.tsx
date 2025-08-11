@@ -98,11 +98,10 @@ export function StaffLabReports() {
         .from("lab_reports")
         .select(`
           *,
-          patient:patients!lab_reports_patient_id_fkey(
+          patient:patients!inner(
             patient_number,
-            profile:profiles!patients_id_fkey(first_name, last_name)
-          ),
-          doctor:profiles!lab_reports_doctor_id_fkey(first_name, last_name)
+            profile:profiles!inner(first_name, last_name)
+          )
         `)
         .eq("patient_id", patient.id)
         .order("test_date", { ascending: false });
@@ -117,7 +116,30 @@ export function StaffLabReports() {
         return;
       }
 
-      setLabReports((reports as any) || []);
+      // Fetch doctor information for reports that have doctor_id
+      let enrichedReports = reports;
+      if (reports && reports.length > 0) {
+        const doctorIds = reports
+          .map(report => report.doctor_id)
+          .filter(id => id) as string[];
+        
+        if (doctorIds.length > 0) {
+          const { data: doctors } = await supabase
+            .from("profiles")
+            .select("id, first_name, last_name")
+            .in("id", doctorIds);
+
+          // Map doctor information to reports
+          enrichedReports = reports.map(report => ({
+            ...report,
+            doctor: report.doctor_id && doctors 
+              ? doctors.find(doc => doc.id === report.doctor_id)
+              : null
+          }));
+        }
+      }
+
+      setLabReports((enrichedReports as any) || []);
 
       if (!reports || reports.length === 0) {
         toast({
