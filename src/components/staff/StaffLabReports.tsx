@@ -63,11 +63,11 @@ export function StaffLabReports() {
 
       // Check if search term looks like a UUID (patient_id) or patient number
       if (searchTerm.includes("-") && searchTerm.length > 30) {
-        // Looks like a UUID
-        patientQuery = patientQuery.eq("id", searchTerm);
+        // Looks like a UUID - use case-insensitive search
+        patientQuery = patientQuery.ilike("id", searchTerm);
       } else {
-        // Search by patient number
-        patientQuery = patientQuery.eq("patient_number", searchTerm);
+        // Search by patient number - use case-insensitive search
+        patientQuery = patientQuery.ilike("patient_number", searchTerm);
       }
 
       const { data: patients, error: patientError } = await patientQuery;
