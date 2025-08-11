@@ -184,7 +184,7 @@ export function TreatmentChartDialog({
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="sm:max-w-[1200px] max-h-[85vh] overflow-y-auto w-[95vw]">
+        <DialogContent className="sm:max-w-[1200px] max-h-[85vh] w-[95vw]">
           <DialogHeader>
             <div className="flex items-center justify-between pr-8">
               <DialogTitle className="flex items-center gap-2">
@@ -253,9 +253,9 @@ export function TreatmentChartDialog({
                   <p className="text-gray-500 mt-2">Loading treatment entries...</p>
                 </div>
               ) : treatmentEntries.length > 0 ? (
-                <div className="border rounded-lg overflow-hidden w-full">
+                <div className="border rounded-lg overflow-hidden w-full max-h-[400px] overflow-y-auto">
                   <Table className="w-full table-fixed">
-                    <TableHeader>
+                    <TableHeader className="sticky top-0 bg-background z-10">
                       <TableRow>
                         <TableHead className="w-32">Date</TableHead>
                         <TableHead className="w-80">Medicine</TableHead>
