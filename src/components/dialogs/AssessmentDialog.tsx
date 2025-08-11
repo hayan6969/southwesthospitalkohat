@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { format } from "date-fns";
 import { ClipboardCheck, User, Calendar, Plus, Printer, Edit, Trash2 } from "lucide-react";
+import jsPDF from "jspdf";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
@@ -89,76 +90,101 @@ export function AssessmentDialog({
   };
 
   const handlePrint = () => {
-    const printWindow = window.open('', '_blank');
-    if (!printWindow || !otSchedule) return;
+    if (!otSchedule) return;
 
-    const printContent = `
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <title>Assessment Chart - ${otSchedule.patient.profile.first_name} ${otSchedule.patient.profile.last_name}</title>
-          <style>
-            body { font-family: Arial, sans-serif; margin: 20px; }
-            .header { text-align: center; margin-bottom: 30px; border-bottom: 2px solid #333; padding-bottom: 10px; }
-            .patient-info { margin-bottom: 20px; background: #f5f5f5; padding: 15px; border-radius: 5px; }
-            .patient-info div { margin-bottom: 5px; }
-            table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-            th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-            th { background-color: #f2f2f2; font-weight: bold; }
-            .assessment-cell { max-width: 200px; word-wrap: break-word; }
-            .plan-cell { max-width: 200px; word-wrap: break-word; }
-          </style>
-        </head>
-        <body>
-          <div class="header">
-            <h1>Assessment Chart</h1>
-          </div>
-          <div class="patient-info">
-            <div><strong>Patient:</strong> ${otSchedule.patient.profile.first_name} ${otSchedule.patient.profile.last_name}</div>
-            <div><strong>Patient ID:</strong> ${otSchedule.patient.patient_number}</div>
-            <div><strong>Operation:</strong> ${otSchedule.operation.operation_name}</div>
-            <div><strong>Operation Date:</strong> ${format(new Date(otSchedule.operation_date), 'PPP')}</div>
-            <div><strong>Surgeon:</strong> ${otSchedule.doctor_name}</div>
-          </div>
-          <table>
-            <thead>
-              <tr>
-                <th>Date</th>
-                <th>Time</th>
-                <th>Assessment</th>
-                <th>Plan</th>
-                <th>User</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${entries.map(entry => `
-                <tr>
-                  <td>${format(new Date(entry.entry_date), 'MMM dd, yyyy')}</td>
-                  <td>${formatTimeForDisplay(new Date(`${entry.entry_date}T${entry.entry_time}`))}</td>
-                  <td class="assessment-cell">${entry.assessment || '-'}</td>
-                  <td class="plan-cell">${entry.plan || '-'}</td>
-                  <td>${entry.user_email}</td>
-                </tr>
-              `).join('')}
-            </tbody>
-          </table>
-          <div style="margin-top: 30px; text-align: center; font-size: 12px; color: #666;">
-            Generated on ${format(new Date(), 'PPP p')}
-          </div>
-          <script>
-            window.onload = function() {
-              window.print();
-              window.onafterprint = function() {
-                window.close();
-              }
-            }
-          </script>
-        </body>
-      </html>
-    `;
-
-    printWindow.document.write(printContent);
-    printWindow.document.close();
+    const doc = new jsPDF();
+    
+    // Header
+    doc.setFontSize(18);
+    doc.text('Assessment Chart', 20, 20);
+    
+    // Patient Info
+    doc.setFontSize(12);
+    doc.text(`Patient: ${otSchedule.patient.profile.first_name} ${otSchedule.patient.profile.last_name}`, 20, 40);
+    doc.text(`Patient ID: ${otSchedule.patient.patient_number}`, 20, 50);
+    doc.text(`Operation: ${otSchedule.operation.operation_name}`, 20, 60);
+    doc.text(`Date: ${format(new Date(otSchedule.operation_date), 'PPP')}`, 20, 70);
+    doc.text(`Surgeon: ${otSchedule.doctor_name}`, 20, 80);
+    
+    // Table Header
+    let yPosition = 100;
+    doc.setFontSize(14);
+    doc.text('Assessment Entries', 20, yPosition);
+    yPosition += 15;
+    
+    // Table headers with background and borders
+    doc.setFillColor(240, 240, 240);
+    doc.rect(15, yPosition - 5, 185, 10, 'F');
+    
+    doc.setFontSize(11);
+    doc.setFont(undefined, 'bold');
+    doc.setTextColor(0, 0, 0);
+    
+    // Header text
+    doc.text('Date', 20, yPosition);
+    doc.text('Time', 50, yPosition);
+    doc.text('Assessment', 80, yPosition);
+    doc.text('Plan', 130, yPosition);
+    doc.text('User', 170, yPosition);
+    
+    // Draw header borders
+    doc.setDrawColor(180, 180, 180);
+    doc.line(15, yPosition - 5, 200, yPosition - 5);
+    doc.line(15, yPosition + 5, 200, yPosition + 5);
+    doc.line(15, yPosition - 5, 15, yPosition + 5);
+    doc.line(45, yPosition - 5, 45, yPosition + 5);
+    doc.line(75, yPosition - 5, 75, yPosition + 5);
+    doc.line(125, yPosition - 5, 125, yPosition + 5);
+    doc.line(165, yPosition - 5, 165, yPosition + 5);
+    doc.line(200, yPosition - 5, 200, yPosition + 5);
+    
+    yPosition += 15;
+    
+    // Reset font for content
+    doc.setFont(undefined, 'normal');
+    
+    // Table rows
+    entries.forEach((entry) => {
+      if (yPosition > 270) {
+        doc.addPage();
+        yPosition = 20;
+      }
+      
+      const entryDate = format(new Date(entry.entry_date), 'MMM d, yyyy');
+      const entryTime = formatTimeForDisplay(new Date(`${entry.entry_date}T${entry.entry_time}`));
+      const assessment = entry.assessment || '-';
+      const plan = entry.plan || '-';
+      const user = entry.user_email;
+      
+      doc.text(entryDate, 20, yPosition);
+      doc.text(entryTime, 50, yPosition);
+      
+      // Handle long text with line breaks
+      const assessmentLines = doc.splitTextToSize(assessment, 40);
+      const planLines = doc.splitTextToSize(plan, 30);
+      const userLines = doc.splitTextToSize(user, 25);
+      
+      const maxLines = Math.max(assessmentLines.length, planLines.length, userLines.length);
+      
+      assessmentLines.forEach((line: string, index: number) => {
+        doc.text(line, 80, yPosition + (index * 5));
+      });
+      
+      planLines.forEach((line: string, index: number) => {
+        doc.text(line, 130, yPosition + (index * 5));
+      });
+      
+      userLines.forEach((line: string, index: number) => {
+        doc.text(line, 170, yPosition + (index * 5));
+      });
+      
+      yPosition += (maxLines * 5) + 5;
+    });
+    
+    // Open PDF in new tab
+    const pdfBlob = doc.output('blob');
+    const url = URL.createObjectURL(pdfBlob);
+    window.open(url, '_blank');
   };
 
   const handleAddEntry = () => {
