@@ -201,14 +201,16 @@ export function TreatmentChartDialog({
                   <Printer className="w-4 h-4" />
                   Print
                 </Button>
-                <Button 
-                  onClick={() => setShowAddDialog(true)}
-                  className="flex items-center gap-2"
-                  size="sm"
-                >
-                  <Plus className="w-4 h-4" />
-                  Add
-                </Button>
+                {profile?.role === 'staff' && (
+                  <Button 
+                    onClick={() => setShowAddDialog(true)}
+                    className="flex items-center gap-2"
+                    size="sm"
+                  >
+                    <Plus className="w-4 h-4" />
+                    Add
+                  </Button>
+                )}
               </div>
             </div>
           </DialogHeader>
