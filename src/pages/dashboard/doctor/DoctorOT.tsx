@@ -477,15 +477,64 @@ export default function DoctorOT() {
                         </span>
                       </TableCell>
                       <TableCell>
-                        <Button 
-                          size="sm" 
-                          variant="outline"
-                          onClick={() => handleDischargeSlip(ot)}
-                          className="flex items-center gap-1"
-                        >
-                          <FileText className="w-3 h-3" />
-                          Discharge Slip
-                        </Button>
+                        <div className="flex gap-2 flex-wrap">
+                          <Button 
+                            size="sm" 
+                            variant="outline"
+                            onClick={() => handlePreOpOrders(ot)}
+                            className="flex items-center gap-1"
+                          >
+                            <ClipboardList className="w-3 h-3" />
+                            Pre-Op Orders
+                          </Button>
+                          <Button 
+                            size="sm" 
+                            variant="outline"
+                            onClick={() => handleTreatmentChart(ot)}
+                            className="flex items-center gap-1"
+                          >
+                            <FileText className="w-3 h-3" />
+                            Treatment Chart
+                          </Button>
+                          <Button 
+                            size="sm" 
+                            variant="outline"
+                            onClick={() => handleProgress(ot)}
+                            className="flex items-center gap-1"
+                          >
+                            <TrendingUp className="w-3 h-3" />
+                            POPPR
+                          </Button>
+                          <Button 
+                            size="sm" 
+                            variant="outline"
+                            onClick={() => handleAssessment(ot)}
+                            className="flex items-center gap-1"
+                          >
+                            <ClipboardCheck className="w-3 h-3" />
+                            Assessment
+                          </Button>
+                          <Button 
+                            size="sm" 
+                            variant="outline"
+                            onClick={() => handleOTNotes(ot)}
+                            className="flex items-center gap-1"
+                          >
+                            <Edit className="w-3 h-3" />
+                            OT Notes
+                          </Button>
+                          {ot.ot_notes?.dischargeSlip && (
+                            <Button 
+                              size="sm" 
+                              variant="outline"
+                              onClick={() => handleDischargeSlip(ot)}
+                              className="flex items-center gap-1"
+                            >
+                              <FileText className="w-3 h-3" />
+                              Discharge Slip
+                            </Button>
+                          )}
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}
