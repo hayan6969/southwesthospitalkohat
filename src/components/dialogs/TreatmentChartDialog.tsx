@@ -91,7 +91,7 @@ export function TreatmentChartDialog({
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="sm:max-w-[1000px] max-h-[85vh] overflow-y-auto">
+        <DialogContent className="sm:max-w-[1200px] max-h-[85vh] overflow-y-auto w-[95vw]">
           <DialogHeader>
             <div className="flex items-center justify-between">
               <DialogTitle className="flex items-center gap-2">
@@ -149,36 +149,36 @@ export function TreatmentChartDialog({
                   <p className="text-gray-500 mt-2">Loading treatment entries...</p>
                 </div>
               ) : treatmentEntries.length > 0 ? (
-                <div className="border rounded-lg overflow-hidden">
-                  <Table>
+                <div className="border rounded-lg overflow-hidden w-full">
+                  <Table className="w-full table-fixed">
                     <TableHeader>
                       <TableRow>
-                        <TableHead className="w-1/6 min-w-0">Date</TableHead>
-                        <TableHead className="w-2/5 min-w-0">Medicine</TableHead>
-                        <TableHead className="w-2/5 min-w-0">Investigation</TableHead>
-                        <TableHead className="w-1/4 min-w-0">User</TableHead>
+                        <TableHead className="w-32">Date</TableHead>
+                        <TableHead className="w-80">Medicine</TableHead>
+                        <TableHead className="w-80">Investigation</TableHead>
+                        <TableHead className="w-48">User</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {treatmentEntries.map((entry) => (
                         <TableRow key={entry.id}>
-                          <TableCell className="w-1/6 min-w-0 align-top">
+                          <TableCell className="w-32 align-top">
                             <div className="font-medium text-sm">
                               {format(new Date(entry.entry_date), 'MMM d, yyyy')}
                             </div>
                           </TableCell>
-                          <TableCell className="w-2/5 min-w-0 align-top">
-                            <div className="text-sm break-words whitespace-normal leading-relaxed">
+                          <TableCell className="w-80 align-top">
+                            <div className="text-sm break-words whitespace-normal leading-relaxed overflow-hidden">
                               {entry.medicine || '-'}
                             </div>
                           </TableCell>
-                          <TableCell className="w-2/5 min-w-0 align-top">
-                            <div className="text-sm break-words whitespace-normal leading-relaxed">
+                          <TableCell className="w-80 align-top">
+                            <div className="text-sm break-words whitespace-normal leading-relaxed overflow-hidden">
                               {entry.investigation || '-'}
                             </div>
                           </TableCell>
-                          <TableCell className="w-1/4 min-w-0 align-top">
-                            <div className="text-sm text-gray-600 break-words whitespace-normal">
+                          <TableCell className="w-48 align-top">
+                            <div className="text-sm text-gray-600 break-words whitespace-normal overflow-hidden">
                               {entry.user_email}
                             </div>
                           </TableCell>
