@@ -1379,6 +1379,59 @@ export type Database = {
         }
         Relationships: []
       }
+      postop_progress_entries: {
+        Row: {
+          blood_pressure: string | null
+          created_at: string
+          entry_date: string
+          id: string
+          input_data: string | null
+          ot_schedule_id: string
+          output_data: string | null
+          pulses: string | null
+          remarks: string | null
+          temperature: string | null
+          updated_at: string
+          user_email: string
+        }
+        Insert: {
+          blood_pressure?: string | null
+          created_at?: string
+          entry_date: string
+          id?: string
+          input_data?: string | null
+          ot_schedule_id: string
+          output_data?: string | null
+          pulses?: string | null
+          remarks?: string | null
+          temperature?: string | null
+          updated_at?: string
+          user_email: string
+        }
+        Update: {
+          blood_pressure?: string | null
+          created_at?: string
+          entry_date?: string
+          id?: string
+          input_data?: string | null
+          ot_schedule_id?: string
+          output_data?: string | null
+          pulses?: string | null
+          remarks?: string | null
+          temperature?: string | null
+          updated_at?: string
+          user_email?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "postop_progress_entries_ot_schedule_id_fkey"
+            columns: ["ot_schedule_id"]
+            isOneToOne: false
+            referencedRelation: "ot_schedules"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       prescriptions: {
         Row: {
           appointment_id: string
