@@ -91,7 +91,7 @@ export function TreatmentChartDialog({
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="sm:max-w-[900px] max-h-[80vh] overflow-y-auto">
+        <DialogContent className="sm:max-w-[1200px] max-h-[85vh] overflow-y-auto w-[95vw]">
           <DialogHeader>
             <div className="flex items-center justify-between">
               <DialogTitle className="flex items-center gap-2">
@@ -150,42 +150,44 @@ export function TreatmentChartDialog({
                 </div>
               ) : treatmentEntries.length > 0 ? (
                 <div className="border rounded-lg overflow-hidden">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Date</TableHead>
-                        <TableHead>Medicine</TableHead>
-                        <TableHead>Investigation</TableHead>
-                        <TableHead>User</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {treatmentEntries.map((entry) => (
-                        <TableRow key={entry.id}>
-                          <TableCell>
-                            <div className="font-medium">
-                              {format(new Date(entry.entry_date), 'MMM d, yyyy')}
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <div className="max-w-xs">
-                              {entry.medicine || '-'}
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <div className="max-w-xs">
-                              {entry.investigation || '-'}
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <div className="text-sm text-gray-600">
-                              {entry.user_email}
-                            </div>
-                          </TableCell>
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="w-[150px]">Date</TableHead>
+                          <TableHead className="w-[300px]">Medicine</TableHead>
+                          <TableHead className="w-[300px]">Investigation</TableHead>
+                          <TableHead className="w-[200px]">User</TableHead>
                         </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
+                      </TableHeader>
+                      <TableBody>
+                        {treatmentEntries.map((entry) => (
+                          <TableRow key={entry.id}>
+                            <TableCell className="w-[150px]">
+                              <div className="font-medium whitespace-nowrap">
+                                {format(new Date(entry.entry_date), 'MMM d, yyyy')}
+                              </div>
+                            </TableCell>
+                            <TableCell className="w-[300px]">
+                              <div className="whitespace-pre-wrap break-words text-sm leading-relaxed">
+                                {entry.medicine || '-'}
+                              </div>
+                            </TableCell>
+                            <TableCell className="w-[300px]">
+                              <div className="whitespace-pre-wrap break-words text-sm leading-relaxed">
+                                {entry.investigation || '-'}
+                              </div>
+                            </TableCell>
+                            <TableCell className="w-[200px]">
+                              <div className="text-sm text-gray-600 break-words">
+                                {entry.user_email}
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
                 </div>
               ) : (
                 <div className="text-center py-12 text-gray-500">
