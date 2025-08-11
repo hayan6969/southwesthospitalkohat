@@ -649,19 +649,50 @@ export default function DashboardAdmin() {
                          >
                            Previous
                          </Button>
-                         <div className="flex items-center gap-1">
-                           {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-                             <Button
-                               key={page}
-                               variant={currentPage === page ? "default" : "outline"}
-                               size="sm"
-                               onClick={() => setCurrentPage(page)}
-                               className="w-8 h-8 p-0"
-                             >
-                               {page}
-                             </Button>
-                           ))}
-                         </div>
+                          <div className="flex items-center gap-1">
+                            {(() => {
+                              const delta = 2;
+                              const range = [];
+                              const rangeWithDots = [];
+
+                              for (let i = Math.max(2, currentPage - delta); 
+                                   i <= Math.min(totalPages - 1, currentPage + delta); 
+                                   i++) {
+                                range.push(i);
+                              }
+
+                              if (currentPage - delta > 2) {
+                                rangeWithDots.push(1, '...');
+                              } else {
+                                rangeWithDots.push(1);
+                              }
+
+                              rangeWithDots.push(...range);
+
+                              if (currentPage + delta < totalPages - 1) {
+                                rangeWithDots.push('...', totalPages);
+                              } else if (totalPages > 1) {
+                                rangeWithDots.push(totalPages);
+                              }
+
+                              return rangeWithDots.map((page, index) => {
+                                if (page === '...') {
+                                  return <span key={`dots-${index}`} className="px-2">...</span>;
+                                }
+                                return (
+                                  <Button
+                                    key={page}
+                                    variant={currentPage === page ? "default" : "outline"}
+                                    size="sm"
+                                    onClick={() => setCurrentPage(page as number)}
+                                    className="w-8 h-8 p-0"
+                                  >
+                                    {page}
+                                  </Button>
+                                );
+                              });
+                            })()}
+                          </div>
                          <Button
                            variant="outline"
                            size="sm"
