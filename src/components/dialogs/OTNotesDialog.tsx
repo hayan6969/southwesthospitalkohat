@@ -88,7 +88,11 @@ export function OTNotesDialog({ open, onOpenChange, otSchedule, onSave, readOnly
 
     setSaving(true);
     try {
+      // Get existing ot_notes or create new structure
+      const existingNotes = otSchedule.ot_notes || {};
+      
       const notesData = {
+        ...existingNotes, // Preserve existing data like pre_operation_orders
         patient_name: patientName,
         age: age,
         sex: sex,
