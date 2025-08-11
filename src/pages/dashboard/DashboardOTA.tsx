@@ -97,9 +97,9 @@ export default function DashboardOTA() {
       if (error) throw error;
       setOtRooms(data || []);
       
-      // Set first room as default if available
+      // Set to show all rooms by default
       if (data && data.length > 0) {
-        setSelectedRoom(data[0].id);
+        setSelectedRoom("all");
       }
     } catch (error) {
       console.error('Error fetching OT rooms:', error);
@@ -146,7 +146,7 @@ export default function DashboardOTA() {
         `);
 
       // Apply filters
-      if (selectedRoom && selectedRoom !== "") {
+      if (selectedRoom && selectedRoom !== "" && selectedRoom !== "all") {
         query = query.eq('room_id', selectedRoom);
       }
 
@@ -233,10 +233,8 @@ export default function DashboardOTA() {
   const clearFilters = () => {
     setSearchPatientId("");
     setSelectedDate(null);
-    // Reset to first room to show all rooms
-    if (otRooms.length > 0) {
-      setSelectedRoom(otRooms[0].id);
-    }
+    // Reset to show all rooms
+    setSelectedRoom("all");
   };
 
   const handleTreatmentChart = (ot: OTScheduleWithDetails) => {
@@ -381,6 +379,7 @@ export default function DashboardOTA() {
                   onChange={(e) => setSelectedRoom(e.target.value)}
                   className="w-full p-2 border rounded-md"
                 >
+                  <option value="all">All Rooms</option>
                   {otRooms.map((room) => (
                     <option key={room.id} value={room.id}>
                       {room.room_name}
