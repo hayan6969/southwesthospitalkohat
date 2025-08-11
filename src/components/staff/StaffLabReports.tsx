@@ -198,14 +198,9 @@ export function StaffLabReports() {
     
     try {
       // Since lab-results bucket is now public, we can use getPublicUrl directly
-      const { data, error } = supabase.storage
+      const { data } = supabase.storage
         .from('lab-results')
         .getPublicUrl(result_file_url);
-      
-      if (error) {
-        console.error('Supabase storage error:', error);
-        throw error;
-      }
       
       if (data?.publicUrl) {
         console.log('Successfully got public URL for:', result_file_url, '-> URL:', data.publicUrl);
@@ -377,32 +372,20 @@ export function StaffLabReports() {
                           </TableCell>
                           <TableCell>
                             {report.result_file_url ? (
-                              <div className="flex gap-2">
-                                <PdfViewerDialog
-                                  pdfUrl={null}
-                                  title={`${report.test_name} - ${format(new Date(report.test_date), 'MMM d, yyyy')}`}
-                                  onGetPdfUrl={() => getPdfUrl(report.result_file_url!)}
-                                  trigger={
-                                    <Button
-                                      variant="outline"
-                                      size="sm"
-                                      className="flex items-center gap-2"
-                                    >
-                                      <Eye className="w-4 h-4" />
-                                      View PDF
-                                    </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={async () => {
+                                  const pdfUrl = await getPdfUrl(report.result_file_url!);
+                                  if (pdfUrl) {
+                                    window.open(pdfUrl, '_blank');
                                   }
-                                />
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => handleDownloadResult(report.result_file_url!, report.test_name)}
-                                  className="flex items-center gap-2"
-                                >
-                                  <Download className="w-4 h-4" />
-                                  Download
-                                </Button>
-                              </div>
+                                }}
+                                className="flex items-center gap-2"
+                              >
+                                <Eye className="w-4 h-4" />
+                                View
+                              </Button>
                             ) : (
                               <Button
                                 variant="outline"
