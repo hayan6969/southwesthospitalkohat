@@ -1558,6 +1558,39 @@ export type Database = {
           },
         ]
       }
+      treatment_chart_entries: {
+        Row: {
+          created_at: string
+          entry_date: string
+          id: string
+          investigation: string | null
+          medicine: string | null
+          ot_schedule_id: string
+          updated_at: string
+          user_email: string
+        }
+        Insert: {
+          created_at?: string
+          entry_date: string
+          id?: string
+          investigation?: string | null
+          medicine?: string | null
+          ot_schedule_id: string
+          updated_at?: string
+          user_email: string
+        }
+        Update: {
+          created_at?: string
+          entry_date?: string
+          id?: string
+          investigation?: string | null
+          medicine?: string | null
+          ot_schedule_id?: string
+          updated_at?: string
+          user_email?: string
+        }
+        Relationships: []
+      }
       users: {
         Row: {
           created_at: string | null
