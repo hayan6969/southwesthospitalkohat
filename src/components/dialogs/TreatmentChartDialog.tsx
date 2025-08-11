@@ -104,15 +104,36 @@ export function TreatmentChartDialog({
     let yPosition = 100;
     doc.setFontSize(14);
     doc.text('Treatment Entries', 20, yPosition);
-    yPosition += 10;
+    yPosition += 15;
     
-    // Table headers
-    doc.setFontSize(10);
+    // Table headers with background and borders
+    doc.setFillColor(240, 240, 240); // Light gray background
+    doc.rect(15, yPosition - 5, 185, 10, 'F'); // Background rectangle
+    
+    doc.setFontSize(11);
+    doc.setFont(undefined, 'bold');
+    doc.setTextColor(0, 0, 0); // Black text
+    
+    // Header text
     doc.text('Date', 20, yPosition);
     doc.text('Medicine', 60, yPosition);
     doc.text('Investigation', 120, yPosition);
     doc.text('User', 170, yPosition);
-    yPosition += 10;
+    
+    // Draw header borders
+    doc.setDrawColor(180, 180, 180);
+    doc.line(15, yPosition - 5, 200, yPosition - 5); // Top border
+    doc.line(15, yPosition + 5, 200, yPosition + 5); // Bottom border
+    doc.line(15, yPosition - 5, 15, yPosition + 5); // Left border
+    doc.line(55, yPosition - 5, 55, yPosition + 5); // Column separator 1
+    doc.line(115, yPosition - 5, 115, yPosition + 5); // Column separator 2
+    doc.line(165, yPosition - 5, 165, yPosition + 5); // Column separator 3
+    doc.line(200, yPosition - 5, 200, yPosition + 5); // Right border
+    
+    yPosition += 15;
+    
+    // Reset font for content
+    doc.setFont(undefined, 'normal');
     
     // Table rows
     treatmentEntries.forEach((entry) => {
