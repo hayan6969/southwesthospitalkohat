@@ -7,7 +7,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
-import { Search, FileText, Download } from "lucide-react";
+import { Search, FileText, Download, Eye } from "lucide-react";
+import { PdfViewerDialog } from "@/components/dialogs/PdfViewerDialog";
 
 interface LabReport {
   id: string;
@@ -183,6 +184,39 @@ export function StaffLabReports() {
     }
   };
 
+  // Get public URL for PDF viewing from public bucket
+  const getPdfUrl = async (result_file_url: string): Promise<string | null> => {
+    if (!result_file_url) return null;
+    
+    // If it's already a full URL, return as is
+    if (result_file_url.startsWith('http')) {
+      return result_file_url;
+    }
+    
+    try {
+      // Since lab-results bucket is now public, we can use getPublicUrl directly
+      const { data } = supabase.storage
+        .from('lab-results')
+        .getPublicUrl(result_file_url);
+      
+      if (data?.publicUrl) {
+        console.log('Successfully got public URL for:', result_file_url);
+        return data.publicUrl;
+      }
+      
+      console.error('No public URL returned from Supabase');
+      return null;
+    } catch (error) {
+      console.error('Error getting PDF URL:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load PDF",
+        variant: "destructive",
+      });
+      return null;
+    }
+  };
+
   const handleDownloadResult = (resultFileUrl: string, testName: string) => {
     if (resultFileUrl) {
       const link = document.createElement('a');
@@ -289,14 +323,42 @@ export function StaffLabReports() {
                             )}
                           </TableCell>
                           <TableCell>
-                            {report.result_file_url && (
+                            {report.result_file_url ? (
+                              <div className="flex gap-2">
+                                <PdfViewerDialog
+                                  pdfUrl={null}
+                                  title={`${report.test_name} - ${format(new Date(report.test_date), 'MMM d, yyyy')}`}
+                                  onGetPdfUrl={() => getPdfUrl(report.result_file_url!)}
+                                  trigger={
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      className="flex items-center gap-2"
+                                    >
+                                      <Eye className="w-4 h-4" />
+                                      View PDF
+                                    </Button>
+                                  }
+                                />
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleDownloadResult(report.result_file_url!, report.test_name)}
+                                  className="flex items-center gap-2"
+                                >
+                                  <Download className="w-4 h-4" />
+                                  Download
+                                </Button>
+                              </div>
+                            ) : (
                               <Button
                                 variant="outline"
                                 size="sm"
-                                onClick={() => handleDownloadResult(report.result_file_url!, report.test_name)}
+                                disabled
+                                className="flex items-center gap-2"
                               >
-                                <Download className="w-4 h-4 mr-1" />
-                                Download
+                                <FileText className="w-4 h-4" />
+                                No PDF
                               </Button>
                             )}
                           </TableCell>
