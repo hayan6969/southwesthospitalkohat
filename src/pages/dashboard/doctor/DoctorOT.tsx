@@ -6,12 +6,13 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { Calendar, User, Building2, Banknote, Clock, FileText, Edit, UserCheck } from "lucide-react";
+import { Calendar, User, Building2, Banknote, Clock, FileText, Edit, UserCheck, ClipboardList } from "lucide-react";
 import { format } from "date-fns";
 import { formatPkrAmount } from "@/utils/currency";
 import { toast } from "sonner";
 import { OTNotesDialog } from "@/components/dialogs/OTNotesDialog";
 import { DischargeSlipDialog } from "@/components/dialogs/DischargeSlipDialog";
+import { PreOperationOrdersDialog } from "@/components/dialogs/PreOperationOrdersDialog";
 import { useToast } from "@/hooks/use-toast";
 import { generateDischargeSlipPDF } from "@/utils/dischargeSlipPdfGenerator";
 
@@ -55,6 +56,7 @@ export default function DoctorOT() {
   // Dialog states
   const [showOTNotesDialog, setShowOTNotesDialog] = useState(false);
   const [showDischargeDialog, setShowDischargeDialog] = useState(false);
+  const [showPreOpOrdersDialog, setShowPreOpOrdersDialog] = useState(false);
   const [selectedOT, setSelectedOT] = useState<OTScheduleWithDetails | null>(null);
 
   useEffect(() => {
@@ -153,6 +155,11 @@ export default function DoctorOT() {
   const handleOTNotes = (ot: OTScheduleWithDetails) => {
     setSelectedOT(ot);
     setShowOTNotesDialog(true);
+  };
+
+  const handlePreOpOrders = (ot: OTScheduleWithDetails) => {
+    setSelectedOT(ot);
+    setShowPreOpOrdersDialog(true);
   };
 
   const handleDischarge = (ot: OTScheduleWithDetails) => {
@@ -310,6 +317,15 @@ export default function DoctorOT() {
                               <Button 
                                 size="sm" 
                                 variant="outline"
+                                onClick={() => handlePreOpOrders(ot)}
+                                className="flex items-center gap-1"
+                              >
+                                <ClipboardList className="w-3 h-3" />
+                                Pre-Op Orders
+                              </Button>
+                              <Button 
+                                size="sm" 
+                                variant="outline"
                                 onClick={() => handleOTNotes(ot)}
                                 className="flex items-center gap-1"
                               >
@@ -437,6 +453,14 @@ export default function DoctorOT() {
           </Tabs>
         </CardContent>
       </Card>
+
+      {/* Pre Operation Orders Dialog */}
+      <PreOperationOrdersDialog 
+        open={showPreOpOrdersDialog}
+        onOpenChange={setShowPreOpOrdersDialog}
+        otSchedule={selectedOT}
+        onSave={fetchDoctorOTSchedules}
+      />
 
       {/* OT Notes Dialog */}
       <OTNotesDialog 
