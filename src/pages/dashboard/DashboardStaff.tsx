@@ -8,9 +8,10 @@ import { StaffCounter } from "@/components/staff/StaffCounter";
 import { StaffLab } from "@/components/staff/StaffLab";
 import { StaffOT } from "@/components/staff/StaffOT";
 import { StaffInvoices } from "@/components/staff/StaffInvoices";
+import { StaffLabReports } from "@/components/staff/StaffLabReports";
 import { StaffXray } from "@/components/staff/StaffXray";
 import { PatientSearchDialog } from "@/components/staff/PatientSearchDialog";
-import { Receipt, TestTube, Building2, FileText, Image } from "lucide-react";
+import { Receipt, TestTube, Building2, FileText, Image, Search } from "lucide-react";
 import { useHospitalSettings } from "@/hooks/useHospitalSettings";
 import { AdminDashboardNav } from "@/components/AdminDashboardNav";
 
@@ -76,7 +77,7 @@ export default function DashboardStaff() {
           </div>
 
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid w-full grid-cols-5">
+            <TabsList className="grid w-full grid-cols-6">
               <TabsTrigger value="counter" className="flex items-center gap-2">
                 <Receipt className="w-4 h-4" />
                 Counter
@@ -84,6 +85,10 @@ export default function DashboardStaff() {
               <TabsTrigger value="lab" className="flex items-center gap-2">
                 <TestTube className="w-4 h-4" />
                 Lab
+              </TabsTrigger>
+              <TabsTrigger value="lab-reports" className="flex items-center gap-2">
+                <Search className="w-4 h-4" />
+                Lab Reports
               </TabsTrigger>
               <TabsTrigger value="xray" className="flex items-center gap-2">
                 <Image className="w-4 h-4" />
@@ -105,6 +110,10 @@ export default function DashboardStaff() {
 
             <TabsContent value="lab" className="mt-6">
               <StaffLab />
+            </TabsContent>
+
+            <TabsContent value="lab-reports" className="mt-6">
+              <StaffLabReports />
             </TabsContent>
 
             <TabsContent value="xray" className="mt-6">
