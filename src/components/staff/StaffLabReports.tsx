@@ -200,8 +200,10 @@ export function StaffLabReports() {
         .getPublicUrl(result_file_url);
       
       if (data?.publicUrl) {
-        console.log('Successfully got public URL for:', result_file_url);
-        return data.publicUrl;
+        console.log('Successfully got public URL for:', result_file_url, '-> URL:', data.publicUrl);
+        // Add timestamp to prevent Chrome caching issues
+        const urlWithTimestamp = `${data.publicUrl}?t=${Date.now()}`;
+        return urlWithTimestamp;
       }
       
       console.error('No public URL returned from Supabase');
