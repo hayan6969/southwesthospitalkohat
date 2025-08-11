@@ -302,7 +302,7 @@ export function StaffLabReports() {
           </div>
           
           <p className="text-sm text-muted-foreground">
-            Search for lab reports by entering a patient ID or patient number (e.g., P-0001)
+            Search for lab reports by entering a patient ID or patient number (e.g., P-000X)
           </p>
         </CardContent>
       </Card>
