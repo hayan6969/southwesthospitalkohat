@@ -4,7 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
-import { FileText, User, Calendar, Plus } from "lucide-react";
+import { FileText, User, Calendar, Plus, Printer } from "lucide-react";
+import jsPDF from "jspdf";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -84,6 +85,77 @@ export function TreatmentChartDialog({
     }
   };
 
+  const handlePrint = () => {
+    const doc = new jsPDF();
+    
+    // Header
+    doc.setFontSize(18);
+    doc.text('Treatment Chart', 20, 20);
+    
+    // Patient Info
+    doc.setFontSize(12);
+    doc.text(`Patient: ${otSchedule.patient.profile.first_name} ${otSchedule.patient.profile.last_name}`, 20, 40);
+    doc.text(`Patient ID: ${otSchedule.patient.patient_number}`, 20, 50);
+    doc.text(`Operation: ${otSchedule.operation.operation_name}`, 20, 60);
+    doc.text(`Date: ${format(new Date(otSchedule.operation_date), 'PPP')}`, 20, 70);
+    doc.text(`Surgeon: ${otSchedule.doctor_name}`, 20, 80);
+    
+    // Table Header
+    let yPosition = 100;
+    doc.setFontSize(14);
+    doc.text('Treatment Entries', 20, yPosition);
+    yPosition += 10;
+    
+    // Table headers
+    doc.setFontSize(10);
+    doc.text('Date', 20, yPosition);
+    doc.text('Medicine', 60, yPosition);
+    doc.text('Investigation', 120, yPosition);
+    doc.text('User', 170, yPosition);
+    yPosition += 10;
+    
+    // Table rows
+    treatmentEntries.forEach((entry) => {
+      if (yPosition > 270) {
+        doc.addPage();
+        yPosition = 20;
+      }
+      
+      const entryDate = format(new Date(entry.entry_date), 'MMM d, yyyy');
+      const medicine = entry.medicine || '-';
+      const investigation = entry.investigation || '-';
+      const user = entry.user_email;
+      
+      doc.text(entryDate, 20, yPosition);
+      
+      // Handle long text with line breaks
+      const medicineLines = doc.splitTextToSize(medicine, 50);
+      const investigationLines = doc.splitTextToSize(investigation, 45);
+      const userLines = doc.splitTextToSize(user, 35);
+      
+      const maxLines = Math.max(medicineLines.length, investigationLines.length, userLines.length);
+      
+      medicineLines.forEach((line: string, index: number) => {
+        doc.text(line, 60, yPosition + (index * 5));
+      });
+      
+      investigationLines.forEach((line: string, index: number) => {
+        doc.text(line, 120, yPosition + (index * 5));
+      });
+      
+      userLines.forEach((line: string, index: number) => {
+        doc.text(line, 170, yPosition + (index * 5));
+      });
+      
+      yPosition += (maxLines * 5) + 5;
+    });
+    
+    // Open PDF in new tab
+    const pdfBlob = doc.output('blob');
+    const url = URL.createObjectURL(pdfBlob);
+    window.open(url, '_blank');
+  };
+
   if (!otSchedule) {
     return null;
   }
@@ -98,14 +170,25 @@ export function TreatmentChartDialog({
                 <FileText className="w-5 h-5 text-green-600" />
                 Treatment Chart
               </DialogTitle>
-              <Button 
-                onClick={() => setShowAddDialog(true)}
-                className="flex items-center gap-2"
-                size="sm"
-              >
-                <Plus className="w-4 h-4" />
-                Add
-              </Button>
+              <div className="flex items-center gap-2">
+                <Button 
+                  onClick={handlePrint}
+                  variant="outline"
+                  className="flex items-center gap-2"
+                  size="sm"
+                >
+                  <Printer className="w-4 h-4" />
+                  Print
+                </Button>
+                <Button 
+                  onClick={() => setShowAddDialog(true)}
+                  className="flex items-center gap-2"
+                  size="sm"
+                >
+                  <Plus className="w-4 h-4" />
+                  Add
+                </Button>
+              </div>
             </div>
           </DialogHeader>
           
