@@ -433,10 +433,25 @@ export function StaffCounter() {
     try {
       // Emergency invoices contain patient data in emergency_patient_data
       if (invoice.emergency_patient_data) {
-        // Use the emergency patient data directly for PDF generation
+        // Structure the emergency patient data properly for PDF generation
         const invoiceForPDF = {
           ...invoice,
-          patient: invoice.emergency_patient_data
+          patient: {
+            patient_number: 'EMERGENCY',
+            cnic: invoice.emergency_patient_data.cnic || '',
+            address: '',
+            date_of_birth: '',
+            blood_type: '',
+            allergies: '',
+            emergency_contact_name: '',
+            emergency_contact_phone: '',
+            users: {
+              first_name: invoice.emergency_patient_data.name?.split(' ')[0] || '',
+              last_name: invoice.emergency_patient_data.name?.split(' ').slice(1).join(' ') || '',
+              email: '',
+              phone: invoice.emergency_patient_data.phone || ''
+            }
+          }
         };
         
         await generateInvoicePDF(invoiceForPDF);
