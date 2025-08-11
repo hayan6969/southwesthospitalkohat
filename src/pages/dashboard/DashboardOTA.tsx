@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Calendar, User, Building2, Clock, FileText, Edit, Search, Filter, LogOut, ClipboardList, TrendingUp, ClipboardCheck } from "lucide-react";
+import { Calendar, User, Building2, Clock, FileText, Edit, Search, Filter, LogOut, ClipboardList, TrendingUp, ClipboardCheck, TestTube } from "lucide-react";
 import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -17,6 +17,7 @@ import { AssessmentDialog } from "@/components/dialogs/AssessmentDialog";
 import { DatePicker } from "@/components/ui/date-picker";
 import { useAuth } from "@/hooks/useAuth";
 import { AdminDashboardNav } from "@/components/AdminDashboardNav";
+import { StaffLabReports } from "@/components/staff/StaffLabReports";
 
 interface OTScheduleWithDetails {
   id: string;
@@ -69,6 +70,7 @@ export default function DashboardOTA() {
   const [showProgressDialog, setShowProgressDialog] = useState(false);
   const [showAssessmentDialog, setShowAssessmentDialog] = useState(false);
   const [selectedOT, setSelectedOT] = useState<OTScheduleWithDetails | null>(null);
+  const [activeMainTab, setActiveMainTab] = useState("ot-operations");
 
   if (!profile) {
     return (
@@ -285,13 +287,28 @@ export default function DashboardOTA() {
         </div>
       </header>
 
-      {/* Main Content */}
-      <main className="p-6">
-        <div className="space-y-6">
-        <div>
-          <h2 className="text-2xl font-bold tracking-tight">OT Operations Management</h2>
-          <p className="text-muted-foreground">Monitor and manage all operating theater operations</p>
-        </div>
+       {/* Main Content */}
+       <main className="p-6">
+         <div className="space-y-6">
+           <div>
+             <h2 className="text-2xl font-bold tracking-tight">OT Operations & Lab Management</h2>
+             <p className="text-muted-foreground">Monitor and manage operating theater operations and lab reports</p>
+           </div>
+
+           {/* Main Tab Navigation */}
+           <Tabs value={activeMainTab} onValueChange={setActiveMainTab} className="w-full">
+             <TabsList className="grid w-full grid-cols-2">
+               <TabsTrigger value="ot-operations" className="flex items-center gap-2">
+                 <Building2 className="w-4 h-4" />
+                 OT Operations
+               </TabsTrigger>
+               <TabsTrigger value="lab-reports" className="flex items-center gap-2">
+                 <TestTube className="w-4 h-4" />
+                 Lab Reports
+               </TabsTrigger>
+             </TabsList>
+
+             <TabsContent value="ot-operations" className="mt-6 space-y-6">{/* Wrap the existing OT content */}
 
         {/* Summary Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
@@ -729,8 +746,14 @@ export default function DashboardOTA() {
           onOpenChange={setShowAssessmentDialog}
           otSchedule={selectedOT}
         />
-        </div>
-      </main>
-    </div>
-  );
-}
+              </TabsContent>
+
+              <TabsContent value="lab-reports" className="mt-6">
+                <StaffLabReports />
+              </TabsContent>
+            </Tabs>
+          </div>
+        </main>
+      </div>
+    );
+  }
