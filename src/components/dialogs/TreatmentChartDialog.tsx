@@ -93,7 +93,7 @@ export function TreatmentChartDialog({
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="sm:max-w-[1200px] max-h-[85vh] overflow-y-auto w-[95vw]">
           <DialogHeader>
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between pr-8">
               <DialogTitle className="flex items-center gap-2">
                 <FileText className="w-5 h-5 text-green-600" />
                 Treatment Chart
