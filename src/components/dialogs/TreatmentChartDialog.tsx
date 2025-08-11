@@ -14,14 +14,9 @@ import { AddTreatmentEntryDialog } from "./AddTreatmentEntryDialog";
 interface TreatmentEntry {
   id: string;
   entry_date: string;
-  blood_pressure: string;
-  pulses: string;
-  temperature: string;
-  input_data: string;
-  output_data: string;
-  remarks: string;
+  medicine?: string;
+  investigation?: string;
   user_email: string;
-  created_at: string;
 }
 
 interface TreatmentChartDialogProps {
@@ -120,27 +115,19 @@ export function TreatmentChartDialog({
     
     // Header text
     doc.text('Date', 20, yPosition);
-    doc.text('B.P', 50, yPosition);
-    doc.text('Pulses', 75, yPosition);
-    doc.text('Temp', 100, yPosition);
-    doc.text('Input', 125, yPosition);
-    doc.text('Output', 150, yPosition);
-    doc.text('Remarks', 175, yPosition);
-    doc.text('User', 200, yPosition);
+    doc.text('Medicine', 50, yPosition);
+    doc.text('Investigation', 100, yPosition);
+    doc.text('User', 150, yPosition);
     
     // Draw header borders
     doc.setDrawColor(180, 180, 180);
-    doc.line(15, yPosition - 5, 220, yPosition - 5); // Top border
-    doc.line(15, yPosition + 5, 220, yPosition + 5); // Bottom border
+    doc.line(15, yPosition - 5, 200, yPosition - 5); // Top border
+    doc.line(15, yPosition + 5, 200, yPosition + 5); // Bottom border
     doc.line(15, yPosition - 5, 15, yPosition + 5); // Left border
     doc.line(45, yPosition - 5, 45, yPosition + 5); // Column separator 1
-    doc.line(70, yPosition - 5, 70, yPosition + 5); // Column separator 2
-    doc.line(95, yPosition - 5, 95, yPosition + 5); // Column separator 3
-    doc.line(120, yPosition - 5, 120, yPosition + 5); // Column separator 4
-    doc.line(145, yPosition - 5, 145, yPosition + 5); // Column separator 5
-    doc.line(170, yPosition - 5, 170, yPosition + 5); // Column separator 6
-    doc.line(195, yPosition - 5, 195, yPosition + 5); // Column separator 7
-    doc.line(220, yPosition - 5, 220, yPosition + 5); // Right border
+    doc.line(95, yPosition - 5, 95, yPosition + 5); // Column separator 2
+    doc.line(145, yPosition - 5, 145, yPosition + 5); // Column separator 3
+    doc.line(200, yPosition - 5, 200, yPosition + 5); // Right border
     
     yPosition += 15;
     
@@ -155,33 +142,29 @@ export function TreatmentChartDialog({
       }
       
       const entryDate = format(new Date(entry.entry_date), 'MMM d, yyyy');
-      const bloodPressure = entry.blood_pressure || '-';
-      const pulses = entry.pulses || '-';
-      const temperature = entry.temperature || '-';
-      const input = entry.input_data || '-';
-      const output = entry.output_data || '-';
-      const remarks = entry.remarks || '-';
+      const medicine = entry.medicine || '-';
+      const investigation = entry.investigation || '-';
       const user = entry.user_email;
       
       doc.text(entryDate, 20, yPosition);
-      doc.text(bloodPressure, 50, yPosition);
-      doc.text(pulses, 75, yPosition);
-      doc.text(temperature, 100, yPosition);
-      doc.text(input, 125, yPosition);
-      doc.text(output, 150, yPosition);
       
-      // Handle long text with line breaks for remarks and user
-      const remarksLines = doc.splitTextToSize(remarks, 20);
-      const userLines = doc.splitTextToSize(user, 20);
+      // Handle long text with line breaks for medicine, investigation and user
+      const medicineLines = doc.splitTextToSize(medicine, 45);
+      const investigationLines = doc.splitTextToSize(investigation, 45);
+      const userLines = doc.splitTextToSize(user, 45);
       
-      const maxLines = Math.max(remarksLines.length, userLines.length);
+      const maxLines = Math.max(medicineLines.length, investigationLines.length, userLines.length);
       
-      remarksLines.forEach((line: string, index: number) => {
-        doc.text(line, 175, yPosition + (index * 5));
+      medicineLines.forEach((line: string, index: number) => {
+        doc.text(line, 50, yPosition + (index * 5));
+      });
+      
+      investigationLines.forEach((line: string, index: number) => {
+        doc.text(line, 100, yPosition + (index * 5));
       });
       
       userLines.forEach((line: string, index: number) => {
-        doc.text(line, 200, yPosition + (index * 5));
+        doc.text(line, 150, yPosition + (index * 5));
       });
       
       yPosition += (maxLines * 5) + 5;
@@ -275,55 +258,31 @@ export function TreatmentChartDialog({
                   <Table className="w-full table-fixed">
                     <TableHeader className="sticky top-0 bg-background z-10">
                       <TableRow>
-                        <TableHead className="w-24">Date</TableHead>
-                        <TableHead className="w-20">B.P</TableHead>
-                        <TableHead className="w-20">Pulses</TableHead>
-                        <TableHead className="w-24">Temperature</TableHead>
-                        <TableHead className="w-24">Input</TableHead>
-                        <TableHead className="w-24">Output</TableHead>
-                        <TableHead className="w-32">Remarks</TableHead>
-                        <TableHead className="w-32">User</TableHead>
+                        <TableHead className="w-32">Date</TableHead>
+                        <TableHead className="w-64">Medicine</TableHead>
+                        <TableHead className="w-64">Investigation</TableHead>
+                        <TableHead className="w-40">User</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {treatmentEntries.map((entry) => (
                         <TableRow key={entry.id}>
-                          <TableCell className="w-24 align-top">
+                          <TableCell className="w-32 align-top">
                             <div className="font-medium text-sm">
                               {format(new Date(entry.entry_date), 'MMM d, yyyy')}
                             </div>
                           </TableCell>
-                          <TableCell className="w-20 align-top">
+                          <TableCell className="w-64 align-top">
                             <div className="text-sm break-words whitespace-normal leading-relaxed overflow-hidden">
-                              {entry.blood_pressure || '-'}
+                              {entry.medicine || '-'}
                             </div>
                           </TableCell>
-                          <TableCell className="w-20 align-top">
+                          <TableCell className="w-64 align-top">
                             <div className="text-sm break-words whitespace-normal leading-relaxed overflow-hidden">
-                              {entry.pulses || '-'}
+                              {entry.investigation || '-'}
                             </div>
                           </TableCell>
-                          <TableCell className="w-24 align-top">
-                            <div className="text-sm break-words whitespace-normal leading-relaxed overflow-hidden">
-                              {entry.temperature || '-'}
-                            </div>
-                          </TableCell>
-                          <TableCell className="w-24 align-top">
-                            <div className="text-sm break-words whitespace-normal leading-relaxed overflow-hidden">
-                              {entry.input_data || '-'}
-                            </div>
-                          </TableCell>
-                          <TableCell className="w-24 align-top">
-                            <div className="text-sm break-words whitespace-normal leading-relaxed overflow-hidden">
-                              {entry.output_data || '-'}
-                            </div>
-                          </TableCell>
-                          <TableCell className="w-32 align-top">
-                            <div className="text-sm break-words whitespace-normal leading-relaxed overflow-hidden">
-                              {entry.remarks || '-'}
-                            </div>
-                          </TableCell>
-                          <TableCell className="w-32 align-top">
+                          <TableCell className="w-40 align-top">
                             <div className="text-sm text-gray-600 break-words whitespace-normal overflow-hidden">
                               {entry.user_email}
                             </div>
