@@ -83,6 +83,42 @@ export type Database = {
           },
         ]
       }
+      assessment_entries: {
+        Row: {
+          assessment: string | null
+          created_at: string
+          entry_date: string
+          entry_time: string
+          id: string
+          ot_schedule_id: string
+          plan: string | null
+          updated_at: string
+          user_email: string
+        }
+        Insert: {
+          assessment?: string | null
+          created_at?: string
+          entry_date?: string
+          entry_time?: string
+          id?: string
+          ot_schedule_id: string
+          plan?: string | null
+          updated_at?: string
+          user_email: string
+        }
+        Update: {
+          assessment?: string | null
+          created_at?: string
+          entry_date?: string
+          entry_time?: string
+          id?: string
+          ot_schedule_id?: string
+          plan?: string | null
+          updated_at?: string
+          user_email?: string
+        }
+        Relationships: []
+      }
       audit_logs: {
         Row: {
           action: string
