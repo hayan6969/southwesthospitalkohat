@@ -6,13 +6,16 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { Calendar, User, Building2, Banknote, Clock, FileText, Edit, UserCheck, ClipboardList } from "lucide-react";
+import { Calendar, User, Building2, Banknote, Clock, FileText, Edit, UserCheck, ClipboardList, TrendingUp, ClipboardCheck } from "lucide-react";
 import { format } from "date-fns";
 import { formatPkrAmount } from "@/utils/currency";
 import { toast } from "sonner";
 import { OTNotesDialog } from "@/components/dialogs/OTNotesDialog";
 import { DischargeSlipDialog } from "@/components/dialogs/DischargeSlipDialog";
 import { PreOperationOrdersDialog } from "@/components/dialogs/PreOperationOrdersDialog";
+import { TreatmentChartDialog } from "@/components/dialogs/TreatmentChartDialog";
+import { PostOperativeProgressDialog } from "@/components/dialogs/PostOperativeProgressDialog";
+import { AssessmentDialog } from "@/components/dialogs/AssessmentDialog";
 import { useToast } from "@/hooks/use-toast";
 import { generateDischargeSlipPDF } from "@/utils/dischargeSlipPdfGenerator";
 
@@ -57,6 +60,9 @@ export default function DoctorOT() {
   const [showOTNotesDialog, setShowOTNotesDialog] = useState(false);
   const [showDischargeDialog, setShowDischargeDialog] = useState(false);
   const [showPreOpOrdersDialog, setShowPreOpOrdersDialog] = useState(false);
+  const [showTreatmentChartDialog, setShowTreatmentChartDialog] = useState(false);
+  const [showProgressDialog, setShowProgressDialog] = useState(false);
+  const [showAssessmentDialog, setShowAssessmentDialog] = useState(false);
   const [selectedOT, setSelectedOT] = useState<OTScheduleWithDetails | null>(null);
 
   useEffect(() => {
@@ -179,6 +185,21 @@ export default function DoctorOT() {
       console.error('Error generating discharge slip:', error);
       toast.error('Failed to generate discharge slip');
     }
+  };
+
+  const handleTreatmentChart = (ot: OTScheduleWithDetails) => {
+    setSelectedOT(ot);
+    setShowTreatmentChartDialog(true);
+  };
+
+  const handleProgress = (ot: OTScheduleWithDetails) => {
+    setSelectedOT(ot);
+    setShowProgressDialog(true);
+  };
+
+  const handleAssessment = (ot: OTScheduleWithDetails) => {
+    setSelectedOT(ot);
+    setShowAssessmentDialog(true);
   };
 
   const upcomingOTs = otSchedules.filter(ot => ot.status === 'pending');
@@ -312,36 +333,63 @@ export default function DoctorOT() {
                               {ot.status}
                             </Badge>
                           </TableCell>
-                          <TableCell>
-                            <div className="flex gap-2">
-                              <Button 
-                                size="sm" 
-                                variant="outline"
-                                onClick={() => handlePreOpOrders(ot)}
-                                className="flex items-center gap-1"
-                              >
-                                <ClipboardList className="w-3 h-3" />
-                                Pre-Op Orders
-                              </Button>
-                              <Button 
-                                size="sm" 
-                                variant="outline"
-                                onClick={() => handleOTNotes(ot)}
-                                className="flex items-center gap-1"
-                              >
-                                <Edit className="w-3 h-3" />
-                                OT Notes
-                              </Button>
-                              <Button 
-                                size="sm" 
-                                onClick={() => handleDischarge(ot)}
-                                className="flex items-center gap-1 bg-green-600 hover:bg-green-700"
-                              >
-                                <UserCheck className="w-3 h-3" />
-                                Discharge
-                              </Button>
-                            </div>
-                          </TableCell>
+                           <TableCell>
+                             <div className="flex gap-2 flex-wrap">
+                               <Button 
+                                 size="sm" 
+                                 variant="outline"
+                                 onClick={() => handlePreOpOrders(ot)}
+                                 className="flex items-center gap-1"
+                               >
+                                 <ClipboardList className="w-3 h-3" />
+                                 Pre-Op Orders
+                               </Button>
+                               <Button 
+                                 size="sm" 
+                                 variant="outline"
+                                 onClick={() => handleTreatmentChart(ot)}
+                                 className="flex items-center gap-1"
+                               >
+                                 <FileText className="w-3 h-3" />
+                                 Treatment Chart
+                               </Button>
+                               <Button 
+                                 size="sm" 
+                                 variant="outline"
+                                 onClick={() => handleProgress(ot)}
+                                 className="flex items-center gap-1"
+                               >
+                                 <TrendingUp className="w-3 h-3" />
+                                 POPPR
+                               </Button>
+                               <Button 
+                                 size="sm" 
+                                 variant="outline"
+                                 onClick={() => handleAssessment(ot)}
+                                 className="flex items-center gap-1"
+                               >
+                                 <ClipboardCheck className="w-3 h-3" />
+                                 Assessment
+                               </Button>
+                               <Button 
+                                 size="sm" 
+                                 variant="outline"
+                                 onClick={() => handleOTNotes(ot)}
+                                 className="flex items-center gap-1"
+                               >
+                                 <Edit className="w-3 h-3" />
+                                 OT Notes
+                               </Button>
+                               <Button 
+                                 size="sm" 
+                                 onClick={() => handleDischarge(ot)}
+                                 className="flex items-center gap-1 bg-green-600 hover:bg-green-700"
+                               >
+                                 <UserCheck className="w-3 h-3" />
+                                 Discharge
+                               </Button>
+                             </div>
+                           </TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
@@ -476,6 +524,27 @@ export default function DoctorOT() {
         onOpenChange={setShowDischargeDialog}
         otSchedule={selectedOT}
         onDischarge={fetchDoctorOTSchedules}
+      />
+
+      {/* Treatment Chart Dialog */}
+      <TreatmentChartDialog 
+        open={showTreatmentChartDialog}
+        onOpenChange={setShowTreatmentChartDialog}
+        otSchedule={selectedOT}
+      />
+
+      {/* Post Operative Progress Dialog */}
+      <PostOperativeProgressDialog 
+        open={showProgressDialog}
+        onOpenChange={setShowProgressDialog}
+        otSchedule={selectedOT}
+      />
+
+      {/* Assessment Dialog */}
+      <AssessmentDialog 
+        open={showAssessmentDialog}
+        onOpenChange={setShowAssessmentDialog}
+        otSchedule={selectedOT}
       />
     </div>
   );

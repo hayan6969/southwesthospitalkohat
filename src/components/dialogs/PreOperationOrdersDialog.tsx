@@ -102,7 +102,6 @@ export function PreOperationOrdersDialog({
   };
 
   if (!otSchedule || !canView) {
-    console.log('PreOperationOrdersDialog: Not rendering dialog', { otSchedule: !!otSchedule, canView, profileRole: profile?.role });
     return null;
   }
 

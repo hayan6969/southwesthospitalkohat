@@ -5,12 +5,15 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Calendar, User, Building2, Clock, FileText, Edit, Search, Filter, LogOut, ClipboardList } from "lucide-react";
+import { Calendar, User, Building2, Clock, FileText, Edit, Search, Filter, LogOut, ClipboardList, TrendingUp, ClipboardCheck } from "lucide-react";
 import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { OTNotesDialog } from "@/components/dialogs/OTNotesDialog";
 import { PreOperationOrdersDialog } from "@/components/dialogs/PreOperationOrdersDialog";
+import { TreatmentChartDialog } from "@/components/dialogs/TreatmentChartDialog";
+import { PostOperativeProgressDialog } from "@/components/dialogs/PostOperativeProgressDialog";
+import { AssessmentDialog } from "@/components/dialogs/AssessmentDialog";
 import { DatePicker } from "@/components/ui/date-picker";
 import { useAuth } from "@/hooks/useAuth";
 import { AdminDashboardNav } from "@/components/AdminDashboardNav";
@@ -62,6 +65,9 @@ export default function DashboardOTA() {
   const [selectedRoom, setSelectedRoom] = useState<string>("");
   const [showOTNotesDialog, setShowOTNotesDialog] = useState(false);
   const [showPreOpOrdersDialog, setShowPreOpOrdersDialog] = useState(false);
+  const [showTreatmentChartDialog, setShowTreatmentChartDialog] = useState(false);
+  const [showProgressDialog, setShowProgressDialog] = useState(false);
+  const [showAssessmentDialog, setShowAssessmentDialog] = useState(false);
   const [selectedOT, setSelectedOT] = useState<OTScheduleWithDetails | null>(null);
 
   if (!profile) {
@@ -220,11 +226,7 @@ export default function DashboardOTA() {
   };
 
   const handlePreOpOrders = (ot: OTScheduleWithDetails) => {
-    console.log('Pre-Op Orders clicked for:', ot);
-    console.log('Current profile role:', profile?.role);
-    console.log('Setting selectedOT to:', ot);
     setSelectedOT(ot);
-    console.log('Opening Pre-Op Orders dialog');
     setShowPreOpOrdersDialog(true);
   };
 
@@ -232,6 +234,21 @@ export default function DashboardOTA() {
     setSearchPatientId("");
     setSelectedDate(null);
     // Keep room selection as is
+  };
+
+  const handleTreatmentChart = (ot: OTScheduleWithDetails) => {
+    setSelectedOT(ot);
+    setShowTreatmentChartDialog(true);
+  };
+
+  const handleProgress = (ot: OTScheduleWithDetails) => {
+    setSelectedOT(ot);
+    setShowProgressDialog(true);
+  };
+
+  const handleAssessment = (ot: OTScheduleWithDetails) => {
+    setSelectedOT(ot);
+    setShowAssessmentDialog(true);
   };
 
   const pendingOTs = otSchedules.filter(ot => ot.status === 'pending' || ot.status === 'in_progress');
@@ -480,28 +497,55 @@ export default function DashboardOTA() {
                                       {ot.status}
                                     </Badge>
                                   </TableCell>
-                                  <TableCell>
-                                    <div className="flex gap-2">
-                                      <Button 
-                                        size="sm" 
-                                        variant="outline"
-                                        onClick={() => handlePreOpOrders(ot)}
-                                        className="flex items-center gap-1"
-                                      >
-                                        <ClipboardList className="w-3 h-3" />
-                                        Pre-Op Orders
-                                      </Button>
-                                      <Button 
-                                        size="sm" 
-                                        variant="outline"
-                                        onClick={() => handleOTNotes(ot)}
-                                        className="flex items-center gap-1"
-                                      >
-                                        <Edit className="w-3 h-3" />
-                                        {(profile?.role as string) === 'nursing' ? 'View Notes' : 'OT Notes'}
-                                      </Button>
-                                    </div>
-                                  </TableCell>
+                                   <TableCell>
+                                     <div className="flex gap-2 flex-wrap">
+                                       <Button 
+                                         size="sm" 
+                                         variant="outline"
+                                         onClick={() => handlePreOpOrders(ot)}
+                                         className="flex items-center gap-1"
+                                       >
+                                         <ClipboardList className="w-3 h-3" />
+                                         Pre-Op Orders
+                                       </Button>
+                                       <Button 
+                                         size="sm" 
+                                         variant="outline"
+                                         onClick={() => handleTreatmentChart(ot)}
+                                         className="flex items-center gap-1"
+                                       >
+                                         <FileText className="w-3 h-3" />
+                                         Treatment Chart
+                                       </Button>
+                                       <Button 
+                                         size="sm" 
+                                         variant="outline"
+                                         onClick={() => handleProgress(ot)}
+                                         className="flex items-center gap-1"
+                                       >
+                                         <TrendingUp className="w-3 h-3" />
+                                         POPPR
+                                       </Button>
+                                       <Button 
+                                         size="sm" 
+                                         variant="outline"
+                                         onClick={() => handleAssessment(ot)}
+                                         className="flex items-center gap-1"
+                                       >
+                                         <ClipboardCheck className="w-3 h-3" />
+                                         Assessment
+                                       </Button>
+                                       <Button 
+                                         size="sm" 
+                                         variant="outline"
+                                         onClick={() => handleOTNotes(ot)}
+                                         className="flex items-center gap-1"
+                                       >
+                                         <Edit className="w-3 h-3" />
+                                         {(profile?.role as string) === 'nursing' ? 'View Notes' : 'OT Notes'}
+                                       </Button>
+                                     </div>
+                                   </TableCell>
                                 </TableRow>
                               ))}
                             </TableBody>
@@ -578,35 +622,55 @@ export default function DashboardOTA() {
                                       {ot.status}
                                     </Badge>
                                   </TableCell>
-                                  <TableCell>
-                                    <div className="flex gap-2">
-                                      <Button 
-                                        size="sm" 
-                                        variant="outline"
-                                        onClick={() => handlePreOpOrders(ot)}
-                                        className="flex items-center gap-1"
-                                      >
-                                        <ClipboardList className="w-3 h-3" />
-                                        Pre-Op Orders
-                                      </Button>
-                                      {ot.status === 'completed' ? (
-                                        <span className="text-sm text-green-600 font-medium flex items-center">
-                                          <FileText className="w-3 h-3 mr-1" />
-                                          Completed
-                                        </span>
-                                      ) : (
-                                         <Button 
-                                           size="sm" 
-                                           variant="outline"
-                                           onClick={() => handleOTNotes(ot)}
-                                           className="flex items-center gap-1"
-                                         >
-                                           <Edit className="w-3 h-3" />
-                                           {(profile?.role as string) === 'nursing' ? 'View Notes' : 'OT Notes'}
-                                         </Button>
-                                      )}
-                                    </div>
-                                  </TableCell>
+                                   <TableCell>
+                                     <div className="flex gap-2 flex-wrap">
+                                       <Button 
+                                         size="sm" 
+                                         variant="outline"
+                                         onClick={() => handlePreOpOrders(ot)}
+                                         className="flex items-center gap-1"
+                                       >
+                                         <ClipboardList className="w-3 h-3" />
+                                         Pre-Op Orders
+                                       </Button>
+                                       <Button 
+                                         size="sm" 
+                                         variant="outline"
+                                         onClick={() => handleTreatmentChart(ot)}
+                                         className="flex items-center gap-1"
+                                       >
+                                         <FileText className="w-3 h-3" />
+                                         Treatment Chart
+                                       </Button>
+                                       <Button 
+                                         size="sm" 
+                                         variant="outline"
+                                         onClick={() => handleProgress(ot)}
+                                         className="flex items-center gap-1"
+                                       >
+                                         <TrendingUp className="w-3 h-3" />
+                                         POPPR
+                                       </Button>
+                                       <Button 
+                                         size="sm" 
+                                         variant="outline"
+                                         onClick={() => handleAssessment(ot)}
+                                         className="flex items-center gap-1"
+                                       >
+                                         <ClipboardCheck className="w-3 h-3" />
+                                         Assessment
+                                       </Button>
+                                       <Button 
+                                         size="sm" 
+                                         variant="outline"
+                                         onClick={() => handleOTNotes(ot)}
+                                         className="flex items-center gap-1"
+                                       >
+                                         <Edit className="w-3 h-3" />
+                                         {(profile?.role as string) === 'nursing' ? 'View Notes' : 'OT Notes'}
+                                       </Button>
+                                     </div>
+                                   </TableCell>
                                 </TableRow>
                               ))}
                             </TableBody>
@@ -629,10 +693,7 @@ export default function DashboardOTA() {
         {/* Pre Operation Orders Dialog */}
         <PreOperationOrdersDialog 
           open={showPreOpOrdersDialog}
-          onOpenChange={(open) => {
-            console.log('Pre-Op Orders dialog open state changing to:', open);
-            setShowPreOpOrdersDialog(open);
-          }}
+          onOpenChange={setShowPreOpOrdersDialog}
           otSchedule={selectedOT}
           onSave={fetchOTSchedules}
         />
@@ -644,6 +705,27 @@ export default function DashboardOTA() {
           otSchedule={selectedOT}
           onSave={fetchOTSchedules}
           readOnly={(profile?.role as string) === 'nursing'}
+        />
+
+        {/* Treatment Chart Dialog */}
+        <TreatmentChartDialog 
+          open={showTreatmentChartDialog}
+          onOpenChange={setShowTreatmentChartDialog}
+          otSchedule={selectedOT}
+        />
+
+        {/* Post Operative Progress Dialog */}
+        <PostOperativeProgressDialog 
+          open={showProgressDialog}
+          onOpenChange={setShowProgressDialog}
+          otSchedule={selectedOT}
+        />
+
+        {/* Assessment Dialog */}
+        <AssessmentDialog 
+          open={showAssessmentDialog}
+          onOpenChange={setShowAssessmentDialog}
+          otSchedule={selectedOT}
         />
         </div>
       </main>
