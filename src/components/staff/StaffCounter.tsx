@@ -433,11 +433,14 @@ export function StaffCounter() {
     try {
       // Emergency invoices contain patient data in emergency_patient_data
       if (invoice.emergency_patient_data) {
+        // Generate a proper emergency patient number from the invoice number
+        const emergencyPatientNumber = invoice.invoice_number.replace('EMG-', 'E-');
+        
         // Structure the emergency patient data properly for PDF generation
         const invoiceForPDF = {
           ...invoice,
           patient: {
-            patient_number: 'EMERGENCY',
+            patient_number: emergencyPatientNumber,
             cnic: invoice.emergency_patient_data.cnic || '',
             address: '',
             date_of_birth: '',
