@@ -5,11 +5,12 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Calendar, User, Building2, Clock, FileText, Edit, Search, Filter, LogOut } from "lucide-react";
+import { Calendar, User, Building2, Clock, FileText, Edit, Search, Filter, LogOut, ClipboardList } from "lucide-react";
 import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { OTNotesDialog } from "@/components/dialogs/OTNotesDialog";
+import { PreOperationOrdersDialog } from "@/components/dialogs/PreOperationOrdersDialog";
 import { DatePicker } from "@/components/ui/date-picker";
 import { useAuth } from "@/hooks/useAuth";
 import { AdminDashboardNav } from "@/components/AdminDashboardNav";
@@ -60,6 +61,7 @@ export default function DashboardOTA() {
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [selectedRoom, setSelectedRoom] = useState<string>("");
   const [showOTNotesDialog, setShowOTNotesDialog] = useState(false);
+  const [showPreOpOrdersDialog, setShowPreOpOrdersDialog] = useState(false);
   const [selectedOT, setSelectedOT] = useState<OTScheduleWithDetails | null>(null);
 
   if (!profile) {
@@ -215,6 +217,11 @@ export default function DashboardOTA() {
   const handleOTNotes = (ot: OTScheduleWithDetails) => {
     setSelectedOT(ot);
     setShowOTNotesDialog(true);
+  };
+
+  const handlePreOpOrders = (ot: OTScheduleWithDetails) => {
+    setSelectedOT(ot);
+    setShowPreOpOrdersDialog(true);
   };
 
   const clearFilters = () => {
@@ -470,15 +477,26 @@ export default function DashboardOTA() {
                                     </Badge>
                                   </TableCell>
                                   <TableCell>
-                                    <Button 
-                                      size="sm" 
-                                      variant="outline"
-                                      onClick={() => handleOTNotes(ot)}
-                                      className="flex items-center gap-1"
-                                    >
-                                      <Edit className="w-3 h-3" />
-                                      {(profile?.role as string) === 'nursing' ? 'View Notes' : 'OT Notes'}
-                                    </Button>
+                                    <div className="flex gap-2">
+                                      <Button 
+                                        size="sm" 
+                                        variant="outline"
+                                        onClick={() => handlePreOpOrders(ot)}
+                                        className="flex items-center gap-1"
+                                      >
+                                        <ClipboardList className="w-3 h-3" />
+                                        Pre-Op Orders
+                                      </Button>
+                                      <Button 
+                                        size="sm" 
+                                        variant="outline"
+                                        onClick={() => handleOTNotes(ot)}
+                                        className="flex items-center gap-1"
+                                      >
+                                        <Edit className="w-3 h-3" />
+                                        {(profile?.role as string) === 'nursing' ? 'View Notes' : 'OT Notes'}
+                                      </Button>
+                                    </div>
                                   </TableCell>
                                 </TableRow>
                               ))}
@@ -557,19 +575,33 @@ export default function DashboardOTA() {
                                     </Badge>
                                   </TableCell>
                                   <TableCell>
-                                    {ot.status === 'completed' ? (
-                                      <span className="text-sm text-green-600 font-medium">Completed</span>
-                                    ) : (
-                                       <Button 
-                                         size="sm" 
-                                         variant="outline"
-                                         onClick={() => handleOTNotes(ot)}
-                                         className="flex items-center gap-1"
-                                       >
-                                         <Edit className="w-3 h-3" />
-                                         {(profile?.role as string) === 'nursing' ? 'View Notes' : 'OT Notes'}
-                                       </Button>
-                                    )}
+                                    <div className="flex gap-2">
+                                      <Button 
+                                        size="sm" 
+                                        variant="outline"
+                                        onClick={() => handlePreOpOrders(ot)}
+                                        className="flex items-center gap-1"
+                                      >
+                                        <ClipboardList className="w-3 h-3" />
+                                        Pre-Op Orders
+                                      </Button>
+                                      {ot.status === 'completed' ? (
+                                        <span className="text-sm text-green-600 font-medium flex items-center">
+                                          <FileText className="w-3 h-3 mr-1" />
+                                          Completed
+                                        </span>
+                                      ) : (
+                                         <Button 
+                                           size="sm" 
+                                           variant="outline"
+                                           onClick={() => handleOTNotes(ot)}
+                                           className="flex items-center gap-1"
+                                         >
+                                           <Edit className="w-3 h-3" />
+                                           {(profile?.role as string) === 'nursing' ? 'View Notes' : 'OT Notes'}
+                                         </Button>
+                                      )}
+                                    </div>
                                   </TableCell>
                                 </TableRow>
                               ))}
@@ -589,6 +621,14 @@ export default function DashboardOTA() {
             )}
           </CardContent>
         </Card>
+
+        {/* Pre Operation Orders Dialog */}
+        <PreOperationOrdersDialog 
+          open={showPreOpOrdersDialog}
+          onOpenChange={setShowPreOpOrdersDialog}
+          otSchedule={selectedOT}
+          onSave={fetchOTSchedules}
+        />
 
         {/* OT Notes Dialog */}
         <OTNotesDialog 
