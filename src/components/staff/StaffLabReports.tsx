@@ -188,22 +188,31 @@ export function StaffLabReports() {
   const getPdfUrl = async (result_file_url: string): Promise<string | null> => {
     if (!result_file_url) return null;
     
+    console.log('Getting PDF URL for file:', result_file_url);
+    
     // If it's already a full URL, return as is
     if (result_file_url.startsWith('http')) {
+      console.log('Already a full URL:', result_file_url);
       return result_file_url;
     }
     
     try {
       // Since lab-results bucket is now public, we can use getPublicUrl directly
-      const { data } = supabase.storage
+      const { data, error } = supabase.storage
         .from('lab-results')
         .getPublicUrl(result_file_url);
       
+      if (error) {
+        console.error('Supabase storage error:', error);
+        throw error;
+      }
+      
       if (data?.publicUrl) {
         console.log('Successfully got public URL for:', result_file_url, '-> URL:', data.publicUrl);
-        // Add timestamp to prevent Chrome caching issues
-        const urlWithTimestamp = `${data.publicUrl}?t=${Date.now()}`;
-        return urlWithTimestamp;
+        // Add timestamp and disable cache to prevent Chrome blocking
+        const urlWithParams = `${data.publicUrl}?t=${Date.now()}&cache=no`;
+        console.log('Final URL with cache busting:', urlWithParams);
+        return urlWithParams;
       }
       
       console.error('No public URL returned from Supabase');
