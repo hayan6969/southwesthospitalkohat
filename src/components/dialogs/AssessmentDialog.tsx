@@ -9,6 +9,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { AddAssessmentEntryDialog } from "./AddAssessmentEntryDialog";
+import { formatDateTimeForDisplay, formatTimeForDisplay } from "@/utils/timezone";
 
 interface AssessmentEntry {
   id: string;
@@ -133,7 +134,7 @@ export function AssessmentDialog({
               ${entries.map(entry => `
                 <tr>
                   <td>${format(new Date(entry.entry_date), 'MMM dd, yyyy')}</td>
-                  <td>${entry.entry_time}</td>
+                  <td>${formatTimeForDisplay(new Date(`${entry.entry_date}T${entry.entry_time}`))}</td>
                   <td class="assessment-cell">${entry.assessment || '-'}</td>
                   <td class="plan-cell">${entry.plan || '-'}</td>
                   <td>${entry.user_email}</td>
@@ -276,7 +277,7 @@ export function AssessmentDialog({
                           <TableCell>
                             {format(new Date(entry.entry_date), 'MMM dd, yyyy')}
                           </TableCell>
-                          <TableCell>{entry.entry_time}</TableCell>
+                          <TableCell>{formatTimeForDisplay(new Date(`${entry.entry_date}T${entry.entry_time}`))}</TableCell>
                           <TableCell className="max-w-[200px]">
                             <div className="truncate" title={entry.assessment}>
                               {entry.assessment || '-'}

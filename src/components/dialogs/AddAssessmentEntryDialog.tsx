@@ -8,6 +8,7 @@ import { format } from "date-fns";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
+import { getCurrentPakistanDate, getCurrentPakistanTimeString } from "@/utils/timezone";
 
 interface AddAssessmentEntryDialogProps {
   open: boolean;
@@ -25,8 +26,8 @@ export function AddAssessmentEntryDialog({
   const { profile } = useAuth();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
-    entry_date: format(new Date(), 'yyyy-MM-dd'),
-    entry_time: format(new Date(), 'HH:mm'),
+    entry_date: getCurrentPakistanDate(),
+    entry_time: getCurrentPakistanTimeString(),
     assessment: '',
     plan: '',
   });
@@ -52,8 +53,8 @@ export function AddAssessmentEntryDialog({
 
       onEntryAdded();
       setFormData({
-        entry_date: format(new Date(), 'yyyy-MM-dd'),
-        entry_time: format(new Date(), 'HH:mm'),
+        entry_date: getCurrentPakistanDate(),
+        entry_time: getCurrentPakistanTimeString(),
         assessment: '',
         plan: '',
       });

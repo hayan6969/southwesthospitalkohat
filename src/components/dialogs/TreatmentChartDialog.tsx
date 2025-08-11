@@ -10,6 +10,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { AddTreatmentEntryDialog } from "./AddTreatmentEntryDialog";
+import { formatDateTimeForDisplay } from "@/utils/timezone";
 
 interface TreatmentEntry {
   id: string;
@@ -17,6 +18,7 @@ interface TreatmentEntry {
   medicine?: string;
   investigation?: string;
   user_email: string;
+  created_at: string;
 }
 
 interface TreatmentChartDialogProps {
@@ -68,7 +70,8 @@ export function TreatmentChartDialog({
         .from('treatment_chart_entries')
         .select('*')
         .eq('ot_schedule_id', otSchedule.id)
-        .order('entry_date', { ascending: false });
+        .order('entry_date', { ascending: false })
+        .order('created_at', { ascending: false });
 
       if (error) throw error;
       setTreatmentEntries(data || []);
@@ -114,19 +117,19 @@ export function TreatmentChartDialog({
     doc.setTextColor(0, 0, 0); // Black text
     
     // Header text
-    doc.text('Date', 20, yPosition);
-    doc.text('Medicine', 50, yPosition);
-    doc.text('Investigation', 100, yPosition);
-    doc.text('User', 150, yPosition);
+    doc.text('Date & Time', 20, yPosition);
+    doc.text('Medicine', 60, yPosition);
+    doc.text('Investigation', 110, yPosition);
+    doc.text('User', 160, yPosition);
     
     // Draw header borders
     doc.setDrawColor(180, 180, 180);
     doc.line(15, yPosition - 5, 200, yPosition - 5); // Top border
     doc.line(15, yPosition + 5, 200, yPosition + 5); // Bottom border
     doc.line(15, yPosition - 5, 15, yPosition + 5); // Left border
-    doc.line(45, yPosition - 5, 45, yPosition + 5); // Column separator 1
-    doc.line(95, yPosition - 5, 95, yPosition + 5); // Column separator 2
-    doc.line(145, yPosition - 5, 145, yPosition + 5); // Column separator 3
+    doc.line(55, yPosition - 5, 55, yPosition + 5); // Column separator 1
+    doc.line(105, yPosition - 5, 105, yPosition + 5); // Column separator 2
+    doc.line(155, yPosition - 5, 155, yPosition + 5); // Column separator 3
     doc.line(200, yPosition - 5, 200, yPosition + 5); // Right border
     
     yPosition += 15;
@@ -141,30 +144,32 @@ export function TreatmentChartDialog({
         yPosition = 20;
       }
       
-      const entryDate = format(new Date(entry.entry_date), 'MMM d, yyyy');
+      const entryDateTime = formatDateTimeForDisplay(entry.created_at);
       const medicine = entry.medicine || '-';
       const investigation = entry.investigation || '-';
       const user = entry.user_email;
       
-      doc.text(entryDate, 20, yPosition);
-      
-      // Handle long text with line breaks for medicine, investigation and user
+      const dateTimeLines = doc.splitTextToSize(entryDateTime, 35);
       const medicineLines = doc.splitTextToSize(medicine, 45);
       const investigationLines = doc.splitTextToSize(investigation, 45);
-      const userLines = doc.splitTextToSize(user, 45);
+      const userLines = doc.splitTextToSize(user, 40);
       
-      const maxLines = Math.max(medicineLines.length, investigationLines.length, userLines.length);
+      const maxLines = Math.max(dateTimeLines.length, medicineLines.length, investigationLines.length, userLines.length);
+      
+      dateTimeLines.forEach((line: string, index: number) => {
+        doc.text(line, 20, yPosition + (index * 5));
+      });
       
       medicineLines.forEach((line: string, index: number) => {
-        doc.text(line, 50, yPosition + (index * 5));
+        doc.text(line, 60, yPosition + (index * 5));
       });
       
       investigationLines.forEach((line: string, index: number) => {
-        doc.text(line, 100, yPosition + (index * 5));
+        doc.text(line, 110, yPosition + (index * 5));
       });
       
       userLines.forEach((line: string, index: number) => {
-        doc.text(line, 150, yPosition + (index * 5));
+        doc.text(line, 160, yPosition + (index * 5));
       });
       
       yPosition += (maxLines * 5) + 5;
@@ -258,26 +263,26 @@ export function TreatmentChartDialog({
                   <Table className="w-full table-fixed">
                     <TableHeader className="sticky top-0 bg-background z-10">
                       <TableRow>
-                        <TableHead className="w-32">Date</TableHead>
-                        <TableHead className="w-64">Medicine</TableHead>
-                        <TableHead className="w-64">Investigation</TableHead>
+                        <TableHead className="w-40">Date & Time</TableHead>
+                        <TableHead className="w-60">Medicine</TableHead>
+                        <TableHead className="w-60">Investigation</TableHead>
                         <TableHead className="w-40">User</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {treatmentEntries.map((entry) => (
                         <TableRow key={entry.id}>
-                          <TableCell className="w-32 align-top">
+                          <TableCell className="w-40 align-top">
                             <div className="font-medium text-sm">
-                              {format(new Date(entry.entry_date), 'MMM d, yyyy')}
+                              {formatDateTimeForDisplay(entry.created_at)}
                             </div>
                           </TableCell>
-                          <TableCell className="w-64 align-top">
+                          <TableCell className="w-60 align-top">
                             <div className="text-sm break-words whitespace-normal leading-relaxed overflow-hidden">
                               {entry.medicine || '-'}
                             </div>
                           </TableCell>
-                          <TableCell className="w-64 align-top">
+                          <TableCell className="w-60 align-top">
                             <div className="text-sm break-words whitespace-normal leading-relaxed overflow-hidden">
                               {entry.investigation || '-'}
                             </div>

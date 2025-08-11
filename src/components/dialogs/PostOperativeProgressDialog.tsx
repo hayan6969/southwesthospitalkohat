@@ -9,6 +9,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { AddPostOpProgressDialog } from "./AddPostOpProgressDialog";
+import { formatDateTimeForDisplay } from "@/utils/timezone";
 
 interface PostOpProgressEntry {
   id: string;
@@ -20,6 +21,7 @@ interface PostOpProgressEntry {
   output_data?: string;
   remarks?: string;
   user_email: string;
+  created_at: string;
 }
 
 interface PostOperativeProgressDialogProps {
@@ -71,7 +73,8 @@ export function PostOperativeProgressDialog({
         .from('postop_progress_entries')
         .select('*')
         .eq('ot_schedule_id', otSchedule.id)
-        .order('entry_date', { ascending: false });
+        .order('entry_date', { ascending: false })
+        .order('created_at', { ascending: false });
 
       if (error) throw error;
       setProgressEntries(data || []);
@@ -117,25 +120,25 @@ export function PostOperativeProgressDialog({
     doc.setTextColor(0, 0, 0);
     
     // Header text
-    doc.text('Date', 20, yPosition);
-    doc.text('B.P', 50, yPosition);
-    doc.text('Pulses', 75, yPosition);
-    doc.text('Temp', 100, yPosition);
-    doc.text('Input', 125, yPosition);
-    doc.text('Output', 150, yPosition);
-    doc.text('Remarks', 175, yPosition);
+    doc.text('Date & Time', 20, yPosition);
+    doc.text('B.P', 60, yPosition);
+    doc.text('Pulses', 85, yPosition);
+    doc.text('Temp', 110, yPosition);
+    doc.text('Input', 135, yPosition);
+    doc.text('Output', 160, yPosition);
+    doc.text('Remarks', 185, yPosition);
     
     // Draw header borders
     doc.setDrawColor(180, 180, 180);
     doc.line(15, yPosition - 5, 200, yPosition - 5);
     doc.line(15, yPosition + 5, 200, yPosition + 5);
     doc.line(15, yPosition - 5, 15, yPosition + 5);
-    doc.line(45, yPosition - 5, 45, yPosition + 5);
-    doc.line(70, yPosition - 5, 70, yPosition + 5);
-    doc.line(95, yPosition - 5, 95, yPosition + 5);
-    doc.line(120, yPosition - 5, 120, yPosition + 5);
-    doc.line(145, yPosition - 5, 145, yPosition + 5);
-    doc.line(170, yPosition - 5, 170, yPosition + 5);
+    doc.line(55, yPosition - 5, 55, yPosition + 5);
+    doc.line(80, yPosition - 5, 80, yPosition + 5);
+    doc.line(105, yPosition - 5, 105, yPosition + 5);
+    doc.line(130, yPosition - 5, 130, yPosition + 5);
+    doc.line(155, yPosition - 5, 155, yPosition + 5);
+    doc.line(180, yPosition - 5, 180, yPosition + 5);
     doc.line(200, yPosition - 5, 200, yPosition + 5);
     
     yPosition += 15;
@@ -150,7 +153,7 @@ export function PostOperativeProgressDialog({
         yPosition = 20;
       }
       
-      const entryDate = format(new Date(entry.entry_date), 'MMM d, yyyy');
+      const entryDateTime = formatDateTimeForDisplay(entry.created_at);
       const bloodPressure = entry.blood_pressure || '-';
       const pulses = entry.pulses || '-';
       const temperature = entry.temperature || '-';
@@ -158,20 +161,26 @@ export function PostOperativeProgressDialog({
       const output = entry.output_data || '-';
       const remarks = entry.remarks || '-';
       
-      doc.text(entryDate, 20, yPosition);
-      doc.text(bloodPressure, 50, yPosition);
-      doc.text(pulses, 75, yPosition);
-      doc.text(temperature, 100, yPosition);
-      doc.text(input, 125, yPosition);
-      doc.text(output, 150, yPosition);
+      const dateTimeLines = doc.splitTextToSize(entryDateTime, 35);
+      const remarksLines = doc.splitTextToSize(remarks, 20);
       
-      // Handle long text for remarks
-      const remarksLines = doc.splitTextToSize(remarks, 25);
-      remarksLines.forEach((line: string, index: number) => {
-        doc.text(line, 175, yPosition + (index * 5));
+      const maxLines = Math.max(dateTimeLines.length, remarksLines.length);
+      
+      dateTimeLines.forEach((line: string, index: number) => {
+        doc.text(line, 20, yPosition + (index * 5));
       });
       
-      yPosition += Math.max(remarksLines.length * 5, 10);
+      doc.text(bloodPressure, 60, yPosition);
+      doc.text(pulses, 85, yPosition);
+      doc.text(temperature, 110, yPosition);
+      doc.text(input, 135, yPosition);
+      doc.text(output, 160, yPosition);
+      
+      remarksLines.forEach((line: string, index: number) => {
+        doc.text(line, 185, yPosition + (index * 5));
+      });
+      
+      yPosition += Math.max(maxLines * 5, 10);
     });
     
     // Open PDF in new tab
@@ -262,7 +271,7 @@ export function PostOperativeProgressDialog({
                   <Table className="w-full table-fixed">
                     <TableHeader className="sticky top-0 bg-background z-10">
                       <TableRow>
-                        <TableHead className="w-24">Date</TableHead>
+                        <TableHead className="w-32">Date & Time</TableHead>
                         <TableHead className="w-20">B.P</TableHead>
                         <TableHead className="w-20">Pulses</TableHead>
                         <TableHead className="w-24">Temperature</TableHead>
@@ -275,9 +284,9 @@ export function PostOperativeProgressDialog({
                     <TableBody>
                       {progressEntries.map((entry) => (
                         <TableRow key={entry.id}>
-                          <TableCell className="w-24 align-top">
+                          <TableCell className="w-32 align-top">
                             <div className="font-medium text-sm">
-                              {format(new Date(entry.entry_date), 'MMM d, yyyy')}
+                              {formatDateTimeForDisplay(entry.created_at)}
                             </div>
                           </TableCell>
                           <TableCell className="w-20 align-top">

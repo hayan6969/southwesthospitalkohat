@@ -9,6 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Save } from "lucide-react";
+import { getCurrentPakistanTimeString } from "@/utils/timezone";
 
 interface AddPostOpProgressDialogProps {
   open: boolean;
@@ -28,6 +29,7 @@ export function AddPostOpProgressDialog({
   const [saving, setSaving] = useState(false);
   const [formData, setFormData] = useState({
     entryDate: new Date(),
+    entryTime: getCurrentPakistanTimeString(),
     bloodPressure: "",
     pulses: "",
     temperature: "",
@@ -72,6 +74,7 @@ export function AddPostOpProgressDialog({
       // Reset form
       setFormData({
         entryDate: new Date(),
+        entryTime: getCurrentPakistanTimeString(),
         bloodPressure: "",
         pulses: "",
         temperature: "",
@@ -105,13 +108,25 @@ export function AddPostOpProgressDialog({
         </DialogHeader>
         
         <div className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="entryDate">Date</Label>
-            <DatePicker 
-              date={formData.entryDate}
-              onDateChange={(date) => setFormData(prev => ({ ...prev, entryDate: date || new Date() }))}
-              className="w-full"
-            />
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="entryDate">Date</Label>
+              <DatePicker 
+                date={formData.entryDate}
+                onDateChange={(date) => setFormData(prev => ({ ...prev, entryDate: date || new Date() }))}
+                className="w-full"
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="entryTime">Time</Label>
+              <Input
+                id="entryTime"
+                type="time"
+                value={formData.entryTime}
+                onChange={(e) => setFormData(prev => ({ ...prev, entryTime: e.target.value }))}
+              />
+            </div>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
