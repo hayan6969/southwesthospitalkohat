@@ -510,6 +510,7 @@ export default function FinanceDaily() {
         }
       };
 
+      // Create the daily closing record
       const { error } = await supabase.rpc('create_daily_closing', {
         p_closing_date: closingData.closingDate,
         p_closing_time: closingData.closingTime,
@@ -524,6 +525,52 @@ export default function FinanceDaily() {
       });
 
       if (error) throw error;
+
+      // Update hospital closing balance with the new balance
+      // Get current closing balance
+      const { data: currentBalance } = await supabase
+        .from('hospital_closing_balance')
+        .select('closing_balance')
+        .order('closing_date', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      const previousBalance = currentBalance?.closing_balance || 0;
+      const newClosingBalance = previousBalance + closingData.netProfit;
+
+      // Update the closing balance
+      const { data: latestRecord } = await supabase
+        .from('hospital_closing_balance')
+        .select('id')
+        .order('closing_date', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (latestRecord) {
+        // Update existing record
+        const { error: balanceError } = await supabase
+          .from('hospital_closing_balance')
+          .update({ 
+            closing_date: closingData.closingDate,
+            closing_balance: newClosingBalance,
+            notes: `Auto-updated from daily closing. Previous: ${formatPkrAmount(previousBalance)}, Net Profit: ${formatPkrAmount(closingData.netProfit)}`,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', latestRecord.id);
+
+        if (balanceError) console.error('Error updating closing balance:', balanceError);
+      } else {
+        // Create first record
+        const { error: balanceError } = await supabase
+          .from('hospital_closing_balance')
+          .insert({ 
+            closing_date: closingData.closingDate,
+            closing_balance: newClosingBalance,
+            notes: `Initial closing balance from daily closing. Net Profit: ${formatPkrAmount(closingData.netProfit)}`
+          });
+
+        if (balanceError) console.error('Error creating closing balance:', balanceError);
+      }
       
       // Generate PDF after successful database insertion
       await generateDailyClosingPDF(closingData);
