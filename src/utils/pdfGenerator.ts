@@ -974,15 +974,34 @@ export const generateDailyClosingPDF = async (data: {
   // CLOSING BALANCE SECTION (AT TOP)
   // ===========================================
   
-  // Get the latest closing balance (single updatable value)
-  const { data: latestBalance } = await supabase
-    .from('hospital_closing_balance')
-    .select('closing_balance')
+  // Get the correct opening balance for this specific closing date
+  let previousClosingBalance = 0;
+  
+  // For historical closings, calculate the opening balance based on previous day's closing
+  const { data: previousDayClosing } = await supabase
+    .from('daily_closings')
+    .select('net_profit, closing_date')
+    .lt('closing_date', data.closingDate)
     .order('closing_date', { ascending: false })
     .limit(1)
     .maybeSingle();
 
-  const previousClosingBalance = latestBalance?.closing_balance || 0;
+  if (previousDayClosing) {
+    // Get all daily closings up to and including the previous day to calculate cumulative balance
+    const { data: allPreviousClosings } = await supabase
+      .from('daily_closings')
+      .select('hospital_revenue, total_expenses, total_refunds')
+      .lte('closing_date', previousDayClosing.closing_date)
+      .order('closing_date', { ascending: true });
+
+    // Calculate cumulative balance up to previous day
+    if (allPreviousClosings && allPreviousClosings.length > 0) {
+      previousClosingBalance = allPreviousClosings.reduce((balance, closing) => {
+        const hospitalNetProfit = closing.hospital_revenue - closing.total_expenses - closing.total_refunds;
+        return balance + hospitalNetProfit;
+      }, 0);
+    }
+  }
 
   // Add header
   await addHospitalHeader(doc, 'Daily Financial Closing Report');
