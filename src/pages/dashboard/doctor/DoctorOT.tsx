@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -6,7 +6,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { Calendar, User, Building2, Banknote, Clock, FileText, Edit, UserCheck, ClipboardList, TrendingUp, ClipboardCheck } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Calendar, User, Building2, Banknote, Clock, FileText, Edit, UserCheck, ClipboardList, TrendingUp, ClipboardCheck, Search, ChevronLeft, ChevronRight } from "lucide-react";
 import { format } from "date-fns";
 import { formatPkrAmount } from "@/utils/currency";
 import { toast } from "sonner";
@@ -56,6 +57,11 @@ export default function DoctorOT() {
   const [loading, setLoading] = useState(true);
   const [totalEarnings, setTotalEarnings] = useState(0);
   
+  // Search and pagination states
+  const [searchTerm, setSearchTerm] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 20;
+  
   // Dialog states
   const [showOTNotesDialog, setShowOTNotesDialog] = useState(false);
   const [showDischargeDialog, setShowDischargeDialog] = useState(false);
@@ -75,44 +81,60 @@ export default function DoctorOT() {
     try {
       setLoading(true);
 
-      const { data, error } = await supabase
-        .from('ot_schedules')
-        .select(`
-          id,
-          operation_date,
-          doctor_expense,
-          total_cost,
-          status,
-          notes,
-          queue_position,
-          doctor_name,
-          doctor_id,
-          patient_id,
-          ot_notes,
-          created_at,
-          patient:patients (
-            patient_number,
-            date_of_birth,
-            address,
-            profiles (
-              first_name,
-              last_name,
-              phone
+      // Fetch all completed OT schedules for this doctor without pagination limit
+      let allOTSchedules: any[] = [];
+      let start = 0;
+      const batchSize = 1000;
+      let hasMore = true;
+
+      while (hasMore) {
+        const { data, error } = await supabase
+          .from('ot_schedules')
+          .select(`
+            id,
+            operation_date,
+            doctor_expense,
+            total_cost,
+            status,
+            notes,
+            queue_position,
+            doctor_name,
+            doctor_id,
+            patient_id,
+            ot_notes,
+            created_at,
+            patient:patients (
+              patient_number,
+              date_of_birth,
+              address,
+              profiles (
+                first_name,
+                last_name,
+                phone
+              )
+            ),
+            operation:ot_operations (
+              operation_name
+            ),
+            room:ot_rooms (
+              room_name
             )
-          ),
-          operation:ot_operations (
-            operation_name
-          ),
-          room:ot_rooms (
-            room_name
-          )
-        `)
-        .eq('doctor_id', profile.id)
-        .order('operation_date', { ascending: false });
+          `)
+          .eq('doctor_id', profile.id)
+          .range(start, start + batchSize - 1)
+          .order('operation_date', { ascending: false });
 
-      if (error) throw error;
+        if (error) throw error;
 
-      const formattedData = data?.map(schedule => ({
+        if (data && data.length > 0) {
+          allOTSchedules = [...allOTSchedules, ...data];
+          start += batchSize;
+          hasMore = data.length === batchSize;
+        } else {
+          hasMore = false;
+        }
+      }
+      const formattedData = allOTSchedules?.map(schedule => ({
         ...schedule,
         patient: {
           patient_number: schedule.patient?.patient_number || '',
@@ -204,8 +226,33 @@ export default function DoctorOT() {
 
   const upcomingOTs = otSchedules.filter(ot => ot.status === 'pending');
 
-  const completedOTs = otSchedules.filter(ot => ot.status === 'completed');
-  const recentCompletedOTs = completedOTs.slice(0, 10);
+  // Filter and paginate completed operations
+  const completedOTs = useMemo(() => {
+    let filtered = otSchedules.filter(ot => ot.status === 'completed');
+    
+    // Apply search filter for patient ID (case insensitive)
+    if (searchTerm.trim()) {
+      filtered = filtered.filter(ot => 
+        ot.patient.patient_number.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+    
+    return filtered;
+  }, [otSchedules, searchTerm]);
+
+  // Paginated completed operations
+  const paginatedCompletedOTs = useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    return completedOTs.slice(startIndex, endIndex);
+  }, [completedOTs, currentPage, itemsPerPage]);
+
+  const totalPages = Math.ceil(completedOTs.length / itemsPerPage);
+
+  // Reset to first page when search changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm]);
 
   return (
     <div className="space-y-6">
@@ -403,149 +450,218 @@ export default function DoctorOT() {
             </TabsContent>
 
             <TabsContent value="completed" className="mt-4">
-          {loading ? (
-            <div className="space-y-3">
-              {Array.from({ length: 5 }).map((_, i) => (
-                <div key={i} className="flex space-x-4">
-                  <div className="h-4 bg-gray-200 rounded animate-pulse w-24"></div>
-                  <div className="h-4 bg-gray-200 rounded animate-pulse w-32"></div>
-                  <div className="h-4 bg-gray-200 rounded animate-pulse w-28"></div>
-                  <div className="h-4 bg-gray-200 rounded animate-pulse w-20"></div>
+              <div className="space-y-4">
+                {/* Search Input */}
+                <div className="flex items-center gap-2 max-w-md">
+                  <Search className="w-4 h-4 text-gray-400" />
+                  <Input
+                    placeholder="Search by Patient ID (e.g., P-0001)..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="flex-1"
+                  />
                 </div>
-              ))}
-            </div>
-          ) : recentCompletedOTs.length > 0 ? (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Date</TableHead>
-                    <TableHead>Patient</TableHead>
-                    <TableHead>Operation</TableHead>
-                    <TableHead>Room</TableHead>
-                    <TableHead>Total Cost</TableHead>
-                    <TableHead>Your Fee</TableHead>
-                    <TableHead>Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {recentCompletedOTs.map((ot) => (
-                    <TableRow key={ot.id}>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <Calendar className="w-4 h-4 text-gray-400" />
-                          <div>
-                            <div className="font-medium">
-                              {format(new Date(ot.operation_date), 'MMM d, yyyy')}
-                            </div>
-                            <div className="text-sm text-gray-500">
-                              {format(new Date(ot.operation_date), 'h:mm a')}
-                            </div>
-                          </div>
+
+                {loading ? (
+                  <div className="space-y-3">
+                    {Array.from({ length: 5 }).map((_, i) => (
+                      <div key={i} className="flex space-x-4">
+                        <div className="h-4 bg-gray-200 rounded animate-pulse w-24"></div>
+                        <div className="h-4 bg-gray-200 rounded animate-pulse w-32"></div>
+                        <div className="h-4 bg-gray-200 rounded animate-pulse w-28"></div>
+                        <div className="h-4 bg-gray-200 rounded animate-pulse w-20"></div>
+                      </div>
+                    ))}
+                  </div>
+                ) : paginatedCompletedOTs.length > 0 ? (
+                  <>
+                    <div className="overflow-x-auto">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Date</TableHead>
+                            <TableHead>Patient</TableHead>
+                            <TableHead>Operation</TableHead>
+                            <TableHead>Room</TableHead>
+                            <TableHead>Total Cost</TableHead>
+                            <TableHead>Your Fee</TableHead>
+                            <TableHead>Actions</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {paginatedCompletedOTs.map((ot) => (
+                            <TableRow key={ot.id}>
+                              <TableCell>
+                                <div className="flex items-center gap-2">
+                                  <Calendar className="w-4 h-4 text-gray-400" />
+                                  <div>
+                                    <div className="font-medium">
+                                      {format(new Date(ot.operation_date), 'MMM d, yyyy')}
+                                    </div>
+                                    <div className="text-sm text-gray-500">
+                                      {format(new Date(ot.operation_date), 'h:mm a')}
+                                    </div>
+                                  </div>
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                <div className="flex items-center gap-2">
+                                  <User className="w-4 h-4 text-gray-400" />
+                                  <div>
+                                    <div className="font-medium">
+                                      {ot.patient.profile.first_name} {ot.patient.profile.last_name}
+                                    </div>
+                                    <div className="text-sm text-gray-500">
+                                      {ot.patient.patient_number}
+                                    </div>
+                                  </div>
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                <span className="font-medium">{ot.operation.operation_name}</span>
+                              </TableCell>
+                              <TableCell>
+                                <div className="flex items-center gap-2">
+                                  <Building2 className="w-4 h-4 text-gray-400" />
+                                  <span>{ot.room.room_name}</span>
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                <span className="font-medium">
+                                  {formatPkrAmount(ot.total_cost)}
+                                </span>
+                              </TableCell>
+                              <TableCell>
+                                <span className="font-bold text-green-600">
+                                  {formatPkrAmount(ot.doctor_expense)}
+                                </span>
+                              </TableCell>
+                              <TableCell>
+                                <div className="flex gap-2 flex-wrap">
+                                  <Button 
+                                    size="sm" 
+                                    variant="outline"
+                                    onClick={() => handlePreOpOrders(ot)}
+                                    className="flex items-center gap-1"
+                                  >
+                                    <ClipboardList className="w-3 h-3" />
+                                    Pre-Op Orders
+                                  </Button>
+                                  <Button 
+                                    size="sm" 
+                                    variant="outline"
+                                    onClick={() => handleTreatmentChart(ot)}
+                                    className="flex items-center gap-1"
+                                  >
+                                    <FileText className="w-3 h-3" />
+                                    Treatment Chart
+                                  </Button>
+                                  <Button 
+                                    size="sm" 
+                                    variant="outline"
+                                    onClick={() => handleProgress(ot)}
+                                    className="flex items-center gap-1"
+                                  >
+                                    <TrendingUp className="w-3 h-3" />
+                                    POPPR
+                                  </Button>
+                                  <Button 
+                                    size="sm" 
+                                    variant="outline"
+                                    onClick={() => handleAssessment(ot)}
+                                    className="flex items-center gap-1"
+                                  >
+                                    <ClipboardCheck className="w-3 h-3" />
+                                    Assessment
+                                  </Button>
+                                  <Button 
+                                    size="sm" 
+                                    variant="outline"
+                                    onClick={() => handleOTNotes(ot)}
+                                    className="flex items-center gap-1"
+                                  >
+                                    <Edit className="w-3 h-3" />
+                                    OT Notes
+                                  </Button>
+                                  {ot.ot_notes?.dischargeSlip && (
+                                    <Button 
+                                      size="sm" 
+                                      variant="outline"
+                                      onClick={() => handleDischargeSlip(ot)}
+                                      className="flex items-center gap-1"
+                                    >
+                                      <FileText className="w-3 h-3" />
+                                      Discharge Slip
+                                    </Button>
+                                  )}
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+
+                    {/* Pagination Controls */}
+                    <div className="flex items-center justify-between">
+                      <div className="text-sm text-gray-500">
+                        Showing {Math.min((currentPage - 1) * itemsPerPage + 1, completedOTs.length)} to {Math.min(currentPage * itemsPerPage, completedOTs.length)} of {completedOTs.length} completed operations
+                      </div>
+                      
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                          disabled={currentPage === 1}
+                          className="flex items-center gap-1"
+                        >
+                          <ChevronLeft className="w-4 h-4" />
+                          Previous
+                        </Button>
+                        
+                        <div className="flex items-center gap-1">
+                          {Array.from({ length: totalPages }, (_, i) => i + 1)
+                            .filter(page => {
+                              const start = Math.max(1, currentPage - 2);
+                              const end = Math.min(totalPages, currentPage + 2);
+                              return page >= start && page <= end;
+                            })
+                            .map(page => (
+                              <Button
+                                key={page}
+                                variant={currentPage === page ? "default" : "outline"}
+                                size="sm"
+                                onClick={() => setCurrentPage(page)}
+                                className="w-8 h-8 p-0"
+                              >
+                                {page}
+                              </Button>
+                            ))}
                         </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <User className="w-4 h-4 text-gray-400" />
-                          <div>
-                            <div className="font-medium">
-                              {ot.patient.profile.first_name} {ot.patient.profile.last_name}
-                            </div>
-                            <div className="text-sm text-gray-500">
-                              {ot.patient.patient_number}
-                            </div>
-                          </div>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <span className="font-medium">{ot.operation.operation_name}</span>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <Building2 className="w-4 h-4 text-gray-400" />
-                          <span>{ot.room.room_name}</span>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <span className="font-medium">
-                          {formatPkrAmount(ot.total_cost)}
-                        </span>
-                      </TableCell>
-                      <TableCell>
-                        <span className="font-bold text-green-600">
-                          {formatPkrAmount(ot.doctor_expense)}
-                        </span>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex gap-2 flex-wrap">
-                          <Button 
-                            size="sm" 
-                            variant="outline"
-                            onClick={() => handlePreOpOrders(ot)}
-                            className="flex items-center gap-1"
-                          >
-                            <ClipboardList className="w-3 h-3" />
-                            Pre-Op Orders
-                          </Button>
-                          <Button 
-                            size="sm" 
-                            variant="outline"
-                            onClick={() => handleTreatmentChart(ot)}
-                            className="flex items-center gap-1"
-                          >
-                            <FileText className="w-3 h-3" />
-                            Treatment Chart
-                          </Button>
-                          <Button 
-                            size="sm" 
-                            variant="outline"
-                            onClick={() => handleProgress(ot)}
-                            className="flex items-center gap-1"
-                          >
-                            <TrendingUp className="w-3 h-3" />
-                            POPPR
-                          </Button>
-                          <Button 
-                            size="sm" 
-                            variant="outline"
-                            onClick={() => handleAssessment(ot)}
-                            className="flex items-center gap-1"
-                          >
-                            <ClipboardCheck className="w-3 h-3" />
-                            Assessment
-                          </Button>
-                          <Button 
-                            size="sm" 
-                            variant="outline"
-                            onClick={() => handleOTNotes(ot)}
-                            className="flex items-center gap-1"
-                          >
-                            <Edit className="w-3 h-3" />
-                            OT Notes
-                          </Button>
-                          {ot.ot_notes?.dischargeSlip && (
-                            <Button 
-                              size="sm" 
-                              variant="outline"
-                              onClick={() => handleDischargeSlip(ot)}
-                              className="flex items-center gap-1"
-                            >
-                              <FileText className="w-3 h-3" />
-                              Discharge Slip
-                            </Button>
-                          )}
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          ) : (
-            <div className="text-center text-gray-500 py-8">
-              No completed OT operations found
-            </div>
-          )}
+                        
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                          disabled={currentPage === totalPages}
+                          className="flex items-center gap-1"
+                        >
+                          Next
+                          <ChevronRight className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <div className="text-center text-gray-500 py-8">
+                    {searchTerm ? 
+                      `No completed operations found matching "${searchTerm}"` : 
+                      "No completed OT operations found"
+                    }
+                  </div>
+                )}
+              </div>
             </TabsContent>
           </Tabs>
         </CardContent>
