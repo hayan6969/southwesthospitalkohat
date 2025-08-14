@@ -23,6 +23,10 @@ export default function PharmacyStock() {
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
   const [editingStock, setEditingStock] = useState<{ id: string; quantity: number } | null>(null);
+  const [activeTab, setActiveTab] = useState("all");
+  const [outOfStockPage, setOutOfStockPage] = useState(1);
+  const [lowStockPage, setLowStockPage] = useState(1);
+  const [normalStockPage, setNormalStockPage] = useState(1);
   const pageSize = 10;
   
   // Debounce search term to avoid API calls on every keystroke
@@ -71,6 +75,21 @@ export default function PharmacyStock() {
   const normalStockMedicines = allMedicines?.filter(medicine => 
     medicine.stock_quantity > (medicine.minimum_stock_level || 10)
   );
+
+  // Pagination logic for filtered lists
+  const getPaginatedData = (data: any[], page: number) => {
+    const startIndex = (page - 1) * pageSize;
+    const endIndex = startIndex + pageSize;
+    return {
+      data: data.slice(startIndex, endIndex),
+      totalPages: Math.ceil(data.length / pageSize),
+      totalCount: data.length
+    };
+  };
+
+  const paginatedOutOfStock = getPaginatedData(outOfStockMedicines || [], outOfStockPage);
+  const paginatedLowStock = getPaginatedData(lowStockMedicines || [], lowStockPage);
+  const paginatedNormalStock = getPaginatedData(normalStockMedicines || [], normalStockPage);
 
   const handleStockUpdate = async (medicineId: string, newQuantity: number) => {
     if (newQuantity < 0) {
@@ -127,7 +146,7 @@ export default function PharmacyStock() {
     toast.success("Data refreshed");
   };
 
-  const renderMedicineTable = (medicinesList: any[], showPagination = false) => (
+  const renderMedicineTable = (medicinesList: any[], paginationData?: { totalPages: number; totalCount: number; currentPage: number; setPage: (page: number) => void }) => (
     <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
       <div className="overflow-x-auto">
         <Table>
@@ -227,39 +246,39 @@ export default function PharmacyStock() {
         </Table>
       </div>
       
-      {/* Pagination for All tab */}
-      {showPagination && totalPages > 1 && (
+      {/* Pagination */}
+      {paginationData && paginationData.totalPages > 1 && (
         <div className="p-6 border-t border-gray-200">
           <div className="flex items-center justify-between">
             <p className="text-sm text-gray-700">
-              Showing {((currentPage - 1) * pageSize) + 1} to {Math.min(currentPage * pageSize, totalCount)} of {totalCount} medicines
+              Showing {((paginationData.currentPage - 1) * pageSize) + 1} to {Math.min(paginationData.currentPage * pageSize, paginationData.totalCount)} of {paginationData.totalCount} medicines
             </p>
             <Pagination>
               <PaginationContent>
                 <PaginationItem>
                   <PaginationPrevious 
-                    onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-                    className={currentPage === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                    onClick={() => paginationData.setPage(Math.max(1, paginationData.currentPage - 1))}
+                    className={paginationData.currentPage === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
                   />
                 </PaginationItem>
                 
-                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                {Array.from({ length: Math.min(5, paginationData.totalPages) }, (_, i) => {
                   let pageNumber;
-                  if (totalPages <= 5) {
+                  if (paginationData.totalPages <= 5) {
                     pageNumber = i + 1;
-                  } else if (currentPage <= 3) {
+                  } else if (paginationData.currentPage <= 3) {
                     pageNumber = i + 1;
-                  } else if (currentPage >= totalPages - 2) {
-                    pageNumber = totalPages - 4 + i;
+                  } else if (paginationData.currentPage >= paginationData.totalPages - 2) {
+                    pageNumber = paginationData.totalPages - 4 + i;
                   } else {
-                    pageNumber = currentPage - 2 + i;
+                    pageNumber = paginationData.currentPage - 2 + i;
                   }
                   
                   return (
                     <PaginationItem key={pageNumber}>
                       <PaginationLink
-                        onClick={() => setCurrentPage(pageNumber)}
-                        isActive={currentPage === pageNumber}
+                        onClick={() => paginationData.setPage(pageNumber)}
+                        isActive={paginationData.currentPage === pageNumber}
                         className="cursor-pointer"
                       >
                         {pageNumber}
@@ -270,8 +289,8 @@ export default function PharmacyStock() {
                 
                 <PaginationItem>
                   <PaginationNext 
-                    onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
-                    className={currentPage === totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                    onClick={() => paginationData.setPage(Math.min(paginationData.totalPages, paginationData.currentPage + 1))}
+                    className={paginationData.currentPage === paginationData.totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"}
                   />
                 </PaginationItem>
               </PaginationContent>
@@ -409,19 +428,39 @@ export default function PharmacyStock() {
               </TabsList>
 
               <TabsContent value="all">
-                {renderMedicineTable(medicines, true)}
+                {renderMedicineTable(medicines, {
+                  totalPages,
+                  totalCount,
+                  currentPage,
+                  setPage: setCurrentPage
+                })}
               </TabsContent>
 
               <TabsContent value="out-of-stock">
-                {renderMedicineTable(outOfStockMedicines || [], false)}
+                {renderMedicineTable(paginatedOutOfStock.data, {
+                  totalPages: paginatedOutOfStock.totalPages,
+                  totalCount: paginatedOutOfStock.totalCount,
+                  currentPage: outOfStockPage,
+                  setPage: setOutOfStockPage
+                })}
               </TabsContent>
 
               <TabsContent value="low-stock">
-                {renderMedicineTable(lowStockMedicines || [], false)}
+                {renderMedicineTable(paginatedLowStock.data, {
+                  totalPages: paginatedLowStock.totalPages,
+                  totalCount: paginatedLowStock.totalCount,
+                  currentPage: lowStockPage,
+                  setPage: setLowStockPage
+                })}
               </TabsContent>
 
               <TabsContent value="normal-stock">
-                {renderMedicineTable(normalStockMedicines || [], false)}
+                {renderMedicineTable(paginatedNormalStock.data, {
+                  totalPages: paginatedNormalStock.totalPages,
+                  totalCount: paginatedNormalStock.totalCount,
+                  currentPage: normalStockPage,
+                  setPage: setNormalStockPage
+                })}
               </TabsContent>
             </Tabs>
           </div>
