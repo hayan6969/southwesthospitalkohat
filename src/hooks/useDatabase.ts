@@ -120,13 +120,31 @@ export const usePatients = () => {
   return useQuery({
     queryKey: ['patients'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('patients')
-        .select('*')
-        .order('id');
+      // Fetch all patients without limit to ensure we get everyone
+      let allPatients: any[] = [];
+      let start = 0;
+      const batchSize = 1000;
+      let hasMore = true;
 
-      if (error) throw error;
-      return data;
+      while (hasMore) {
+        const { data, error } = await supabase
+          .from('patients')
+          .select('*')
+          .range(start, start + batchSize - 1)
+          .order('id');
+
+        if (error) throw error;
+        
+        if (data && data.length > 0) {
+          allPatients = [...allPatients, ...data];
+          start += batchSize;
+          hasMore = data.length === batchSize;
+        } else {
+          hasMore = false;
+        }
+      }
+
+      return allPatients;
     }
   });
 };
