@@ -6,7 +6,7 @@ import { useAppointments, useMedicalRecords } from "@/hooks/useDatabase";
 import { useRealStatsData } from "@/hooks/useRealStatsData";
 import { useFinancialAnalytics } from "@/hooks/useFinancialAnalytics";
 import { usePatientNames, useDoctorNames, getPatientName, getDoctorName } from "@/hooks/useDisplayHelpers";
-import { useDoctorTodayAppointments } from "@/hooks/useDoctorData";
+import { useDoctorTodayAppointments, useDoctorPatients } from "@/hooks/useDoctorData";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Calendar, Users, Clock, CheckCircle, Plus, User, LogOut, Stethoscope, FileText, CalendarDays, ClipboardList, Banknote, Building2, Pill } from "lucide-react";
@@ -44,6 +44,7 @@ export default function DashboardDoctor() {
   const { data: patientNames } = usePatientNames();
   const { data: doctorNames } = useDoctorNames();
   const { data: todayAppointmentsData, isLoading: todayLoading } = useDoctorTodayAppointments();
+  const { data: doctorPatientsData, isLoading: doctorPatientsLoading } = useDoctorPatients();
   const [doctorProfile, setDoctorProfile] = useState<any>(null);
   const [selectedAppointment, setSelectedAppointment] = useState<any>(null);
   const [isAppointmentDialogOpen, setIsAppointmentDialogOpen] = useState(false);
@@ -185,13 +186,10 @@ export default function DashboardDoctor() {
                   loading={appointmentsLoading}
                 />
                 <StatsCard
-                  title="Total Patients"
-                  value={realStats?.totalPatients || 0}
-                  change={realStats?.patientsChange}
-                  changeType={realStats?.patientsChangeType}
+                  title="My Total Patients"
+                  value={doctorPatientsData?.totalCount || 0}
                   icon={<Users className="w-5 h-5 text-green-600" />}
-                  chart={<MiniChart data={realStats?.chartData?.patients || []} type="line" color="#10b981" />}
-                  loading={statsLoading}
+                  loading={doctorPatientsLoading}
                 />
                 <StatsCard
                   title="Completed Today"
