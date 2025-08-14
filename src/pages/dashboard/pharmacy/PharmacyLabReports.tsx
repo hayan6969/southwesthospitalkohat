@@ -12,7 +12,6 @@ import { Search, Download, FileText, Filter, Calendar, User, Eye } from "lucide-
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { formatPkrAmount } from "@/utils/currency";
-import { PdfViewerDialog } from "@/components/dialogs/PdfViewerDialog";
 
 interface Patient {
   id: string;
@@ -396,25 +395,24 @@ export default function PharmacyLabReports() {
                         </TableCell>
                         <TableCell>
                           {report.result_file_url ? (
-                            <PdfViewerDialog
-                              pdfUrl={null}
-                              title={`${report.test_name} - ${new Date(report.test_date).toLocaleDateString()}`}
-                              onGetPdfUrl={() => getPdfUrl(report.result_file_url)}
-                              trigger={
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  className="flex items-center gap-2"
-                                >
-                                  <Eye className="w-4 h-4" />
-                                  View PDF
-                                </Button>
-                              }
-                            />
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={async () => {
+                                const pdfUrl = await getPdfUrl(report.result_file_url);
+                                if (pdfUrl) {
+                                  window.open(pdfUrl, '_blank');
+                                }
+                              }}
+                              className="flex items-center gap-2"
+                            >
+                              <Eye className="w-4 h-4" />
+                              View
+                            </Button>
                           ) : (
                             <Button
-                              size="sm"
                               variant="outline"
+                              size="sm"
                               disabled
                               className="flex items-center gap-2"
                             >
