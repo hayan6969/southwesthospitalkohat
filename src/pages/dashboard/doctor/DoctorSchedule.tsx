@@ -1,8 +1,8 @@
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useAppointments, useUpdateAppointment, useMarkAppointmentFree } from "@/hooks/useDatabase";
 import { usePatientNames, getPatientName } from "@/hooks/useDisplayHelpers";
-import { Calendar, Clock, User, Edit3, CheckCircle, X, Hash, CreditCard, AlertTriangle, Filter, Search, CalendarIcon, Gift, Pill } from "lucide-react";
+import { Calendar, Clock, User, Edit3, CheckCircle, X, Hash, CreditCard, AlertTriangle, Filter, Search, CalendarIcon, Gift, Pill, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -37,6 +37,10 @@ export default function DoctorSchedule() { // Fixed ordering syntax
   const [dateFilter, setDateFilter] = useState("");
   const [patientFilter, setPatientFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
+
+  // Pagination states
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 20;
 
   // Prescription dialog state
   const [isPrescriptionDialogOpen, setIsPrescriptionDialogOpen] = useState(false);
@@ -322,32 +326,50 @@ export default function DoctorSchedule() { // Fixed ordering syntax
   }) || [];
 
   // Filter past appointments based on user inputs
-  const filteredPastAppointments = appointmentsWithQueue?.filter(apt => {
-    const isPastAppointment = apt.status === 'completed' || apt.status === 'cancelled' || 
-      (new Date(apt.appointment_date) < new Date() && apt.status !== 'scheduled');
-    
-    if (!isPastAppointment) return false;
-    
-    // Apply filters
-    if (dateFilter && !formatInPakistanTime(apt.appointment_date, 'yyyy-MM-dd').includes(dateFilter)) {
-      return false;
-    }
-    
-    if (patientFilter) {
-      const patientName = getPatientName(apt.patient_id, patientNames || []).toLowerCase();
-      const patientNumber = apt.patient_number?.toLowerCase() || '';
-      if (!patientName.includes(patientFilter.toLowerCase()) && 
-          !patientNumber.includes(patientFilter.toLowerCase())) {
+  const filteredPastAppointments = useMemo(() => {
+    const filtered = appointmentsWithQueue?.filter(apt => {
+      const isPastAppointment = apt.status === 'completed' || apt.status === 'cancelled' || 
+        (new Date(apt.appointment_date) < new Date() && apt.status !== 'scheduled');
+      
+      if (!isPastAppointment) return false;
+      
+      // Apply filters
+      if (dateFilter && !formatInPakistanTime(apt.appointment_date, 'yyyy-MM-dd').includes(dateFilter)) {
         return false;
       }
-    }
+      
+      if (patientFilter) {
+        const patientName = getPatientName(apt.patient_id, patientNames || []).toLowerCase();
+        const patientNumber = apt.patient_number?.toLowerCase() || '';
+        if (!patientName.includes(patientFilter.toLowerCase()) && 
+            !patientNumber.includes(patientFilter.toLowerCase())) {
+          return false;
+        }
+      }
+      
+      if (statusFilter && statusFilter !== "all" && apt.status !== statusFilter) {
+        return false;
+      }
+      
+      return true;
+    }).sort((a, b) => new Date(b.appointment_date).getTime() - new Date(a.appointment_date).getTime()) || [];
     
-    if (statusFilter && statusFilter !== "all" && apt.status !== statusFilter) {
-      return false;
-    }
-    
-    return true;
-  }).sort((a, b) => new Date(b.appointment_date).getTime() - new Date(a.appointment_date).getTime()) || [];
+    return filtered;
+  }, [appointmentsWithQueue, dateFilter, patientFilter, statusFilter, patientNames]);
+
+  // Paginated past appointments
+  const paginatedPastAppointments = useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    return filteredPastAppointments.slice(startIndex, endIndex);
+  }, [filteredPastAppointments, currentPage, itemsPerPage]);
+
+  const totalPages = Math.ceil(filteredPastAppointments.length / itemsPerPage);
+
+  // Reset to first page when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [dateFilter, patientFilter, statusFilter]);
 
   // Remove the separate PatientDetailsView rendering
   // Now we'll use the PatientDetailDialog instead
@@ -679,7 +701,65 @@ export default function DoctorSchedule() { // Fixed ordering syntax
                 </div>
               </div>
             </div>
-            {renderAppointmentTable(filteredPastAppointments, "Past Appointments")}
+            
+            <div className="space-y-4">
+              {renderAppointmentTable(paginatedPastAppointments, "Past Appointments")}
+              
+              {/* Pagination Controls */}
+              {totalPages > 1 && (
+                <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
+                  <div className="flex items-center justify-between">
+                    <div className="text-sm text-gray-500">
+                      Showing {Math.min((currentPage - 1) * itemsPerPage + 1, filteredPastAppointments.length)} to {Math.min(currentPage * itemsPerPage, filteredPastAppointments.length)} of {filteredPastAppointments.length} past appointments
+                    </div>
+                    
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                        disabled={currentPage === 1}
+                        className="flex items-center gap-1"
+                      >
+                        <ChevronLeft className="w-4 h-4" />
+                        Previous
+                      </Button>
+                      
+                      <div className="flex items-center gap-1">
+                        {Array.from({ length: totalPages }, (_, i) => i + 1)
+                          .filter(page => {
+                            const start = Math.max(1, currentPage - 2);
+                            const end = Math.min(totalPages, currentPage + 2);
+                            return page >= start && page <= end;
+                          })
+                          .map(page => (
+                            <Button
+                              key={page}
+                              variant={currentPage === page ? "default" : "outline"}
+                              size="sm"
+                              onClick={() => setCurrentPage(page)}
+                              className="w-8 h-8 p-0"
+                            >
+                              {page}
+                            </Button>
+                          ))}
+                      </div>
+                      
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                        disabled={currentPage === totalPages}
+                        className="flex items-center gap-1"
+                      >
+                        Next
+                        <ChevronRight className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </TabsContent>
       </Tabs>
