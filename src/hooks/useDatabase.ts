@@ -197,17 +197,35 @@ export const useLabReports = () => {
   return useQuery({
     queryKey: ['lab-reports'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('lab_reports')
-        .select(`
-          *,
-          patient:patients(*),
-          doctor:doctors(*, profiles(first_name, last_name))
-        `)
-        .order('created_at', { ascending: false });
+      // Fetch all lab reports without limit to ensure we get everyone
+      let allLabReports: any[] = [];
+      let start = 0;
+      const batchSize = 1000;
+      let hasMore = true;
 
-      if (error) throw error;
-      return data;
+      while (hasMore) {
+        const { data, error } = await supabase
+          .from('lab_reports')
+          .select(`
+            *,
+            patient:patients(*),
+            doctor:doctors(*, profiles(first_name, last_name))
+          `)
+          .range(start, start + batchSize - 1)
+          .order('created_at', { ascending: false });
+
+        if (error) throw error;
+        
+        if (data && data.length > 0) {
+          allLabReports = [...allLabReports, ...data];
+          start += batchSize;
+          hasMore = data.length === batchSize;
+        } else {
+          hasMore = false;
+        }
+      }
+
+      return allLabReports;
     }
   });
 };
