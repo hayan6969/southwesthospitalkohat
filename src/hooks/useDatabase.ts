@@ -197,6 +197,7 @@ export const useLabReports = () => {
   return useQuery({
     queryKey: ['lab-reports'],
     queryFn: async () => {
+      console.log('🧪 Fetching all lab reports...');
       // Fetch all lab reports without limit to ensure we get everyone
       let allLabReports: any[] = [];
       let start = 0;
@@ -204,6 +205,7 @@ export const useLabReports = () => {
       let hasMore = true;
 
       while (hasMore) {
+        console.log(`🧪 Fetching lab reports batch: ${start} to ${start + batchSize - 1}`);
         const { data, error } = await supabase
           .from('lab_reports')
           .select(`
@@ -214,7 +216,12 @@ export const useLabReports = () => {
           .range(start, start + batchSize - 1)
           .order('created_at', { ascending: false });
 
-        if (error) throw error;
+        if (error) {
+          console.error('🧪 Error fetching lab reports:', error);
+          throw error;
+        }
+        
+        console.log(`🧪 Fetched ${data?.length || 0} lab reports in this batch`);
         
         if (data && data.length > 0) {
           allLabReports = [...allLabReports, ...data];
@@ -225,6 +232,7 @@ export const useLabReports = () => {
         }
       }
 
+      console.log(`🧪 Total lab reports fetched: ${allLabReports.length}`);
       return allLabReports;
     }
   });
