@@ -7,7 +7,7 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instanciate createClient with right options
+  // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
     PostgrestVersion: "12.2.3 (519615d)"
@@ -1837,11 +1837,11 @@ export type Database = {
         Returns: undefined
       }
       calculate_doctor_earnings: {
-        Args: { p_doctor_id: string; p_start_date: string; p_end_date: string }
+        Args: { p_doctor_id: string; p_end_date: string; p_start_date: string }
         Returns: {
           appointment_count: number
-          ot_count: number
           consultation_earnings: number
+          ot_count: number
           ot_earnings: number
           total_earnings: number
         }[]
@@ -1852,11 +1852,11 @@ export type Database = {
           p_closing_time: string
           p_day_name: string
           p_hospital_revenue: number
-          p_pharmacy_revenue: number
+          p_net_profit: number
           p_pharmacy_profit: number
+          p_pharmacy_revenue: number
           p_total_expenses: number
           p_total_refunds: number
-          p_net_profit: number
           p_transactions_data: Json
         }
         Returns: string
@@ -1864,9 +1864,9 @@ export type Database = {
       create_user_account: {
         Args: {
           p_email: string
-          p_password: string
           p_first_name: string
           p_last_name: string
+          p_password: string
           p_role: string
         }
         Returns: string
@@ -1898,34 +1898,34 @@ export type Database = {
       get_last_daily_closing: {
         Args: Record<PropertyKey, never>
         Returns: {
-          id: string
           closing_date: string
           closing_time: string
+          created_at: string
           day_name: string
           hospital_revenue: number
-          pharmacy_revenue: number
+          id: string
+          net_profit: number
           pharmacy_profit: number
+          pharmacy_revenue: number
           total_expenses: number
           total_refunds: number
-          net_profit: number
           transactions_data: Json
-          created_at: string
           updated_at: string
         }[]
       }
       get_next_ot_queue_position: {
-        Args: { room_uuid: string; operation_date_param: string }
+        Args: { operation_date_param: string; room_uuid: string }
         Returns: number
       }
       get_next_queue_position: {
-        Args: { doctor_uuid: string; appointment_date_param: string }
+        Args: { appointment_date_param: string; doctor_uuid: string }
         Returns: number
       }
       reorder_queue_after_cancellation: {
         Args: {
-          p_doctor_id: string
           p_appointment_date: string
           p_cancelled_position: number
+          p_doctor_id: string
         }
         Returns: undefined
       }
