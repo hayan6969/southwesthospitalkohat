@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import AppLayout from "@/layouts/AppLayout";
-import { useMedicines, usePharmacyInvoices, useCreatePharmacyInvoice } from "@/hooks/useDatabase";
+import { useMedicines, useCreatePharmacyInvoice, usePaginatedPharmacyInvoices } from "@/hooks/useDatabase";
 import { useAuditLogger } from "@/hooks/useAuditLogger";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
@@ -29,7 +29,6 @@ type InvoiceItem = {
 
 export default function PharmacyInvoices() {
   const { data: medicines } = useMedicines();
-  const { data: invoices, isLoading } = usePharmacyInvoices();
   const createInvoice = useCreatePharmacyInvoice();
   const { toast } = useToast();
   const { logCreate, logDownload } = useAuditLogger();
@@ -46,6 +45,12 @@ export default function PharmacyInvoices() {
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 20;
+
+  // Use paginated pharmacy invoices hook for better performance
+  const { data: paginatedResult, isLoading } = usePaginatedPharmacyInvoices(currentPage, itemsPerPage, searchTerm);
+  const invoices = paginatedResult?.data || [];
+  const totalCount = paginatedResult?.count || 0;
+  const totalPages = paginatedResult?.totalPages || 1;
 
   const addItem = () => {
     if (!selectedMedicineId) return;
@@ -199,28 +204,15 @@ export default function PharmacyInvoices() {
     logDownload('Pharmacy Invoice PDF', `Downloaded PDF for invoice ${invoice.invoice_number}`, user?.id);
   };
 
-  // Filter and search invoices
-  const filteredInvoices = invoices?.filter(invoice => {
-    // Filter by date if selected
-    const matchesDate = !filterDate || 
-      new Date(invoice.created_at!).toDateString() === filterDate.toDateString();
-    
-    // Filter by search term (invoice number)
-    const matchesSearch = !searchTerm || 
-      invoice.invoice_number?.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    return matchesDate && matchesSearch;
-  }) || [];
+  // Filter invoices by date if needed (client-side filtering for date since server-side search handles invoice number)
+  const filteredInvoices = filterDate ? 
+    invoices.filter(invoice => 
+      new Date(invoice.created_at!).toDateString() === filterDate.toDateString()
+    ) : invoices;
 
-  // Pagination
-  const totalPages = Math.ceil(filteredInvoices.length / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = startIndex + itemsPerPage;
-  const paginatedInvoices = filteredInvoices.slice(startIndex, endIndex);
-
-  // Calculate totals for filtered invoices
+  // Calculate totals for current page
   const totalAmount = filteredInvoices.reduce((sum, invoice) => sum + (invoice.final_amount || 0), 0);
-  const totalCount = filteredInvoices.length;
+  const currentCount = filteredInvoices.length;
 
   // Reset current page when search or filter changes
   useEffect(() => {
@@ -232,34 +224,41 @@ export default function PharmacyInvoices() {
       <div className="space-y-8">
         {/* Summary Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-gray-600">Total Invoices</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{totalCount}</div>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-gray-600">Total Revenue</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-green-600">{formatPkrAmount(totalAmount)}</div>
-            </CardContent>
-          </Card>
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium text-gray-600">Total Invoices</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{totalCount}</div>
+                <div className="text-xs text-gray-500">
+                  {searchTerm && `(filtered by "${searchTerm}")`}
+                </div>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium text-gray-600">Page Revenue</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-green-600">{formatPkrAmount(totalAmount)}</div>
+                <div className="text-xs text-gray-500">
+                  Current page total
+                </div>
+              </CardContent>
+            </Card>
 
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-gray-600">Filter Applied</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-sm text-gray-600">
-                {filterDate ? format(filterDate, 'MMM dd, yyyy') : 'All Dates'}
-              </div>
-            </CardContent>
-          </Card>
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium text-gray-600">Current Page</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{currentPage} of {totalPages}</div>
+                <div className="text-xs text-gray-500">
+                  {currentCount} invoices shown
+                </div>
+              </CardContent>
+            </Card>
         </div>
 
         {/* Header */}
@@ -334,7 +333,7 @@ export default function PharmacyInvoices() {
             {/* Results count */}
             <div className="flex items-center justify-between text-sm text-gray-600">
               <span>
-                Showing {startIndex + 1} to {Math.min(endIndex, filteredInvoices.length)} of {filteredInvoices.length} invoices
+                Showing {((currentPage - 1) * itemsPerPage) + 1} to {Math.min(currentPage * itemsPerPage, totalCount)} of {totalCount} invoices
                 {searchTerm && ` (filtered by "${searchTerm}")`}
               </span>
               {totalPages > 1 && (
@@ -353,7 +352,7 @@ export default function PharmacyInvoices() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {paginatedInvoices.map((invoice) => (
+                {filteredInvoices.map((invoice) => (
                   <TableRow key={invoice.id}>
                     <TableCell className="font-mono">{invoice.invoice_number}</TableCell>
                     <TableCell>{invoice.customer_name || 'Walk-in Customer'}</TableCell>
@@ -373,7 +372,7 @@ export default function PharmacyInvoices() {
                     </TableCell>
                   </TableRow>
                 ))}
-                {paginatedInvoices.length === 0 && (
+                {filteredInvoices.length === 0 && (
                   <TableRow>
                     <TableCell colSpan={6} className="text-center py-8 text-gray-500">
                       {searchTerm ? `No invoices found matching "${searchTerm}"` :
@@ -389,7 +388,7 @@ export default function PharmacyInvoices() {
             {totalPages > 1 && (
               <div className="flex items-center justify-between px-2">
                 <div className="text-sm text-gray-700">
-                  Showing {startIndex + 1} to {Math.min(endIndex, filteredInvoices.length)} of {filteredInvoices.length} results
+                  Showing {((currentPage - 1) * itemsPerPage) + 1} to {Math.min(currentPage * itemsPerPage, totalCount)} of {totalCount} results
                 </div>
                 <div className="flex items-center gap-2">
                   <Button
