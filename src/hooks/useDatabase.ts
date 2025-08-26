@@ -554,16 +554,13 @@ export const usePharmacyInvoices = () => {
   return useQuery({
     queryKey: ['pharmacy-invoices'],
     queryFn: async () => {
+      // Only fetch invoice data, not the related items to avoid timeout
+      // Items will be fetched separately when needed for PDF generation
       const { data, error } = await supabase
         .from('pharmacy_invoices')
-        .select(`
-          *,
-          pharmacy_invoice_items(
-            *,
-            medicine:medicines(*)
-          )
-        `)
-        .order('created_at', { ascending: false });
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(1000); // Limit to prevent timeout
 
       if (error) throw error;
       return data;

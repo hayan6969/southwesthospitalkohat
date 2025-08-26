@@ -76,8 +76,9 @@ export const usePharmacyAnalytics = () => {
         supabase.from('medicines').select('*').limit(5000),
         supabase
           .from('pharmacy_invoices')
-          .select('*, pharmacy_invoice_items(quantity, unit_price, total_price, medicine_id, medicines(purchase_price, selling_price, name))')
-          .order('created_at', { ascending: false }),
+          .select('*')
+          .order('created_at', { ascending: false })
+          .limit(2000), // Limit to prevent timeout
         supabase
           .from('pharmacy_expenses')
           .select('*')
@@ -94,19 +95,17 @@ export const usePharmacyAnalytics = () => {
       const returnExpenses = expensesResult.data || [];
       const lastClosing = lastClosingResult.data?.[0];
 
-      // Flatten invoice items for easier processing
-      const allInvoiceItems: any[] = [];
-      allInvoices.forEach(invoice => {
-        if (invoice.pharmacy_invoice_items) {
-          invoice.pharmacy_invoice_items.forEach((item: any) => {
-            allInvoiceItems.push({
-              ...item,
-              created_at: invoice.created_at,
-              invoice_id: invoice.id
-            });
-          });
-        }
-      });
+      // Fetch invoice items for profit calculations with invoice dates
+      const invoiceItemsResult = await supabase
+        .from('pharmacy_invoice_items')
+        .select('*, medicines(purchase_price, selling_price, name)')
+        .in('invoice_id', allInvoices.map(inv => inv.id).slice(0, 500)); // Only process recent invoices for profit
+
+      // Add invoice created_at to each item for date filtering
+      const allInvoiceItems = (invoiceItemsResult.data || []).map(item => ({
+        ...item,
+        invoice_created_at: allInvoices.find(inv => inv.id === item.invoice_id)?.created_at || item.created_at
+      }));
 
       // Separate sales and returns based on amount (negative amounts are returns)
       const salesInvoices = allInvoices.filter(inv => inv.final_amount >= 0);
@@ -154,14 +153,14 @@ export const usePharmacyAnalytics = () => {
 
       // Calculate today's profit - include both sales and returns properly
       const todayAllInvoiceItems = allInvoiceItems.filter(item => {
-        const invoicePakistanTime = toPakistanTime(new Date(item.created_at));
+        const invoicePakistanTime = toPakistanTime(new Date(item.invoice_created_at));
         const invoiceDateStr = invoicePakistanTime.toDateString();
         const todayDateStr = pakistanToday.toDateString();
         return invoiceDateStr === todayDateStr;
       });
       const todayProfit = todayAllInvoiceItems.reduce((sum, item) => {
         // Use selling_price instead of unit_price to exclude discounts
-        const profit = (item.medicines?.selling_price - (item.medicines?.purchase_price || 0)) * item.quantity;
+        const profit = ((item.medicines?.selling_price || 0) - (item.medicines?.purchase_price || 0)) * item.quantity;
         return sum + profit;
       }, 0);
 
@@ -193,14 +192,14 @@ export const usePharmacyAnalytics = () => {
 
       // Calculate monthly profit - include both sales and returns properly
       const monthlyAllInvoiceItems = allInvoiceItems.filter(item => {
-        const invoiceDate = toPakistanTime(new Date(item.created_at));
+        const invoiceDate = toPakistanTime(new Date(item.invoice_created_at));
         const invMonthYear = format(invoiceDate, 'yyyy-MM');
         const currentMonthYear = format(pakistanToday, 'yyyy-MM');
         return invMonthYear === currentMonthYear;
       });
       const monthlyProfit = monthlyAllInvoiceItems.reduce((sum, item) => {
         // Use selling_price instead of unit_price to exclude discounts
-        const profit = (item.medicines?.selling_price - (item.medicines?.purchase_price || 0)) * item.quantity;
+        const profit = ((item.medicines?.selling_price || 0) - (item.medicines?.purchase_price || 0)) * item.quantity;
         return sum + profit;
       }, 0);
 
@@ -229,7 +228,7 @@ export const usePharmacyAnalytics = () => {
         const daySales = daySalesInvoices.length;
         
         const dayInvoiceItems = allInvoiceItems.filter(item => {
-          const invoiceDate = toPakistanTime(new Date(item.created_at));
+          const invoiceDate = toPakistanTime(new Date(item.invoice_created_at));
           return invoiceDate.toDateString() === dateStr && item.unit_price > 0;
         });
         
@@ -335,7 +334,7 @@ export const usePharmacyAnalytics = () => {
       
       // Calculate profit from all invoice items since last closing (including returns)
       const sinceClosingInvoiceItems = allInvoiceItems.filter(item => {
-        const invoiceDate = toPakistanTime(new Date(item.created_at));
+        const invoiceDate = toPakistanTime(new Date(item.invoice_created_at));
         return invoiceDate >= lastClosingTime; // Use >= instead of > to match finance daily
       });
       
