@@ -123,7 +123,10 @@ export const usePharmacyAnalytics = () => {
       const todaySalesInvoices = salesInvoices.filter(inv => {
         const invDate = new Date(inv.created_at);
         const invPakistanTime = toPakistanTime(invDate);
-        const isToday = invPakistanTime >= startOfToday && invPakistanTime <= endOfToday;
+        // Compare dates only, not times to avoid timezone comparison issues
+        const invDateStr = invPakistanTime.toDateString();
+        const todayDateStr = pakistanToday.toDateString();
+        const isToday = invDateStr === todayDateStr;
         if (isToday) {
           console.log('✅ Today sale found:', inv.invoice_number, 'at', invPakistanTime, 'amount:', inv.final_amount);
         }
@@ -132,11 +135,15 @@ export const usePharmacyAnalytics = () => {
       console.log('Found', todaySalesInvoices.length, 'sales for today');
       const todayReturnInvoices = returnInvoices.filter(inv => {
         const invPakistanTime = toPakistanTime(new Date(inv.created_at));
-        return invPakistanTime >= startOfToday && invPakistanTime <= endOfToday;
+        const invDateStr = invPakistanTime.toDateString();
+        const todayDateStr = pakistanToday.toDateString();
+        return invDateStr === todayDateStr;
       });
       const todayReturnExpenses = returnExpenses.filter(exp => {
         const expPakistanTime = toPakistanTime(new Date(exp.expense_date));
-        return expPakistanTime >= startOfToday && expPakistanTime <= endOfToday;
+        const expDateStr = expPakistanTime.toDateString();
+        const todayDateStr = pakistanToday.toDateString();
+        return expDateStr === todayDateStr;
       });
 
       const todayGrossRevenue = todaySalesInvoices.reduce((sum, inv) => sum + inv.final_amount, 0);
@@ -148,7 +155,9 @@ export const usePharmacyAnalytics = () => {
       // Calculate today's profit - include both sales and returns properly
       const todayAllInvoiceItems = allInvoiceItems.filter(item => {
         const invoicePakistanTime = toPakistanTime(new Date(item.created_at));
-        return invoicePakistanTime >= startOfToday && invoicePakistanTime <= endOfToday;
+        const invoiceDateStr = invoicePakistanTime.toDateString();
+        const todayDateStr = pakistanToday.toDateString();
+        return invoiceDateStr === todayDateStr;
       });
       const todayProfit = todayAllInvoiceItems.reduce((sum, item) => {
         // Use selling_price instead of unit_price to exclude discounts
@@ -159,15 +168,21 @@ export const usePharmacyAnalytics = () => {
       // Monthly calculations (current calendar month using Pakistan timezone)
       const monthlySalesInvoices = salesInvoices.filter(inv => {
         const invDate = toPakistanTime(new Date(inv.created_at));
-        return invDate >= startOfThisMonth && invDate <= endOfThisMonth;
+        const invMonthYear = format(invDate, 'yyyy-MM');
+        const currentMonthYear = format(pakistanToday, 'yyyy-MM');
+        return invMonthYear === currentMonthYear;
       });
       const monthlyReturnInvoices = returnInvoices.filter(inv => {
         const invDate = toPakistanTime(new Date(inv.created_at));
-        return invDate >= startOfThisMonth && invDate <= endOfThisMonth;
+        const invMonthYear = format(invDate, 'yyyy-MM');
+        const currentMonthYear = format(pakistanToday, 'yyyy-MM');
+        return invMonthYear === currentMonthYear;
       });
       const monthlyReturnExpenses = returnExpenses.filter(exp => {
         const expDate = toPakistanTime(new Date(exp.expense_date));
-        return expDate >= startOfThisMonth && expDate <= endOfThisMonth;
+        const expMonthYear = format(expDate, 'yyyy-MM');
+        const currentMonthYear = format(pakistanToday, 'yyyy-MM');
+        return expMonthYear === currentMonthYear;
       });
 
       const monthlyGrossRevenue = monthlySalesInvoices.reduce((sum, inv) => sum + inv.final_amount, 0);
@@ -179,7 +194,9 @@ export const usePharmacyAnalytics = () => {
       // Calculate monthly profit - include both sales and returns properly
       const monthlyAllInvoiceItems = allInvoiceItems.filter(item => {
         const invoiceDate = toPakistanTime(new Date(item.created_at));
-        return invoiceDate >= startOfThisMonth && invoiceDate <= endOfThisMonth;
+        const invMonthYear = format(invoiceDate, 'yyyy-MM');
+        const currentMonthYear = format(pakistanToday, 'yyyy-MM');
+        return invMonthYear === currentMonthYear;
       });
       const monthlyProfit = monthlyAllInvoiceItems.reduce((sum, item) => {
         // Use selling_price instead of unit_price to exclude discounts
@@ -191,20 +208,19 @@ export const usePharmacyAnalytics = () => {
       const dailyData = [];
       for (let i = 29; i >= 0; i--) {
         const date = subDays(pakistanToday, i);
-        const dayStart = startOfDay(date);
-        const dayEnd = endOfDay(date);
+        const dateStr = date.toDateString();
         
         const daySalesInvoices = salesInvoices.filter(inv => {
           const invDate = toPakistanTime(new Date(inv.created_at));
-          return invDate >= dayStart && invDate <= dayEnd;
+          return invDate.toDateString() === dateStr;
         });
         const dayReturnInvoices = returnInvoices.filter(inv => {
           const invDate = toPakistanTime(new Date(inv.created_at));
-          return invDate >= dayStart && invDate <= dayEnd;
+          return invDate.toDateString() === dateStr;
         });
         const dayReturnExpenses = returnExpenses.filter(exp => {
           const expDate = toPakistanTime(new Date(exp.expense_date));
-          return expDate >= dayStart && expDate <= dayEnd;
+          return expDate.toDateString() === dateStr;
         });
         
         const dayRevenue = daySalesInvoices.reduce((sum, inv) => sum + inv.final_amount, 0);
@@ -214,7 +230,7 @@ export const usePharmacyAnalytics = () => {
         
         const dayInvoiceItems = allInvoiceItems.filter(item => {
           const invoiceDate = toPakistanTime(new Date(item.created_at));
-          return invoiceDate >= dayStart && invoiceDate <= dayEnd && item.unit_price > 0;
+          return invoiceDate.toDateString() === dateStr && item.unit_price > 0;
         });
         
         // Calculate profit correctly - include both positive sales and negative returns
