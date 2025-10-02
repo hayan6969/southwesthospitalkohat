@@ -66,19 +66,18 @@ export const usePharmacyAnalytics = () => {
       const startOfThisMonth = startOfMonth(pakistanToday);
       const endOfThisMonth = endOfMonth(pakistanToday);
 
-      // Fetch all data in parallel
+      // Fetch all data in parallel - remove limits for accurate calculations
       const [
         medicinesResult,
         invoicesResult,
         expensesResult,
         lastClosingResult
       ] = await Promise.all([
-        supabase.from('medicines').select('*').limit(5000),
+        supabase.from('medicines').select('*'),
         supabase
           .from('pharmacy_invoices')
           .select('*')
-          .order('created_at', { ascending: false })
-          .limit(2000), // Limit to prevent timeout
+          .order('created_at', { ascending: false }), // Fetch all invoices for accurate calculations
         supabase
           .from('pharmacy_expenses')
           .select('*')
@@ -99,7 +98,7 @@ export const usePharmacyAnalytics = () => {
       const invoiceItemsResult = await supabase
         .from('pharmacy_invoice_items')
         .select('*, medicines(purchase_price, selling_price, name)')
-        .in('invoice_id', allInvoices.map(inv => inv.id).slice(0, 500)); // Only process recent invoices for profit
+        .in('invoice_id', allInvoices.map(inv => inv.id)); // Process all invoices for accurate profit
 
       // Add invoice created_at to each item for date filtering
       const allInvoiceItems = (invoiceItemsResult.data || []).map(item => ({
@@ -159,8 +158,8 @@ export const usePharmacyAnalytics = () => {
         return invoiceDateStr === todayDateStr;
       });
       const todayProfit = todayAllInvoiceItems.reduce((sum, item) => {
-        // Use selling_price instead of unit_price to exclude discounts
-        const profit = ((item.medicines?.selling_price || 0) - (item.medicines?.purchase_price || 0)) * item.quantity;
+        // Calculate profit based on actual unit_price (includes discounts) - purchase price
+        const profit = (item.unit_price - (item.medicines?.purchase_price || 0)) * item.quantity;
         return sum + profit;
       }, 0);
 
@@ -198,8 +197,8 @@ export const usePharmacyAnalytics = () => {
         return invMonthYear === currentMonthYear;
       });
       const monthlyProfit = monthlyAllInvoiceItems.reduce((sum, item) => {
-        // Use selling_price instead of unit_price to exclude discounts
-        const profit = ((item.medicines?.selling_price || 0) - (item.medicines?.purchase_price || 0)) * item.quantity;
+        // Calculate profit based on actual unit_price (includes discounts) - purchase price
+        const profit = (item.unit_price - (item.medicines?.purchase_price || 0)) * item.quantity;
         return sum + profit;
       }, 0);
 
@@ -265,7 +264,7 @@ export const usePharmacyAnalytics = () => {
             profit: 0 
           };
           
-          const profit = (item.medicines?.selling_price - (item.medicines?.purchase_price || 0)) * item.quantity;
+          const profit = (item.unit_price - (item.medicines?.purchase_price || 0)) * item.quantity;
           
           medicinesSold.set(medicineId, {
             name: medicineName,
@@ -314,8 +313,8 @@ export const usePharmacyAnalytics = () => {
       // Profit margins - calculate overall profit correctly
       const totalRevenue = salesInvoices.reduce((sum, inv) => sum + inv.final_amount, 0);
       const totalProfit = allInvoiceItems.reduce((sum, item) => {
-        // Use selling_price instead of unit_price to exclude discounts
-        const profit = (item.medicines?.selling_price - (item.medicines?.purchase_price || 0)) * item.quantity;
+        // Calculate profit based on actual unit_price (includes discounts) - purchase price
+        const profit = (item.unit_price - (item.medicines?.purchase_price || 0)) * item.quantity;
         return sum + profit;
       }, 0);
 
@@ -339,9 +338,9 @@ export const usePharmacyAnalytics = () => {
       });
       
       const sinceClosingProfit = sinceClosingInvoiceItems.reduce((sum, item) => {
-        // Use selling_price instead of unit_price to exclude discounts
+        // Calculate profit based on actual unit_price (includes discounts) - purchase price
         // For returns, quantities are negative, so this automatically subtracts profit lost
-        const profit = (item.medicines?.selling_price - (item.medicines?.purchase_price || 0)) * item.quantity;
+        const profit = (item.unit_price - (item.medicines?.purchase_price || 0)) * item.quantity;
         return sum + profit;
       }, 0);
       
