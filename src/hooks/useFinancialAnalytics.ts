@@ -106,10 +106,13 @@ export const useFinancialAnalytics = () => {
         }, 0);
       }
 
-      // Calculate lab revenue from invoices with prices (both completed and pending)
-      const labRevenue = labReports
-        .filter(report => report.price)
-        .reduce((sum, report) => sum + Number(report.price), 0);
+      // Calculate lab revenue from paid invoices (not lab_reports to avoid counting unpaid)
+      const labRevenue = invoices
+        .filter(inv => inv.status === 'paid' && (
+          inv.invoice_number?.startsWith('LAB-') ||
+          inv.description?.toLowerCase().includes('lab test')
+        ))
+        .reduce((sum, inv) => sum + Number(inv.amount), 0);
 
       // Calculate X-ray revenue from reports with prices (both completed and pending)
       const xrayRevenue = xrayReports
@@ -148,10 +151,6 @@ export const useFinancialAnalytics = () => {
         ...pharmacyInvoices.filter(inv => {
           const date = new Date(inv.created_at);
           return date.getMonth() === currentMonth && date.getFullYear() === currentYear;
-        }),
-        ...labReports.filter(report => {
-          const date = new Date(report.created_at);
-          return report.price && date.getMonth() === currentMonth && date.getFullYear() === currentYear;
         }),
         ...xrayReports.filter(report => {
           const date = new Date(report.created_at);

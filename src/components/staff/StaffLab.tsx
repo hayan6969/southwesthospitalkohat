@@ -56,15 +56,22 @@ export function StaffLab() {
   const pendingReports = labReports?.filter(report => report.status === 'pending') || [];
   const completedReports = labReports?.filter(report => report.status === 'completed') || [];
 
-  // Filter reports by search query
+  // Filter reports by search query - include external doctor name and patient number
   const filteredReports = pendingReports.filter(report => {
     const patientName = getPatientName(report.patient_id, patientNames || []).toLowerCase();
     const doctorName = getDoctorName(report.doctor_id, doctorNames || []).toLowerCase();
+    const externalDoctorName = report.external_doctor_name?.toLowerCase() || '';
     const query = searchQuery.toLowerCase();
+    
+    // Find patient data to get patient_number
+    const patient = patientNames?.find(p => p.id === report.patient_id);
+    const patientNumber = patient?.patient_number?.toLowerCase() || '';
     
     return patientName.includes(query) || 
            doctorName.includes(query) || 
+           externalDoctorName.includes(query) ||
            report.test_name.toLowerCase().includes(query) ||
+           patientNumber.includes(query) ||
            report.patient_id.toLowerCase().includes(query);
   });
 
