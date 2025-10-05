@@ -130,15 +130,18 @@ export default function FinanceDaily() {
         })));
       }
 
-      // Lab reports - filter based on cutoff time (include both completed and pending with prices)
-      const { data: labReports } = await supabase
-        .from('lab_reports')
-        .select('price, created_at, test_name, status')
-        .not('price', 'is', null)
+      // Fetch lab-related invoices (paid only) - filter based on cutoff time
+      const { data: labInvoices } = await supabase
+        .from('invoices')
+        .select('amount, created_at, description, invoice_number')
+        .eq('status', 'paid')
         .gte('created_at', cutoffTime)
         .lte('created_at', upperBound);
 
-      console.log('Lab reports found:', labReports?.length, labReports);
+      console.log('Lab invoices found:', labInvoices?.filter(inv => 
+        inv.invoice_number?.startsWith('LAB-') || 
+        inv.description?.toLowerCase().includes('lab test')
+      )?.length, labInvoices);
 
       // X-ray reports - filter based on cutoff time (include both completed and pending with prices)
       const { data: xrayReports } = await supabase
@@ -255,7 +258,11 @@ export default function FinanceDaily() {
         pharmacyProfit = grossPharmacyProfit - returnsProfit;
       }
       
-      const labRevenue = labReports?.reduce((sum, lab) => sum + (lab.price || 0), 0) || 0;
+      // Calculate lab revenue from paid invoices only (not lab_reports to avoid counting unpaid)
+      const labRevenue = labInvoices?.filter(inv => 
+        inv.invoice_number?.startsWith('LAB-') || 
+        inv.description?.toLowerCase().includes('lab test')
+      )?.reduce((sum, inv) => sum + Number(inv.amount), 0) || 0;
       const xrayRevenue = xrayReports?.reduce((sum, xray) => sum + (xray.price || 0), 0) || 0;
       const otHospitalRevenue = otSchedules?.reduce((sum, ot) => sum + ((ot.total_cost || 0) - (ot.doctor_expense || 0)), 0) || 0;
       const miscellaneousIncome = miscIncome?.reduce((sum, income) => sum + (income.amount || 0), 0) || 0;
@@ -379,9 +386,9 @@ export default function FinanceDaily() {
           .lte('created_at', upperBound),
         
         supabase
-          .from('lab_reports')
+          .from('invoices')
           .select('*, patients(id, profiles(first_name, last_name))')
-          .not('price', 'is', null)
+          .eq('status', 'paid')
           .gte('created_at', cutoffTime)
           .lte('created_at', upperBound),
         
@@ -450,7 +457,10 @@ export default function FinanceDaily() {
       return {
         hospitalInvoices: hospitalInvoicesRes.data || [],
         pharmacyInvoices: pharmacyInvoicesRes.data || [],
-        labReports: labReportsRes.data || [],
+        labReports: (labReportsRes.data || []).filter((inv: any) => 
+          inv.invoice_number?.startsWith('LAB-') || 
+          inv.description?.toLowerCase().includes('lab test')
+        ),
         xrayReports: xrayReportsRes.data || [],
         otSchedules: otSchedulesRes.data || [],
         emergencyAppointments: emergencyAppointmentsRes.data || [],
@@ -944,14 +954,14 @@ export default function FinanceDaily() {
                   {detailedData?.labReports && detailedData.labReports.length > 0 && (
                     <Card>
                       <CardHeader>
-                        <CardTitle className="text-lg">Lab Reports ({detailedData.labReports.length})</CardTitle>
+                        <CardTitle className="text-lg">Lab Invoices ({detailedData.labReports.length})</CardTitle>
                       </CardHeader>
                       <CardContent>
                         <div className="space-y-2 max-h-32 overflow-y-auto">
-                          {detailedData.labReports.map((lab, idx) => (
+                          {detailedData.labReports.map((lab: any, idx: number) => (
                             <div key={idx} className="flex justify-between p-2 bg-gray-50 rounded">
-                              <span className="text-sm">{lab.test_name}</span>
-                              <Badge>{formatPkrAmount(lab.price || 0)}</Badge>
+                              <span className="text-sm">{lab.invoice_number || lab.description}</span>
+                              <Badge>{formatPkrAmount(lab.amount || 0)}</Badge>
                             </div>
                           ))}
                         </div>
