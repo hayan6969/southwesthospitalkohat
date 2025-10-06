@@ -42,6 +42,25 @@ export function PreviousClosingsDialog() {
   const [searchTerm, setSearchTerm] = useState("");
   const itemsPerPage = 10;
 
+  // Recalculate hospital services revenue from stored transactions_data for accurate display
+  const computeServicesRevenue = (td?: any): number => {
+    if (!td) return 0;
+    const lab = (td.labReports || []).reduce((s: number, r: any) => s + (Number(r.price) || 0), 0);
+    const xray = (td.xrayReports || []).reduce((s: number, r: any) => s + (Number(r.price) || 0), 0);
+    const ot = (td.otSchedules || []).reduce((s: number, ot: any) => s + ((Number(ot.total_cost) || 0) - (Number(ot.doctor_expense) || 0)), 0);
+    const emergencyAppointments = (td.emergencyAppointments || []).reduce((s: number, e: any) => s + (Number(e.consultation_fee_at_time) || 0), 0);
+    const emergencyInvoices = (td.hospitalInvoices || []).filter((inv: any) =>
+      inv?.description?.toLowerCase?.().includes('emergency') ||
+      inv?.emergency_patient_data ||
+      inv?.invoice_number?.startsWith?.('EMG-') ||
+      inv?.invoice_number?.startsWith?.('EMERGENCY-')
+    );
+    const emergencyInvoiceRevenue = emergencyInvoices.reduce((s: number, inv: any) => s + (Number(inv.amount) || 0), 0);
+    const emergency = emergencyAppointments + emergencyInvoiceRevenue;
+    const misc = (td.miscellaneousIncome || []).reduce((s: number, m: any) => s + (Number(m.amount) || 0), 0);
+    return lab + xray + ot + emergency + misc;
+  };
+
   // Fetch all previous daily closings
   const { data: closings, isLoading } = useQuery({
     queryKey: ['daily-closings'],
@@ -278,7 +297,10 @@ export function PreviousClosingsDialog() {
                           {formatInPakistanTime(new Date(closing.closing_time), 'h:mm a')}
                         </TableCell>
                         <TableCell className="font-medium text-green-600">
-                          {formatPkrAmount(closing.hospital_revenue)}
+                          {formatPkrAmount((() => {
+                            const computed = computeServicesRevenue(closing.transactions_data);
+                            return computed || closing.hospital_revenue;
+                          })())}
                         </TableCell>
                         <TableCell className="font-medium text-blue-600">
                           {formatPkrAmount(closing.pharmacy_profit)}
@@ -286,8 +308,8 @@ export function PreviousClosingsDialog() {
                         <TableCell className="font-medium text-red-600">
                           -{formatPkrAmount(closing.total_expenses)}
                         </TableCell>
-                        <TableCell className={`font-medium ${closing.net_profit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                          {formatPkrAmount(closing.net_profit)}
+                        <TableCell className={`font-medium ${(((computeServicesRevenue(closing.transactions_data) || closing.hospital_revenue) - closing.total_expenses - closing.total_refunds) >= 0) ? 'text-green-600' : 'text-red-600'}`}>
+                          {formatPkrAmount((computeServicesRevenue(closing.transactions_data) || closing.hospital_revenue) - closing.total_expenses - closing.total_refunds)}
                         </TableCell>
                         <TableCell>
                           <Button
