@@ -308,8 +308,8 @@ export function PreviousClosingsDialog() {
                         <TableCell className="font-medium text-red-600">
                           -{formatPkrAmount(closing.total_expenses)}
                         </TableCell>
-                        <TableCell className={`font-medium ${(((computeServicesRevenue(closing.transactions_data) || closing.hospital_revenue) - closing.total_expenses - closing.total_refunds) >= 0) ? 'text-green-600' : 'text-red-600'}`}>
-                          {formatPkrAmount((computeServicesRevenue(closing.transactions_data) || closing.hospital_revenue) - closing.total_expenses - closing.total_refunds)}
+                        <TableCell className={`font-medium ${(((computeServicesRevenue(closing.transactions_data) || closing.hospital_revenue) + closing.pharmacy_profit - closing.total_expenses - closing.total_refunds) >= 0) ? 'text-green-600' : 'text-red-600'}`}>
+                          {formatPkrAmount((computeServicesRevenue(closing.transactions_data) || closing.hospital_revenue) + closing.pharmacy_profit - closing.total_expenses - closing.total_refunds)}
                         </TableCell>
                         <TableCell>
                           <Button
