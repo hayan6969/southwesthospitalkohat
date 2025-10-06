@@ -324,18 +324,32 @@ export const usePharmacyAnalytics = () => {
       // Calculate amount to pay hospital (profit since last closing)
       // Hospital gets the pharmacy profit share since last daily closing
       const lastClosingTime = lastClosing ? toPakistanTime(new Date(lastClosing.closing_time)) : new Date(0);
-      
-      // Get sales invoices since last closing (comparing Pakistani time)
-      const sinceClosingSalesInvoices = salesInvoices.filter(inv => {
-        const invoiceDate = toPakistanTime(new Date(inv.created_at));
-        return invoiceDate > lastClosingTime;
+      console.log('📊 Pay Hospital Calculation:', {
+        lastClosing,
+        lastClosingTime: lastClosingTime.toISOString(),
+        totalInvoiceItems: allInvoiceItems.length,
       });
       
       // Calculate profit from all invoice items since last closing (including returns)
       const sinceClosingInvoiceItems = allInvoiceItems.filter(item => {
         const invoiceDate = toPakistanTime(new Date(item.invoice_created_at));
-        return invoiceDate > lastClosingTime; // Use > to exclude items from the closed period
+        const isAfterClosing = invoiceDate > lastClosingTime;
+        if (isAfterClosing) {
+          console.log('✅ Invoice item after closing:', {
+            invoice_id: item.invoice_id,
+            created_at: item.invoice_created_at,
+            invoice_pakistan_time: invoiceDate.toISOString(),
+            medicine: item.medicines?.name,
+            quantity: item.quantity,
+            unit_price: item.unit_price,
+            purchase_price: item.medicines?.purchase_price,
+            profit: (item.unit_price - (item.medicines?.purchase_price || 0)) * item.quantity
+          });
+        }
+        return isAfterClosing;
       });
+      
+      console.log('📦 Items since closing:', sinceClosingInvoiceItems.length);
       
       const sinceClosingProfit = sinceClosingInvoiceItems.reduce((sum, item) => {
         // Calculate profit based on actual unit_price (includes discounts) - purchase price
@@ -343,6 +357,8 @@ export const usePharmacyAnalytics = () => {
         const profit = (item.unit_price - (item.medicines?.purchase_price || 0)) * item.quantity;
         return sum + profit;
       }, 0);
+      
+      console.log('💰 Pay Hospital Amount:', sinceClosingProfit);
       
       // Hospital gets the full profit since last closing (pharmacy expenses don't affect this)
       const payHospitalAmount = Math.max(0, sinceClosingProfit);
