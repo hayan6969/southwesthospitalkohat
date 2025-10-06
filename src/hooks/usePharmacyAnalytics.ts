@@ -163,18 +163,60 @@ export const usePharmacyAnalytics = () => {
                            todayReturnExpenses.reduce((sum, exp) => sum + exp.amount, 0);
       const todaySales = todaySalesInvoices.length;
 
-      // Calculate today's profit - include both sales and returns properly
-      const todayAllInvoiceItems = allInvoiceItems.filter(item => {
-        const invoicePakistanTime = toPakistanTime(new Date(item.invoice_created_at));
-        const invoiceDateStr = invoicePakistanTime.toDateString();
-        const todayDateStr = pakistanToday.toDateString();
-        return invoiceDateStr === todayDateStr;
+      // Calculate today's profit using the same reliable approach
+      const todayStartISO = startOfToday.toISOString();
+      const todayEndISO = endOfToday.toISOString();
+      
+      const { data: todayInvoicesWithItems } = await supabase
+        .from('pharmacy_invoices')
+        .select(`
+          id,
+          final_amount,
+          created_at,
+          pharmacy_invoice_items(
+            quantity,
+            unit_price,
+            medicines(purchase_price)
+          )
+        `)
+        .gte('created_at', todayStartISO)
+        .lte('created_at', todayEndISO);
+
+      let todayProfit = 0;
+      if (todayInvoicesWithItems && todayInvoicesWithItems.length > 0) {
+        const positiveInvoices = todayInvoicesWithItems.filter(inv => (inv.final_amount || 0) >= 0);
+        const negativeInvoices = todayInvoicesWithItems.filter(inv => (inv.final_amount || 0) < 0);
+
+        // Calculate profit from sales (unit_price includes discounts)
+        const grossProfit = positiveInvoices.reduce((total, inv) => {
+          const items = inv.pharmacy_invoice_items || [];
+          const invProfit = items.reduce((sum, item) => {
+            const purchase = item.medicines?.purchase_price || 0;
+            const profitPerUnit = item.unit_price - purchase; // unit_price has discount already applied
+            return sum + profitPerUnit * item.quantity;
+          }, 0);
+          return total + invProfit;
+        }, 0);
+
+        // Subtract profit lost from returns
+        const returnsProfit = negativeInvoices.reduce((total, inv) => {
+          const items = inv.pharmacy_invoice_items || [];
+          const invProfit = items.reduce((sum, item) => {
+            const purchase = item.medicines?.purchase_price || 0;
+            const profitPerUnit = item.unit_price - purchase;
+            return sum + profitPerUnit * Math.abs(item.quantity);
+          }, 0);
+          return total + invProfit;
+        }, 0);
+
+        todayProfit = grossProfit - returnsProfit;
+      }
+
+      console.log('📊 Today profit calculation:', {
+        invoices: todayInvoicesWithItems?.length || 0,
+        todayRange: `${todayStartISO} to ${todayEndISO}`,
+        todayProfit
       });
-      const todayProfit = todayAllInvoiceItems.reduce((sum, item) => {
-        // Calculate profit based on actual unit_price (includes discounts) - purchase price
-        const profit = (item.unit_price - (item.medicines?.purchase_price || 0)) * item.quantity;
-        return sum + profit;
-      }, 0);
 
       // Monthly calculations (current calendar month using Pakistan timezone)
       const monthlySalesInvoices = salesInvoices.filter(inv => {
@@ -226,16 +268,18 @@ export const usePharmacyAnalytics = () => {
         const positiveInvoices = monthlyInvoicesWithItems.filter(inv => (inv.final_amount || 0) >= 0);
         const negativeInvoices = monthlyInvoicesWithItems.filter(inv => (inv.final_amount || 0) < 0);
 
+        // Calculate profit from sales (unit_price includes discounts)
         const grossProfit = positiveInvoices.reduce((total, inv) => {
           const items = inv.pharmacy_invoice_items || [];
           const invProfit = items.reduce((sum, item) => {
             const purchase = item.medicines?.purchase_price || 0;
-            const profitPerUnit = item.unit_price - purchase;
+            const profitPerUnit = item.unit_price - purchase; // unit_price has discount already applied
             return sum + profitPerUnit * item.quantity;
           }, 0);
           return total + invProfit;
         }, 0);
 
+        // Subtract profit lost from returns
         const returnsProfit = negativeInvoices.reduce((total, inv) => {
           const items = inv.pharmacy_invoice_items || [];
           const invProfit = items.reduce((sum, item) => {
