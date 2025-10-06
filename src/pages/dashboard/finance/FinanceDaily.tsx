@@ -262,8 +262,8 @@ export default function FinanceDaily() {
       const totalExpenses = expenses?.reduce((sum, exp) => sum + exp.amount, 0) || 0;
       const totalRefunds = refunds?.reduce((sum, ref) => sum + ref.amount, 0) || 0;
 
-      // Total hospital revenue = emergency consultations + lab + xray + OT hospital portion + pharmacy profit + miscellaneous income
-      const totalHospitalRevenue = emergencyRevenue + labRevenue + xrayRevenue + otHospitalRevenue + pharmacyProfit + miscellaneousIncome;
+      // Total hospital revenue = emergency consultations + lab + xray + OT hospital portion + miscellaneous income (NO pharmacy profit)
+      const totalHospitalRevenue = emergencyRevenue + labRevenue + xrayRevenue + otHospitalRevenue + miscellaneousIncome;
       const totalHospitalProfit = totalHospitalRevenue - totalExpenses;
 
       // Categorize refunds
