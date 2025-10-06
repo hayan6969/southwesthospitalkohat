@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { startOfMonth, endOfMonth } from "date-fns";
+import { startOfMonth, endOfMonth, format } from "date-fns";
 
 interface FinancialMetrics {
   pharmacySales: number;
@@ -13,6 +13,15 @@ interface FinancialMetrics {
   xrayRevenue: number;
   emergencyRevenue: number;
   totalExpenses: number;
+  pharmacyBillsPaidCount: number;
+  pharmacyBillsPaidAmount: number;
+  payrollsPaidCount: number;
+  payrollsPaidAmount: number;
+  totalInvoicesCount: number;
+  totalInvoicesAmount: number;
+  totalRefunds: number;
+  doctorPaymentsPaidCount: number;
+  doctorPaymentsPaidAmount: number;
   recentActivity: Array<{
     id: string;
     type: string;
@@ -50,7 +59,12 @@ export const useFinancialAnalytics = (selectedMonth?: Date) => {
       const monthStartDate = monthStart.toISOString().split('T')[0];
       const monthEndDate = monthEnd.toISOString().split('T')[0];
 
+      // ISO format for timestamp queries
+      const monthStartISO = monthStart.toISOString();
+      const monthEndISO = monthEnd.toISOString();
+
       console.log('📅 Fetching closings for month:', monthStartDate, 'to', monthEndDate);
+      
       // Fetch daily closings for the selected month - this is the CORRECT source of truth
       const { data: dailyClosings, error: closingsError } = await supabase
         .from('daily_closings')
@@ -65,6 +79,44 @@ export const useFinancialAnalytics = (selectedMonth?: Date) => {
       }
 
       console.log('📊 Found', dailyClosings?.length || 0, 'daily closings for the month');
+
+      // Fetch pharmacy invoices for the month
+      const { data: pharmacyInvoices } = await supabase
+        .from('pharmacy_invoices')
+        .select('*')
+        .gte('created_at', monthStartISO)
+        .lte('created_at', monthEndISO)
+        .eq('status', 'paid');
+
+      // Fetch payroll records for the month
+      const { data: payrolls } = await supabase
+        .from('payroll')
+        .select('*')
+        .eq('pay_period', format(targetDate, 'MMMM yyyy'))
+        .eq('status', 'paid');
+
+      // Fetch hospital invoices for the month
+      const { data: hospitalInvoices } = await supabase
+        .from('invoices')
+        .select('*')
+        .gte('created_at', monthStartISO)
+        .lte('created_at', monthEndISO)
+        .eq('status', 'paid');
+
+      // Fetch refunds for the month
+      const { data: refunds } = await supabase
+        .from('refunds')
+        .select('*')
+        .gte('created_at', monthStartISO)
+        .lte('created_at', monthEndISO);
+
+      // Fetch doctor payments for the month
+      const { data: doctorPayments } = await supabase
+        .from('doctor_payments')
+        .select('*')
+        .gte('period_start', monthStartDate)
+        .lte('period_end', monthEndDate)
+        .eq('payment_status', 'paid');
 
       // Helper function to recalculate hospital services revenue from transactions_data
       // (matches the logic in PreviousClosingsDialog.tsx)
@@ -105,6 +157,15 @@ export const useFinancialAnalytics = (selectedMonth?: Date) => {
           xrayRevenue: 0,
           emergencyRevenue: 0,
           totalExpenses: 0,
+          pharmacyBillsPaidCount: 0,
+          pharmacyBillsPaidAmount: 0,
+          payrollsPaidCount: 0,
+          payrollsPaidAmount: 0,
+          totalInvoicesCount: 0,
+          totalInvoicesAmount: 0,
+          totalRefunds: 0,
+          doctorPaymentsPaidCount: 0,
+          doctorPaymentsPaidAmount: 0,
           recentActivity: [],
         };
       }
@@ -165,6 +226,21 @@ export const useFinancialAnalytics = (selectedMonth?: Date) => {
       const hospitalProfitWithoutPharmacy = totalHospitalRevenue - totalExpenses;
       const hospitalProfitWithPharmacy = hospitalProfitWithoutPharmacy + totalPharmacyProfit;
 
+      // Calculate additional metrics
+      const pharmacyBillsPaidCount = pharmacyInvoices?.length || 0;
+      const pharmacyBillsPaidAmount = pharmacyInvoices?.reduce((sum, inv) => sum + (Number(inv.final_amount) || 0), 0) || 0;
+      
+      const payrollsPaidCount = payrolls?.length || 0;
+      const payrollsPaidAmount = payrolls?.reduce((sum, p) => sum + (Number(p.net_salary) || 0), 0) || 0;
+      
+      const totalInvoicesCount = hospitalInvoices?.length || 0;
+      const totalInvoicesAmount = hospitalInvoices?.reduce((sum, inv) => sum + (Number(inv.amount) || 0), 0) || 0;
+      
+      const totalRefunds = refunds?.reduce((sum, r) => sum + (Number(r.amount) || 0), 0) || 0;
+      
+      const doctorPaymentsPaidCount = doctorPayments?.length || 0;
+      const doctorPaymentsPaidAmount = doctorPayments?.reduce((sum, dp) => sum + (Number(dp.total_earnings) || 0), 0) || 0;
+
       console.log('💰 Calculated Financial Metrics from Daily Closings:', {
         closingsCount: dailyClosings.length,
         pharmacySales: totalPharmacySales.toFixed(2),
@@ -176,7 +252,12 @@ export const useFinancialAnalytics = (selectedMonth?: Date) => {
         emergencyRevenue: totalEmergencyRevenue.toFixed(2),
         totalExpenses: totalExpenses.toFixed(2),
         hospitalProfitWithoutPharmacy: hospitalProfitWithoutPharmacy.toFixed(2),
-        hospitalProfitWithPharmacy: hospitalProfitWithPharmacy.toFixed(2)
+        hospitalProfitWithPharmacy: hospitalProfitWithPharmacy.toFixed(2),
+        pharmacyBillsPaidCount,
+        payrollsPaidCount,
+        totalInvoicesCount,
+        totalRefunds: totalRefunds.toFixed(2),
+        doctorPaymentsPaidCount
       });
 
       // Recent activity from daily closings
@@ -205,6 +286,15 @@ export const useFinancialAnalytics = (selectedMonth?: Date) => {
         xrayRevenue: totalXrayRevenue,
         emergencyRevenue: totalEmergencyRevenue,
         totalExpenses,
+        pharmacyBillsPaidCount,
+        pharmacyBillsPaidAmount,
+        payrollsPaidCount,
+        payrollsPaidAmount,
+        totalInvoicesCount,
+        totalInvoicesAmount,
+        totalRefunds,
+        doctorPaymentsPaidCount,
+        doctorPaymentsPaidAmount,
         recentActivity,
       };
     },

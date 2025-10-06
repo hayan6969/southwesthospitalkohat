@@ -80,6 +80,15 @@ export default function FinanceAnalytics() {
   const xrayRevenue = financialData?.xrayRevenue || 0;
   const emergencyRevenue = financialData?.emergencyRevenue || 0;
   const totalExpenses = financialData?.totalExpenses || 0;
+  const pharmacyBillsPaidCount = financialData?.pharmacyBillsPaidCount || 0;
+  const pharmacyBillsPaidAmount = financialData?.pharmacyBillsPaidAmount || 0;
+  const payrollsPaidCount = financialData?.payrollsPaidCount || 0;
+  const payrollsPaidAmount = financialData?.payrollsPaidAmount || 0;
+  const totalInvoicesCount = financialData?.totalInvoicesCount || 0;
+  const totalInvoicesAmount = financialData?.totalInvoicesAmount || 0;
+  const totalRefunds = financialData?.totalRefunds || 0;
+  const doctorPaymentsPaidCount = financialData?.doctorPaymentsPaidCount || 0;
+  const doctorPaymentsPaidAmount = financialData?.doctorPaymentsPaidAmount || 0;
   const recentActivities = financialData?.recentActivity || [];
 
   const selectedMonthStr = format(selectedMonth, 'MMMM yyyy');
@@ -238,6 +247,56 @@ export default function FinanceAnalytics() {
           <CardContent>
             <div className="text-2xl font-bold text-rose-600">{formatPkrAmount(emergencyRevenue)}</div>
             <p className="text-xs text-muted-foreground mt-1">Emergency consultations</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Pharmacy Bills Paid</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-emerald-600">{pharmacyBillsPaidCount}</div>
+            <p className="text-xs text-muted-foreground mt-1">{formatPkrAmount(pharmacyBillsPaidAmount)} total</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Payrolls Paid</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-cyan-600">{payrollsPaidCount}</div>
+            <p className="text-xs text-muted-foreground mt-1">{formatPkrAmount(payrollsPaidAmount)} total</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Hospital Invoices</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-sky-600">{totalInvoicesCount}</div>
+            <p className="text-xs text-muted-foreground mt-1">{formatPkrAmount(totalInvoicesAmount)} collected</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Total Refunds</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-orange-600">{formatPkrAmount(totalRefunds)}</div>
+            <p className="text-xs text-muted-foreground mt-1">Refunds issued</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Doctor Payments</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-teal-600">{doctorPaymentsPaidCount}</div>
+            <p className="text-xs text-muted-foreground mt-1">{formatPkrAmount(doctorPaymentsPaidAmount)} paid</p>
           </CardContent>
         </Card>
       </div>
