@@ -48,8 +48,13 @@ export const useFinancialAnalytics = (selectedMonth?: Date) => {
       const monthStartISO = monthStart.toISOString();
       const monthEndISO = monthEnd.toISOString();
       // Fetch data for the selected month
-      const [invoicesRes, pharmacyInvoicesRes, labReportsRes, xrayReportsRes, otSchedulesRes, expensesRes, miscIncomeRes] = await Promise.all([
+      const [invoicesRes, emergencyApptsRes, pharmacyInvoicesRes, labReportsRes, xrayReportsRes, otSchedulesRes, expensesRes, miscIncomeRes] = await Promise.all([
         supabase.from('invoices').select('*').gte('created_at', monthStartISO).lte('created_at', monthEndISO),
+        supabase.from('appointments').select('consultation_fee_at_time, type, status, appointment_date')
+          .ilike('type', 'emergency')
+          .eq('status', 'completed')
+          .gte('appointment_date', monthStartISO)
+          .lte('appointment_date', monthEndISO),
         supabase.from('pharmacy_invoices').select(`
           *,
           pharmacy_invoice_items(
@@ -58,14 +63,15 @@ export const useFinancialAnalytics = (selectedMonth?: Date) => {
             medicines(purchase_price)
           )
         `).gte('created_at', monthStartISO).lte('created_at', monthEndISO),
-        supabase.from('lab_reports').select('*').gte('created_at', monthStartISO).lte('created_at', monthEndISO),
-        supabase.from('xray_reports').select('*').gte('created_at', monthStartISO).lte('created_at', monthEndISO),
-        supabase.from('ot_schedules').select('*').gte('created_at', monthStartISO).lte('created_at', monthEndISO),
+        supabase.from('lab_reports').select('price, created_at').not('price', 'is', null).gte('created_at', monthStartISO).lte('created_at', monthEndISO),
+        supabase.from('xray_reports').select('price, created_at').not('price', 'is', null).gte('created_at', monthStartISO).lte('created_at', monthEndISO),
+        supabase.from('ot_schedules').select('total_cost, doctor_expense, created_at, status').in('status', ['completed', 'pending']).gte('created_at', monthStartISO).lte('created_at', monthEndISO),
         supabase.from('expenses').select('*').gte('expense_date', monthStart.toISOString().split('T')[0]).lte('expense_date', monthEnd.toISOString().split('T')[0]),
         supabase.from('miscellaneous_income').select('*').gte('created_at', monthStartISO).lte('created_at', monthEndISO)
       ]);
 
       const invoices = invoicesRes.data || [];
+      const emergencyAppointments = emergencyApptsRes.data || [];
       const pharmacyInvoices = pharmacyInvoicesRes.data || [];
       const labReports = labReportsRes.data || [];
       const xrayReports = xrayReportsRes.data || [];
@@ -73,77 +79,120 @@ export const useFinancialAnalytics = (selectedMonth?: Date) => {
       const expenses = expensesRes.data || [];
       const miscIncome = miscIncomeRes.data || [];
 
-      // 1. Emergency Revenue
-      const emergencyRevenue = invoices
+      console.log('📊 Financial Analytics Data:', {
+        invoices: invoices.length,
+        emergencyAppointments: emergencyAppointments.length,
+        pharmacyInvoices: pharmacyInvoices.length,
+        labReports: labReports.length,
+        xrayReports: xrayReports.length,
+        otSchedules: otSchedules.length,
+        expenses: expenses.length,
+        miscIncome: miscIncome.length
+      });
+
+      // 1. Emergency Revenue (from both appointments and invoices)
+      const emergencyAppointmentRevenue = emergencyAppointments.reduce((sum, apt) => 
+        sum + Number(apt.consultation_fee_at_time || 0), 0);
+      
+      const emergencyInvoiceRevenue = invoices
         .filter(inv => inv.status === 'paid' && (
           inv.description?.toLowerCase().includes('emergency') ||
           inv.emergency_patient_data
         ))
         .reduce((sum, inv) => sum + Number(inv.amount), 0);
+      
+      const emergencyRevenue = emergencyAppointmentRevenue + emergencyInvoiceRevenue;
 
-      // 2. Pharmacy Sales and Profit (using unit_price which includes discounts)
+      // 2. Pharmacy Sales and Profit (matching FinanceDaily calculation exactly)
       let pharmacySales = 0;
       let pharmacyProfit = 0;
       
       const positivePharmacyInvoices = pharmacyInvoices.filter(inv => (inv.final_amount || 0) >= 0);
       const negativePharmacyInvoices = pharmacyInvoices.filter(inv => (inv.final_amount || 0) < 0);
 
-      // Calculate sales
-      pharmacySales = positivePharmacyInvoices.reduce((sum, inv) => sum + Number(inv.final_amount), 0);
+      // Calculate gross sales from positive invoices
+      const grossPharmacySales = positivePharmacyInvoices.reduce((sum, inv) => 
+        sum + Number(inv.final_amount || 0), 0);
+      
+      // Calculate return amounts (make positive)
+      const pharmacyReturns = Math.abs(negativePharmacyInvoices.reduce((sum, inv) => 
+        sum + Number(inv.final_amount || 0), 0));
+      
+      // Net sales after subtracting returns
+      pharmacySales = grossPharmacySales - pharmacyReturns;
 
-      // Calculate profit from sales (using actual unit_price after discounts)
-      const grossProfit = positivePharmacyInvoices.reduce((total, inv) => {
-        const items = inv.pharmacy_invoice_items || [];
-        const invProfit = items.reduce((sum, item) => {
-          const purchase = item.medicines?.purchase_price || 0;
-          const profitPerUnit = item.unit_price - purchase; // unit_price includes discounts
-          return sum + profitPerUnit * item.quantity;
+      // Calculate gross profit from positive sales (using unit_price which includes discounts)
+      const grossProfit = positivePharmacyInvoices.reduce((totalProfit, invoice) => {
+        const invoiceProfit = (invoice.pharmacy_invoice_items || []).reduce((itemsProfit, item) => {
+          if (item.medicines && item.medicines.purchase_price) {
+            const profitPerUnit = item.unit_price - Number(item.medicines.purchase_price);
+            return itemsProfit + (profitPerUnit * item.quantity);
+          }
+          return itemsProfit;
         }, 0);
-        return total + invProfit;
+        return totalProfit + invoiceProfit;
       }, 0);
 
-      // Subtract profit lost from returns
-      const returnsProfit = negativePharmacyInvoices.reduce((total, inv) => {
-        const items = inv.pharmacy_invoice_items || [];
-        const invProfit = items.reduce((sum, item) => {
-          const purchase = item.medicines?.purchase_price || 0;
-          const profitPerUnit = item.unit_price - purchase;
-          return sum + profitPerUnit * Math.abs(item.quantity);
+      // Calculate profit lost from returns
+      const returnsProfit = negativePharmacyInvoices.reduce((totalProfit, invoice) => {
+        const invoiceProfit = (invoice.pharmacy_invoice_items || []).reduce((itemsProfit, item) => {
+          if (item.medicines && item.medicines.purchase_price) {
+            const profitPerUnit = item.unit_price - Number(item.medicines.purchase_price);
+            return itemsProfit + (profitPerUnit * Math.abs(item.quantity));
+          }
+          return itemsProfit;
         }, 0);
-        return total + invProfit;
+        return totalProfit + invoiceProfit;
       }, 0);
 
+      // Net profit after subtracting profit lost from returns
       pharmacyProfit = grossProfit - returnsProfit;
 
-      // 3. Lab Revenue
-      const labRevenue = labReports
-        .filter(report => report.price)
-        .reduce((sum, report) => sum + Number(report.price), 0);
+      // 3. Lab Revenue (direct sum of all lab prices)
+      const labRevenue = labReports.reduce((sum, lab) => 
+        sum + Number(lab.price || 0), 0);
 
-      // 4. X-ray Revenue
-      const xrayRevenue = xrayReports
-        .filter(report => report.price)
-        .reduce((sum, report) => sum + Number(report.price), 0);
+      // 4. X-ray Revenue (direct sum of all xray prices)
+      const xrayRevenue = xrayReports.reduce((sum, xray) => 
+        sum + Number(xray.price || 0), 0);
 
-      // 5. Operations Revenue (hospital portion only)
-      const operationsRevenue = otSchedules
-        .filter(schedule => schedule.total_cost && schedule.doctor_expense)
-        .reduce((sum, schedule) => sum + (Number(schedule.total_cost) - Number(schedule.doctor_expense)), 0);
+      // 5. Operations Revenue (hospital portion only: total_cost - doctor_expense)
+      const operationsRevenue = otSchedules.reduce((sum, ot) => 
+        sum + (Number(ot.total_cost || 0) - Number(ot.doctor_expense || 0)), 0);
 
       // 6. Miscellaneous Income
-      const miscellaneousIncome = miscIncome.reduce((sum, income) => sum + Number(income.amount), 0);
+      const miscellaneousIncome = miscIncome.reduce((sum, income) => 
+        sum + Number(income.amount || 0), 0);
 
-      // 7. Total Hospital Revenue (without pharmacy sales, only pharmacy profit)
+      // 7. Total Hospital Revenue = emergency + lab + xray + operations + misc
+      // (Does NOT include pharmacy sales - only pharmacy profit counts for hospital)
       const hospitalRevenue = emergencyRevenue + labRevenue + xrayRevenue + operationsRevenue + miscellaneousIncome;
       
       // 8. Total Expenses
-      const totalExpenses = expenses.reduce((sum, exp) => sum + Number(exp.amount), 0);
+      const totalExpenses = expenses.reduce((sum, exp) => 
+        sum + Number(exp.amount || 0), 0);
       
-      // 9. Hospital Profit Without Pharmacy
+      // 9. Hospital Profit Without Pharmacy = Hospital Revenue - Expenses
       const hospitalProfitWithoutPharmacy = hospitalRevenue - totalExpenses;
       
-      // 10. Hospital Profit With Pharmacy Profit
+      // 10. Hospital Profit With Pharmacy = Hospital Profit + Pharmacy Profit
       const hospitalProfitWithPharmacy = hospitalProfitWithoutPharmacy + pharmacyProfit;
+
+      console.log('💰 Calculated Financial Metrics:', {
+        emergencyRevenue: emergencyRevenue.toFixed(2),
+        emergencyAppointments: emergencyAppointmentRevenue.toFixed(2),
+        emergencyInvoices: emergencyInvoiceRevenue.toFixed(2),
+        pharmacySales: pharmacySales.toFixed(2),
+        pharmacyProfit: pharmacyProfit.toFixed(2),
+        labRevenue: labRevenue.toFixed(2),
+        xrayRevenue: xrayRevenue.toFixed(2),
+        operationsRevenue: operationsRevenue.toFixed(2),
+        miscellaneousIncome: miscellaneousIncome.toFixed(2),
+        hospitalRevenue: hospitalRevenue.toFixed(2),
+        totalExpenses: totalExpenses.toFixed(2),
+        hospitalProfitWithoutPharmacy: hospitalProfitWithoutPharmacy.toFixed(2),
+        hospitalProfitWithPharmacy: hospitalProfitWithPharmacy.toFixed(2)
+      });
 
       // Recent activity
       const recentActivity = [
