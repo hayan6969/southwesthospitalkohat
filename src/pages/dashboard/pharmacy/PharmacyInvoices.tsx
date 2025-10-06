@@ -46,8 +46,8 @@ export default function PharmacyInvoices() {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 20;
 
-  // Use paginated pharmacy invoices hook for better performance
-  const { data: paginatedResult, isLoading } = usePaginatedPharmacyInvoices(currentPage, itemsPerPage, searchTerm);
+  // Use paginated pharmacy invoices hook for better performance (with date filter)
+  const { data: paginatedResult, isLoading } = usePaginatedPharmacyInvoices(currentPage, itemsPerPage, searchTerm, filterDate);
   const invoices = paginatedResult?.data || [];
   const totalCount = paginatedResult?.count || 0;
   const totalPages = paginatedResult?.totalPages || 1;
@@ -204,11 +204,8 @@ export default function PharmacyInvoices() {
     logDownload('Pharmacy Invoice PDF', `Downloaded PDF for invoice ${invoice.invoice_number}`, user?.id);
   };
 
-  // Filter invoices by date if needed (client-side filtering for date since server-side search handles invoice number)
-  const filteredInvoices = filterDate ? 
-    invoices.filter(invoice => 
-      new Date(invoice.created_at!).toDateString() === filterDate.toDateString()
-    ) : invoices;
+  // Date filtering is now done server-side in the hook, no need for client-side filtering
+  const filteredInvoices = invoices;
 
   // Calculate totals for current page
   const totalAmount = filteredInvoices.reduce((sum, invoice) => sum + (invoice.final_amount || 0), 0);
