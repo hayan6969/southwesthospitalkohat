@@ -3,7 +3,6 @@ import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { usePaginatedInvoices, usePaginatedPharmacyInvoices } from "@/hooks/useDatabase";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { formatPkrAmount } from "@/utils/currency";
@@ -25,15 +24,33 @@ export default function FinanceInvoices() {
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 20;
-  const { data: hospitalInvoicesResult, isLoading: hospitalLoading } = usePaginatedInvoices(currentPage, itemsPerPage, searchTerm);
-  const hospitalInvoices = hospitalInvoicesResult?.data || [];
-  const hospitalTotalCount = hospitalInvoicesResult?.count || 0;
   const { toast } = useToast();
 
-  // Get pharmacy invoices with pagination
-  const { data: pharmacyInvoicesResult, isLoading: pharmacyLoading } = usePaginatedPharmacyInvoices(currentPage, itemsPerPage, searchTerm);
-  const pharmacyInvoices = pharmacyInvoicesResult?.data || [];
-  const pharmacyTotalCount = pharmacyInvoicesResult?.count || 0;
+  // Fetch ALL hospital invoices (no pagination, we'll paginate client-side after filtering)
+  const { data: hospitalInvoices, isLoading: hospitalLoading } = useQuery({
+    queryKey: ['hospital-invoices-all'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('invoices')
+        .select('*')
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return data || [];
+    }
+  });
+
+  // Fetch ALL pharmacy invoices (no pagination, we'll paginate client-side after filtering)
+  const { data: pharmacyInvoices, isLoading: pharmacyLoading } = useQuery({
+    queryKey: ['pharmacy-invoices-all'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('pharmacy_invoices')
+        .select('*')
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return data || [];
+    }
+  });
 
   // Get lab reports for invoicing
   const { data: labReports, isLoading: labLoading } = useQuery({
@@ -749,7 +766,7 @@ export default function FinanceInvoices() {
               <SelectTrigger className="w-48">
                 <SelectValue placeholder="Filter by type" />
               </SelectTrigger>
-                 <SelectContent>
+              <SelectContent className="bg-background z-50">
                   <SelectItem value="all">All Types</SelectItem>
                   <SelectItem value="appointment">Appointments</SelectItem>
                   <SelectItem value="emergency">Emergency</SelectItem>
@@ -867,7 +884,7 @@ export default function FinanceInvoices() {
           {totalPages > 1 && (
              <div className="flex items-center justify-between px-2 pt-4">
                <div className="text-sm text-gray-700">
-                 Showing {startIndex + 1} to {Math.min(endIndex, filteredInvoices.length)} of {hospitalTotalCount + pharmacyTotalCount}+ total invoices
+                 Showing {startIndex + 1} to {Math.min(endIndex, filteredInvoices.length)} of {filteredInvoices.length} total invoices
                </div>
               <div className="flex items-center gap-2">
                 <Button
