@@ -80,13 +80,13 @@ export const useFinancialAnalytics = (selectedMonth?: Date) => {
 
       console.log('📊 Found', dailyClosings?.length || 0, 'daily closings for the month');
 
-      // Fetch pharmacy invoices for the month
+      // Fetch pharmacy invoices for the month (completed invoices)
       const { data: pharmacyInvoices } = await supabase
         .from('pharmacy_invoices')
         .select('*')
         .gte('created_at', monthStartISO)
         .lte('created_at', monthEndISO)
-        .eq('status', 'paid');
+        .eq('status', 'completed');
 
       // Fetch payroll records for the month
       const { data: payrolls } = await supabase
@@ -110,13 +110,12 @@ export const useFinancialAnalytics = (selectedMonth?: Date) => {
         .gte('created_at', monthStartISO)
         .lte('created_at', monthEndISO);
 
-      // Fetch doctor payments for the month
+      // Fetch doctor payments for the month (all payments regardless of status)
       const { data: doctorPayments } = await supabase
         .from('doctor_payments')
         .select('*')
         .gte('period_start', monthStartDate)
-        .lte('period_end', monthEndDate)
-        .eq('payment_status', 'paid');
+        .lte('period_end', monthEndDate);
 
       // Helper function to recalculate hospital services revenue from transactions_data
       // (matches the logic in PreviousClosingsDialog.tsx)
