@@ -272,11 +272,11 @@ export default function FinanceAnalytics() {
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Hospital Invoices</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">Pharmacy Invoices</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-sky-600">{totalInvoicesCount}</div>
-            <p className="text-xs text-muted-foreground mt-1">{formatPkrAmount(totalInvoicesAmount)} collected</p>
+            <div className="text-2xl font-bold text-sky-600">{pharmacyBillsPaidCount}</div>
+            <p className="text-xs text-muted-foreground mt-1">{formatPkrAmount(pharmacyBillsPaidAmount)} collected</p>
           </CardContent>
         </Card>
 
