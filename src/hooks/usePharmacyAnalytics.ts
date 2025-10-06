@@ -202,18 +202,58 @@ export const usePharmacyAnalytics = () => {
                             monthlyReturnExpenses.reduce((sum, exp) => sum + exp.amount, 0);
       const monthlySales = monthlySalesInvoices.length;
 
-      // Calculate monthly profit - include both sales and returns properly
-      const monthlyAllInvoiceItems = allInvoiceItems.filter(item => {
-        const invoiceDate = toPakistanTime(new Date(item.invoice_created_at));
-        const invMonthYear = format(invoiceDate, 'yyyy-MM');
-        const currentMonthYear = format(pakistanToday, 'yyyy-MM');
-        return invMonthYear === currentMonthYear;
+      // Calculate monthly profit using the same reliable approach as Pay Hospital
+      const monthlyStartISO = startOfThisMonth.toISOString();
+      const monthlyEndISO = endOfThisMonth.toISOString();
+      
+      const { data: monthlyInvoicesWithItems } = await supabase
+        .from('pharmacy_invoices')
+        .select(`
+          id,
+          final_amount,
+          created_at,
+          pharmacy_invoice_items(
+            quantity,
+            unit_price,
+            medicines(purchase_price)
+          )
+        `)
+        .gte('created_at', monthlyStartISO)
+        .lte('created_at', monthlyEndISO);
+
+      let monthlyProfit = 0;
+      if (monthlyInvoicesWithItems && monthlyInvoicesWithItems.length > 0) {
+        const positiveInvoices = monthlyInvoicesWithItems.filter(inv => (inv.final_amount || 0) >= 0);
+        const negativeInvoices = monthlyInvoicesWithItems.filter(inv => (inv.final_amount || 0) < 0);
+
+        const grossProfit = positiveInvoices.reduce((total, inv) => {
+          const items = inv.pharmacy_invoice_items || [];
+          const invProfit = items.reduce((sum, item) => {
+            const purchase = item.medicines?.purchase_price || 0;
+            const profitPerUnit = item.unit_price - purchase;
+            return sum + profitPerUnit * item.quantity;
+          }, 0);
+          return total + invProfit;
+        }, 0);
+
+        const returnsProfit = negativeInvoices.reduce((total, inv) => {
+          const items = inv.pharmacy_invoice_items || [];
+          const invProfit = items.reduce((sum, item) => {
+            const purchase = item.medicines?.purchase_price || 0;
+            const profitPerUnit = item.unit_price - purchase;
+            return sum + profitPerUnit * Math.abs(item.quantity);
+          }, 0);
+          return total + invProfit;
+        }, 0);
+
+        monthlyProfit = grossProfit - returnsProfit;
+      }
+
+      console.log('📊 Monthly profit calculation:', {
+        invoices: monthlyInvoicesWithItems?.length || 0,
+        monthRange: `${monthlyStartISO} to ${monthlyEndISO}`,
+        monthlyProfit
       });
-      const monthlyProfit = monthlyAllInvoiceItems.reduce((sum, item) => {
-        // Calculate profit based on actual unit_price (includes discounts) - purchase price
-        const profit = (item.unit_price - (item.medicines?.purchase_price || 0)) * item.quantity;
-        return sum + profit;
-      }, 0);
 
       // Daily data for charts (last 30 days)
       const dailyData = [];
