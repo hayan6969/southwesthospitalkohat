@@ -84,12 +84,12 @@ export default function FinanceDaily() {
         formattedTime: formatInPakistanTime(new Date(lastClosing.closing_time), 'MMM d, yyyy h:mm a')
       } : 'No previous closing found');
 
-      // Hospital invoices (consultations) - filter based on cutoff time
+      // Hospital invoices (consultations) - filter based on cutoff time (AFTER closing, not AT)
       const { data: hospitalInvoices } = await supabase
         .from('invoices')
         .select('amount, created_at, description, emergency_patient_data')
         .eq('status', 'paid')
-        .gte('created_at', cutoffTime)
+        .gt('created_at', cutoffTime)  // Use gt (>) not gte (>=) to exclude boundary
         .lte('created_at', upperBound);
 
       console.log('Hospital invoices found:', hospitalInvoices?.length, hospitalInvoices);
@@ -116,7 +116,7 @@ export default function FinanceDaily() {
             medicines(purchase_price, selling_price)
           )
         `)
-        .gte('created_at', cutoffTime)
+        .gt('created_at', cutoffTime)  // Use gt (>) not gte (>=) to exclude boundary
         .lte('created_at', upperBound);
 
       console.log('Pharmacy invoices found:', pharmacyInvoicesWithItems?.length, pharmacyInvoicesWithItems);
@@ -135,7 +135,7 @@ export default function FinanceDaily() {
         .from('lab_reports')
         .select('price, created_at, test_name, status')
         .not('price', 'is', null)
-        .gte('created_at', cutoffTime)
+        .gt('created_at', cutoffTime)  // Use gt (>) not gte (>=) to exclude boundary
         .lte('created_at', upperBound);
 
       console.log('Lab reports found:', labReports?.length, labReports);
@@ -145,7 +145,7 @@ export default function FinanceDaily() {
         .from('xray_reports')
         .select('price, created_at, test_name, status')
         .not('price', 'is', null)
-        .gte('created_at', cutoffTime)
+        .gt('created_at', cutoffTime)  // Use gt (>) not gte (>=) to exclude boundary
         .lte('created_at', upperBound);
 
       console.log('X-ray reports found:', xrayReports?.length, xrayReports);
@@ -155,7 +155,7 @@ export default function FinanceDaily() {
         .from('ot_schedules')
         .select('total_cost, doctor_expense, created_at, operation_date, status')
         .in('status', ['completed', 'pending'])
-        .gte('created_at', cutoffTime)
+        .gt('created_at', cutoffTime)  // Use gt (>) not gte (>=) to exclude boundary
         .lte('created_at', upperBound);
 
       console.log('OT schedules found:', otSchedules?.length, otSchedules);
@@ -175,7 +175,7 @@ export default function FinanceDaily() {
       const { data: expenses } = await supabase
         .from('expenses')
         .select('amount, expense_date, created_at')
-        .gte('created_at', cutoffTime)
+        .gt('created_at', cutoffTime)  // Use gt (>) not gte (>=) to exclude boundary
         .lte('created_at', upperBound);
 
       console.log('Expenses found:', expenses?.length, expenses);
@@ -184,7 +184,7 @@ export default function FinanceDaily() {
       const { data: refunds } = await supabase
         .from('refunds')
         .select('amount, refund_type, description, created_at')
-        .gte('created_at', cutoffTime)
+        .gt('created_at', cutoffTime)  // Use gt (>) not gte (>=) to exclude boundary
         .lte('created_at', upperBound);
 
       console.log('Refunds found:', refunds?.length, refunds);
@@ -193,7 +193,7 @@ export default function FinanceDaily() {
       const { data: miscIncome } = await supabase
         .from('miscellaneous_income')
         .select('amount, description, created_at')
-        .gte('created_at', cutoffTime)
+        .gt('created_at', cutoffTime)  // Use gt (>) not gte (>=) to exclude boundary
         .lte('created_at', upperBound);
 
       console.log('Miscellaneous income found:', miscIncome?.length, miscIncome);
@@ -227,11 +227,12 @@ export default function FinanceDaily() {
         // Net revenue after subtracting full return amounts
         pharmacyRevenue = grossPharmacyRevenue - pharmacyReturnsFromInvoices;
         
-        // Calculate gross profit only from positive sales based on selling price - purchase price
+        // Calculate gross profit only from positive sales based on actual unit price - purchase price
         const grossPharmacyProfit = positiveInvoices.reduce((totalProfit, invoice) => {
           const invoiceProfit = (invoice.pharmacy_invoice_items || []).reduce((itemsProfit, item) => {
-            if (item.medicines && item.medicines.selling_price && item.medicines.purchase_price) {
-              const profitPerUnit = item.medicines.selling_price - item.medicines.purchase_price;
+            if (item.medicines && item.medicines.purchase_price) {
+              // Use unit_price (actual charged price including discounts) not selling_price
+              const profitPerUnit = item.unit_price - item.medicines.purchase_price;
               return itemsProfit + (profitPerUnit * item.quantity);
             }
             return itemsProfit;
@@ -242,8 +243,9 @@ export default function FinanceDaily() {
         // Calculate profit portion of returns (only the profit lost, not the full return amount)
         const returnsProfit = negativeInvoices.reduce((totalProfit, invoice) => {
           const invoiceProfit = (invoice.pharmacy_invoice_items || []).reduce((itemsProfit, item) => {
-            if (item.medicines && item.medicines.selling_price && item.medicines.purchase_price) {
-              const profitPerUnit = item.medicines.selling_price - item.medicines.purchase_price;
+            if (item.medicines && item.medicines.purchase_price) {
+              // Use unit_price (actual charged price including discounts) not selling_price
+              const profitPerUnit = item.unit_price - item.medicines.purchase_price;
               return itemsProfit + (profitPerUnit * Math.abs(item.quantity)); // Use absolute value for returns
             }
             return itemsProfit;
@@ -360,7 +362,7 @@ export default function FinanceDaily() {
           .from('invoices')
           .select('*, patients(id, profiles(first_name, last_name))')
           .eq('status', 'paid')
-          .gte('created_at', cutoffTime)
+          .gt('created_at', cutoffTime)  // Use gt (>) not gte (>=) to exclude boundary
           .lte('created_at', upperBound),
         
         supabase
@@ -375,28 +377,28 @@ export default function FinanceDaily() {
               medicines(name, purchase_price, selling_price)
             )
           `)
-          .gte('created_at', cutoffTime)
+          .gt('created_at', cutoffTime)  // Use gt (>) not gte (>=) to exclude boundary
           .lte('created_at', upperBound),
         
         supabase
           .from('lab_reports')
           .select('*, patients(id, profiles(first_name, last_name))')
           .not('price', 'is', null)
-          .gte('created_at', cutoffTime)
+          .gt('created_at', cutoffTime)  // Use gt (>) not gte (>=) to exclude boundary
           .lte('created_at', upperBound),
         
         supabase
           .from('xray_reports')
           .select('*')
           .not('price', 'is', null)
-          .gte('created_at', cutoffTime)
+          .gt('created_at', cutoffTime)  // Use gt (>) not gte (>=) to exclude boundary
           .lte('created_at', upperBound),
         
         supabase
           .from('ot_schedules')
           .select('*, patients(id, profiles(first_name, last_name)), ot_operations(operation_name)')
           .in('status', ['completed', 'pending'])
-          .gte('created_at', cutoffTime)
+          .gt('created_at', cutoffTime)  // Use gt (>) not gte (>=) to exclude boundary
           .lte('created_at', upperBound),
         
         supabase
@@ -410,19 +412,19 @@ export default function FinanceDaily() {
         supabase
           .from('expenses')
           .select('*')
-          .gte('created_at', cutoffTime)
+          .gt('created_at', cutoffTime)  // Use gt (>) not gte (>=) to exclude boundary
           .lte('created_at', upperBound),
         
         supabase
           .from('refunds')
           .select('*')
-          .gte('created_at', cutoffTime)
+          .gt('created_at', cutoffTime)  // Use gt (>) not gte (>=) to exclude boundary
           .lte('created_at', upperBound),
         
         supabase
           .from('pharmacy_expenses')
           .select('*')
-          .gte('created_at', cutoffTime)
+          .gt('created_at', cutoffTime)  // Use gt (>) not gte (>=) to exclude boundary
           .lte('created_at', upperBound),
         
         supabase
@@ -438,7 +440,7 @@ export default function FinanceDaily() {
         supabase
           .from('miscellaneous_income')
           .select('*')
-          .gte('created_at', cutoffTime)
+          .gt('created_at', cutoffTime)  // Use gt (>) not gte (>=) to exclude boundary
           .lte('created_at', upperBound)
       ]);
 
