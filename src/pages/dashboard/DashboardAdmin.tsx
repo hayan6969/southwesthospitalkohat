@@ -404,20 +404,20 @@ export default function DashboardAdmin() {
             <TabsContent value="analytics">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
                 <StatsCard
-                  title="Total Revenue"
-                  value={formatPkrAmount(financialAnalytics?.totalRevenue || 0)}
+                  title="Hospital Revenue"
+                  value={formatPkrAmount(financialAnalytics?.hospitalRevenue || 0)}
                   change={realStats?.revenueChange}
                   changeType={realStats?.revenueChangeType}
                   icon={<Banknote className="w-5 h-5 text-green-600" />}
-                  chart={<MiniChart data={[{value: financialAnalytics?.monthlyRevenue || 0}]} type="bar" color="#10b981" />}
+                  chart={<MiniChart data={[{value: financialAnalytics?.hospitalRevenue || 0}]} type="bar" color="#10b981" />}
                 />
                 <StatsCard
-                  title="Net Profit"
-                  value={formatPkrAmount(financialAnalytics?.netProfit || 0)}
-                  change={financialAnalytics?.profitMargin ? `${financialAnalytics.profitMargin.toFixed(1)}%` : "0%"}
-                  changeType={financialAnalytics?.netProfit && financialAnalytics.netProfit > 0 ? "positive" : "negative"}
+                  title="Hospital Profit"
+                  value={formatPkrAmount(financialAnalytics?.hospitalProfitWithPharmacy || 0)}
+                  change="With Pharmacy"
+                  changeType={financialAnalytics?.hospitalProfitWithPharmacy && financialAnalytics.hospitalProfitWithPharmacy > 0 ? "positive" : "negative"}
                   icon={<TrendingUp className="w-5 h-5 text-blue-600" />}
-                  chart={<MiniChart data={[{value: Math.max(0, (financialAnalytics?.netProfit || 0))}]} type="area" color="#3b82f6" />}
+                  chart={<MiniChart data={[{value: Math.max(0, (financialAnalytics?.hospitalProfitWithPharmacy || 0))}]} type="area" color="#3b82f6" />}
                 />
                 <StatsCard
                   title="Total Expenses"
@@ -425,7 +425,7 @@ export default function DashboardAdmin() {
                   change="Monthly"
                   changeType="negative"
                   icon={<CreditCard className="w-5 h-5 text-red-600" />}
-                  chart={<MiniChart data={[{value: financialAnalytics?.monthlyExpenses || 0}]} type="bar" color="#ef4444" />}
+                  chart={<MiniChart data={[{value: financialAnalytics?.totalExpenses || 0}]} type="bar" color="#ef4444" />}
                 />
                 <StatsCard
                   title="Active Users"
@@ -441,26 +441,55 @@ export default function DashboardAdmin() {
                 <div className="bg-white rounded-lg border shadow-sm p-6">
                   <h3 className="font-semibold mb-4">Revenue by Source</h3>
                   <div className="space-y-3">
-                    {financialAnalytics?.revenueBySource && Object.entries(financialAnalytics.revenueBySource).map(([source, amount]) => {
-                      const percentage = financialAnalytics.totalRevenue > 0 ? Math.round((amount / financialAnalytics.totalRevenue) * 100) : 0;
-                      return (
-                        <div key={source} className="flex items-center justify-between">
+                    {financialAnalytics && (
+                      <>
+                        <div className="flex items-center justify-between">
                           <div className="flex items-center space-x-3">
-                            <div className={`w-3 h-3 rounded-full ${
-                              source === 'hospital' ? 'bg-blue-500' :
-                              source === 'pharmacy' ? 'bg-green-500' :
-                              source === 'lab' ? 'bg-yellow-500' :
-                              source === 'xray' ? 'bg-red-500' : 'bg-purple-500'
-                            }`} />
-                            <span className="text-sm font-medium capitalize">{source}</span>
+                            <div className="w-3 h-3 rounded-full bg-red-500" />
+                            <span className="text-sm font-medium">Emergency</span>
                           </div>
                           <div className="text-right">
-                            <div className="text-sm font-semibold">{formatPkrAmount(amount)}</div>
-                            <div className="text-xs text-gray-500">{percentage}%</div>
+                            <div className="text-sm font-semibold">{formatPkrAmount(financialAnalytics.emergencyRevenue)}</div>
                           </div>
                         </div>
-                      );
-                    })}
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center space-x-3">
+                            <div className="w-3 h-3 rounded-full bg-yellow-500" />
+                            <span className="text-sm font-medium">Lab</span>
+                          </div>
+                          <div className="text-right">
+                            <div className="text-sm font-semibold">{formatPkrAmount(financialAnalytics.labRevenue)}</div>
+                          </div>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center space-x-3">
+                            <div className="w-3 h-3 rounded-full bg-purple-500" />
+                            <span className="text-sm font-medium">X-ray</span>
+                          </div>
+                          <div className="text-right">
+                            <div className="text-sm font-semibold">{formatPkrAmount(financialAnalytics.xrayRevenue)}</div>
+                          </div>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center space-x-3">
+                            <div className="w-3 h-3 rounded-full bg-blue-500" />
+                            <span className="text-sm font-medium">Operations</span>
+                          </div>
+                          <div className="text-right">
+                            <div className="text-sm font-semibold">{formatPkrAmount(financialAnalytics.operationsRevenue)}</div>
+                          </div>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center space-x-3">
+                            <div className="w-3 h-3 rounded-full bg-green-500" />
+                            <span className="text-sm font-medium">Pharmacy</span>
+                          </div>
+                          <div className="text-right">
+                            <div className="text-sm font-semibold">{formatPkrAmount(financialAnalytics.pharmacySales)}</div>
+                          </div>
+                        </div>
+                      </>
+                    )}
                   </div>
                 </div>
               </div>
