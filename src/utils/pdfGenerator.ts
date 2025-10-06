@@ -1413,7 +1413,9 @@ export const generateDailyClosingPDF = async (data: {
   
   drawSectionHeader('HOSPITAL CLOSING BALANCE CALCULATION');
 
-  // Calculate hospital net profit using services-only revenue (exclude pharmacy profit)
+  // ALWAYS use recalculated hospital revenue from transactions (not stored value)
+  // This ensures all PDFs (new and historical) show correct calculations
+  // Hospital revenue = lab + xray + OT + emergency + misc income (NO pharmacy profit)
   const computedHospitalRevenue = typeof correctHospitalServicesRevenue === 'number'
     ? correctHospitalServicesRevenue
     : data.hospitalRevenue;
