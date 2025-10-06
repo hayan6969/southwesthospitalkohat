@@ -94,17 +94,32 @@ export const usePharmacyAnalytics = () => {
       const returnExpenses = expensesResult.data || [];
       const lastClosing = lastClosingResult.data?.[0];
 
+      console.log('📊 Total invoices fetched:', allInvoices.length);
+      console.log('📊 Invoice IDs sample:', allInvoices.slice(0, 3).map(inv => inv.id));
+
       // Fetch invoice items for profit calculations with invoice dates
       const invoiceItemsResult = await supabase
         .from('pharmacy_invoice_items')
         .select('*, medicines(purchase_price, selling_price, name)')
         .in('invoice_id', allInvoices.map(inv => inv.id)); // Process all invoices for accurate profit
 
+      console.log('📦 Invoice items query result:', {
+        data: invoiceItemsResult.data?.length || 0,
+        error: invoiceItemsResult.error,
+        status: invoiceItemsResult.status
+      });
+
+      if (invoiceItemsResult.error) {
+        console.error('❌ Error fetching invoice items:', invoiceItemsResult.error);
+      }
+
       // Add invoice created_at to each item for date filtering
       const allInvoiceItems = (invoiceItemsResult.data || []).map(item => ({
         ...item,
         invoice_created_at: allInvoices.find(inv => inv.id === item.invoice_id)?.created_at || item.created_at
       }));
+
+      console.log('📦 Total invoice items after mapping:', allInvoiceItems.length);
 
       // Separate sales and returns based on amount (negative amounts are returns)
       const salesInvoices = allInvoices.filter(inv => inv.final_amount >= 0);
