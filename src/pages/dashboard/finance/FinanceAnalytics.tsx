@@ -82,8 +82,7 @@ export default function FinanceAnalytics() {
   const totalExpenses = financialData?.totalExpenses || 0;
   const pharmacyBillsPaidCount = financialData?.pharmacyBillsPaidCount || 0;
   const pharmacyBillsPaidAmount = financialData?.pharmacyBillsPaidAmount || 0;
-  const payrollsPaidCount = financialData?.payrollsPaidCount || 0;
-  const payrollsPaidAmount = financialData?.payrollsPaidAmount || 0;
+  const pharmacyReturns = financialData?.pharmacyReturns || 0;
   const totalInvoicesCount = financialData?.totalInvoicesCount || 0;
   const totalInvoicesAmount = financialData?.totalInvoicesAmount || 0;
   const totalRefunds = financialData?.totalRefunds || 0;
@@ -262,11 +261,11 @@ export default function FinanceAnalytics() {
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Payrolls Paid</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">Pharmacy Returns</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-cyan-600">{payrollsPaidCount}</div>
-            <p className="text-xs text-muted-foreground mt-1">{formatPkrAmount(payrollsPaidAmount)} total</p>
+            <div className="text-2xl font-bold text-red-600">{formatPkrAmount(pharmacyReturns)}</div>
+            <p className="text-xs text-muted-foreground mt-1">Returns from sales</p>
           </CardContent>
         </Card>
 

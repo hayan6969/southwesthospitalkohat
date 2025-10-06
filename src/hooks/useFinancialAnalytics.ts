@@ -5,6 +5,7 @@ import { startOfMonth, endOfMonth, format } from "date-fns";
 interface FinancialMetrics {
   pharmacySales: number;
   pharmacyProfit: number;
+  pharmacyReturns: number;
   hospitalRevenue: number;
   hospitalProfitWithoutPharmacy: number;
   hospitalProfitWithPharmacy: number;
@@ -15,8 +16,6 @@ interface FinancialMetrics {
   totalExpenses: number;
   pharmacyBillsPaidCount: number;
   pharmacyBillsPaidAmount: number;
-  payrollsPaidCount: number;
-  payrollsPaidAmount: number;
   totalInvoicesCount: number;
   totalInvoicesAmount: number;
   totalRefunds: number;
@@ -178,6 +177,7 @@ export const useFinancialAnalytics = (selectedMonth?: Date) => {
         return {
           pharmacySales: 0,
           pharmacyProfit: 0,
+          pharmacyReturns: 0,
           hospitalRevenue: 0,
           hospitalProfitWithoutPharmacy: 0,
           hospitalProfitWithPharmacy: 0,
@@ -188,8 +188,6 @@ export const useFinancialAnalytics = (selectedMonth?: Date) => {
           totalExpenses: 0,
           pharmacyBillsPaidCount: 0,
           pharmacyBillsPaidAmount: 0,
-          payrollsPaidCount: 0,
-          payrollsPaidAmount: 0,
           totalInvoicesCount: 0,
           totalInvoicesAmount: 0,
           totalRefunds: 0,
@@ -202,6 +200,7 @@ export const useFinancialAnalytics = (selectedMonth?: Date) => {
       // Sum up values from all daily closings in the month
       let totalPharmacySales = 0;
       let totalPharmacyProfit = 0;
+      let totalPharmacyReturns = 0;
       let totalHospitalRevenue = 0;
       let totalExpenses = 0;
       let totalLabRevenue = 0;
@@ -216,7 +215,7 @@ export const useFinancialAnalytics = (selectedMonth?: Date) => {
         totalPharmacyProfit += Number(closing.pharmacy_profit || 0);
         totalExpenses += Number(closing.total_expenses || 0);
         
-        // Calculate pharmacy sales from transactions_data
+        // Calculate pharmacy sales and returns from transactions_data
         const td = closing.transactions_data as any;
         if (td?.pharmacyInvoices) {
           const positiveInvoices = td.pharmacyInvoices.filter((inv: any) => (inv.final_amount || 0) >= 0);
@@ -226,6 +225,7 @@ export const useFinancialAnalytics = (selectedMonth?: Date) => {
           const returns = Math.abs(negativeInvoices.reduce((sum: number, inv: any) => 
             sum + Number(inv.final_amount || 0), 0));
           totalPharmacySales += (grossSales - returns);
+          totalPharmacyReturns += returns;
         } else {
           totalPharmacySales += Number(closing.pharmacy_revenue || 0);
         }
@@ -307,6 +307,7 @@ export const useFinancialAnalytics = (selectedMonth?: Date) => {
       return {
         pharmacySales: totalPharmacySales,
         pharmacyProfit: totalPharmacyProfit,
+        pharmacyReturns: totalPharmacyReturns,
         hospitalRevenue: totalHospitalRevenue,
         hospitalProfitWithoutPharmacy,
         hospitalProfitWithPharmacy,
@@ -317,8 +318,6 @@ export const useFinancialAnalytics = (selectedMonth?: Date) => {
         totalExpenses,
         pharmacyBillsPaidCount,
         pharmacyBillsPaidAmount,
-        payrollsPaidCount,
-        payrollsPaidAmount,
         totalInvoicesCount,
         totalInvoicesAmount,
         totalRefunds,
