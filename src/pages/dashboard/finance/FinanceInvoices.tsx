@@ -70,18 +70,9 @@ export default function FinanceInvoices() {
     }
   });
 
-  // Get lab reports for invoicing
-  const { data: labReports, isLoading: labLoading } = useQuery({
-    queryKey: ['lab-reports-invoices'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('lab_reports')
-        .select('*')
-        .order('created_at', { ascending: false });
-      if (error) throw error;
-      return data;
-    }
-  });
+  // Note: Lab reports are NOT fetched separately because they already have invoices 
+  // created in the 'invoices' table with invoice_number starting with "LAB-"
+  // Fetching them separately would cause duplicates
 
   // Get X-ray reports for invoicing
   const { data: xrayReports, isLoading: xrayLoading } = useQuery({
@@ -660,15 +651,6 @@ export default function FinanceInvoices() {
       displayDate: inv.created_at,
       displayStatus: 'completed'
     })) || []),
-    ...(labReports?.map(lab => ({
-      ...lab,
-      type: 'lab',
-      typeLabel: 'Lab Test',
-      displayAmount: lab.price,
-      displayNumber: `LAB-${lab.id.slice(0, 8)}`,
-      displayDate: lab.created_at,
-      displayStatus: lab.status
-    })) || []),
     ...(xrayReports?.map(xray => ({
       ...xray,
       type: 'xray',
@@ -726,7 +708,7 @@ export default function FinanceInvoices() {
   const totalAmount = filteredInvoices.reduce((sum, invoice) => sum + (invoice.displayAmount || 0), 0);
   const totalCount = filteredInvoices.length;
 
-  if (hospitalLoading || pharmacyLoading || labLoading || xrayLoading || otLoading) {
+  if (hospitalLoading || pharmacyLoading || xrayLoading || otLoading) {
     return <div className="p-8">Loading...</div>;
   }
 
