@@ -1188,12 +1188,54 @@ export const generateDailyClosingPDF = async (data: {
     const totalItems = transactionsData.pharmacyInvoices.reduce((sum: number, invoice: any) =>
       sum + (invoice.pharmacy_invoice_items?.length || 0), 0);
     
+    // Calculate detailed breakdown
+    const positiveInvoices = transactionsData.pharmacyInvoices.filter((inv: any) => (inv.final_amount || 0) >= 0);
+    const negativeInvoices = transactionsData.pharmacyInvoices.filter((inv: any) => (inv.final_amount || 0) < 0);
+    
+    const salesCount = positiveInvoices.length;
+    const returnsCount = negativeInvoices.length;
+    
+    const grossSalesRevenue = positiveInvoices.reduce((sum: number, inv: any) => sum + (inv.final_amount || 0), 0);
+    const returnsAmount = Math.abs(negativeInvoices.reduce((sum: number, inv: any) => sum + (inv.final_amount || 0), 0));
+    const netRevenue = grossSalesRevenue - returnsAmount;
+    
+    // Calculate gross profit from sales
+    const grossProfit = positiveInvoices.reduce((totalProfit: number, invoice: any) => {
+      const invoiceProfit = (invoice.pharmacy_invoice_items || []).reduce((itemsProfit: number, item: any) => {
+        if (item.medicines && item.medicines.selling_price && item.medicines.purchase_price) {
+          const profitPerUnit = item.medicines.selling_price - item.medicines.purchase_price;
+          return itemsProfit + (profitPerUnit * item.quantity);
+        }
+        return itemsProfit;
+      }, 0);
+      return totalProfit + invoiceProfit;
+    }, 0);
+    
+    // Calculate profit lost in returns
+    const profitLostInReturns = negativeInvoices.reduce((totalProfit: number, invoice: any) => {
+      const invoiceProfit = (invoice.pharmacy_invoice_items || []).reduce((itemsProfit: number, item: any) => {
+        if (item.medicines && item.medicines.selling_price && item.medicines.purchase_price) {
+          const profitPerUnit = item.medicines.selling_price - item.medicines.purchase_price;
+          return itemsProfit + (profitPerUnit * Math.abs(item.quantity));
+        }
+        return itemsProfit;
+      }, 0);
+      return totalProfit + invoiceProfit;
+    }, 0);
+    
+    const netProfit = grossProfit - profitLostInReturns;
+    
     const pharmacySummaryHeaders = ['Summary', 'Count', 'Amount'];
     const pharmacySummaryColWidths = [80, 30, 40];
     const pharmacySummaryRows = [
-      ['Total Invoices', totalInvoices.toString(), formatPkrAmount(data.pharmacyRevenue)],
+      ['Total Invoices (Sales + Returns)', `${totalInvoices} (${salesCount} + ${returnsCount})`, ''],
+      ['Gross Sales Revenue', salesCount.toString(), formatPkrAmount(grossSalesRevenue)],
+      ['Returns Amount', returnsCount.toString(), `(${formatPkrAmount(returnsAmount)})`],
+      ['Net Revenue', '-', formatPkrAmount(netRevenue)],
       ['Total Items Sold', totalItems.toString(), '-'],
-      ['Gross Profit', '-', formatPkrAmount(data.pharmacyProfit)]
+      ['Gross Profit (from sales)', '-', formatPkrAmount(grossProfit)],
+      ['Profit Lost in Returns', '-', `(${formatPkrAmount(profitLostInReturns)})`],
+      ['Net Profit', '-', formatPkrAmount(netProfit)]
     ];
 
     drawTable(pharmacySummaryHeaders, pharmacySummaryRows, pharmacySummaryColWidths);
