@@ -80,8 +80,10 @@ export default function FinanceAnalytics() {
   const xrayRevenue = financialData?.xrayRevenue || 0;
   const emergencyRevenue = financialData?.emergencyRevenue || 0;
   const totalExpenses = financialData?.totalExpenses || 0;
-  const pharmacyBillsPaidCount = financialData?.pharmacyBillsPaidCount || 0;
-  const pharmacyBillsPaidAmount = financialData?.pharmacyBillsPaidAmount || 0;
+  const pharmacyInvoicesCount = financialData?.pharmacyInvoicesCount || 0;
+  const pharmacyInvoicesAmount = financialData?.pharmacyInvoicesAmount || 0;
+  const pharmacyExpensesCount = financialData?.pharmacyExpensesCount || 0;
+  const pharmacyExpensesAmount = financialData?.pharmacyExpensesAmount || 0;
   const pharmacyReturns = financialData?.pharmacyReturns || 0;
   const totalInvoicesCount = financialData?.totalInvoicesCount || 0;
   const totalInvoicesAmount = financialData?.totalInvoicesAmount || 0;
@@ -251,11 +253,21 @@ export default function FinanceAnalytics() {
 
         <Card>
           <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Pharmacy Invoices</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-purple-600">{pharmacyInvoicesCount}</div>
+            <p className="text-xs text-muted-foreground mt-1">{formatPkrAmount(pharmacyInvoicesAmount)} total</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">Pharmacy Bills Paid</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-emerald-600">{pharmacyBillsPaidCount}</div>
-            <p className="text-xs text-muted-foreground mt-1">{formatPkrAmount(pharmacyBillsPaidAmount)} total</p>
+            <div className="text-2xl font-bold text-orange-600">{pharmacyExpensesCount}</div>
+            <p className="text-xs text-muted-foreground mt-1">{formatPkrAmount(pharmacyExpensesAmount)} total</p>
           </CardContent>
         </Card>
 
@@ -266,16 +278,6 @@ export default function FinanceAnalytics() {
           <CardContent>
             <div className="text-2xl font-bold text-red-600">{formatPkrAmount(pharmacyReturns)}</div>
             <p className="text-xs text-muted-foreground mt-1">Returns from sales</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Pharmacy Invoices</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-sky-600">{pharmacyBillsPaidCount}</div>
-            <p className="text-xs text-muted-foreground mt-1">{formatPkrAmount(pharmacyBillsPaidAmount)} collected</p>
           </CardContent>
         </Card>
 

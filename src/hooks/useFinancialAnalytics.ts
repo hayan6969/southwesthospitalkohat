@@ -14,8 +14,10 @@ interface FinancialMetrics {
   xrayRevenue: number;
   emergencyRevenue: number;
   totalExpenses: number;
-  pharmacyBillsPaidCount: number;
-  pharmacyBillsPaidAmount: number;
+  pharmacyInvoicesCount: number;
+  pharmacyInvoicesAmount: number;
+  pharmacyExpensesCount: number;
+  pharmacyExpensesAmount: number;
   totalInvoicesCount: number;
   totalInvoicesAmount: number;
   totalRefunds: number;
@@ -80,7 +82,7 @@ export const useFinancialAnalytics = (selectedMonth?: Date) => {
       console.log('📊 Found', dailyClosings?.length || 0, 'daily closings for the month');
 
       // Count pharmacy invoices for the month (completed invoices)
-      const { count: pharmacyBillsCount } = await supabase
+      const { count: pharmacyInvoicesCount } = await supabase
         .from('pharmacy_invoices')
         .select('*', { count: 'exact', head: true })
         .gte('created_at', monthStartISO)
@@ -94,6 +96,20 @@ export const useFinancialAnalytics = (selectedMonth?: Date) => {
         .gte('created_at', monthStartISO)
         .lte('created_at', monthEndISO)
         .eq('status', 'completed');
+
+      // Count pharmacy expenses for the month
+      const { count: pharmacyExpensesCount } = await supabase
+        .from('pharmacy_expenses')
+        .select('*', { count: 'exact', head: true })
+        .gte('expense_date', monthStartDate)
+        .lte('expense_date', monthEndDate);
+
+      // Get sum of pharmacy expenses
+      const { data: pharmacyExpenses } = await supabase
+        .from('pharmacy_expenses')
+        .select('amount')
+        .gte('expense_date', monthStartDate)
+        .lte('expense_date', monthEndDate);
 
       // Count payroll records for the month
       const { count: payrollsCount } = await supabase
@@ -186,8 +202,10 @@ export const useFinancialAnalytics = (selectedMonth?: Date) => {
           xrayRevenue: 0,
           emergencyRevenue: 0,
           totalExpenses: 0,
-          pharmacyBillsPaidCount: 0,
-          pharmacyBillsPaidAmount: 0,
+          pharmacyInvoicesCount: 0,
+          pharmacyInvoicesAmount: 0,
+          pharmacyExpensesCount: 0,
+          pharmacyExpensesAmount: 0,
           totalInvoicesCount: 0,
           totalInvoicesAmount: 0,
           totalRefunds: 0,
@@ -256,8 +274,11 @@ export const useFinancialAnalytics = (selectedMonth?: Date) => {
       const hospitalProfitWithPharmacy = hospitalProfitWithoutPharmacy + totalPharmacyProfit;
 
       // Calculate additional metrics using counts and sums
-      const pharmacyBillsPaidCount = pharmacyBillsCount || 0;
-      const pharmacyBillsPaidAmount = pharmacyInvoices?.reduce((sum, inv) => sum + (Number(inv.final_amount) || 0), 0) || 0;
+      const finalPharmacyInvoicesCount = pharmacyInvoicesCount || 0;
+      const finalPharmacyInvoicesAmount = pharmacyInvoices?.reduce((sum, inv) => sum + (Number(inv.final_amount) || 0), 0) || 0;
+      
+      const finalPharmacyExpensesCount = pharmacyExpensesCount || 0;
+      const finalPharmacyExpensesAmount = pharmacyExpenses?.reduce((sum, exp) => sum + (Number(exp.amount) || 0), 0) || 0;
       
       const payrollsPaidCount = payrollsCount || 0;
       const payrollsPaidAmount = payrolls?.reduce((sum, p) => sum + (Number(p.net_salary) || 0), 0) || 0;
@@ -282,8 +303,8 @@ export const useFinancialAnalytics = (selectedMonth?: Date) => {
         totalExpenses: totalExpenses.toFixed(2),
         hospitalProfitWithoutPharmacy: hospitalProfitWithoutPharmacy.toFixed(2),
         hospitalProfitWithPharmacy: hospitalProfitWithPharmacy.toFixed(2),
-        pharmacyBillsPaidCount,
-        payrollsPaidCount,
+        pharmacyInvoicesCount: finalPharmacyInvoicesCount,
+        pharmacyExpensesCount: finalPharmacyExpensesCount,
         totalInvoicesCount,
         totalRefunds: totalRefunds.toFixed(2),
         doctorPaymentsPaidCount
@@ -316,8 +337,10 @@ export const useFinancialAnalytics = (selectedMonth?: Date) => {
         xrayRevenue: totalXrayRevenue,
         emergencyRevenue: totalEmergencyRevenue,
         totalExpenses,
-        pharmacyBillsPaidCount,
-        pharmacyBillsPaidAmount,
+        pharmacyInvoicesCount: finalPharmacyInvoicesCount,
+        pharmacyInvoicesAmount: finalPharmacyInvoicesAmount,
+        pharmacyExpensesCount: finalPharmacyExpensesCount,
+        pharmacyExpensesAmount: finalPharmacyExpensesAmount,
         totalInvoicesCount,
         totalInvoicesAmount,
         totalRefunds,
