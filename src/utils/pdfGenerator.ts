@@ -1390,11 +1390,11 @@ export const generateDailyClosingPDF = async (data: {
   const correctLabRevenue = transactionsData?.labReports?.reduce((sum: number, lab: any) => sum + (lab.price || 0), 0) || 0;
   const correctXrayRevenue = transactionsData?.xrayReports?.reduce((sum: number, xray: any) => sum + (xray.price || 0), 0) || 0;
   const correctOtRevenue = transactionsData?.otSchedules?.reduce((sum: number, ot: any) => sum + ((ot.total_cost || 0) - (ot.doctor_expense || 0)), 0) || 0;
-  const correctEmergencyRevenue = transactionsData?.emergencyAppointments?.reduce((sum: number, emergency: any) => sum + (emergency.consultation_fee_at_time || 0), 0) || 0;
+  // Use the same totalEmergencyRevenue calculation (includes both appointments and invoices)
   const correctMiscIncome = transactionsData?.miscellaneousIncome?.reduce((sum: number, income: any) => sum + (income.amount || 0), 0) || 0;
   
-  // Hospital services revenue (excludes pharmacy profit but includes misc income)
-  const correctHospitalServicesRevenue = correctLabRevenue + correctXrayRevenue + correctOtRevenue + correctEmergencyRevenue + correctMiscIncome;
+  // Hospital services revenue should match the HOSPITAL SERVICES section calculation
+  const correctHospitalServicesRevenue = correctLabRevenue + correctXrayRevenue + correctOtRevenue + totalEmergencyRevenue + correctMiscIncome;
   
   const summaryRows = [
     ['Hospital Services Revenue', formatPkrAmount(correctHospitalServicesRevenue)],
