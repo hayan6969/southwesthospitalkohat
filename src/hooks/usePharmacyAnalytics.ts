@@ -95,13 +95,11 @@ export const usePharmacyAnalytics = () => {
       const lastClosing = lastClosingResult.data?.[0];
 
       console.log('📊 Total invoices fetched:', allInvoices.length);
-      console.log('📊 Invoice IDs sample:', allInvoices.slice(0, 3).map(inv => inv.id));
 
-      // Fetch invoice items for profit calculations with invoice dates
+      // Fetch ALL invoice items without filtering - URL was too long with .in() filter
       const invoiceItemsResult = await supabase
         .from('pharmacy_invoice_items')
-        .select('*, medicines(purchase_price, selling_price, name)')
-        .in('invoice_id', allInvoices.map(inv => inv.id)); // Process all invoices for accurate profit
+        .select('*, medicines(purchase_price, selling_price, name)');
 
       console.log('📦 Invoice items query result:', {
         data: invoiceItemsResult.data?.length || 0,
