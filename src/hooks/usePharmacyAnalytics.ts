@@ -334,7 +334,7 @@ export const usePharmacyAnalytics = () => {
       // Calculate profit from all invoice items since last closing (including returns)
       const sinceClosingInvoiceItems = allInvoiceItems.filter(item => {
         const invoiceDate = toPakistanTime(new Date(item.invoice_created_at));
-        return invoiceDate >= lastClosingTime; // Use >= instead of > to match finance daily
+        return invoiceDate > lastClosingTime; // Use > to exclude items from the closed period
       });
       
       const sinceClosingProfit = sinceClosingInvoiceItems.reduce((sum, item) => {
