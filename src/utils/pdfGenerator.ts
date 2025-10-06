@@ -1413,9 +1413,11 @@ export const generateDailyClosingPDF = async (data: {
   
   drawSectionHeader('HOSPITAL CLOSING BALANCE CALCULATION');
 
-  // Calculate hospital net profit (using correct hospital revenue calculation)
-  // Hospital revenue for balance calculation should include pharmacy profit as per original logic
-  const hospitalNetProfit = data.hospitalRevenue - data.totalExpenses - data.totalRefunds;
+  // Calculate hospital net profit using services-only revenue (exclude pharmacy profit)
+  const computedHospitalRevenue = typeof correctHospitalServicesRevenue === 'number'
+    ? correctHospitalServicesRevenue
+    : data.hospitalRevenue;
+  const hospitalNetProfit = computedHospitalRevenue - data.totalExpenses - data.totalRefunds;
   const newClosingBalance = previousClosingBalance + hospitalNetProfit;
 
   // Hospital Balance Summary
@@ -1423,7 +1425,7 @@ export const generateDailyClosingPDF = async (data: {
   const balanceColWidths = [130, 50]; // Increased width for description
   const balanceRows = [
     ['Opening Balance (Previous Day)', formatPkrAmount(previousClosingBalance)],
-    ['Todays Hospital Revenue', formatPkrAmount(data.hospitalRevenue)],
+    ['Todays Hospital Revenue', formatPkrAmount(computedHospitalRevenue)],
     ['Todays Hospital Expenses', `(${formatPkrAmount(data.totalExpenses)})`],
     ['Todays Refunds', `(${formatPkrAmount(data.totalRefunds)})`],
     ['Todays Hospital Net Profit/Loss', formatPkrAmount(hospitalNetProfit)]

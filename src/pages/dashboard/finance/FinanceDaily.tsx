@@ -493,7 +493,7 @@ export default function FinanceDaily() {
         pharmacyProfit: dailyData.pharmacyProfit,
         totalExpenses: dailyData.totalExpenses,
         totalRefunds: dailyData.totalRefunds,
-        netProfit: (dailyData.totalHospitalRevenue + dailyData.pharmacyProfit) - dailyData.totalExpenses - dailyData.totalRefunds,
+        netProfit: (dailyData.totalHospitalRevenue) - dailyData.totalExpenses - dailyData.totalRefunds,
         transactionsData: {
           hospitalInvoices: detailedData.hospitalInvoices,
           pharmacyInvoices: detailedData.pharmacyInvoices,
