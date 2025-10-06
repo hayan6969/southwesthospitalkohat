@@ -80,40 +80,70 @@ export const useFinancialAnalytics = (selectedMonth?: Date) => {
 
       console.log('📊 Found', dailyClosings?.length || 0, 'daily closings for the month');
 
-      // Fetch pharmacy invoices for the month (completed invoices)
-      const { data: pharmacyInvoices } = await supabase
+      // Count pharmacy invoices for the month (completed invoices)
+      const { count: pharmacyBillsCount } = await supabase
         .from('pharmacy_invoices')
-        .select('*')
+        .select('*', { count: 'exact', head: true })
         .gte('created_at', monthStartISO)
         .lte('created_at', monthEndISO)
         .eq('status', 'completed');
 
-      // Fetch payroll records for the month
-      const { data: payrolls } = await supabase
+      // Get sum of pharmacy invoice amounts
+      const { data: pharmacyInvoices } = await supabase
+        .from('pharmacy_invoices')
+        .select('final_amount')
+        .gte('created_at', monthStartISO)
+        .lte('created_at', monthEndISO)
+        .eq('status', 'completed');
+
+      // Count payroll records for the month
+      const { count: payrollsCount } = await supabase
         .from('payroll')
-        .select('*')
+        .select('*', { count: 'exact', head: true })
         .eq('pay_period', format(targetDate, 'MMMM yyyy'))
         .eq('status', 'paid');
 
-      // Fetch hospital invoices for the month
-      const { data: hospitalInvoices } = await supabase
+      // Get sum of payroll amounts
+      const { data: payrolls } = await supabase
+        .from('payroll')
+        .select('net_salary')
+        .eq('pay_period', format(targetDate, 'MMMM yyyy'))
+        .eq('status', 'paid');
+
+      // Count hospital invoices for the month
+      const { count: hospitalInvoicesCount } = await supabase
         .from('invoices')
-        .select('*')
+        .select('*', { count: 'exact', head: true })
         .gte('created_at', monthStartISO)
         .lte('created_at', monthEndISO)
         .eq('status', 'paid');
 
-      // Fetch refunds for the month
+      // Get sum of hospital invoice amounts
+      const { data: hospitalInvoices } = await supabase
+        .from('invoices')
+        .select('amount')
+        .gte('created_at', monthStartISO)
+        .lte('created_at', monthEndISO)
+        .eq('status', 'paid');
+
+      // Get sum of refunds for the month
       const { data: refunds } = await supabase
         .from('refunds')
-        .select('*')
+        .select('amount')
         .gte('created_at', monthStartISO)
         .lte('created_at', monthEndISO);
 
-      // Fetch doctor payments for the month (all payments regardless of status)
+      // Count doctor payments for the month
+      const { count: doctorPaymentsCount } = await supabase
+        .from('doctor_payments')
+        .select('*', { count: 'exact', head: true })
+        .gte('period_start', monthStartDate)
+        .lte('period_end', monthEndDate);
+
+      // Get sum of doctor payment amounts
       const { data: doctorPayments } = await supabase
         .from('doctor_payments')
-        .select('*')
+        .select('total_earnings')
         .gte('period_start', monthStartDate)
         .lte('period_end', monthEndDate);
 
@@ -225,19 +255,19 @@ export const useFinancialAnalytics = (selectedMonth?: Date) => {
       const hospitalProfitWithoutPharmacy = totalHospitalRevenue - totalExpenses;
       const hospitalProfitWithPharmacy = hospitalProfitWithoutPharmacy + totalPharmacyProfit;
 
-      // Calculate additional metrics
-      const pharmacyBillsPaidCount = pharmacyInvoices?.length || 0;
+      // Calculate additional metrics using counts and sums
+      const pharmacyBillsPaidCount = pharmacyBillsCount || 0;
       const pharmacyBillsPaidAmount = pharmacyInvoices?.reduce((sum, inv) => sum + (Number(inv.final_amount) || 0), 0) || 0;
       
-      const payrollsPaidCount = payrolls?.length || 0;
+      const payrollsPaidCount = payrollsCount || 0;
       const payrollsPaidAmount = payrolls?.reduce((sum, p) => sum + (Number(p.net_salary) || 0), 0) || 0;
       
-      const totalInvoicesCount = hospitalInvoices?.length || 0;
+      const totalInvoicesCount = hospitalInvoicesCount || 0;
       const totalInvoicesAmount = hospitalInvoices?.reduce((sum, inv) => sum + (Number(inv.amount) || 0), 0) || 0;
       
       const totalRefunds = refunds?.reduce((sum, r) => sum + (Number(r.amount) || 0), 0) || 0;
       
-      const doctorPaymentsPaidCount = doctorPayments?.length || 0;
+      const doctorPaymentsPaidCount = doctorPaymentsCount || 0;
       const doctorPaymentsPaidAmount = doctorPayments?.reduce((sum, dp) => sum + (Number(dp.total_earnings) || 0), 0) || 0;
 
       console.log('💰 Calculated Financial Metrics from Daily Closings:', {
