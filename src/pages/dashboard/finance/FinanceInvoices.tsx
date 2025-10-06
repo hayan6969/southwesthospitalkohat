@@ -39,16 +39,34 @@ export default function FinanceInvoices() {
     }
   });
 
-  // Fetch ALL pharmacy invoices (no pagination, we'll paginate client-side after filtering)
+  // Fetch ALL pharmacy invoices in batches (no limit)
   const { data: pharmacyInvoices, isLoading: pharmacyLoading } = useQuery({
     queryKey: ['pharmacy-invoices-all'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('pharmacy_invoices')
-        .select('*')
-        .order('created_at', { ascending: false });
-      if (error) throw error;
-      return data || [];
+      let allInvoices: any[] = [];
+      let start = 0;
+      const batchSize = 1000;
+      let hasMore = true;
+
+      while (hasMore) {
+        const { data, error } = await supabase
+          .from('pharmacy_invoices')
+          .select('*')
+          .order('created_at', { ascending: false })
+          .range(start, start + batchSize - 1);
+
+        if (error) throw error;
+        
+        if (data && data.length > 0) {
+          allInvoices = [...allInvoices, ...data];
+          start += batchSize;
+          hasMore = data.length === batchSize;
+        } else {
+          hasMore = false;
+        }
+      }
+
+      return allInvoices;
     }
   });
 
