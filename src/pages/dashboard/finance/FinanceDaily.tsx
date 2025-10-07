@@ -385,41 +385,249 @@ export default function FinanceDaily() {
   // Create daily closing mutation
   const createClosingMutation = useMutation({
     mutationFn: async () => {
-      if (!detailedData || !dailyData) throw new Error('No data available');
+      // CRITICAL: Capture closing time FIRST, then recalculate all data with this exact timestamp
+      const closingTimestamp = getCurrentPakistanTime().toISOString();
+      
+      console.log('🔒 DAILY CLOSING - Starting with exact timestamp:', closingTimestamp);
+      
+      // Get last closing to determine lower bound
+      const { data: lastClosingData } = await supabase.rpc('get_last_daily_closing');
+      const lastClosing = lastClosingData?.[0];
+      
+      // Determine cutoff time (lower bound) - use AFTER last closing time
+      let cutoffTime: string;
+      if (lastClosing) {
+        cutoffTime = lastClosing.closing_time;
+        console.log('📊 Using last closing time as lower bound:', cutoffTime);
+      } else {
+        const selectedDatePakTime = toPakistanTime(new Date(`${targetDate}T00:00:00`));
+        cutoffTime = selectedDatePakTime.toISOString();
+        console.log('📊 No previous closing, using start of day:', cutoffTime);
+      }
+      
+      // Upper bound is the exact closing timestamp we just captured
+      const upperBound = closingTimestamp;
+      
+      console.log('📊 Exact time range for closing:');
+      console.log('   FROM (exclusive):', cutoffTime, '→', formatInPakistanTime(new Date(cutoffTime), 'MMM d, yyyy h:mm:ss a'));
+      console.log('   TO (inclusive):', upperBound, '→', formatInPakistanTime(new Date(upperBound), 'MMM d, yyyy h:mm:ss a'));
 
-      // Use Pakistani time for closing
-      const pakistanNow = getCurrentPakistanTime();
+      // Fetch ALL data with EXACT timestamp bounds
+      const [
+        hospitalInvoicesRes,
+        pharmacyInvoicesRes,
+        labInvoicesRes,
+        xrayReportsRes,
+        otSchedulesRes,
+        emergencyAppointmentsRes,
+        expensesRes,
+        refundsRes,
+        pharmacyExpensesRes,
+        pharmacyAccountRes,
+        totalStockRes,
+        miscellaneousIncomeRes
+      ] = await Promise.all([
+        supabase.from('invoices')
+          .select('*, patients(id, profiles(first_name, last_name))')
+          .eq('status', 'paid')
+          .gt('created_at', cutoffTime)
+          .lte('created_at', upperBound),
+        
+        supabase.from('pharmacy_invoices')
+          .select(`
+            *,
+            pharmacy_invoice_items(
+              quantity,
+              unit_price,
+              total_price,
+              medicine_id,
+              medicines(name, purchase_price, selling_price)
+            )
+          `)
+          .gt('created_at', cutoffTime)
+          .lte('created_at', upperBound),
+        
+        supabase.from('invoices')
+          .select('*, patients(id, profiles(first_name, last_name))')
+          .eq('status', 'paid')
+          .like('invoice_number', 'LAB-%')
+          .gt('created_at', cutoffTime)
+          .lte('created_at', upperBound),
+        
+        supabase.from('xray_reports')
+          .select('*, patients(profiles(first_name, last_name))')
+          .not('price', 'is', null)
+          .gt('created_at', cutoffTime)
+          .lte('created_at', upperBound),
+        
+        supabase.from('ot_schedules')
+          .select('*, patients(profiles(first_name, last_name))')
+          .in('status', ['completed', 'pending'])
+          .gt('created_at', cutoffTime)
+          .lte('created_at', upperBound),
+        
+        supabase.from('appointments')
+          .select('*, patients(profiles(first_name, last_name))')
+          .ilike('type', 'emergency')
+          .eq('status', 'completed')
+          .gt('appointment_date', cutoffTime)
+          .lte('appointment_date', upperBound),
+        
+        supabase.from('expenses')
+          .select('*')
+          .gt('created_at', cutoffTime)
+          .lte('created_at', upperBound),
+        
+        supabase.from('refunds')
+          .select('*')
+          .gt('created_at', cutoffTime)
+          .lte('created_at', upperBound),
+        
+        supabase.from('pharmacy_expenses')
+          .select('*')
+          .gt('expense_date', cutoffTime)
+          .lte('expense_date', upperBound),
+        
+        supabase.from('pharmacy_account')
+          .select('*')
+          .order('created_at', { ascending: false })
+          .limit(1),
+        
+        supabase.from('medicines')
+          .select('stock_quantity, purchase_price'),
+        
+        supabase.from('miscellaneous_income')
+          .select('*')
+          .gt('created_at', cutoffTime)
+          .lte('created_at', upperBound)
+      ]);
+
+      const hospitalInvoices = hospitalInvoicesRes.data || [];
+      const pharmacyInvoices = pharmacyInvoicesRes.data || [];
+      const labInvoices = labInvoicesRes.data || [];
+      const xrayReports = xrayReportsRes.data || [];
+      const otSchedules = otSchedulesRes.data || [];
+      const emergencyAppointments = emergencyAppointmentsRes.data || [];
+      const expenses = expensesRes.data || [];
+      const refunds = refundsRes.data || [];
+      const pharmacyExpenses = pharmacyExpensesRes.data || [];
+      const pharmacyAccount = pharmacyAccountRes.data?.[0] || null;
+      const totalStock = totalStockRes.data || [];
+      const miscellaneousIncome = miscellaneousIncomeRes.data || [];
+
+      console.log('✅ Data fetched with exact timestamps:');
+      console.log('   Hospital invoices:', hospitalInvoices.length);
+      console.log('   Lab invoices:', labInvoices.length, '→ Rs.', labInvoices.reduce((s, i) => s + (i.amount || 0), 0));
+      console.log('   Pharmacy invoices:', pharmacyInvoices.length);
+      console.log('   X-ray reports:', xrayReports.length);
+      console.log('   OT schedules:', otSchedules.length);
+
+      // Calculate revenues with exact data
+      const emergencyAppointmentRevenue = emergencyAppointments.reduce((sum, apt) => 
+        sum + (apt.consultation_fee_at_time || 0), 0);
+      const emergencyInvoiceRevenue = hospitalInvoices
+        .filter(inv => inv.description?.toLowerCase().includes('emergency') || inv.emergency_patient_data)
+        .reduce((sum, inv) => sum + Number(inv.amount), 0);
+      const emergencyRevenue = emergencyAppointmentRevenue + emergencyInvoiceRevenue;
+
+      // Pharmacy calculations
+      let pharmacyRevenue = 0;
+      let pharmacyProfit = 0;
+      let pharmacyReturnsFromInvoices = 0;
+      
+      const positiveInvoices = pharmacyInvoices.filter(inv => (inv.final_amount || 0) >= 0);
+      const negativeInvoices = pharmacyInvoices.filter(inv => (inv.final_amount || 0) < 0);
+      
+      pharmacyReturnsFromInvoices = Math.abs(negativeInvoices.reduce((sum, inv) => sum + (inv.final_amount || 0), 0));
+      const grossPharmacyRevenue = positiveInvoices.reduce((sum, inv) => sum + (inv.final_amount || 0), 0);
+      pharmacyRevenue = grossPharmacyRevenue - pharmacyReturnsFromInvoices;
+      
+      const grossPharmacyProfit = positiveInvoices.reduce((totalProfit, invoice) => {
+        const invoiceProfit = (invoice.pharmacy_invoice_items || []).reduce((itemsProfit, item) => {
+          if (item.medicines && item.medicines.purchase_price) {
+            const profitPerUnit = item.unit_price - item.medicines.purchase_price;
+            return itemsProfit + (profitPerUnit * item.quantity);
+          }
+          return itemsProfit;
+        }, 0);
+        return totalProfit + invoiceProfit;
+      }, 0);
+      
+      const returnsProfit = negativeInvoices.reduce((totalProfit, invoice) => {
+        const invoiceProfit = (invoice.pharmacy_invoice_items || []).reduce((itemsProfit, item) => {
+          if (item.medicines && item.medicines.purchase_price) {
+            const profitPerUnit = item.unit_price - item.medicines.purchase_price;
+            return itemsProfit + (profitPerUnit * Math.abs(item.quantity));
+          }
+          return itemsProfit;
+        }, 0);
+        return totalProfit + invoiceProfit;
+      }, 0);
+      
+      pharmacyProfit = grossPharmacyProfit - returnsProfit;
+
+      // Other revenue calculations
+      const labRevenue = labInvoices.reduce((sum, inv) => sum + (inv.amount || 0), 0);
+      const xrayRevenue = xrayReports.reduce((sum, xray) => sum + (xray.price || 0), 0);
+      const otHospitalRevenue = otSchedules.reduce((sum, ot) => 
+        sum + ((ot.total_cost || 0) - (ot.doctor_expense || 0)), 0);
+      const miscIncome = miscellaneousIncome.reduce((sum, income) => sum + (income.amount || 0), 0);
+      const totalExpenses = expenses.reduce((sum, exp) => sum + exp.amount, 0);
+      const totalRefunds = refunds.reduce((sum, ref) => sum + ref.amount, 0);
+
+      const totalHospitalRevenue = emergencyRevenue + labRevenue + xrayRevenue + otHospitalRevenue + miscIncome;
+      const totalStockValue = totalStock.reduce((sum, medicine) => 
+        sum + (medicine.stock_quantity * medicine.purchase_price), 0);
+
+      console.log('💰 Final calculations:');
+      console.log('   Emergency Revenue:', emergencyRevenue);
+      console.log('   Lab Revenue:', labRevenue, '← from', labInvoices.length, 'invoices');
+      console.log('   X-ray Revenue:', xrayRevenue);
+      console.log('   OT Hospital Revenue:', otHospitalRevenue);
+      console.log('   Misc Income:', miscIncome);
+      console.log('   Total Hospital Revenue:', totalHospitalRevenue);
+      console.log('   Pharmacy Revenue:', pharmacyRevenue);
+      console.log('   Pharmacy Profit:', pharmacyProfit);
+      console.log('   Total Expenses:', totalExpenses);
+      console.log('   Total Refunds:', totalRefunds);
+
       const closingData = {
         closingDate: targetDate,
-        closingTime: pakistanNow.toISOString(),
-        // Store in ISO format but it's Pakistani time
-        dayName: formatInPakistanTime(pakistanNow, 'EEEE'),
-        hospitalRevenue: dailyData.totalHospitalRevenue,
-        pharmacyRevenue: dailyData.pharmacyRevenue,
-        pharmacyProfit: dailyData.pharmacyProfit,
-        totalExpenses: dailyData.totalExpenses,
-        totalRefunds: dailyData.totalRefunds,
-        netProfit: dailyData.totalHospitalRevenue - dailyData.totalExpenses - dailyData.totalRefunds,
+        closingTime: closingTimestamp,
+        dayName: formatInPakistanTime(new Date(closingTimestamp), 'EEEE'),
+        hospitalRevenue: totalHospitalRevenue,
+        pharmacyRevenue: pharmacyRevenue,
+        pharmacyProfit: pharmacyProfit,
+        totalExpenses: totalExpenses,
+        totalRefunds: totalRefunds,
+        netProfit: totalHospitalRevenue - totalExpenses - totalRefunds,
         transactionsData: {
-          hospitalInvoices: detailedData.hospitalInvoices,
-          pharmacyInvoices: detailedData.pharmacyInvoices,
-          labReports: detailedData.labReports,
-          xrayReports: detailedData.xrayReports,
-          otSchedules: detailedData.otSchedules,
-          emergencyAppointments: detailedData.emergencyAppointments,
-          expenses: detailedData.expenses,
-          refunds: detailedData.refunds,
-          pharmacyExpenses: detailedData.pharmacyExpenses,
-          miscellaneousIncome: detailedData.miscellaneousIncome,
-          pharmacyAccount: detailedData.pharmacyAccount,
-          totalStockValue: detailedData.totalStockValue
+          hospitalInvoices,
+          pharmacyInvoices,
+          labReports: labInvoices,
+          xrayReports,
+          otSchedules,
+          emergencyAppointments,
+          expenses,
+          refunds,
+          pharmacyExpenses,
+          miscellaneousIncome,
+          pharmacyAccount,
+          totalStockValue,
+          // Store exact timestamp bounds for audit trail
+          cutoffTime,
+          closingTimestamp
         }
       };
 
+      console.log('💾 Creating daily closing record with EXACT timestamp:', closingData.closingTime);
+      console.log('📊 Closing contains:');
+      console.log('   Lab invoices:', labInvoices.length, '→ Total: Rs.', labRevenue);
+      console.log('   First lab invoice:', labInvoices[0]?.invoice_number, '→', labInvoices[0]?.created_at);
+      console.log('   Last lab invoice:', labInvoices[labInvoices.length - 1]?.invoice_number, '→', labInvoices[labInvoices.length - 1]?.created_at);
+      
       // Create the daily closing record
-      const {
-        error
-      } = await supabase.rpc('create_daily_closing', {
+      const { error } = await supabase.rpc('create_daily_closing', {
         p_closing_date: closingData.closingDate,
         p_closing_time: closingData.closingTime,
         p_day_name: closingData.dayName,
@@ -431,7 +639,14 @@ export default function FinanceDaily() {
         p_net_profit: closingData.netProfit,
         p_transactions_data: closingData.transactionsData
       });
-      if (error) throw error;
+      
+      if (error) {
+        console.error('❌ Failed to create daily closing:', error);
+        throw error;
+      }
+      
+      console.log('✅ Daily closing created successfully with exact timestamp range');
+      console.log('   Next closing will use time > ', closingData.closingTime);
 
       // Update hospital closing balance with the new balance
       // Get current closing balance
@@ -479,9 +694,12 @@ export default function FinanceDaily() {
     onSuccess: () => {
       toast.success('Daily closing completed successfully! PDF report generated.');
       setShowClosingDialog(false);
-      queryClient.invalidateQueries({
-        queryKey: ['last-daily-closing']
-      });
+      // Invalidate all related queries to refresh the UI
+      queryClient.invalidateQueries({ queryKey: ['last-daily-closing'] });
+      queryClient.invalidateQueries({ queryKey: ['last-closing-info'] });
+      queryClient.invalidateQueries({ queryKey: ['daily-finance'] });
+      queryClient.invalidateQueries({ queryKey: ['daily-detailed'] });
+      queryClient.invalidateQueries({ queryKey: ['daily-closings'] });
     },
     onError: error => {
       toast.error('Failed to create daily closing: ' + error.message);
