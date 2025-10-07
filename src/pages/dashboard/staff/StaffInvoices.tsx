@@ -377,7 +377,13 @@ export default function StaffInvoices() {
                   className="pl-10"
                 />
               </div>
-              <Select value={filterType} onValueChange={setFilterType}>
+              <Select value={filterType} onValueChange={(val) => {
+                setFilterType(val);
+                setCurrentPage(1);
+                if (val === 'pharmacy') {
+                  setSearchTerm(''); // Ensure search doesn't hide pharmacy invoices
+                }
+              }}>
                 <SelectTrigger className="w-full sm:w-[200px]">
                   <Filter className="h-4 w-4 mr-2" />
                   <SelectValue placeholder="Filter by type" />
