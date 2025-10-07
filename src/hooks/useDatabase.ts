@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { getCurrentPakistanDate, formatInPakistanTime } from '@/utils/timezone';
 
 export const useStats = () => {
   return useQuery({
@@ -511,7 +512,7 @@ export const usePharmacyStats = () => {
         supabase.from('medicines').select('*', { count: 'exact', head: true }),
         supabase.from('pharmacy_invoices').select('*', { count: 'exact', head: true }),
         supabase.from('medicines').select('id').lte('stock_quantity', 10),
-        supabase.from('medicines').select('id').lt('expiry_date', new Date().toISOString().split('T')[0]),
+        supabase.from('medicines').select('id').lt('expiry_date', getCurrentPakistanDate()),
         supabase.from('pharmacy_invoices').select('final_amount')
       ]);
 

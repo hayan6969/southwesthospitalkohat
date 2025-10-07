@@ -415,7 +415,9 @@ export default function OfflineModePharmacy() {
             total_amount: sale.total_amount,
             discount_amount: sale.discount_amount,
             final_amount: sale.final_amount,
-            status: 'completed'
+            status: 'completed',
+            // Preserve original offline sale timestamp (stored as UTC ISO)
+            created_at: sale.created_at,
           })
           .select()
           .single();
@@ -424,6 +426,8 @@ export default function OfflineModePharmacy() {
           console.error('Error creating invoice:', invoiceError);
           continue;
         }
+
+        console.log('Uploaded pharmacy invoice timestamps:', { server_created_at: invoice.created_at, original_offline_created_at: sale.created_at });
 
         // Create invoice items
         for (const item of sale.items) {

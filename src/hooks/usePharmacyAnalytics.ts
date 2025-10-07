@@ -405,7 +405,7 @@ export const usePharmacyAnalytics = () => {
       // Stock analysis
       const totalMedicines = medicines.length;
       const lowStockCount = medicines.filter(m => m.stock_quantity <= (m.minimum_stock_level || 10)).length;
-      const expiredCount = medicines.filter(m => new Date(m.expiry_date) < new Date()).length;
+      const expiredCount = medicines.filter(m => new Date(m.expiry_date) < getCurrentPakistanTime()).length;
 
       // Profit margins - calculate overall profit correctly
       const totalRevenue = salesInvoices.reduce((sum, inv) => sum + inv.final_amount, 0);
