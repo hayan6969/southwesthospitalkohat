@@ -18,7 +18,6 @@ import { toast } from "sonner";
 import { HospitalClosingBalanceDialog } from "@/components/dialogs/HospitalClosingBalanceDialog";
 import { PreviousClosingsDialog } from "@/components/dialogs/PreviousClosingsDialog";
 import { getCurrentPakistanTime, toPakistanTime, formatInPakistanTime } from "@/utils/timezone";
-
 export default function FinanceDaily() {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [showClosingDialog, setShowClosingDialog] = useState(false);
@@ -33,29 +32,37 @@ export default function FinanceDaily() {
     const day = String(date.getDate()).padStart(2, '0');
     return `${year}-${month}-${day}`;
   };
-
   const targetDate = formatDateForQuery(selectedDate);
 
   // Fetch daily finance data
   // First get the last closing info for the query key
-  const { data: lastClosingInfo } = useQuery({
+  const {
+    data: lastClosingInfo
+  } = useQuery({
     queryKey: ['last-closing-info'],
     queryFn: async () => {
-      const { data } = await supabase.rpc('get_last_daily_closing');
+      const {
+        data
+      } = await supabase.rpc('get_last_daily_closing');
       return data?.[0] || null;
     }
   });
-
-  const { data: dailyData, isLoading, refetch } = useQuery({
+  const {
+    data: dailyData,
+    isLoading,
+    refetch
+  } = useQuery({
     queryKey: ['daily-finance', targetDate, lastClosingInfo?.closing_time],
     queryFn: async () => {
       console.log('🔍 Daily Finance Query STARTED for date:', targetDate);
       console.log('🔍 Last closing info in query key:', lastClosingInfo);
-      
+
       // First, get the last daily closing to determine the cutoff time
-      const { data: lastClosingData } = await supabase.rpc('get_last_daily_closing');
+      const {
+        data: lastClosingData
+      } = await supabase.rpc('get_last_daily_closing');
       const lastClosing = lastClosingData?.[0];
-      
+
       // Determine the time cutoff for filtering - use the same logic as detailed query
       let cutoffTime: string;
       if (lastClosing && lastClosing.closing_date !== targetDate) {
@@ -69,13 +76,12 @@ export default function FinanceDaily() {
         const selectedDatePakTime = toPakistanTime(new Date(`${targetDate}T00:00:00`));
         cutoffTime = selectedDatePakTime.toISOString();
       }
-      
+
       // Current time for upper bound (only for today's date) in Pakistani timezone
       const currentPakTime = getCurrentPakistanTime();
       const selectedDatePakTime = toPakistanTime(new Date(`${targetDate}T00:00:00`));
       const isToday = currentPakTime.toDateString() === selectedDatePakTime.toDateString();
       const upperBound = isToday ? currentPakTime.toISOString() : toPakistanTime(new Date(`${targetDate}T23:59:59`)).toISOString();
-      
       console.log('Filtering activities from:', cutoffTime, 'to:', upperBound);
       console.log('Last closing details:', lastClosing ? {
         id: lastClosing.id,
@@ -85,15 +91,12 @@ export default function FinanceDaily() {
       } : 'No previous closing found');
 
       // Hospital invoices (consultations) - filter based on cutoff time (AFTER closing, not AT)
-      const { data: hospitalInvoices } = await supabase
-        .from('invoices')
-        .select('amount, created_at, description, emergency_patient_data')
-        .eq('status', 'paid')
-        .gt('created_at', cutoffTime)  // Use gt (>) not gte (>=) to exclude boundary
-        .lte('created_at', upperBound);
-
+      const {
+        data: hospitalInvoices
+      } = await supabase.from('invoices').select('amount, created_at, description, emergency_patient_data').eq('status', 'paid').gt('created_at', cutoffTime) // Use gt (>) not gte (>=) to exclude boundary
+      .lte('created_at', upperBound);
       console.log('Hospital invoices found:', hospitalInvoices?.length, hospitalInvoices);
-      
+
       // Log each hospital invoice to verify time filtering
       if (hospitalInvoices && hospitalInvoices.length > 0) {
         console.log('Hospital invoice details:', hospitalInvoices.map(inv => ({
@@ -104,9 +107,9 @@ export default function FinanceDaily() {
       }
 
       // Pharmacy invoices with items for profit calculation - filter based on cutoff time
-      const { data: pharmacyInvoicesWithItems } = await supabase
-        .from('pharmacy_invoices')
-        .select(`
+      const {
+        data: pharmacyInvoicesWithItems
+      } = await supabase.from('pharmacy_invoices').select(`
           *,
           pharmacy_invoice_items(
             quantity,
@@ -115,12 +118,10 @@ export default function FinanceDaily() {
             medicine_id,
             medicines(purchase_price, selling_price)
           )
-        `)
-        .gt('created_at', cutoffTime)  // Use gt (>) not gte (>=) to exclude boundary
-        .lte('created_at', upperBound);
-
+        `).gt('created_at', cutoffTime) // Use gt (>) not gte (>=) to exclude boundary
+      .lte('created_at', upperBound);
       console.log('Pharmacy invoices found:', pharmacyInvoicesWithItems?.length, pharmacyInvoicesWithItems);
-      
+
       // Log each pharmacy invoice to verify time filtering
       if (pharmacyInvoicesWithItems && pharmacyInvoicesWithItems.length > 0) {
         console.log('Pharmacy invoice details:', pharmacyInvoicesWithItems.map(inv => ({
@@ -131,133 +132,107 @@ export default function FinanceDaily() {
       }
 
       // Lab invoices - filter based on cutoff time (use actual invoice amounts for revenue)
-      const { data: labInvoices } = await supabase
-        .from('invoices')
-        .select('amount, created_at, description, invoice_number, status')
-        .eq('status', 'paid')
-        .like('invoice_number', 'LAB-%')
-        .gt('created_at', cutoffTime)  // Use gt (>) not gte (>=) to exclude boundary
-        .lte('created_at', upperBound);
-
+      const {
+        data: labInvoices
+      } = await supabase.from('invoices').select('amount, created_at, description, invoice_number, status').eq('status', 'paid').like('invoice_number', 'LAB-%').gt('created_at', cutoffTime) // Use gt (>) not gte (>=) to exclude boundary
+      .lte('created_at', upperBound);
       console.log('Lab invoices found:', labInvoices?.length, labInvoices);
 
       // X-ray reports - filter based on cutoff time (include both completed and pending with prices)
-      const { data: xrayReports } = await supabase
-        .from('xray_reports')
-        .select('price, created_at, test_name, status')
-        .not('price', 'is', null)
-        .gt('created_at', cutoffTime)  // Use gt (>) not gte (>=) to exclude boundary
-        .lte('created_at', upperBound);
-
+      const {
+        data: xrayReports
+      } = await supabase.from('xray_reports').select('price, created_at, test_name, status').not('price', 'is', null).gt('created_at', cutoffTime) // Use gt (>) not gte (>=) to exclude boundary
+      .lte('created_at', upperBound);
       console.log('X-ray reports found:', xrayReports?.length, xrayReports);
 
       // OT schedules - filter based on cutoff time and include both completed and scheduled
-      const { data: otSchedules } = await supabase
-        .from('ot_schedules')
-        .select('total_cost, doctor_expense, created_at, operation_date, status')
-        .in('status', ['completed', 'pending'])
-        .gt('created_at', cutoffTime)  // Use gt (>) not gte (>=) to exclude boundary
-        .lte('created_at', upperBound);
-
+      const {
+        data: otSchedules
+      } = await supabase.from('ot_schedules').select('total_cost, doctor_expense, created_at, operation_date, status').in('status', ['completed', 'pending']).gt('created_at', cutoffTime) // Use gt (>) not gte (>=) to exclude boundary
+      .lte('created_at', upperBound);
       console.log('OT schedules found:', otSchedules?.length, otSchedules);
 
       // Emergency consultations - filter based on cutoff time
-      const { data: emergencyAppointments } = await supabase
-        .from('appointments')
-        .select('consultation_fee_at_time, type, status, appointment_date')
-        .ilike('type', 'emergency')
-        .eq('status', 'completed')
-        .gte('appointment_date', cutoffTime)
-        .lte('appointment_date', upperBound);
-
+      const {
+        data: emergencyAppointments
+      } = await supabase.from('appointments').select('consultation_fee_at_time, type, status, appointment_date').ilike('type', 'emergency').eq('status', 'completed').gte('appointment_date', cutoffTime).lte('appointment_date', upperBound);
       console.log('Emergency appointments found:', emergencyAppointments?.length, emergencyAppointments);
 
       // Daily expenses - filter based on cutoff time
-      const { data: expenses } = await supabase
-        .from('expenses')
-        .select('amount, expense_date, created_at')
-        .gt('created_at', cutoffTime)  // Use gt (>) not gte (>=) to exclude boundary
-        .lte('created_at', upperBound);
-
+      const {
+        data: expenses
+      } = await supabase.from('expenses').select('amount, expense_date, created_at').gt('created_at', cutoffTime) // Use gt (>) not gte (>=) to exclude boundary
+      .lte('created_at', upperBound);
       console.log('Expenses found:', expenses?.length, expenses);
 
       // Refunds for the period - filter based on cutoff time
-      const { data: refunds } = await supabase
-        .from('refunds')
-        .select('amount, refund_type, description, created_at')
-        .gt('created_at', cutoffTime)  // Use gt (>) not gte (>=) to exclude boundary
-        .lte('created_at', upperBound);
-
+      const {
+        data: refunds
+      } = await supabase.from('refunds').select('amount, refund_type, description, created_at').gt('created_at', cutoffTime) // Use gt (>) not gte (>=) to exclude boundary
+      .lte('created_at', upperBound);
       console.log('Refunds found:', refunds?.length, refunds);
 
       // Miscellaneous income - filter based on cutoff time
-      const { data: miscIncome } = await supabase
-        .from('miscellaneous_income')
-        .select('amount, description, created_at')
-        .gt('created_at', cutoffTime)  // Use gt (>) not gte (>=) to exclude boundary
-        .lte('created_at', upperBound);
-
+      const {
+        data: miscIncome
+      } = await supabase.from('miscellaneous_income').select('amount, description, created_at').gt('created_at', cutoffTime) // Use gt (>) not gte (>=) to exclude boundary
+      .lte('created_at', upperBound);
       console.log('Miscellaneous income found:', miscIncome?.length, miscIncome);
 
       // Calculate totals
       // Hospital revenue ONLY from emergency consultations (regular consultations go to doctors)
       // Include both emergency appointments and emergency invoices
       const emergencyAppointmentRevenue = emergencyAppointments?.reduce((sum, apt) => sum + (apt.consultation_fee_at_time || 0), 0) || 0;
-      const emergencyInvoiceRevenue = hospitalInvoices?.filter(inv => 
-        inv.description?.toLowerCase().includes('emergency') || 
-        inv.emergency_patient_data
-      )?.reduce((sum, inv) => sum + Number(inv.amount), 0) || 0;
+      const emergencyInvoiceRevenue = hospitalInvoices?.filter(inv => inv.description?.toLowerCase().includes('emergency') || inv.emergency_patient_data)?.reduce((sum, inv) => sum + Number(inv.amount), 0) || 0;
       const emergencyRevenue = emergencyAppointmentRevenue + emergencyInvoiceRevenue;
-      
+
       // Calculate pharmacy revenue and profit correctly
       let pharmacyRevenue = 0;
       let pharmacyProfit = 0;
       let pharmacyReturnsFromInvoices = 0;
-      
       if (pharmacyInvoicesWithItems) {
         // Separate positive (sales) and negative (returns) amounts
         const positiveInvoices = pharmacyInvoicesWithItems.filter(inv => (inv.final_amount || 0) >= 0);
         const negativeInvoices = pharmacyInvoicesWithItems.filter(inv => (inv.final_amount || 0) < 0);
-        
+
         // Returns from negative invoices (make positive for display)
         pharmacyReturnsFromInvoices = Math.abs(negativeInvoices.reduce((sum, inv) => sum + (inv.final_amount || 0), 0));
-        
+
         // Calculate gross revenue from positive sales
         const grossPharmacyRevenue = positiveInvoices.reduce((sum, inv) => sum + (inv.final_amount || 0), 0);
-        
+
         // Net revenue after subtracting full return amounts
         pharmacyRevenue = grossPharmacyRevenue - pharmacyReturnsFromInvoices;
-        
+
         // Calculate gross profit only from positive sales based on actual unit price - purchase price
         const grossPharmacyProfit = positiveInvoices.reduce((totalProfit, invoice) => {
           const invoiceProfit = (invoice.pharmacy_invoice_items || []).reduce((itemsProfit, item) => {
             if (item.medicines && item.medicines.purchase_price) {
               // Use unit_price (actual charged price including discounts) not selling_price
               const profitPerUnit = item.unit_price - item.medicines.purchase_price;
-              return itemsProfit + (profitPerUnit * item.quantity);
+              return itemsProfit + profitPerUnit * item.quantity;
             }
             return itemsProfit;
           }, 0);
           return totalProfit + invoiceProfit;
         }, 0);
-        
+
         // Calculate profit portion of returns (only the profit lost, not the full return amount)
         const returnsProfit = negativeInvoices.reduce((totalProfit, invoice) => {
           const invoiceProfit = (invoice.pharmacy_invoice_items || []).reduce((itemsProfit, item) => {
             if (item.medicines && item.medicines.purchase_price) {
               // Use unit_price (actual charged price including discounts) not selling_price
               const profitPerUnit = item.unit_price - item.medicines.purchase_price;
-              return itemsProfit + (profitPerUnit * Math.abs(item.quantity)); // Use absolute value for returns
+              return itemsProfit + profitPerUnit * Math.abs(item.quantity); // Use absolute value for returns
             }
             return itemsProfit;
           }, 0);
           return totalProfit + invoiceProfit;
         }, 0);
-        
+
         // Calculate NET pharmacy profit (gross profit minus only the profit portion of returns)
         pharmacyProfit = grossPharmacyProfit - returnsProfit;
       }
-      
       const labRevenue = labInvoices?.reduce((sum, inv) => sum + (inv.amount || 0), 0) || 0;
       const xrayRevenue = xrayReports?.reduce((sum, xray) => sum + (xray.price || 0), 0) || 0;
       const otHospitalRevenue = otSchedules?.reduce((sum, ot) => sum + ((ot.total_cost || 0) - (ot.doctor_expense || 0)), 0) || 0;
@@ -273,7 +248,6 @@ export default function FinanceDaily() {
       const otRefunds = refunds?.filter(r => r.refund_type.includes('ot'))?.reduce((sum, r) => sum + r.amount, 0) || 0;
       const pharmacyRefunds = pharmacyReturnsFromInvoices + (refunds?.filter(r => r.refund_type === 'pharmacy_invoice')?.reduce((sum, r) => sum + r.amount, 0) || 0);
       const otherRefunds = refunds?.filter(r => !r.refund_type.includes('ot') && r.refund_type !== 'pharmacy_invoice')?.reduce((sum, r) => sum + r.amount, 0) || 0;
-
       console.log('Calculated values:', {
         emergencyRevenue,
         pharmacyRevenue,
@@ -293,7 +267,6 @@ export default function FinanceDaily() {
         upperBoundUsed: upperBound,
         lastClosingInfo: lastClosing ? formatInPakistanTime(new Date(lastClosing.closing_time), 'MMM d, yyyy h:mm a') : 'None'
       });
-
       return {
         emergencyRevenue,
         pharmacyRevenue,
@@ -314,16 +287,20 @@ export default function FinanceDaily() {
         cutoffTime: cutoffTime
       };
     },
-    refetchInterval: 30000, // Refresh every 30 seconds
+    refetchInterval: 30000 // Refresh every 30 seconds
   });
 
   // Fetch detailed transactions for closing
-  const { data: detailedData } = useQuery({
+  const {
+    data: detailedData
+  } = useQuery({
     queryKey: ['daily-detailed', targetDate],
     queryFn: async () => {
-      const { data: lastClosingData } = await supabase.rpc('get_last_daily_closing');
+      const {
+        data: lastClosingData
+      } = await supabase.rpc('get_last_daily_closing');
       const lastClosing = lastClosingData?.[0];
-      
+
       // Determine the time cutoff for filtering detailed data
       let cutoffTime: string;
       if (lastClosing && lastClosing.closing_date !== targetDate) {
@@ -337,7 +314,7 @@ export default function FinanceDaily() {
         const selectedDatePakTime = toPakistanTime(new Date(`${targetDate}T00:00:00`));
         cutoffTime = selectedDatePakTime.toISOString();
       }
-      
+
       // Current time for upper bound (only for today's date) in Pakistani timezone
       const currentPakTime = getCurrentPakistanTime();
       const selectedDatePakTime = toPakistanTime(new Date(`${targetDate}T00:00:00`));
@@ -345,30 +322,8 @@ export default function FinanceDaily() {
       const upperBound = isToday ? currentPakTime.toISOString() : toPakistanTime(new Date(`${targetDate}T23:59:59`)).toISOString();
 
       // Fetch all detailed transaction data using proper time filtering
-      const [
-        hospitalInvoicesRes,
-        pharmacyInvoicesRes,
-        labInvoicesRes,
-        xrayReportsRes,
-        otSchedulesRes,
-        emergencyAppointmentsRes,
-        expensesRes,
-        refundsRes,
-        pharmacyExpensesRes,
-        pharmacyAccountRes,
-        totalStockRes,
-        miscellaneousIncomeRes
-      ] = await Promise.all([
-        supabase
-          .from('invoices')
-          .select('*, patients(id, profiles(first_name, last_name))')
-          .eq('status', 'paid')
-          .gt('created_at', cutoffTime)  // Use gt (>) not gte (>=) to exclude boundary
-          .lte('created_at', upperBound),
-        
-        supabase
-          .from('pharmacy_invoices')
-          .select(`
+      const [hospitalInvoicesRes, pharmacyInvoicesRes, labInvoicesRes, xrayReportsRes, otSchedulesRes, emergencyAppointmentsRes, expensesRes, refundsRes, pharmacyExpensesRes, pharmacyAccountRes, totalStockRes, miscellaneousIncomeRes] = await Promise.all([supabase.from('invoices').select('*, patients(id, profiles(first_name, last_name))').eq('status', 'paid').gt('created_at', cutoffTime) // Use gt (>) not gte (>=) to exclude boundary
+      .lte('created_at', upperBound), supabase.from('pharmacy_invoices').select(`
             *,
             pharmacy_invoice_items(
               quantity,
@@ -377,80 +332,22 @@ export default function FinanceDaily() {
               medicine_id,
               medicines(name, purchase_price, selling_price)
             )
-          `)
-          .gt('created_at', cutoffTime)  // Use gt (>) not gte (>=) to exclude boundary
-          .lte('created_at', upperBound),
-        
-        supabase
-          .from('invoices')
-          .select('*, patients(id, profiles(first_name, last_name))')
-          .eq('status', 'paid')
-          .like('invoice_number', 'LAB-%')
-          .gt('created_at', cutoffTime)  // Use gt (>) not gte (>=) to exclude boundary
-          .lte('created_at', upperBound),
-        
-        supabase
-          .from('xray_reports')
-          .select('*')
-          .not('price', 'is', null)
-          .gt('created_at', cutoffTime)  // Use gt (>) not gte (>=) to exclude boundary
-          .lte('created_at', upperBound),
-        
-        supabase
-          .from('ot_schedules')
-          .select('*, patients(id, profiles(first_name, last_name)), ot_operations(operation_name)')
-          .in('status', ['completed', 'pending'])
-          .gt('created_at', cutoffTime)  // Use gt (>) not gte (>=) to exclude boundary
-          .lte('created_at', upperBound),
-        
-        supabase
-          .from('appointments')
-          .select('*, patients(id, profiles(first_name, last_name)), doctors(id, profiles(first_name, last_name))')
-          .ilike('type', 'emergency')
-          .eq('status', 'completed')
-          .gte('appointment_date', cutoffTime)
-          .lte('appointment_date', upperBound),
-        
-        supabase
-          .from('expenses')
-          .select('*')
-          .gt('created_at', cutoffTime)  // Use gt (>) not gte (>=) to exclude boundary
-          .lte('created_at', upperBound),
-        
-        supabase
-          .from('refunds')
-          .select('*')
-          .gt('created_at', cutoffTime)  // Use gt (>) not gte (>=) to exclude boundary
-          .lte('created_at', upperBound),
-        
-        supabase
-          .from('pharmacy_expenses')
-          .select('*')
-          .gt('created_at', cutoffTime)  // Use gt (>) not gte (>=) to exclude boundary
-          .lte('created_at', upperBound),
-        
-        supabase
-          .from('pharmacy_account')
-          .select('*')
-          .order('created_at', { ascending: false })
-          .limit(1),
-        
-        supabase
-          .from('medicines')
-          .select('stock_quantity, selling_price'),
-        
-        supabase
-          .from('miscellaneous_income')
-          .select('*')
-          .gt('created_at', cutoffTime)  // Use gt (>) not gte (>=) to exclude boundary
-          .lte('created_at', upperBound)
-      ]);
+          `).gt('created_at', cutoffTime) // Use gt (>) not gte (>=) to exclude boundary
+      .lte('created_at', upperBound), supabase.from('invoices').select('*, patients(id, profiles(first_name, last_name))').eq('status', 'paid').like('invoice_number', 'LAB-%').gt('created_at', cutoffTime) // Use gt (>) not gte (>=) to exclude boundary
+      .lte('created_at', upperBound), supabase.from('xray_reports').select('*').not('price', 'is', null).gt('created_at', cutoffTime) // Use gt (>) not gte (>=) to exclude boundary
+      .lte('created_at', upperBound), supabase.from('ot_schedules').select('*, patients(id, profiles(first_name, last_name)), ot_operations(operation_name)').in('status', ['completed', 'pending']).gt('created_at', cutoffTime) // Use gt (>) not gte (>=) to exclude boundary
+      .lte('created_at', upperBound), supabase.from('appointments').select('*, patients(id, profiles(first_name, last_name)), doctors(id, profiles(first_name, last_name))').ilike('type', 'emergency').eq('status', 'completed').gte('appointment_date', cutoffTime).lte('appointment_date', upperBound), supabase.from('expenses').select('*').gt('created_at', cutoffTime) // Use gt (>) not gte (>=) to exclude boundary
+      .lte('created_at', upperBound), supabase.from('refunds').select('*').gt('created_at', cutoffTime) // Use gt (>) not gte (>=) to exclude boundary
+      .lte('created_at', upperBound), supabase.from('pharmacy_expenses').select('*').gt('created_at', cutoffTime) // Use gt (>) not gte (>=) to exclude boundary
+      .lte('created_at', upperBound), supabase.from('pharmacy_account').select('*').order('created_at', {
+        ascending: false
+      }).limit(1), supabase.from('medicines').select('stock_quantity, selling_price'), supabase.from('miscellaneous_income').select('*').gt('created_at', cutoffTime) // Use gt (>) not gte (>=) to exclude boundary
+      .lte('created_at', upperBound)]);
 
       // Calculate total stock value
       const totalStockValue = (totalStockRes.data || []).reduce((total: number, medicine: any) => {
-        return total + (medicine.stock_quantity * medicine.selling_price);
+        return total + medicine.stock_quantity * medicine.selling_price;
       }, 0);
-
       return {
         hospitalInvoices: hospitalInvoicesRes.data || [],
         pharmacyInvoices: pharmacyInvoicesRes.data || [],
@@ -472,10 +369,14 @@ export default function FinanceDaily() {
   });
 
   // Fetch last closing report
-  const { data: lastClosingData } = useQuery({
+  const {
+    data: lastClosingData
+  } = useQuery({
     queryKey: ['last-daily-closing'],
     queryFn: async () => {
-      const { data } = await supabase.rpc('get_last_daily_closing');
+      const {
+        data
+      } = await supabase.rpc('get_last_daily_closing');
       return data?.[0] || null;
     },
     enabled: showLastClosingDialog
@@ -490,14 +391,15 @@ export default function FinanceDaily() {
       const pakistanNow = getCurrentPakistanTime();
       const closingData = {
         closingDate: targetDate,
-        closingTime: pakistanNow.toISOString(), // Store in ISO format but it's Pakistani time
+        closingTime: pakistanNow.toISOString(),
+        // Store in ISO format but it's Pakistani time
         dayName: formatInPakistanTime(pakistanNow, 'EEEE'),
         hospitalRevenue: dailyData.totalHospitalRevenue,
         pharmacyRevenue: dailyData.pharmacyRevenue,
         pharmacyProfit: dailyData.pharmacyProfit,
         totalExpenses: dailyData.totalExpenses,
         totalRefunds: dailyData.totalRefunds,
-        netProfit: (dailyData.totalHospitalRevenue) - dailyData.totalExpenses - dailyData.totalRefunds,
+        netProfit: dailyData.totalHospitalRevenue - dailyData.totalExpenses - dailyData.totalRefunds,
         transactionsData: {
           hospitalInvoices: detailedData.hospitalInvoices,
           pharmacyInvoices: detailedData.pharmacyInvoices,
@@ -515,7 +417,9 @@ export default function FinanceDaily() {
       };
 
       // Create the daily closing record
-      const { error } = await supabase.rpc('create_daily_closing', {
+      const {
+        error
+      } = await supabase.rpc('create_daily_closing', {
         p_closing_date: closingData.closingDate,
         p_closing_time: closingData.closingTime,
         p_day_name: closingData.dayName,
@@ -527,78 +431,68 @@ export default function FinanceDaily() {
         p_net_profit: closingData.netProfit,
         p_transactions_data: closingData.transactionsData
       });
-
       if (error) throw error;
 
       // Update hospital closing balance with the new balance
       // Get current closing balance
-      const { data: currentBalance } = await supabase
-        .from('hospital_closing_balance')
-        .select('closing_balance')
-        .order('closing_date', { ascending: false })
-        .limit(1)
-        .maybeSingle();
-
+      const {
+        data: currentBalance
+      } = await supabase.from('hospital_closing_balance').select('closing_balance').order('closing_date', {
+        ascending: false
+      }).limit(1).maybeSingle();
       const previousBalance = currentBalance?.closing_balance || 0;
       const newClosingBalance = previousBalance + closingData.netProfit;
 
       // Update the closing balance
-      const { data: latestRecord } = await supabase
-        .from('hospital_closing_balance')
-        .select('id')
-        .order('closing_date', { ascending: false })
-        .limit(1)
-        .maybeSingle();
-
+      const {
+        data: latestRecord
+      } = await supabase.from('hospital_closing_balance').select('id').order('closing_date', {
+        ascending: false
+      }).limit(1).maybeSingle();
       if (latestRecord) {
         // Update existing record
-        const { error: balanceError } = await supabase
-          .from('hospital_closing_balance')
-          .update({ 
-            closing_date: closingData.closingDate,
-            closing_balance: newClosingBalance,
-            notes: `Auto-updated from daily closing. Previous: ${formatPkrAmount(previousBalance)}, Net Profit: ${formatPkrAmount(closingData.netProfit)}`,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', latestRecord.id);
-
+        const {
+          error: balanceError
+        } = await supabase.from('hospital_closing_balance').update({
+          closing_date: closingData.closingDate,
+          closing_balance: newClosingBalance,
+          notes: `Auto-updated from daily closing. Previous: ${formatPkrAmount(previousBalance)}, Net Profit: ${formatPkrAmount(closingData.netProfit)}`,
+          updated_at: new Date().toISOString()
+        }).eq('id', latestRecord.id);
         if (balanceError) console.error('Error updating closing balance:', balanceError);
       } else {
         // Create first record
-        const { error: balanceError } = await supabase
-          .from('hospital_closing_balance')
-          .insert({ 
-            closing_date: closingData.closingDate,
-            closing_balance: newClosingBalance,
-            notes: `Initial closing balance from daily closing. Net Profit: ${formatPkrAmount(closingData.netProfit)}`
-          });
-
+        const {
+          error: balanceError
+        } = await supabase.from('hospital_closing_balance').insert({
+          closing_date: closingData.closingDate,
+          closing_balance: newClosingBalance,
+          notes: `Initial closing balance from daily closing. Net Profit: ${formatPkrAmount(closingData.netProfit)}`
+        });
         if (balanceError) console.error('Error creating closing balance:', balanceError);
       }
-      
+
       // Generate PDF after successful database insertion
       await generateDailyClosingPDF(closingData);
-      
       return closingData;
     },
     onSuccess: () => {
       toast.success('Daily closing completed successfully! PDF report generated.');
       setShowClosingDialog(false);
-      queryClient.invalidateQueries({ queryKey: ['last-daily-closing'] });
+      queryClient.invalidateQueries({
+        queryKey: ['last-daily-closing']
+      });
     },
-    onError: (error) => {
+    onError: error => {
       toast.error('Failed to create daily closing: ' + error.message);
     }
   });
-
   const handleRefresh = () => {
     refetch();
   };
-
   const handleDailyClosing = () => {
     setShowClosingDialog(true);
   };
-
   const confirmClosing = () => {
     createClosingMutation.mutate();
   };
@@ -607,44 +501,37 @@ export default function FinanceDaily() {
   const recalculateClosingsMutation = useMutation({
     mutationFn: async () => {
       console.log('Starting recalculation of all historical closings...');
-      
-      // Fetch all daily closings
-      const { data: closings, error: fetchError } = await supabase
-        .from('daily_closings')
-        .select('*')
-        .order('closing_date', { ascending: true });
 
+      // Fetch all daily closings
+      const {
+        data: closings,
+        error: fetchError
+      } = await supabase.from('daily_closings').select('*').order('closing_date', {
+        ascending: true
+      });
       if (fetchError) throw fetchError;
       if (!closings || closings.length === 0) {
         throw new Error('No closings found to recalculate');
       }
-
       console.log(`Found ${closings.length} closings to recalculate`);
       let updatedCount = 0;
-
       for (const closing of closings) {
         try {
           const transactionsData = closing.transactions_data as any;
-          
+
           // Extract unique invoice IDs from lab reports
           const labReports = transactionsData?.labReports || [];
-          const uniqueInvoiceIds: string[] = [...new Set(
-            labReports
-              .map((lab: any) => lab.invoice_id)
-              .filter((id: any) => id != null)
-          )] as string[];
-
+          const uniqueInvoiceIds: string[] = [...new Set(labReports.map((lab: any) => lab.invoice_id).filter((id: any) => id != null))] as string[];
           if (uniqueInvoiceIds.length === 0) {
             console.log(`Closing ${closing.closing_date}: No lab invoices to recalculate`);
             continue;
           }
 
           // Fetch actual invoice amounts
-          const { data: invoices, error: invoiceError } = await supabase
-            .from('invoices')
-            .select('id, amount')
-            .in('id', uniqueInvoiceIds);
-
+          const {
+            data: invoices,
+            error: invoiceError
+          } = await supabase.from('invoices').select('id, amount').in('id', uniqueInvoiceIds);
           if (invoiceError) {
             console.error(`Error fetching invoices for closing ${closing.closing_date}:`, invoiceError);
             continue;
@@ -652,40 +539,28 @@ export default function FinanceDaily() {
 
           // Calculate lab revenue from invoice amounts
           const labRevenue = invoices?.reduce((sum, inv) => sum + (inv.amount || 0), 0) || 0;
-          
+
           // Calculate other revenues from transactions data
-          const emergencyRevenue = (transactionsData?.emergencyAppointments || [])
-            .reduce((sum: number, apt: any) => sum + (apt.consultation_fee_at_time || 0), 0) +
-            (transactionsData?.hospitalInvoices || [])
-              .filter((inv: any) => inv.description?.toLowerCase().includes('emergency') || inv.emergency_patient_data)
-              .reduce((sum: number, inv: any) => sum + Number(inv.amount || 0), 0);
-
-          const xrayRevenue = (transactionsData?.xrayReports || [])
-            .reduce((sum: number, xray: any) => sum + (xray.price || 0), 0);
-
-          const otHospitalRevenue = (transactionsData?.otSchedules || [])
-            .reduce((sum: number, ot: any) => sum + ((ot.total_cost || 0) - (ot.doctor_expense || 0)), 0);
-
-          const miscellaneousIncome = (transactionsData?.miscellaneousIncome || [])
-            .reduce((sum: number, income: any) => sum + (income.amount || 0), 0);
+          const emergencyRevenue = (transactionsData?.emergencyAppointments || []).reduce((sum: number, apt: any) => sum + (apt.consultation_fee_at_time || 0), 0) + (transactionsData?.hospitalInvoices || []).filter((inv: any) => inv.description?.toLowerCase().includes('emergency') || inv.emergency_patient_data).reduce((sum: number, inv: any) => sum + Number(inv.amount || 0), 0);
+          const xrayRevenue = (transactionsData?.xrayReports || []).reduce((sum: number, xray: any) => sum + (xray.price || 0), 0);
+          const otHospitalRevenue = (transactionsData?.otSchedules || []).reduce((sum: number, ot: any) => sum + ((ot.total_cost || 0) - (ot.doctor_expense || 0)), 0);
+          const miscellaneousIncome = (transactionsData?.miscellaneousIncome || []).reduce((sum: number, income: any) => sum + (income.amount || 0), 0);
 
           // Recalculate total hospital revenue
           const newHospitalRevenue = emergencyRevenue + labRevenue + xrayRevenue + otHospitalRevenue + miscellaneousIncome;
-          
+
           // Only update if there's a difference
           if (Math.abs(newHospitalRevenue - closing.hospital_revenue) > 0.01) {
             const oldLabRevenue = labReports.reduce((sum: number, lab: any) => sum + (lab.price || 0), 0);
             console.log(`Closing ${closing.closing_date}: Lab revenue ${oldLabRevenue} → ${labRevenue}, Hospital revenue ${closing.hospital_revenue} → ${newHospitalRevenue}`);
 
             // Update the closing
-            const { error: updateError } = await supabase
-              .from('daily_closings')
-              .update({
-                hospital_revenue: newHospitalRevenue,
-                net_profit: newHospitalRevenue - closing.total_expenses - closing.total_refunds
-              })
-              .eq('id', closing.id);
-
+            const {
+              error: updateError
+            } = await supabase.from('daily_closings').update({
+              hospital_revenue: newHospitalRevenue,
+              net_profit: newHospitalRevenue - closing.total_expenses - closing.total_refunds
+            }).eq('id', closing.id);
             if (updateError) {
               console.error(`Error updating closing ${closing.closing_date}:`, updateError);
             } else {
@@ -698,22 +573,26 @@ export default function FinanceDaily() {
           console.error(`Error processing closing ${closing.closing_date}:`, error);
         }
       }
-
-      return { total: closings.length, updated: updatedCount };
+      return {
+        total: closings.length,
+        updated: updatedCount
+      };
     },
-    onSuccess: (result) => {
+    onSuccess: result => {
       toast.success(`Successfully recalculated ${result.updated} out of ${result.total} closings with correct lab revenue`);
-      queryClient.invalidateQueries({ queryKey: ['daily-closings'] });
-      queryClient.invalidateQueries({ queryKey: ['daily-data'] });
+      queryClient.invalidateQueries({
+        queryKey: ['daily-closings']
+      });
+      queryClient.invalidateQueries({
+        queryKey: ['daily-data']
+      });
     },
     onError: (error: any) => {
       console.error('Recalculation error:', error);
       toast.error(`Failed to recalculate closings: ${error.message}`);
     }
   });
-
-  return (
-    <div className="space-y-6">
+  return <div className="space-y-6">
       {/* Header with Date Filter */}
       <div className="flex justify-between items-center">
         <div>
@@ -721,42 +600,17 @@ export default function FinanceDaily() {
           <p className="text-muted-foreground">
             Daily revenue, expenses, and profits for {format(selectedDate, 'EEEE, MMMM d, yyyy')}
           </p>
-          {dailyData?.lastClosing && (
-            <p className="text-xs text-blue-600 mt-1">
+          {dailyData?.lastClosing && <p className="text-xs text-blue-600 mt-1">
               📊 Showing activities since last closing: {formatInPakistanTime(new Date(dailyData.lastClosing.closing_time), 'MMM d, yyyy h:mm a')} (Pakistan time)
-            </p>
-          )}
+            </p>}
         </div>
         <div className="flex gap-2">
-          <Button
-            onClick={() => setShowClosingBalanceDialog(true)}
-            variant="outline"
-            className="flex items-center gap-2 border-blue-200 text-blue-600 hover:bg-blue-50"
-          >
+          <Button onClick={() => setShowClosingBalanceDialog(true)} variant="outline" className="flex items-center gap-2 border-blue-200 text-blue-600 hover:bg-blue-50">
             <Calculator className="h-4 w-4" />
             Closing Balance
           </Button>
-          <Button
-            onClick={() => {
-              if (confirm('This will recalculate lab revenue for ALL historical closings using actual invoice amounts instead of test prices. Continue?')) {
-                recalculateClosingsMutation.mutate();
-              }
-            }}
-            variant="outline"
-            disabled={recalculateClosingsMutation.isPending}
-            className="flex items-center gap-2 border-orange-200 text-orange-600 hover:bg-orange-50"
-          >
-            {recalculateClosingsMutation.isPending ? (
-              <RefreshCw className="h-4 w-4 animate-spin" />
-            ) : (
-              <Calculator className="h-4 w-4" />
-            )}
-            Fix Closings
-          </Button>
-          <Button
-            onClick={handleDailyClosing}
-            className="flex items-center gap-2 bg-green-600 hover:bg-green-700"
-          >
+          
+          <Button onClick={handleDailyClosing} className="flex items-center gap-2 bg-green-600 hover:bg-green-700">
             <FileText className="h-4 w-4" />
             Daily Closing
           </Button>
@@ -771,42 +625,12 @@ export default function FinanceDaily() {
       <div>
         <h2 className="text-xl font-semibold mb-4">Daily Revenue</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
-          <StatsCard
-            title="Hospital Revenue"
-            value={formatPkrAmount(dailyData?.totalHospitalRevenue || 0)}
-            icon={<Building className="w-5 h-5 text-blue-600" />}
-            loading={isLoading}
-          />
-          <StatsCard
-            title="Emergency Revenue"
-            value={formatPkrAmount(dailyData?.emergencyRevenue || 0)}
-            icon={<AlertTriangle className="w-5 h-5 text-red-600" />}
-            loading={isLoading}
-          />
-          <StatsCard
-            title="Lab Revenue"
-            value={formatPkrAmount(dailyData?.labRevenue || 0)}
-            icon={<TestTube className="w-5 h-5 text-green-600" />}
-            loading={isLoading}
-          />
-          <StatsCard
-            title="X-ray Revenue"
-            value={formatPkrAmount(dailyData?.xrayRevenue || 0)}
-            icon={<Activity className="w-5 h-5 text-pink-600" />}
-            loading={isLoading}
-          />
-          <StatsCard
-            title="OT Revenue"
-            value={formatPkrAmount(dailyData?.otHospitalRevenue || 0)}
-            icon={<Activity className="w-5 h-5 text-purple-600" />}
-            loading={isLoading}
-          />
-          <StatsCard
-            title="Miscellaneous Income"
-            value={formatPkrAmount(dailyData?.miscellaneousIncome || 0)}
-            icon={<DollarSign className="w-5 h-5 text-yellow-600" />}
-            loading={isLoading}
-          />
+          <StatsCard title="Hospital Revenue" value={formatPkrAmount(dailyData?.totalHospitalRevenue || 0)} icon={<Building className="w-5 h-5 text-blue-600" />} loading={isLoading} />
+          <StatsCard title="Emergency Revenue" value={formatPkrAmount(dailyData?.emergencyRevenue || 0)} icon={<AlertTriangle className="w-5 h-5 text-red-600" />} loading={isLoading} />
+          <StatsCard title="Lab Revenue" value={formatPkrAmount(dailyData?.labRevenue || 0)} icon={<TestTube className="w-5 h-5 text-green-600" />} loading={isLoading} />
+          <StatsCard title="X-ray Revenue" value={formatPkrAmount(dailyData?.xrayRevenue || 0)} icon={<Activity className="w-5 h-5 text-pink-600" />} loading={isLoading} />
+          <StatsCard title="OT Revenue" value={formatPkrAmount(dailyData?.otHospitalRevenue || 0)} icon={<Activity className="w-5 h-5 text-purple-600" />} loading={isLoading} />
+          <StatsCard title="Miscellaneous Income" value={formatPkrAmount(dailyData?.miscellaneousIncome || 0)} icon={<DollarSign className="w-5 h-5 text-yellow-600" />} loading={isLoading} />
         </div>
       </div>
 
@@ -814,24 +638,9 @@ export default function FinanceDaily() {
       <div>
         <h2 className="text-xl font-semibold mb-4">Pharmacy Performance</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          <StatsCard
-            title="Pharmacy Revenue"
-            value={formatPkrAmount(dailyData?.pharmacyRevenue || 0)}
-            icon={<Pill className="w-5 h-5 text-blue-600" />}
-            loading={isLoading}
-          />
-          <StatsCard
-            title="Pharmacy Profit"
-            value={formatPkrAmount(dailyData?.pharmacyProfit || 0)}
-            icon={<TrendingUp className="w-5 h-5 text-green-600" />}
-            loading={isLoading}
-          />
-          <StatsCard
-            title="Pharmacy Returns"
-            value={formatPkrAmount(dailyData?.pharmacyRefunds || 0)}
-            icon={<TrendingDown className="w-5 h-5 text-red-600" />}
-            loading={isLoading}
-          />
+          <StatsCard title="Pharmacy Revenue" value={formatPkrAmount(dailyData?.pharmacyRevenue || 0)} icon={<Pill className="w-5 h-5 text-blue-600" />} loading={isLoading} />
+          <StatsCard title="Pharmacy Profit" value={formatPkrAmount(dailyData?.pharmacyProfit || 0)} icon={<TrendingUp className="w-5 h-5 text-green-600" />} loading={isLoading} />
+          <StatsCard title="Pharmacy Returns" value={formatPkrAmount(dailyData?.pharmacyRefunds || 0)} icon={<TrendingDown className="w-5 h-5 text-red-600" />} loading={isLoading} />
         </div>
       </div>
 
@@ -839,43 +648,21 @@ export default function FinanceDaily() {
       <div>
         <h2 className="text-xl font-semibold mb-4">Daily Profit & Loss</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <StatsCard
-            title="Hospital Profit"
-            value={formatPkrAmount(dailyData?.totalHospitalProfit || 0)}
-            icon={<DollarSign className="w-5 h-5 text-green-600" />}
-            loading={isLoading}
-          />
-          <StatsCard
-            title="Daily Expenses"
-            value={formatPkrAmount(dailyData?.totalExpenses || 0)}
-            icon={<Receipt className="w-5 h-5 text-orange-600" />}
-            loading={isLoading}
-          />
-          <StatsCard
-            title="OT Returns"
-            value={formatPkrAmount(dailyData?.otRefunds || 0)}
-            icon={<Activity className="w-5 h-5 text-red-600" />}
-            loading={isLoading}
-          />
-          <StatsCard
-            title="Total Refunds"
-            value={formatPkrAmount(dailyData?.totalRefunds || 0)}
-            icon={<TrendingDown className="w-5 h-5 text-red-600" />}
-            loading={isLoading}
-          />
+          <StatsCard title="Hospital Profit" value={formatPkrAmount(dailyData?.totalHospitalProfit || 0)} icon={<DollarSign className="w-5 h-5 text-green-600" />} loading={isLoading} />
+          <StatsCard title="Daily Expenses" value={formatPkrAmount(dailyData?.totalExpenses || 0)} icon={<Receipt className="w-5 h-5 text-orange-600" />} loading={isLoading} />
+          <StatsCard title="OT Returns" value={formatPkrAmount(dailyData?.otRefunds || 0)} icon={<Activity className="w-5 h-5 text-red-600" />} loading={isLoading} />
+          <StatsCard title="Total Refunds" value={formatPkrAmount(dailyData?.totalRefunds || 0)} icon={<TrendingDown className="w-5 h-5 text-red-600" />} loading={isLoading} />
         </div>
       </div>
 
       {/* Refunds Detail */}
-      {dailyData?.refunds && dailyData.refunds.length > 0 && (
-        <Card>
+      {dailyData?.refunds && dailyData.refunds.length > 0 && <Card>
           <CardHeader>
             <CardTitle>Daily Refunds & Returns Detail</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {dailyData.refunds.map((refund, index) => (
-                <div key={index} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+              {dailyData.refunds.map((refund, index) => <div key={index} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
                   <div>
                     <p className="font-medium">{refund.refund_type.replace('_', ' ').toUpperCase()}</p>
                     <p className="text-sm text-muted-foreground">{refund.description}</p>
@@ -883,12 +670,10 @@ export default function FinanceDaily() {
                   <div className="text-right">
                     <p className="font-semibold text-red-600">{formatPkrAmount(refund.amount)}</p>
                   </div>
-                </div>
-              ))}
+                </div>)}
             </div>
           </CardContent>
-        </Card>
-      )}
+        </Card>}
 
       {/* Daily Closing Dialog */}
       <Dialog open={showClosingDialog} onOpenChange={setShowClosingDialog}>
@@ -952,7 +737,7 @@ export default function FinanceDaily() {
                     <CardContent className="p-4">
                       <div className="text-sm text-muted-foreground">Net Profit</div>
                       <div className="text-xl font-bold text-purple-600">
-                        {formatPkrAmount(((dailyData?.totalHospitalRevenue || 0) + (dailyData?.pharmacyProfit || 0)) - (dailyData?.totalExpenses || 0) - (dailyData?.totalRefunds || 0))}
+                        {formatPkrAmount((dailyData?.totalHospitalRevenue || 0) + (dailyData?.pharmacyProfit || 0) - (dailyData?.totalExpenses || 0) - (dailyData?.totalRefunds || 0))}
                       </div>
                     </CardContent>
                   </Card>
@@ -986,15 +771,13 @@ export default function FinanceDaily() {
                   </Card>
                 </div>
                 
-                {detailedData?.pharmacyInvoices && detailedData.pharmacyInvoices.length > 0 && (
-                  <Card>
+                {detailedData?.pharmacyInvoices && detailedData.pharmacyInvoices.length > 0 && <Card>
                     <CardHeader>
                       <CardTitle className="text-lg">Pharmacy Transactions ({detailedData.pharmacyInvoices.length})</CardTitle>
                     </CardHeader>
                     <CardContent>
                       <div className="space-y-2 max-h-40 overflow-y-auto">
-                        {detailedData.pharmacyInvoices.map((invoice, idx) => (
-                          <div key={idx} className="flex justify-between items-center p-2 bg-gray-50 rounded">
+                        {detailedData.pharmacyInvoices.map((invoice, idx) => <div key={idx} className="flex justify-between items-center p-2 bg-gray-50 rounded">
                             <div>
                               <span className="font-medium">{invoice.invoice_number}</span>
                               <span className="text-sm text-muted-foreground ml-2">
@@ -1004,12 +787,10 @@ export default function FinanceDaily() {
                             <Badge variant={invoice.final_amount >= 0 ? "default" : "destructive"}>
                               {formatPkrAmount(invoice.final_amount)}
                             </Badge>
-                          </div>
-                        ))}
+                          </div>)}
                       </div>
                     </CardContent>
-                  </Card>
-                )}
+                  </Card>}
               </div>
 
               {/* Hospital Section */}
@@ -1053,65 +834,52 @@ export default function FinanceDaily() {
 
                 {/* Detailed transactions */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  {detailedData?.emergencyAppointments && detailedData.emergencyAppointments.length > 0 && (
-                    <Card>
+                  {detailedData?.emergencyAppointments && detailedData.emergencyAppointments.length > 0 && <Card>
                       <CardHeader>
                         <CardTitle className="text-lg">Emergency Consultations ({detailedData.emergencyAppointments.length})</CardTitle>
                       </CardHeader>
                       <CardContent>
                         <div className="space-y-2 max-h-32 overflow-y-auto">
-                          {detailedData.emergencyAppointments.map((apt, idx) => (
-                            <div key={idx} className="flex justify-between p-2 bg-gray-50 rounded">
+                          {detailedData.emergencyAppointments.map((apt, idx) => <div key={idx} className="flex justify-between p-2 bg-gray-50 rounded">
                               <span className="text-sm">{apt.patients?.profiles?.first_name} {apt.patients?.profiles?.last_name}</span>
                               <Badge>{formatPkrAmount(apt.consultation_fee_at_time || 0)}</Badge>
-                            </div>
-                          ))}
+                            </div>)}
                         </div>
                       </CardContent>
-                    </Card>
-                  )}
+                    </Card>}
 
-                  {detailedData?.labReports && detailedData.labReports.length > 0 && (
-                    <Card>
+                  {detailedData?.labReports && detailedData.labReports.length > 0 && <Card>
                       <CardHeader>
                         <CardTitle className="text-lg">Lab Reports ({detailedData.labReports.length})</CardTitle>
                       </CardHeader>
                       <CardContent>
                         <div className="space-y-2 max-h-32 overflow-y-auto">
-                          {detailedData.labReports.map((lab: any, idx: number) => (
-                            <div key={idx} className="flex justify-between p-2 bg-gray-50 rounded">
+                          {detailedData.labReports.map((lab: any, idx: number) => <div key={idx} className="flex justify-between p-2 bg-gray-50 rounded">
                               <span className="text-sm">{lab.test_name}</span>
                               <Badge>{formatPkrAmount(lab.price || 0)}</Badge>
-                            </div>
-                          ))}
+                            </div>)}
                         </div>
                       </CardContent>
-                    </Card>
-                  )}
+                    </Card>}
 
-                  {detailedData?.xrayReports && detailedData.xrayReports.length > 0 && (
-                    <Card>
+                  {detailedData?.xrayReports && detailedData.xrayReports.length > 0 && <Card>
                       <CardHeader>
                         <CardTitle className="text-lg">X-ray Reports ({detailedData.xrayReports.length})</CardTitle>
                       </CardHeader>
                       <CardContent>
                         <div className="space-y-2 max-h-32 overflow-y-auto">
-                          {detailedData.xrayReports.map((xray, idx) => (
-                            <div key={idx} className="flex justify-between p-2 bg-gray-50 rounded">
+                          {detailedData.xrayReports.map((xray, idx) => <div key={idx} className="flex justify-between p-2 bg-gray-50 rounded">
                               <span className="text-sm">{xray.test_name}</span>
                               <Badge>{formatPkrAmount(xray.price || 0)}</Badge>
-                            </div>
-                          ))}
+                            </div>)}
                         </div>
                       </CardContent>
-                    </Card>
-                  )}
+                    </Card>}
                 </div>
               </div>
 
               {/* Expenses Section */}
-              {detailedData?.expenses && detailedData.expenses.length > 0 && (
-                <div>
+              {detailedData?.expenses && detailedData.expenses.length > 0 && <div>
                   <h3 className="text-xl font-semibold mb-4 flex items-center gap-2">
                     <Receipt className="h-5 w-5 text-orange-600" />
                     Daily Expenses ({detailedData.expenses.length})
@@ -1119,24 +887,20 @@ export default function FinanceDaily() {
                   <Card>
                     <CardContent className="p-4">
                       <div className="space-y-2 max-h-40 overflow-y-auto">
-                        {detailedData.expenses.map((expense, idx) => (
-                          <div key={idx} className="flex justify-between items-center p-2 bg-gray-50 rounded">
+                        {detailedData.expenses.map((expense, idx) => <div key={idx} className="flex justify-between items-center p-2 bg-gray-50 rounded">
                             <div>
                               <span className="font-medium">{expense.category}</span>
                               <span className="text-sm text-muted-foreground block">{expense.description}</span>
                             </div>
                             <Badge variant="destructive">{formatPkrAmount(expense.amount)}</Badge>
-                          </div>
-                        ))}
+                          </div>)}
                       </div>
                     </CardContent>
                   </Card>
-                </div>
-              )}
+                </div>}
 
               {/* Refunds Section */}
-              {detailedData?.refunds && detailedData.refunds.length > 0 && (
-                <div>
+              {detailedData?.refunds && detailedData.refunds.length > 0 && <div>
                   <h3 className="text-xl font-semibold mb-4 flex items-center gap-2">
                     <TrendingDown className="h-5 w-5 text-red-600" />
                     Refunds & Returns ({detailedData.refunds.length})
@@ -1144,42 +908,31 @@ export default function FinanceDaily() {
                   <Card>
                     <CardContent className="p-4">
                       <div className="space-y-2 max-h-40 overflow-y-auto">
-                        {detailedData.refunds.map((refund, idx) => (
-                          <div key={idx} className="flex justify-between items-center p-2 bg-gray-50 rounded">
+                        {detailedData.refunds.map((refund, idx) => <div key={idx} className="flex justify-between items-center p-2 bg-gray-50 rounded">
                             <div>
                               <span className="font-medium">{refund.refund_type}</span>
                               <span className="text-sm text-muted-foreground block">{refund.description}</span>
                             </div>
                             <Badge variant="destructive">{formatPkrAmount(refund.amount)}</Badge>
-                          </div>
-                        ))}
+                          </div>)}
                       </div>
                     </CardContent>
                   </Card>
-                </div>
-              )}
+                </div>}
 
               {/* Confirmation */}
               <div className="flex justify-end gap-4 pt-4 border-t">
                 <Button variant="outline" onClick={() => setShowClosingDialog(false)}>
                   Cancel
                 </Button>
-                <Button 
-                  onClick={confirmClosing} 
-                  disabled={createClosingMutation.isPending}
-                  className="bg-green-600 hover:bg-green-700"
-                >
-                  {createClosingMutation.isPending ? (
-                    <div className="flex items-center gap-2">
+                <Button onClick={confirmClosing} disabled={createClosingMutation.isPending} className="bg-green-600 hover:bg-green-700">
+                  {createClosingMutation.isPending ? <div className="flex items-center gap-2">
                       <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                       Processing...
-                    </div>
-                  ) : (
-                    <div className="flex items-center gap-2">
+                    </div> : <div className="flex items-center gap-2">
                       <CheckCircle className="h-4 w-4" />
                       Confirm Daily Closing
-                    </div>
-                  )}
+                    </div>}
                 </Button>
               </div>
             </div>
@@ -1198,8 +951,7 @@ export default function FinanceDaily() {
           </DialogHeader>
           
           <ScrollArea className="max-h-[70vh]">
-            {lastClosingData ? (
-              <div className="space-y-4 p-4">
+            {lastClosingData ? <div className="space-y-4 p-4">
                 <div className="text-center border-b pb-4">
                   <h3 className="text-xl font-bold">
                     {formatInPakistanTime(new Date(lastClosingData.closing_date), 'EEEE, MMMM d, yyyy')}
@@ -1235,22 +987,14 @@ export default function FinanceDaily() {
                     </CardContent>
                   </Card>
                 </div>
-              </div>
-            ) : (
-              <div className="text-center py-8">
+              </div> : <div className="text-center py-8">
                 <p className="text-muted-foreground">No previous closing reports found.</p>
-              </div>
-            )}
+              </div>}
           </ScrollArea>
         </DialogContent>
       </Dialog>
 
       {/* Hospital Closing Balance Dialog */}
-      <HospitalClosingBalanceDialog
-        open={showClosingBalanceDialog}
-        onOpenChange={setShowClosingBalanceDialog}
-        selectedDate={selectedDate}
-      />
-    </div>
-  );
+      <HospitalClosingBalanceDialog open={showClosingBalanceDialog} onOpenChange={setShowClosingBalanceDialog} selectedDate={selectedDate} />
+    </div>;
 }
