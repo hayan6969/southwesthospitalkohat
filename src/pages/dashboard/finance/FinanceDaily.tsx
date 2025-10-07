@@ -603,6 +603,115 @@ export default function FinanceDaily() {
     createClosingMutation.mutate();
   };
 
+  // Mutation to recalculate all historical closings with correct lab revenue
+  const recalculateClosingsMutation = useMutation({
+    mutationFn: async () => {
+      console.log('Starting recalculation of all historical closings...');
+      
+      // Fetch all daily closings
+      const { data: closings, error: fetchError } = await supabase
+        .from('daily_closings')
+        .select('*')
+        .order('closing_date', { ascending: true });
+
+      if (fetchError) throw fetchError;
+      if (!closings || closings.length === 0) {
+        throw new Error('No closings found to recalculate');
+      }
+
+      console.log(`Found ${closings.length} closings to recalculate`);
+      let updatedCount = 0;
+
+      for (const closing of closings) {
+        try {
+          const transactionsData = closing.transactions_data as any;
+          
+          // Extract unique invoice IDs from lab reports
+          const labReports = transactionsData?.labReports || [];
+          const uniqueInvoiceIds: string[] = [...new Set(
+            labReports
+              .map((lab: any) => lab.invoice_id)
+              .filter((id: any) => id != null)
+          )] as string[];
+
+          if (uniqueInvoiceIds.length === 0) {
+            console.log(`Closing ${closing.closing_date}: No lab invoices to recalculate`);
+            continue;
+          }
+
+          // Fetch actual invoice amounts
+          const { data: invoices, error: invoiceError } = await supabase
+            .from('invoices')
+            .select('id, amount')
+            .in('id', uniqueInvoiceIds);
+
+          if (invoiceError) {
+            console.error(`Error fetching invoices for closing ${closing.closing_date}:`, invoiceError);
+            continue;
+          }
+
+          // Calculate lab revenue from invoice amounts
+          const labRevenue = invoices?.reduce((sum, inv) => sum + (inv.amount || 0), 0) || 0;
+          
+          // Calculate other revenues from transactions data
+          const emergencyRevenue = (transactionsData?.emergencyAppointments || [])
+            .reduce((sum: number, apt: any) => sum + (apt.consultation_fee_at_time || 0), 0) +
+            (transactionsData?.hospitalInvoices || [])
+              .filter((inv: any) => inv.description?.toLowerCase().includes('emergency') || inv.emergency_patient_data)
+              .reduce((sum: number, inv: any) => sum + Number(inv.amount || 0), 0);
+
+          const xrayRevenue = (transactionsData?.xrayReports || [])
+            .reduce((sum: number, xray: any) => sum + (xray.price || 0), 0);
+
+          const otHospitalRevenue = (transactionsData?.otSchedules || [])
+            .reduce((sum: number, ot: any) => sum + ((ot.total_cost || 0) - (ot.doctor_expense || 0)), 0);
+
+          const miscellaneousIncome = (transactionsData?.miscellaneousIncome || [])
+            .reduce((sum: number, income: any) => sum + (income.amount || 0), 0);
+
+          // Recalculate total hospital revenue
+          const newHospitalRevenue = emergencyRevenue + labRevenue + xrayRevenue + otHospitalRevenue + miscellaneousIncome;
+          
+          // Only update if there's a difference
+          if (Math.abs(newHospitalRevenue - closing.hospital_revenue) > 0.01) {
+            const oldLabRevenue = labReports.reduce((sum: number, lab: any) => sum + (lab.price || 0), 0);
+            console.log(`Closing ${closing.closing_date}: Lab revenue ${oldLabRevenue} → ${labRevenue}, Hospital revenue ${closing.hospital_revenue} → ${newHospitalRevenue}`);
+
+            // Update the closing
+            const { error: updateError } = await supabase
+              .from('daily_closings')
+              .update({
+                hospital_revenue: newHospitalRevenue,
+                net_profit: newHospitalRevenue - closing.total_expenses - closing.total_refunds
+              })
+              .eq('id', closing.id);
+
+            if (updateError) {
+              console.error(`Error updating closing ${closing.closing_date}:`, updateError);
+            } else {
+              updatedCount++;
+            }
+          } else {
+            console.log(`Closing ${closing.closing_date}: No change needed (already correct)`);
+          }
+        } catch (error) {
+          console.error(`Error processing closing ${closing.closing_date}:`, error);
+        }
+      }
+
+      return { total: closings.length, updated: updatedCount };
+    },
+    onSuccess: (result) => {
+      toast.success(`Successfully recalculated ${result.updated} out of ${result.total} closings with correct lab revenue`);
+      queryClient.invalidateQueries({ queryKey: ['daily-closings'] });
+      queryClient.invalidateQueries({ queryKey: ['daily-data'] });
+    },
+    onError: (error: any) => {
+      console.error('Recalculation error:', error);
+      toast.error(`Failed to recalculate closings: ${error.message}`);
+    }
+  });
+
   return (
     <div className="space-y-6">
       {/* Header with Date Filter */}
@@ -626,6 +735,23 @@ export default function FinanceDaily() {
           >
             <Calculator className="h-4 w-4" />
             Closing Balance
+          </Button>
+          <Button
+            onClick={() => {
+              if (confirm('This will recalculate lab revenue for ALL historical closings using actual invoice amounts instead of test prices. Continue?')) {
+                recalculateClosingsMutation.mutate();
+              }
+            }}
+            variant="outline"
+            disabled={recalculateClosingsMutation.isPending}
+            className="flex items-center gap-2 border-orange-200 text-orange-600 hover:bg-orange-50"
+          >
+            {recalculateClosingsMutation.isPending ? (
+              <RefreshCw className="h-4 w-4 animate-spin" />
+            ) : (
+              <Calculator className="h-4 w-4" />
+            )}
+            Fix Closings
           </Button>
           <Button
             onClick={handleDailyClosing}
