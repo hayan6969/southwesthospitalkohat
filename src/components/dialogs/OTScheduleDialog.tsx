@@ -283,8 +283,25 @@ export function OTScheduleDialog() {
 
       const scheduleData = scheduleResults.map(result => result.data);
 
-      // Generate invoice number for OT scheduling (but don't create duplicate in invoices table)
+      // Generate invoice number for OT scheduling
       const invoiceNumber = `OT-${Date.now()}`;
+
+      // Create invoice record in the database for finance tracking
+      const { error: invoiceError } = await supabase
+        .from('invoices')
+        .insert({
+          invoice_number: invoiceNumber,
+          patient_id: patientId,
+          amount: totalCost,
+          status: 'paid',
+          description: `OT Procedure: ${getSelectedOperationsDetails().map(op => op.operation_name).join(', ')}`,
+          paid_at: new Date().toISOString()
+        });
+
+      if (invoiceError) {
+        console.error('Error creating OT invoice:', invoiceError);
+        throw invoiceError;
+      }
 
       // Create doctor payment record for OT
       const doctorExpenseAmount = parseFloat(doctorExpense) || 0;
