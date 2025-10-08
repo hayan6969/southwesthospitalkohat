@@ -7,7 +7,8 @@ export const useAppointmentStats = (filterMonth?: Date) => {
     queryKey: ['appointment-stats', filterMonth?.toISOString()],
     queryFn: async () => {
       // Get appointment counts by status, filtered by date range if specified
-      let query = supabase.from('appointments').select('status, created_at');
+      // Remove Supabase's default 1000 row limit by setting a higher limit
+      let query = supabase.from('appointments').select('status, created_at').limit(50000);
       
       // If a filter month is provided, filter by that month; otherwise get all appointments
       if (filterMonth) {
