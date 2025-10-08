@@ -11,6 +11,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { formatPkrAmount } from "@/utils/currency";
 import { getCurrentPakistanTime } from "@/utils/timezone";
 import { Calculator, TrendingUp, DollarSign, Wallet, Minus, Plus, Receipt } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
+import { useAuditLogger } from "@/hooks/useAuditLogger";
 
 interface PharmacyAccountDialogProps {
   open: boolean;
@@ -33,6 +35,8 @@ export function PharmacyAccountDialog({ open, onOpenChange }: PharmacyAccountDia
     netBalance: 0
   });
   const { toast } = useToast();
+  const { user } = useAuth();
+  const { logCreate } = useAuditLogger();
 
   // Fetch pharmacy account data and calculate stats
   useEffect(() => {
@@ -201,17 +205,28 @@ export function PharmacyAccountDialog({ open, onOpenChange }: PharmacyAccountDia
 
     setIsAddingExpense(true);
     try {
+      const expenseDescription = expenseType === 'hospital_profit_withdrawal' 
+        ? 'Hospital profit withdrawal' 
+        : 'Bill payment';
+      
       const { error } = await supabase
         .from('pharmacy_expenses')
         .insert({
           amount: expenseAmount,
           expense_type: expenseType,
-          description: expenseType === 'hospital_profit_withdrawal' ? 'Hospital profit withdrawal' : 'Bill payment',
+          description: expenseDescription,
           bill_number: expenseType === 'bill_payment' ? billNumber.trim() : null,
           expense_date: getCurrentPakistanTime().toISOString().split('T')[0]
         });
 
       if (error) throw error;
+
+      // Log expense creation to audit logs
+      logCreate(
+        'Pharmacy Expense',
+        `${expenseDescription} - ${formatPkrAmount(expenseAmount)}${expenseType === 'bill_payment' ? ` (Bill: ${billNumber})` : ''}`,
+        user?.id
+      );
 
       // Update stats
       setPharmacyStats(prev => ({

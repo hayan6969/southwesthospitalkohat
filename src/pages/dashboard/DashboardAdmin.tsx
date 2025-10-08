@@ -108,7 +108,12 @@ export default function DashboardAdmin() {
 
   // Filter audit logs
   const filteredLogs = auditLogs?.filter(log => {
-    const matchesAction = actionFilter === "all" || log.action.toLowerCase().includes(actionFilter.toLowerCase());
+    // Improved action filtering with specific expense matching
+    const matchesAction = actionFilter === "all" || 
+      (actionFilter === "expense" 
+        ? log.action.toLowerCase().includes("expense")
+        : log.action.toLowerCase().includes(actionFilter.toLowerCase()));
+    
     const matchesSearch = logSearchTerm === "" || 
       log.action.toLowerCase().includes(logSearchTerm.toLowerCase()) ||
       (log.details && log.details.toLowerCase().includes(logSearchTerm.toLowerCase()));
