@@ -1,10 +1,22 @@
-
+import { useState } from 'react';
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Legend, Tooltip } from 'recharts';
 import { useAppointmentStats } from '@/hooks/useAppointmentStats';
 import { Loader2 } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { subMonths, format } from 'date-fns';
 
 export function AppointmentChart() {
-  const { data: appointmentStats, isLoading } = useAppointmentStats();
+  const [selectedMonth, setSelectedMonth] = useState<Date | undefined>(undefined);
+  const { data: appointmentStats, isLoading } = useAppointmentStats(selectedMonth);
+  
+  // Generate last 6 months for dropdown
+  const monthOptions = Array.from({ length: 6 }, (_, i) => {
+    const date = subMonths(new Date(), i);
+    return {
+      value: date.toISOString(),
+      label: format(date, 'MMMM yyyy')
+    };
+  });
 
   if (isLoading) {
     return (
@@ -30,9 +42,22 @@ export function AppointmentChart() {
     <div className="bg-white rounded-lg border shadow-sm p-6">
       <div className="flex items-center justify-between mb-6">
         <h3 className="text-lg font-semibold">Appointment Statistics</h3>
-        <select className="text-sm border rounded px-3 py-1 bg-white">
-          <option>Monthly</option>
-        </select>
+        <Select 
+          value={selectedMonth?.toISOString() || 'all'} 
+          onValueChange={(value) => setSelectedMonth(value === 'all' ? undefined : new Date(value))}
+        >
+          <SelectTrigger className="w-[180px]">
+            <SelectValue placeholder="Select period" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Last 12 Months</SelectItem>
+            {monthOptions.map((option) => (
+              <SelectItem key={option.value} value={option.value}>
+                {option.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
       
       <div className="grid grid-cols-4 gap-4 mb-6">

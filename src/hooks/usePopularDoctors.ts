@@ -1,21 +1,28 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { startOfMonth, endOfMonth } from 'date-fns';
 
 export const usePopularDoctors = () => {
   return useQuery({
     queryKey: ['popular-doctors'],
     queryFn: async () => {
-      // Get all appointments with doctor and patient data
+      // Get appointments from current month only for "Popular Doctors this month"
+      const monthStart = startOfMonth(new Date());
+      const monthEnd = endOfMonth(new Date());
+      // Get appointments from current month with doctor data
       const { data: appointments } = await supabase
         .from('appointments')
         .select(`
           doctor_id,
           status,
+          created_at,
           doctors(
             specialization,
             profiles(first_name, last_name)
           )
-        `);
+        `)
+        .gte('created_at', monthStart.toISOString())
+        .lte('created_at', monthEnd.toISOString());
 
       if (!appointments) return [];
 
@@ -69,7 +76,7 @@ export const usePopularDoctors = () => {
 
       return sortedDoctors;
     },
-    staleTime: 15 * 60 * 1000, // 15 minutes
-    refetchInterval: 15 * 60 * 1000,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    refetchInterval: 5 * 60 * 1000, // Auto-refresh every 5 minutes
   });
 };
