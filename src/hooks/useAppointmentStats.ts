@@ -8,17 +8,52 @@ export const useAppointmentStats = (filterMonth?: Date) => {
     queryFn: async () => {
       // Get appointment counts by status, filtered by date range if specified
       // Remove Supabase's default 1000 row limit by setting a higher limit
-      let query = supabase.from('appointments').select('status, created_at').limit(50000);
+      // Build base query with count to determine total rows
+      let baseQuery = supabase
+        .from('appointments')
+        .select('status, created_at', { count: 'exact', head: true });
       
       // If a filter month is provided, filter by that month; otherwise get all appointments
       if (filterMonth) {
         const monthStart = startOfMonth(filterMonth);
         const monthEnd = endOfMonth(filterMonth);
-        query = query.gte('created_at', monthStart.toISOString()).lte('created_at', monthEnd.toISOString());
+        baseQuery = baseQuery
+          .gte('created_at', monthStart.toISOString())
+          .lte('created_at', monthEnd.toISOString());
       }
       
-      const { data: allAppointments } = await query;
+      const { count } = await baseQuery;
 
+      // Paginate fetch to bypass PostgREST default 1000 row cap
+      const pageSize = 1000;
+      const total = count ?? 0;
+      const pages = Math.max(1, Math.ceil(total / pageSize));
+      let allAppointments: { status: string; created_at: string }[] = [];
+
+      for (let page = 0; page < pages; page++) {
+        const from = page * pageSize;
+        const to = from + pageSize - 1;
+
+        let pageQuery = supabase
+          .from('appointments')
+          .select('status, created_at')
+          .range(from, to);
+
+        if (filterMonth) {
+          const monthStart = startOfMonth(filterMonth);
+          const monthEnd = endOfMonth(filterMonth);
+          pageQuery = pageQuery
+            .gte('created_at', monthStart.toISOString())
+            .lte('created_at', monthEnd.toISOString());
+        }
+
+        const { data } = await pageQuery;
+        if (data && data.length > 0) {
+          allAppointments = allAppointments.concat(data as any);
+        }
+      }
+
+      if (!allAppointments || allAppointments.length === 0) return null;
       if (!allAppointments) return null;
 
       // Calculate totals
