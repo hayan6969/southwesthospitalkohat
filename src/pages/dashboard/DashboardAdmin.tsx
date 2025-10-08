@@ -108,15 +108,25 @@ export default function DashboardAdmin() {
 
   // Filter audit logs
   const filteredLogs = auditLogs?.filter(log => {
-    // Improved action filtering with specific expense matching
+    const action = (log.action || '').toLowerCase();
+    const details = (log.details || '').toLowerCase();
+
+    // Improved action filtering with specific expense matching (action or details)
     const matchesAction = actionFilter === "all" || 
-      (actionFilter === "expense" 
-        ? log.action.toLowerCase().includes("expense")
-        : log.action.toLowerCase().includes(actionFilter.toLowerCase()));
+      (actionFilter === "expense"
+        ? (
+            action.includes("expense") ||
+            details.includes("expense") ||
+            details.includes("withdrawal") ||
+            details.includes("bill payment") ||
+            details.includes("pharmacy expense")
+          )
+        : action.includes(actionFilter.toLowerCase())
+      );
     
     const matchesSearch = logSearchTerm === "" || 
-      log.action.toLowerCase().includes(logSearchTerm.toLowerCase()) ||
-      (log.details && log.details.toLowerCase().includes(logSearchTerm.toLowerCase()));
+      action.includes(logSearchTerm.toLowerCase()) ||
+      details.includes(logSearchTerm.toLowerCase());
     
     // Date filtering
     const logDate = new Date(log.created_at || '');
