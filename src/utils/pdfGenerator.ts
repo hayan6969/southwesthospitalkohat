@@ -813,15 +813,15 @@ export const generateOTPDF = async (data: {
 
 // Helper function to query transaction data for a specific date
 const queryTransactionDataForDate = async (closingDate: string, closingTime: string) => {
-  // Get the previous closing to determine cutoff time
-  const { data: previousClosings } = await supabase
+  // Get the previous closing to determine cutoff time (use exact previous closing before this closingTime)
+  const { data: previous } = await supabase
     .from('daily_closings')
     .select('closing_time')
-    .lt('closing_date', closingDate)
-    .order('closing_date', { ascending: false })
+    .lt('closing_time', closingTime)
+    .order('closing_time', { ascending: false })
     .limit(1);
   
-  const previousClosing = previousClosings?.[0];
+  const previousClosing = previous?.[0];
   const cutoffTime = previousClosing?.closing_time || `${closingDate}T00:00:00Z`;
   const upperBound = closingTime;
   
@@ -1263,9 +1263,9 @@ export const generateDailyClosingPDF = async (data: {
   drawSectionHeader('HOSPITAL SERVICES');
 
   // Hospital Services Summary
-  const labCount = (transactionsData?.labReports?.length && transactionsData.labReports.length > 0)
-    ? transactionsData.labReports.length
-    : (transactionsData?.hospitalInvoices || []).filter((inv: any) => inv.invoice_number?.startsWith?.('LAB-')).length;
+  const hospitalInvoicesAll = transactionsData?.hospitalInvoices || [];
+  const labInvoicesHS = hospitalInvoicesAll.filter((inv: any) => inv.invoice_number?.startsWith?.('LAB-'));
+  const labCount = labInvoicesHS.length;
   const xrayCount = transactionsData?.xrayReports?.length || 0;
   const otCount = transactionsData?.otSchedules?.length || 0;
   const emergencyAppointmentCount = transactionsData?.emergencyAppointments?.length || 0;
@@ -1280,12 +1280,7 @@ export const generateDailyClosingPDF = async (data: {
   const emergencyInvoiceCount = emergencyInvoices.length;
   const totalEmergencyCount = emergencyAppointmentCount + emergencyInvoiceCount;
   
-  const labRevenue = (() => {
-    const fromReports = (transactionsData?.labReports || []).reduce((sum: number, lab: any) => sum + (Number(lab.price) || 0), 0);
-    if (fromReports > 0) return fromReports;
-    const labInvs = (transactionsData?.hospitalInvoices || []).filter((inv: any) => inv.invoice_number?.startsWith?.('LAB-'));
-    return labInvs.reduce((sum: number, inv: any) => sum + (Number(inv.amount) || 0), 0);
-  })();
+  const labRevenue = labInvoicesHS.reduce((sum: number, inv: any) => sum + (Number(inv.amount) || 0), 0);
   const xrayRevenue = transactionsData?.xrayReports?.reduce((sum: number, xray: any) => sum + (xray.price || 0), 0) || 0;
   const otRevenue = transactionsData?.otSchedules?.reduce((sum: number, ot: any) => sum + ((ot.total_cost || 0) - (ot.doctor_expense || 0)), 0) || 0;
   const emergencyAppointmentRevenue = transactionsData?.emergencyAppointments?.reduce((sum: number, emergency: any) => sum + (emergency.consultation_fee_at_time || 0), 0) || 0;
@@ -1446,12 +1441,9 @@ export const generateDailyClosingPDF = async (data: {
   const summaryHeaders = ['Description', 'Amount'];
   const summaryColWidths = [130, 50]; // Increased width for description
   // Calculate correct values for summary (recalculate to ensure accuracy)
-  const correctLabRevenue = (() => {
-    const fromReports = (transactionsData?.labReports || []).reduce((sum: number, lab: any) => sum + (Number(lab.price) || 0), 0);
-    if (fromReports > 0) return fromReports;
-    const labInvs = (transactionsData?.hospitalInvoices || []).filter((inv: any) => inv.invoice_number?.startsWith?.('LAB-'));
-    return labInvs.reduce((sum: number, inv: any) => sum + (Number(inv.amount) || 0), 0);
-  })();
+  const correctLabRevenue = (transactionsData?.hospitalInvoices || [])
+    .filter((inv: any) => inv.invoice_number?.startsWith?.('LAB-'))
+    .reduce((sum: number, inv: any) => sum + (Number(inv.amount) || 0), 0);
   const correctXrayRevenue = transactionsData?.xrayReports?.reduce((sum: number, xray: any) => sum + (xray.price || 0), 0) || 0;
   const correctOtRevenue = transactionsData?.otSchedules?.reduce((sum: number, ot: any) => sum + ((ot.total_cost || 0) - (ot.doctor_expense || 0)), 0) || 0;
   // Use the same totalEmergencyRevenue calculation (includes both appointments and invoices)
