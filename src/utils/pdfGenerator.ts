@@ -968,6 +968,16 @@ export const generateDailyClosingPDF = async (data: {
     } else {
       console.log('✅ Stored data has xray reports:', transactionsData.xrayReports?.length || 0);
     }
+
+    // Ensure lab reports have price values; supplement if missing or zeroed
+    const needsLabSupplement = !transactionsData.labReports || transactionsData.labReports.length === 0 || transactionsData.labReports.every((lr: any) => !lr?.price || Number(lr.price) <= 0);
+    if (needsLabSupplement) {
+      console.log('⚠️ Stored data missing lab report prices, supplementing with lab_reports for date:', data.closingDate);
+      const supplementalData = await queryTransactionDataForDate(data.closingDate, data.closingTime);
+      console.log('✅ Supplemental lab data found:', supplementalData.labReports?.length || 0);
+      transactionsData.labReports = supplementalData.labReports || [];
+      console.log('🎯 Final lab reports in transactions data:', transactionsData.labReports?.length || 0);
+    }
   }
 
   // ===========================================
