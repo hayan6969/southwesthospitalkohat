@@ -131,12 +131,16 @@ export default function FinanceDaily() {
         })));
       }
 
-      // Lab reports - filter based on cutoff time (use lab_reports table with price field)
+      // Lab invoices - filter based on cutoff time (use actual invoice amounts for revenue)
       const {
         data: labInvoices
-      } = await supabase.from('lab_reports').select('price, created_at, test_name, status').not('price', 'is', null).gt('created_at', cutoffTime) // Use gt (>) not gte (>=) to exclude boundary
-      .lte('created_at', upperBound);
-      console.log('Lab reports found:', labInvoices?.length, labInvoices);
+      } = await supabase.from('invoices')
+        .select('amount, created_at, description, invoice_number, status')
+        .eq('status', 'paid')
+        .like('invoice_number', 'LAB-%')
+        .gt('created_at', cutoffTime) // Use gt (>) not gte (>=) to exclude boundary
+        .lte('created_at', upperBound);
+      console.log('Lab invoices found:', labInvoices?.length, labInvoices);
 
       // X-ray reports - filter based on cutoff time (include both completed and pending with prices)
       const {
@@ -233,7 +237,7 @@ export default function FinanceDaily() {
         // Calculate NET pharmacy profit (gross profit minus only the profit portion of returns)
         pharmacyProfit = grossPharmacyProfit - returnsProfit;
       }
-      const labRevenue = labInvoices?.reduce((sum, lab) => sum + (lab.price || 0), 0) || 0;
+      const labRevenue = labInvoices?.reduce((sum, inv) => sum + (inv.amount || 0), 0) || 0;
       const xrayRevenue = xrayReports?.reduce((sum, xray) => sum + (xray.price || 0), 0) || 0;
       const otHospitalRevenue = otSchedules?.reduce((sum, ot) => sum + ((ot.total_cost || 0) - (ot.doctor_expense || 0)), 0) || 0;
       const miscellaneousIncome = miscIncome?.reduce((sum, income) => sum + (income.amount || 0), 0) || 0;
@@ -447,9 +451,10 @@ export default function FinanceDaily() {
           .gt('created_at', cutoffTime)
           .lte('created_at', upperBound),
         
-        supabase.from('lab_reports')
+        supabase.from('invoices')
           .select('*, patients(id, profiles(first_name, last_name))')
-          .not('price', 'is', null)
+          .eq('status', 'paid')
+          .like('invoice_number', 'LAB-%')
           .gt('created_at', cutoffTime)
           .lte('created_at', upperBound),
         
@@ -516,7 +521,7 @@ export default function FinanceDaily() {
 
       console.log('✅ Data fetched with exact timestamps:');
       console.log('   Hospital invoices:', hospitalInvoices.length);
-      console.log('   Lab reports:', labInvoices.length, '→ Rs.', labInvoices.reduce((s, lab) => s + (lab.price || 0), 0));
+      console.log('   Lab invoices:', labInvoices.length, '→ Rs.', labInvoices.reduce((s, inv) => s + (inv.amount || 0), 0));
       console.log('   Pharmacy invoices:', pharmacyInvoices.length);
       console.log('   X-ray reports:', xrayReports.length);
       console.log('   OT schedules:', otSchedules.length);
