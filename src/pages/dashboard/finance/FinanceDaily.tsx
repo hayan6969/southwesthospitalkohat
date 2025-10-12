@@ -571,7 +571,7 @@ export default function FinanceDaily() {
       pharmacyProfit = grossPharmacyProfit - returnsProfit;
 
       // Other revenue calculations
-      const labRevenue = labInvoices.reduce((sum, lab) => sum + (lab.price || 0), 0);
+      const labRevenue = labInvoices.reduce((sum, inv) => sum + (Number(inv.amount) || 0), 0);
       const xrayRevenue = xrayReports.reduce((sum, xray) => sum + (xray.price || 0), 0);
       const otHospitalRevenue = otSchedules.reduce((sum, ot) => 
         sum + ((ot.total_cost || 0) - (ot.doctor_expense || 0)), 0);
@@ -626,9 +626,9 @@ export default function FinanceDaily() {
 
       console.log('💾 Creating daily closing record with EXACT timestamp:', closingData.closingTime);
       console.log('📊 Closing contains:');
-      console.log('   Lab reports:', labInvoices.length, '→ Total: Rs.', labRevenue);
-      console.log('   First lab report:', labInvoices[0]?.id, '→', labInvoices[0]?.created_at);
-      console.log('   Last lab report:', labInvoices[labInvoices.length - 1]?.id, '→', labInvoices[labInvoices.length - 1]?.created_at);
+      console.log('   Lab invoices:', labInvoices.length, '→ Total: Rs.', labRevenue);
+      console.log('   First lab invoice:', labInvoices[0]?.invoice_number, '→', labInvoices[0]?.created_at);
+      console.log('   Last lab invoice:', labInvoices[labInvoices.length - 1]?.invoice_number, '→', labInvoices[labInvoices.length - 1]?.created_at);
       
       // Create the daily closing record
       const { error } = await supabase.rpc('create_daily_closing', {

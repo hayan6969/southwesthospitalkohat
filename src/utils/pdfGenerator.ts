@@ -1263,7 +1263,9 @@ export const generateDailyClosingPDF = async (data: {
   drawSectionHeader('HOSPITAL SERVICES');
 
   // Hospital Services Summary
-  const labCount = transactionsData?.labReports?.length || 0;
+  const labCount = (transactionsData?.labReports?.length && transactionsData.labReports.length > 0)
+    ? transactionsData.labReports.length
+    : (transactionsData?.hospitalInvoices || []).filter((inv: any) => inv.invoice_number?.startsWith?.('LAB-')).length;
   const xrayCount = transactionsData?.xrayReports?.length || 0;
   const otCount = transactionsData?.otSchedules?.length || 0;
   const emergencyAppointmentCount = transactionsData?.emergencyAppointments?.length || 0;
@@ -1278,7 +1280,12 @@ export const generateDailyClosingPDF = async (data: {
   const emergencyInvoiceCount = emergencyInvoices.length;
   const totalEmergencyCount = emergencyAppointmentCount + emergencyInvoiceCount;
   
-  const labRevenue = transactionsData?.labReports?.reduce((sum: number, lab: any) => sum + (lab.price || 0), 0) || 0;
+  const labRevenue = (() => {
+    const fromReports = (transactionsData?.labReports || []).reduce((sum: number, lab: any) => sum + (Number(lab.price) || 0), 0);
+    if (fromReports > 0) return fromReports;
+    const labInvs = (transactionsData?.hospitalInvoices || []).filter((inv: any) => inv.invoice_number?.startsWith?.('LAB-'));
+    return labInvs.reduce((sum: number, inv: any) => sum + (Number(inv.amount) || 0), 0);
+  })();
   const xrayRevenue = transactionsData?.xrayReports?.reduce((sum: number, xray: any) => sum + (xray.price || 0), 0) || 0;
   const otRevenue = transactionsData?.otSchedules?.reduce((sum: number, ot: any) => sum + ((ot.total_cost || 0) - (ot.doctor_expense || 0)), 0) || 0;
   const emergencyAppointmentRevenue = transactionsData?.emergencyAppointments?.reduce((sum: number, emergency: any) => sum + (emergency.consultation_fee_at_time || 0), 0) || 0;
@@ -1439,7 +1446,12 @@ export const generateDailyClosingPDF = async (data: {
   const summaryHeaders = ['Description', 'Amount'];
   const summaryColWidths = [130, 50]; // Increased width for description
   // Calculate correct values for summary (recalculate to ensure accuracy)
-  const correctLabRevenue = transactionsData?.labReports?.reduce((sum: number, lab: any) => sum + (lab.price || 0), 0) || 0;
+  const correctLabRevenue = (() => {
+    const fromReports = (transactionsData?.labReports || []).reduce((sum: number, lab: any) => sum + (Number(lab.price) || 0), 0);
+    if (fromReports > 0) return fromReports;
+    const labInvs = (transactionsData?.hospitalInvoices || []).filter((inv: any) => inv.invoice_number?.startsWith?.('LAB-'));
+    return labInvs.reduce((sum: number, inv: any) => sum + (Number(inv.amount) || 0), 0);
+  })();
   const correctXrayRevenue = transactionsData?.xrayReports?.reduce((sum: number, xray: any) => sum + (xray.price || 0), 0) || 0;
   const correctOtRevenue = transactionsData?.otSchedules?.reduce((sum: number, ot: any) => sum + ((ot.total_cost || 0) - (ot.doctor_expense || 0)), 0) || 0;
   // Use the same totalEmergencyRevenue calculation (includes both appointments and invoices)
