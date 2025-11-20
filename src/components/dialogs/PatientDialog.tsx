@@ -45,7 +45,12 @@ export function PatientDialog() {
         `Patient: ${firstName} ${lastName} (Phone: ${phone}, CNIC: ${cnic})`
       );
       
-      toast.success("Patient account created successfully. They can now login with their phone number and CNIC.");
+      // Show success message with patient details
+      const successMessage = result.patientNumber 
+        ? `Patient registered successfully!\nPatient ID: ${result.patientNumber}\nPhone: ${phone}\nThey can now login with their phone number and CNIC.`
+        : `Patient registered successfully!\nPhone: ${phone}\nThey can now login with their phone number and CNIC.`;
+      
+      toast.success(successMessage, { duration: 6000 });
       setOpen(false);
       
       // Reset form

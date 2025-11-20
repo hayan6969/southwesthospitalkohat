@@ -964,8 +964,24 @@ export const useCreatePatientWithProfile = () => {
           throw new Error(`PATIENT_CREATION_FAILED: ${patientError.message}`);
         }
 
+        // Fetch the complete patient data with profile to get patient_number
+        const { data: fullPatient, error: fetchError } = await supabase
+          .from('patients')
+          .select('*, profiles:id(first_name, last_name, phone, email)')
+          .eq('id', userId)
+          .single();
+
+        if (fetchError) {
+          console.error('Error fetching patient data:', fetchError);
+        }
+
         // Profile will be created automatically by the trigger
-        return { patient, user: { id: userId } };
+        return { 
+          patient: fullPatient || patient, 
+          user: { id: userId },
+          patientNumber: fullPatient?.patient_number,
+          phone: patientData.phone
+        };
         
       } catch (error: any) {
         console.error('Error in patient creation:', error);
