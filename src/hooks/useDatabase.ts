@@ -908,19 +908,20 @@ export const useCreatePatientWithProfile = () => {
       }
 
       // Check for existing profile with same phone number (username should be unique)
-      const { data: existingProfileByPhone } = await supabase
+      // Check both phone field and email pattern used for patients
+      const email = `${patientData.phone}@patient.local`;
+      const { data: existingProfiles } = await supabase
         .from('profiles')
-        .select('id, phone')
-        .eq('phone', patientData.phone)
+        .select('id, phone, email')
+        .or(`phone.eq.${patientData.phone},email.eq.${email}`)
         .maybeSingle();
 
-      if (existingProfileByPhone) {
+      if (existingProfiles) {
         console.log('Duplicate phone number found:', patientData.phone);
         throw new Error('DUPLICATE_PHONE');
       }
 
       // Use the database function to create user without affecting current session
-      const email = `${patientData.phone}@patient.local`;
       console.log('Creating patient with email:', email);
 
       try {
