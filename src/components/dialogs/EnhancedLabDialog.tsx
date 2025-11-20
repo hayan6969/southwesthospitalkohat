@@ -208,9 +208,23 @@ export function EnhancedLabDialog() {
       const selectedLabTests = labTests?.filter(test => selectedTests.includes(test.id)) || [];
       const totalAmount = selectedLabTests.reduce((sum, test) => sum + test.price, 0);
 
+      // Validate doctor_id before creating order
+      let validatedDoctorId = null;
+      if (!isExternalDoctor && selectedDoctor) {
+        // Verify the doctor exists
+        const doctorExists = doctorNames?.some(d => d.id === selectedDoctor);
+        if (!doctorExists) {
+          toast.error("Selected doctor is invalid. Please select a valid doctor or use external doctor option.");
+          return;
+        }
+        validatedDoctorId = selectedDoctor;
+      }
+
+      console.log('Creating lab order with doctor_id:', validatedDoctorId, 'isExternalDoctor:', isExternalDoctor);
+
       const labOrderData = {
         patient_id: patientId,
-        doctor_id: isExternalDoctor ? null : (selectedDoctor || null), // Ensure empty string becomes null
+        doctor_id: validatedDoctorId,
         external_doctor_name: isExternalDoctor ? externalDoctorName.trim() : null,
         selectedTests: selectedLabTests,
         notes: notes.trim() || null,
