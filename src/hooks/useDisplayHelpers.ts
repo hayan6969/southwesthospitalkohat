@@ -69,19 +69,29 @@ export const useDoctorNames = () => {
       }
 
       try {
+        // Fetch only doctors that exist in both profiles AND doctors table
         const { data, error } = await supabase
-          .from('profiles')
-          .select('id, first_name, last_name, phone, email')
-          .eq('role', 'doctor');
+          .from('doctors')
+          .select('id, profiles!inner(first_name, last_name, phone, email)')
+          .eq('profiles.role', 'doctor');
 
         if (error) throw error;
         
+        // Flatten the data structure to match the expected format
+        const formattedData = data?.map(doctor => ({
+          id: doctor.id,
+          first_name: doctor.profiles.first_name,
+          last_name: doctor.profiles.last_name,
+          phone: doctor.profiles.phone,
+          email: doctor.profiles.email,
+        })) || [];
+        
         // Cache the data for offline use
-        if (data) {
-          localStorage.setItem('cached_doctor_names', JSON.stringify(data));
+        if (formattedData) {
+          localStorage.setItem('cached_doctor_names', JSON.stringify(formattedData));
         }
         
-        return data;
+        return formattedData;
       } catch (error) {
         console.error('Error fetching doctor names:', error);
         // Fallback to cached data
