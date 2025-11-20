@@ -75,8 +75,8 @@ export function PatientDialog() {
       
       if (error.message === 'DUPLICATE_PHONE') {
         toast.error(`This phone number (${phone}) is already registered. Each patient must have a unique phone number.`, { duration: 5000 });
-      } else if (error.message.includes('Failed to verify phone number')) {
-        toast.error("Could not verify phone number availability. Please try again.");
+      } else if (error.message.includes('USER_CREATION_FAILED') && error.message.includes('already exists')) {
+        toast.error(`This phone number (${phone}) is already registered. Each patient must have a unique phone number.`, { duration: 5000 });
       } else if (error.message.includes('USER_CREATION_FAILED')) {
         toast.error(`Failed to create user account: ${error.message.replace('USER_CREATION_FAILED: ', '')}`);
       } else if (error.message.includes('PATIENT_CREATION_FAILED')) {

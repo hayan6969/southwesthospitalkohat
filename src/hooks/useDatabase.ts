@@ -910,38 +910,42 @@ export const useCreatePatientWithProfile = () => {
       // Check for existing profile with same phone number (username should be unique)
       const email = `${patientData.phone}@patient.local`;
       
-      // First check by phone number
-      const { data: byPhone, error: phoneCheckError } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('phone', patientData.phone)
-        .maybeSingle();
-      
-      if (phoneCheckError && phoneCheckError.code !== 'PGRST116') {
-        console.error('Error checking phone:', phoneCheckError);
-        throw new Error('Failed to verify phone number availability');
-      }
+      // Try to check for duplicates, but don't block registration on network errors
+      // Database constraints will catch actual duplicates during insertion
+      try {
+        // Check by phone number
+        const { data: byPhone, error: phoneCheckError } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('phone', patientData.phone)
+          .maybeSingle();
+        
+        // Only throw if we successfully checked and found a duplicate
+        if (byPhone) {
+          console.log('Phone number already exists:', patientData.phone);
+          throw new Error('DUPLICATE_PHONE');
+        }
 
-      if (byPhone) {
-        console.log('Phone number already exists:', patientData.phone);
-        throw new Error('DUPLICATE_PHONE');
-      }
-
-      // Then check by email pattern
-      const { data: byEmail, error: emailCheckError } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('email', email)
-        .maybeSingle();
-      
-      if (emailCheckError && emailCheckError.code !== 'PGRST116') {
-        console.error('Error checking email:', emailCheckError);
-        throw new Error('Failed to verify phone number availability');
-      }
-
-      if (byEmail) {
-        console.log('Email pattern already exists:', email);
-        throw new Error('DUPLICATE_PHONE');
+        // Check by email pattern
+        const { data: byEmail, error: emailCheckError } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('email', email)
+          .maybeSingle();
+        
+        // Only throw if we successfully checked and found a duplicate
+        if (byEmail) {
+          console.log('Email pattern already exists:', email);
+          throw new Error('DUPLICATE_PHONE');
+        }
+      } catch (checkError: any) {
+        // If it's a duplicate error, rethrow it
+        if (checkError.message === 'DUPLICATE_PHONE') {
+          throw checkError;
+        }
+        // For network errors or other issues, log and continue
+        // Database constraints will catch any actual duplicates
+        console.warn('Could not verify duplicate status, proceeding with registration:', checkError.message);
       }
 
       // Use the database function to create user without affecting current session
