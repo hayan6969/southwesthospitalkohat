@@ -210,7 +210,7 @@ export function EnhancedLabDialog() {
 
       const labOrderData = {
         patient_id: patientId,
-        doctor_id: isExternalDoctor ? null : selectedDoctor,
+        doctor_id: isExternalDoctor ? null : (selectedDoctor || null), // Ensure empty string becomes null
         external_doctor_name: isExternalDoctor ? externalDoctorName.trim() : null,
         selectedTests: selectedLabTests,
         notes: notes.trim() || null,
