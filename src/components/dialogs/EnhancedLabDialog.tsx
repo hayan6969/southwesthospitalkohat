@@ -83,20 +83,6 @@ export function EnhancedLabDialog() {
   const createPatientWithProfile = useCreatePatientWithProfile();
   const createLabOrderWithInvoice = useCreateLabOrderWithInvoice();
 
-  // Fetch doctors
-  const { data: doctors } = useQuery({
-    queryKey: ['doctors-for-lab'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('role', 'doctor');
-      
-      if (error) throw error;
-      return data as Doctor[];
-    }
-  });
-
   // Fetch lab tests
   const { data: labTests } = useQuery({
     queryKey: ['lab-tests-for-order'],
@@ -512,7 +498,7 @@ export function EnhancedLabDialog() {
                       <CommandEmpty>No doctor found.</CommandEmpty>
                       <CommandGroup>
                         <CommandList>
-                          {doctors?.map((doctor) => (
+                          {doctorNames?.map((doctor) => (
                             <CommandItem
                               key={doctor.id}
                               value={doctor.id}
