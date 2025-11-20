@@ -37,7 +37,14 @@ export function PatientDialog() {
         cnic: cnic.trim(),
       };
       
+      console.log('Attempting to register patient:', { 
+        name: `${firstName} ${lastName}`, 
+        phone: phone.trim() 
+      });
+      
       const result = await createPatientWithProfile.mutateAsync(patientData);
+      
+      console.log('Patient registration successful:', result);
       
       // Log the audit event
       await logAction(
@@ -60,9 +67,16 @@ export function PatientDialog() {
       setCnic("");
     } catch (error: any) {
       console.error("Error creating patient:", error);
+      console.error("Error details:", {
+        message: error.message,
+        code: error.code,
+        details: error.details
+      });
       
       if (error.message === 'DUPLICATE_PHONE') {
-        toast.error("Username already exists! A patient account with this phone number already exists. Phone numbers must be unique, but multiple patients can share the same CNIC.");
+        toast.error(`This phone number (${phone}) is already registered. Each patient must have a unique phone number.`, { duration: 5000 });
+      } else if (error.message.includes('Failed to verify phone number')) {
+        toast.error("Could not verify phone number availability. Please try again.");
       } else if (error.message.includes('USER_CREATION_FAILED')) {
         toast.error(`Failed to create user account: ${error.message.replace('USER_CREATION_FAILED: ', '')}`);
       } else if (error.message.includes('PATIENT_CREATION_FAILED')) {
@@ -70,7 +84,7 @@ export function PatientDialog() {
       } else if (error.message.includes('REGISTRATION_FAILED')) {
         toast.error(`Registration failed: ${error.message.replace('REGISTRATION_FAILED: ', '')}`);
       } else {
-        toast.error("Failed to register patient. Please check all information and try again.");
+        toast.error(`Registration error: ${error.message || 'Unknown error occurred'}. Please try again.`);
       }
     }
   };

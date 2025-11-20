@@ -908,21 +908,44 @@ export const useCreatePatientWithProfile = () => {
       }
 
       // Check for existing profile with same phone number (username should be unique)
-      // Check both phone field and email pattern used for patients
       const email = `${patientData.phone}@patient.local`;
-      const { data: existingProfiles } = await supabase
+      
+      // First check by phone number
+      const { data: byPhone, error: phoneCheckError } = await supabase
         .from('profiles')
-        .select('id, phone, email')
-        .or(`phone.eq.${patientData.phone},email.eq.${email}`)
+        .select('id')
+        .eq('phone', patientData.phone)
         .maybeSingle();
+      
+      if (phoneCheckError && phoneCheckError.code !== 'PGRST116') {
+        console.error('Error checking phone:', phoneCheckError);
+        throw new Error('Failed to verify phone number availability');
+      }
 
-      if (existingProfiles) {
-        console.log('Duplicate phone number found:', patientData.phone);
+      if (byPhone) {
+        console.log('Phone number already exists:', patientData.phone);
+        throw new Error('DUPLICATE_PHONE');
+      }
+
+      // Then check by email pattern
+      const { data: byEmail, error: emailCheckError } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('email', email)
+        .maybeSingle();
+      
+      if (emailCheckError && emailCheckError.code !== 'PGRST116') {
+        console.error('Error checking email:', emailCheckError);
+        throw new Error('Failed to verify phone number availability');
+      }
+
+      if (byEmail) {
+        console.log('Email pattern already exists:', email);
         throw new Error('DUPLICATE_PHONE');
       }
 
       // Use the database function to create user without affecting current session
-      console.log('Creating patient with email:', email);
+      console.log('Creating new patient with email:', email);
 
       try {
         // Use the create_user_account function to avoid session switching
