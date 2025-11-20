@@ -1832,10 +1832,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      auto_cancel_overdue_appointments: {
-        Args: Record<PropertyKey, never>
-        Returns: undefined
-      }
+      auto_cancel_overdue_appointments: { Args: never; Returns: undefined }
       calculate_doctor_earnings: {
         Args: { p_doctor_id: string; p_end_date: string; p_start_date: string }
         Returns: {
@@ -1871,10 +1868,7 @@ export type Database = {
         }
         Returns: string
       }
-      delete_user_safely: {
-        Args: { user_uuid: string }
-        Returns: boolean
-      }
+      delete_user_safely: { Args: { user_uuid: string }; Returns: boolean }
       generate_daily_doctor_payments: {
         Args: { target_date: string }
         Returns: number
@@ -1887,16 +1881,10 @@ export type Database = {
         Args: { target_month: string }
         Returns: number
       }
-      generate_patient_number: {
-        Args: Record<PropertyKey, never>
-        Returns: string
-      }
-      get_current_user_role: {
-        Args: Record<PropertyKey, never>
-        Returns: string
-      }
+      generate_patient_number: { Args: never; Returns: string }
+      get_current_user_role: { Args: never; Returns: string }
       get_last_daily_closing: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           closing_date: string
           closing_time: string
