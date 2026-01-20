@@ -506,8 +506,20 @@ export default function FinanceDaily() {
           .lte('created_at', upperBound)
       ]);
 
+      // Log and check for errors in each query
+      if (hospitalInvoicesRes.error) console.error('❌ Hospital invoices query error:', hospitalInvoicesRes.error);
+      if (pharmacyInvoicesRes.error) console.error('❌ Pharmacy invoices query error:', pharmacyInvoicesRes.error);
+      if (labInvoicesRes.error) console.error('❌ Lab invoices query error:', labInvoicesRes.error);
+      if (xrayReportsRes.error) console.error('❌ X-ray reports query error:', xrayReportsRes.error);
+      if (otSchedulesRes.error) console.error('❌ OT schedules query error:', otSchedulesRes.error);
+      if (emergencyAppointmentsRes.error) console.error('❌ Emergency appointments query error:', emergencyAppointmentsRes.error);
+      if (expensesRes.error) console.error('❌ Expenses query error:', expensesRes.error);
+      if (refundsRes.error) console.error('❌ Refunds query error:', refundsRes.error);
+      if (pharmacyExpensesRes.error) console.error('❌ Pharmacy expenses query error:', pharmacyExpensesRes.error);
+      if (miscellaneousIncomeRes.error) console.error('❌ Miscellaneous income query error:', miscellaneousIncomeRes.error);
+
       const hospitalInvoices = hospitalInvoicesRes.data || [];
-      const pharmacyInvoices = pharmacyInvoicesRes.data || [];
+      let pharmacyInvoices = pharmacyInvoicesRes.data || [];
       const labInvoices = labInvoicesRes.data || [];
       const xrayReports = xrayReportsRes.data || [];
       const otSchedules = otSchedulesRes.data || [];
@@ -518,6 +530,39 @@ export default function FinanceDaily() {
       const pharmacyAccount = pharmacyAccountRes.data?.[0] || null;
       const totalStock = totalStockRes.data || [];
       const miscellaneousIncome = miscellaneousIncomeRes.data || [];
+
+      // If pharmacy query failed or returned empty but we expect data, try a simpler query
+      if (pharmacyInvoicesRes.error || pharmacyInvoices.length === 0) {
+        console.log('⚠️ Pharmacy query may have failed, trying simpler query...');
+        const { data: simplePharmacyData, error: simpleError } = await supabase
+          .from('pharmacy_invoices')
+          .select('id, invoice_number, customer_name, customer_phone, total_amount, discount_amount, final_amount, status, created_at')
+          .gt('created_at', cutoffTime)
+          .lte('created_at', upperBound);
+        
+        if (simpleError) {
+          console.error('❌ Simple pharmacy query also failed:', simpleError);
+        } else if (simplePharmacyData && simplePharmacyData.length > 0) {
+          console.log('✅ Simple pharmacy query succeeded, fetching items separately...');
+          // Fetch items for these invoices in batches
+          const invoiceIds = simplePharmacyData.map(inv => inv.id);
+          const { data: itemsData, error: itemsError } = await supabase
+            .from('pharmacy_invoice_items')
+            .select('invoice_id, quantity, unit_price, total_price, medicine_id, medicines(name, purchase_price, selling_price)')
+            .in('invoice_id', invoiceIds);
+          
+          if (itemsError) {
+            console.error('❌ Pharmacy items query failed:', itemsError);
+          }
+          
+          // Combine invoices with items
+          pharmacyInvoices = simplePharmacyData.map(inv => ({
+            ...inv,
+            pharmacy_invoice_items: (itemsData || []).filter(item => item.invoice_id === inv.id)
+          }));
+          console.log('✅ Rebuilt pharmacy data:', pharmacyInvoices.length, 'invoices with items');
+        }
+      }
 
       console.log('✅ Data fetched with exact timestamps:');
       console.log('   Hospital invoices:', hospitalInvoices.length);
