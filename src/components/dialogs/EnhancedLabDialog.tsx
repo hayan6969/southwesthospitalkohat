@@ -53,7 +53,7 @@ export function EnhancedLabDialog() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedPatient, setSelectedPatient] = useState<any>(null);
   const [selectedDoctor, setSelectedDoctor] = useState("");
-  const [doctorOpen, setDoctorOpen] = useState(false);
+  // doctorOpen state removed - using Select instead of Popover+Command
   const [selectedTests, setSelectedTests] = useState<string[]>([]);
   const [testSearchQuery, setTestSearchQuery] = useState("");
   const [notes, setNotes] = useState("");
@@ -478,49 +478,18 @@ export function EnhancedLabDialog() {
                   />
                 </div>
               ) : (
-                <Popover open={doctorOpen} onOpenChange={setDoctorOpen}>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      role="combobox"
-                      aria-expanded={doctorOpen}
-                      className="w-full justify-between"
-                    >
-                      {selectedDoctor
-                        ? getDoctorName(selectedDoctor, doctorNames || [])
-                        : "Select ordering doctor..."}
-                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-full p-0">
-                    <Command>
-                      <CommandInput placeholder="Search doctors..." />
-                      <CommandEmpty>No doctor found.</CommandEmpty>
-                      <CommandGroup>
-                        <CommandList>
-                          {doctorNames?.map((doctor) => (
-                            <CommandItem
-                              key={doctor.id}
-                              value={doctor.id}
-                              onSelect={(currentValue) => {
-                                setSelectedDoctor(currentValue === selectedDoctor ? "" : currentValue);
-                                setDoctorOpen(false);
-                              }}
-                            >
-                              <Check
-                                className={cn(
-                                  "mr-2 h-4 w-4",
-                                  selectedDoctor === doctor.id ? "opacity-100" : "opacity-0"
-                                )}
-                              />
-                              {getDoctorName(doctor.id, doctorNames || [])}
-                            </CommandItem>
-                          ))}
-                        </CommandList>
-                      </CommandGroup>
-                    </Command>
-                  </PopoverContent>
-                </Popover>
+                <Select value={selectedDoctor} onValueChange={setSelectedDoctor}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Select ordering doctor..." />
+                  </SelectTrigger>
+                  <SelectContent className="z-[9999] max-h-[300px]">
+                    {doctorNames?.map((doctor) => (
+                      <SelectItem key={doctor.id} value={doctor.id}>
+                        {getDoctorName(doctor.id, doctorNames || [])}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               )}
             </CardContent>
           </Card>

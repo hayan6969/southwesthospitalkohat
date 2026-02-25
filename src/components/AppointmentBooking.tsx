@@ -40,7 +40,7 @@ export const AppointmentBooking = () => {
   const { profile } = useAuth();
   const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [filteredDoctors, setFilteredDoctors] = useState<Doctor[]>([]);
-  const [doctorComboOpen, setDoctorComboOpen] = useState(false);
+  // doctorComboOpen removed - using Select
   const [hospitalSettings, setHospitalSettings] = useState<HospitalSettings | null>(null);
   const [selectedDoctor, setSelectedDoctor] = useState<string>("");
   const [selectedDate, setSelectedDate] = useState<Date>();
@@ -280,79 +280,18 @@ export const AppointmentBooking = () => {
           <CardContent className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="doctor">Select Doctor</Label>
-              <Popover open={doctorComboOpen} onOpenChange={setDoctorComboOpen}>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    role="combobox"
-                    aria-expanded={doctorComboOpen}
-                    className="w-full justify-between"
-                  >
-                    {selectedDoctor
-                      ? (() => {
-                          const doctor = doctors.find(d => d.id === selectedDoctor);
-                          return doctor ? `Dr. ${doctor.first_name} ${doctor.last_name}` : "Select doctor...";
-                        })()
-                      : "Select doctor..."}
-                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-full p-0">
-                  <Command>
-                    <CommandInput placeholder="Search doctors by name or specialization..." />
-                    <CommandList>
-                      <CommandEmpty>No doctor found.</CommandEmpty>
-                      <CommandGroup>
-                        {doctors.map((doctor) => (
-                          <CommandItem
-                            key={doctor.id}
-                            value={`${doctor.first_name} ${doctor.last_name} ${doctor.specialization}`}
-                            onSelect={() => {
-                              setSelectedDoctor(doctor.id);
-                              setDoctorComboOpen(false);
-                            }}
-                          >
-                            <Check
-                              className={cn(
-                                "mr-2 h-4 w-4",
-                                selectedDoctor === doctor.id ? "opacity-100" : "opacity-0"
-                              )}
-                            />
-                            <div className="flex items-center gap-3 py-2">
-                              <Avatar className="w-10 h-10 border-2 border-green-200">
-                                <AvatarImage 
-                                  src={doctor.avatar_url || ''} 
-                                  alt="Doctor Avatar"
-                                  onError={(e) => {
-                                    console.log('Avatar image failed to load:', doctor.avatar_url);
-                                    e.currentTarget.style.display = 'none';
-                                  }}
-                                />
-                                <AvatarFallback className="bg-green-100 text-green-700 text-sm font-bold">
-                                  {doctor.first_name?.[0]}{doctor.last_name?.[0]}
-                                </AvatarFallback>
-                              </Avatar>
-                              <div className="flex flex-col gap-1 flex-1">
-                                <div className="flex items-center gap-2">
-                                  <span className="font-medium">
-                                    Dr. {doctor.first_name} {doctor.last_name}
-                                  </span>
-                                </div>
-                                <div className="text-sm text-gray-500">
-                                  {doctor.specialization} • {doctor.experience_years} years exp.
-                                </div>
-                                <div className="text-sm font-medium text-green-600">
-                                  PKR {doctor.consultation_fee} consultation fee
-                                </div>
-                              </div>
-                            </div>
-                          </CommandItem>
-                        ))}
-                      </CommandGroup>
-                    </CommandList>
-                  </Command>
-                </PopoverContent>
-              </Popover>
+              <Select value={selectedDoctor} onValueChange={setSelectedDoctor}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select doctor..." />
+                </SelectTrigger>
+                <SelectContent className="z-[9999] max-h-[300px]">
+                  {doctors.map((doctor) => (
+                    <SelectItem key={doctor.id} value={doctor.id}>
+                      Dr. {doctor.first_name} {doctor.last_name} - {doctor.specialization} (PKR {doctor.consultation_fee})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="space-y-2">
