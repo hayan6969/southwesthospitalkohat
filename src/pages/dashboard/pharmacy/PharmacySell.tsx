@@ -32,6 +32,7 @@ export default function PharmacySell() {
   const [customerPhone, setCustomerPhone] = useState("");
   const [discount, setDiscount] = useState(0);
   const [searchTerm, setSearchTerm] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const { data: medicines, isLoading } = useSearchableMedicines(searchTerm);
   const createInvoice = useCreatePharmacyInvoice();
@@ -120,6 +121,9 @@ export default function PharmacySell() {
       return;
     }
 
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+
     try {
       const invoiceNumber = `INV-${Date.now()}`;
       
@@ -179,6 +183,8 @@ export default function PharmacySell() {
     } catch (error) {
       toast.error("Failed to complete sale");
       console.error("Sale error:", error);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -335,9 +341,9 @@ export default function PharmacySell() {
                 <Button 
                   onClick={handleSale} 
                   className="w-full"
-                  disabled={createInvoice.isPending}
+                  disabled={isSubmitting || createInvoice.isPending}
                 >
-                  {createInvoice.isPending ? "Processing..." : "Complete Sale"}
+                  {(isSubmitting || createInvoice.isPending) ? "Processing..." : "Complete Sale"}
                 </Button>
               </div>
             )}
