@@ -482,7 +482,7 @@ export function EnhancedLabDialog() {
                   <SelectTrigger className="w-full">
                     <SelectValue placeholder="Select ordering doctor..." />
                   </SelectTrigger>
-                  <SelectContent className="z-[9999] max-h-[300px] bg-popover" position="popper" sideOffset={4}>
+                  <SelectContent portal={false} className="z-[9999] max-h-[300px] bg-popover" position="popper" sideOffset={4}>
                     {doctorNames && doctorNames.length > 0 ? (
                       doctorNames.map((doctor) => (
                         <SelectItem key={doctor.id} value={doctor.id}>
@@ -490,7 +490,7 @@ export function EnhancedLabDialog() {
                         </SelectItem>
                       ))
                     ) : (
-                      <div className="px-3 py-2 text-sm text-muted-foreground">No doctors found</div>
+                      <SelectItem value="__no_doctors__" disabled>No doctors found</SelectItem>
                     )}
                   </SelectContent>
                 </Select>

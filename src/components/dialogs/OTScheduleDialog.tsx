@@ -689,7 +689,7 @@ export function OTScheduleDialog() {
                   <SelectTrigger className="w-full">
                     <SelectValue placeholder="Select internal doctor..." />
                   </SelectTrigger>
-                  <SelectContent className="z-[9999] max-h-[300px]">
+                  <SelectContent portal={false} className="z-[9999] max-h-[300px] bg-popover">
                     {doctors?.map((doctor) => {
                       const doctorProfile = doctorNames?.find(d => d.id === doctor.id);
                       return (

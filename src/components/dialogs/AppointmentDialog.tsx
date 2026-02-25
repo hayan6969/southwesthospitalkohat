@@ -152,7 +152,7 @@ export function AppointmentDialog() {
               <SelectTrigger className="w-full">
                 <SelectValue placeholder="Select doctor..." />
               </SelectTrigger>
-              <SelectContent className="z-[9999] max-h-[300px]">
+              <SelectContent portal={false} className="z-[9999] max-h-[300px] bg-popover">
                 {doctors?.map((doctor) => (
                   <SelectItem key={doctor.id} value={doctor.id}>
                     Dr. {doctor.profiles?.first_name} {doctor.profiles?.last_name} - {doctor.specialization}
