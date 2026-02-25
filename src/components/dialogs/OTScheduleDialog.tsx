@@ -38,7 +38,7 @@ interface OTRoom {
 export function OTScheduleDialog() {
   const [open, setOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("search");
-  const [doctorOpen, setDoctorOpen] = useState(false);
+  // doctorOpen state removed - using Select instead of Popover+Command
   const [operationOpen, setOperationOpen] = useState(false);
   
   
@@ -685,58 +685,21 @@ export function OTScheduleDialog() {
               {/* Doctor Selection */}
                <div className="space-y-2">
                  <Label htmlFor="doctor">Doctor *</Label>
-                <Popover open={doctorOpen} onOpenChange={setDoctorOpen}>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      role="combobox"
-                      aria-expanded={doctorOpen}
-                       className="w-full justify-between"
-                     >
-                       {doctorId ? (() => {
-                         const selectedDoctor = doctorNames?.find(d => d.id === doctorId);
-                         return `Dr. ${selectedDoctor?.first_name} ${selectedDoctor?.last_name}`;
-                       })() : "Select internal doctor..."}
-                       <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                    </Button>
-                  </PopoverTrigger>
-                   <PopoverContent className="w-full p-0">
-                     <Command>
-                       <CommandInput placeholder="Search internal doctors..." />
-                       <CommandList>
-                         <CommandEmpty>No internal doctor found.</CommandEmpty>
-                         <CommandGroup>
-                           {doctors?.map((doctor) => {
-                             const doctorProfile = doctorNames?.find(d => d.id === doctor.id);
-                             return (
-                               <CommandItem
-                                 key={doctor.id}
-                                 value={`${doctorProfile?.first_name} ${doctorProfile?.last_name} ${doctor.specialization}`}
-                                 onSelect={() => {
-                                   handleDoctorChange(doctor.id);
-                                   setDoctorOpen(false);
-                                 }}
-                               >
-                                 <Check
-                                   className={cn(
-                                     "mr-2 h-4 w-4",
-                                     doctorId === doctor.id ? "opacity-100" : "opacity-0"
-                                   )}
-                                 />
-                                 <div className="flex flex-col">
-                                   <span>Dr. {doctorProfile?.first_name} {doctorProfile?.last_name}</span>
-                                   <span className="text-sm text-gray-500">
-                                     {doctor.specialization} • Fee: {formatPkrAmount(doctor.consultation_fee || 0)}
-                                   </span>
-                                 </div>
-                               </CommandItem>
-                             );
-                           })}
-                         </CommandGroup>
-                       </CommandList>
-                     </Command>
-                   </PopoverContent>
-                 </Popover>
+                <Select value={doctorId} onValueChange={handleDoctorChange}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Select internal doctor..." />
+                  </SelectTrigger>
+                  <SelectContent className="z-[9999] max-h-[300px]">
+                    {doctors?.map((doctor) => {
+                      const doctorProfile = doctorNames?.find(d => d.id === doctor.id);
+                      return (
+                        <SelectItem key={doctor.id} value={doctor.id}>
+                          Dr. {doctorProfile?.first_name} {doctorProfile?.last_name} - {doctor.specialization} ({formatPkrAmount(doctor.consultation_fee || 0)})
+                        </SelectItem>
+                      );
+                    })}
+                  </SelectContent>
+                </Select>
                </div>
 
               {/* Doctor Expense */}

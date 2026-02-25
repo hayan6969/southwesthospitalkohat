@@ -31,7 +31,7 @@ export function AppointmentDialog() {
   const [open, setOpen] = useState(false);
   const [patientId, setPatientId] = useState("");
   const [doctorId, setDoctorId] = useState("");
-  const [doctorOpen, setDoctorOpen] = useState(false);
+  // doctorOpen removed - using Select
   const [appointmentDate, setAppointmentDate] = useState("");
   const [appointmentTime, setAppointmentTime] = useState("");
   const [type, setType] = useState("");
@@ -106,7 +106,7 @@ export function AppointmentDialog() {
       // Reset form
       setPatientId("");
       setDoctorId("");
-      setDoctorOpen(false);
+      // doctorOpen removed
       setAppointmentDate("");
       setAppointmentTime("");
       setType("");
@@ -148,49 +148,18 @@ export function AppointmentDialog() {
 
           <div className="space-y-2">
             <Label htmlFor="doctor">Doctor</Label>
-            <Popover open={doctorOpen} onOpenChange={setDoctorOpen}>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  role="combobox"
-                  aria-expanded={doctorOpen}
-                  className="w-full justify-between"
-                >
-                  {doctorId
-                    ? `Dr. ${doctors?.find((doctor) => doctor.id === doctorId)?.profiles?.first_name} ${doctors?.find((doctor) => doctor.id === doctorId)?.profiles?.last_name}`
-                    : "Select doctor..."}
-                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-full p-0">
-                <Command>
-                  <CommandInput placeholder="Search doctors..." />
-                  <CommandList>
-                    <CommandEmpty>No doctor found.</CommandEmpty>
-                    <CommandGroup>
-                      {doctors?.map((doctor) => (
-                        <CommandItem
-                          key={doctor.id}
-                          value={`${doctor.profiles?.first_name} ${doctor.profiles?.last_name} ${doctor.specialization}`}
-                          onSelect={() => {
-                            setDoctorId(doctor.id);
-                            setDoctorOpen(false);
-                          }}
-                        >
-                          <Check
-                            className={cn(
-                              "mr-2 h-4 w-4",
-                              doctorId === doctor.id ? "opacity-100" : "opacity-0"
-                            )}
-                          />
-                          Dr. {doctor.profiles?.first_name} {doctor.profiles?.last_name} - {doctor.specialization}
-                        </CommandItem>
-                      ))}
-                    </CommandGroup>
-                  </CommandList>
-                </Command>
-              </PopoverContent>
-            </Popover>
+            <Select value={doctorId} onValueChange={setDoctorId}>
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Select doctor..." />
+              </SelectTrigger>
+              <SelectContent className="z-[9999] max-h-[300px]">
+                {doctors?.map((doctor) => (
+                  <SelectItem key={doctor.id} value={doctor.id}>
+                    Dr. {doctor.profiles?.first_name} {doctor.profiles?.last_name} - {doctor.specialization}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="space-y-2">
