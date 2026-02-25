@@ -424,7 +424,7 @@ export function EnhancedAppointmentDialog() {
               <SelectTrigger className="w-full">
                 <SelectValue placeholder="Select doctor..." />
               </SelectTrigger>
-              <SelectContent className="z-[9999] max-h-[300px]">
+              <SelectContent portal={false} className="z-[9999] max-h-[300px] bg-popover">
                 {doctors?.map((doctor) => {
                   const doctorName = doctorNames?.find(d => d.id === doctor.id);
                   return (
