@@ -155,21 +155,6 @@ export default function FinanceRefunds() {
         profile?.id
       );
 
-      // If it's a hospital-related refund, also create an expense record
-      if (['ot_simple', 'lab', 'pharmacy', 'other'].includes(refundData.refundType)) {
-        const { error: expenseError } = await supabase
-          .from('expenses')
-          .insert({
-            amount: parseFloat(refundData.amount),
-            category: 'Refund',
-            description: `${getRefundTypeLabel(refundData.refundType)} refund: ${refundData.description}`,
-            expense_date: getCurrentPakistanTime().toISOString().split('T')[0],
-            created_by: profile?.id
-          });
-
-        if (expenseError) throw expenseError;
-      }
-
       return refund;
     },
     onSuccess: () => {
