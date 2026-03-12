@@ -20,6 +20,7 @@ interface FinanceData {
   xrayReports: any[];
   otSchedules: any[];
   expenses: any[];
+  completedAppointments: any[];
 }
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8'];
@@ -66,14 +67,16 @@ export function AdminFinanceAnalytics() {
         { data: labReports },
         { data: xrayReports },
         { data: otSchedules },
-        { data: expenses }
+        { data: expenses },
+        { data: completedAppointments }
       ] = await Promise.all([
         supabase.from('invoices').select('*').gte('created_at', start).lte('created_at', end).order('created_at', { ascending: false }),
         supabase.from('pharmacy_invoices').select('*').gte('created_at', start).lte('created_at', end).order('created_at', { ascending: false }),
         supabase.from('lab_reports').select('*').gte('created_at', start).lte('created_at', end).order('created_at', { ascending: false }),
         supabase.from('xray_reports').select('*').gte('created_at', start).lte('created_at', end).order('created_at', { ascending: false }),
         supabase.from('ot_schedules').select('*').gte('created_at', start).lte('created_at', end).order('created_at', { ascending: false }),
-        supabase.from('expenses').select('*').gte('created_at', start).lte('created_at', end).order('created_at', { ascending: false })
+        supabase.from('expenses').select('*').gte('created_at', start).lte('created_at', end).order('created_at', { ascending: false }),
+        supabase.from('appointments').select('id, consultation_fee_at_time, status, payment_status, created_at, appointment_date').eq('status', 'completed').eq('payment_status', 'paid').gte('created_at', start).lte('created_at', end)
       ]);
 
       return {
@@ -82,7 +85,8 @@ export function AdminFinanceAnalytics() {
         labReports: labReports || [],
         xrayReports: xrayReports || [],
         otSchedules: otSchedules || [],
-        expenses: expenses || []
+        expenses: expenses || [],
+        completedAppointments: completedAppointments || []
       };
     },
     refetchInterval: 30000, // Real-time updates every 30 seconds
@@ -306,7 +310,7 @@ export function AdminFinanceAnalytics() {
 }
 
 function calculateAnalytics(data: FinanceData) {
-  const { hospitalInvoices, pharmacyInvoices, labReports, xrayReports, otSchedules, expenses } = data;
+  const { hospitalInvoices, pharmacyInvoices, labReports, xrayReports, otSchedules, expenses, completedAppointments } = data;
   const today = new Date();
   const startOfToday = startOfDay(today);
   const endOfToday = endOfDay(today);
@@ -314,18 +318,17 @@ function calculateAnalytics(data: FinanceData) {
   const endOfThisMonth = endOfMonth(today);
 
   // IMPORTANT: Correct revenue flow separation
-  // Doctor revenue: Regular appointment consultation fees + OT doctor expenses
-  // Hospital revenue: EMERGENCY consultations + Lab tests + OT hospital portion (total - doctor expense) + pharmacy profit
+  // Doctor revenue: Only from COMPLETED & PAID appointments (consultation fees) + OT doctor expenses
+  // Hospital revenue: EMERGENCY consultations + Lab tests + OT hospital portion + pharmacy profit
 
   // Emergency consultations go to hospital
   const emergencyConsultationRevenue = hospitalInvoices.filter(inv => 
     inv.status === 'paid' && inv.description?.toLowerCase().includes('emergency')
   ).reduce((sum, inv) => sum + Number(inv.amount), 0);
   
-  // Regular consultations go to doctors (not counted in hospital revenue)
-  const doctorConsultationRevenue = hospitalInvoices.filter(inv => 
-    inv.status === 'paid' && (!inv.description?.toLowerCase().includes('emergency'))
-  ).reduce((sum, inv) => sum + Number(inv.amount), 0);
+  // Regular consultations - use completed appointments data instead of invoices
+  const doctorConsultationRevenue = completedAppointments
+    .reduce((sum, apt) => sum + (Number(apt.consultation_fee_at_time) || 0), 0);
   
   // Calculate pharmacy revenue and profit
   const pharmacyRevenue = pharmacyInvoices.reduce((sum, inv) => sum + Number(inv.final_amount), 0);
