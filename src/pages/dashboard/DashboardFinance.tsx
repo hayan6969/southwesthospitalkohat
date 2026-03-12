@@ -107,7 +107,7 @@ export default function DashboardFinance() {
   // Calculate hospital revenue - Emergency consultations go to hospital, regular consultations go to doctors
   // Hospital gets: EMERGENCY consultations, lab tests, OT hospital portion, pharmacy profit
   const emergencyConsultationRevenue = invoices?.filter(inv => 
-    inv.status === 'paid' && inv.description?.toLowerCase().includes('emergency')
+    inv.status === 'paid' && inv.status !== 'cancelled' && inv.description?.toLowerCase().includes('emergency')
   ).reduce((sum, invoice) => sum + (invoice.amount || 0), 0) || 0;
   
   // Calculate pharmacy revenue and profit correctly
