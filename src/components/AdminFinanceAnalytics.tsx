@@ -67,14 +67,16 @@ export function AdminFinanceAnalytics() {
         { data: labReports },
         { data: xrayReports },
         { data: otSchedules },
-        { data: expenses }
+        { data: expenses },
+        { data: completedAppointments }
       ] = await Promise.all([
         supabase.from('invoices').select('*').gte('created_at', start).lte('created_at', end).order('created_at', { ascending: false }),
         supabase.from('pharmacy_invoices').select('*').gte('created_at', start).lte('created_at', end).order('created_at', { ascending: false }),
         supabase.from('lab_reports').select('*').gte('created_at', start).lte('created_at', end).order('created_at', { ascending: false }),
         supabase.from('xray_reports').select('*').gte('created_at', start).lte('created_at', end).order('created_at', { ascending: false }),
         supabase.from('ot_schedules').select('*').gte('created_at', start).lte('created_at', end).order('created_at', { ascending: false }),
-        supabase.from('expenses').select('*').gte('created_at', start).lte('created_at', end).order('created_at', { ascending: false })
+        supabase.from('expenses').select('*').gte('created_at', start).lte('created_at', end).order('created_at', { ascending: false }),
+        supabase.from('appointments').select('id, consultation_fee_at_time, status, payment_status, created_at, appointment_date').eq('status', 'completed').eq('payment_status', 'paid').gte('created_at', start).lte('created_at', end)
       ]);
 
       return {
@@ -83,7 +85,8 @@ export function AdminFinanceAnalytics() {
         labReports: labReports || [],
         xrayReports: xrayReports || [],
         otSchedules: otSchedules || [],
-        expenses: expenses || []
+        expenses: expenses || [],
+        completedAppointments: completedAppointments || []
       };
     },
     refetchInterval: 30000, // Real-time updates every 30 seconds
