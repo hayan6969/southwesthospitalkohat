@@ -522,59 +522,62 @@ export function OTScheduleDialog() {
                 </TabsList>
                 
                 <TabsContent value="search" className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="search">Search by Patient ID</Label>
-                    <Input
-                      id="search"
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      placeholder="Enter Patient ID (e.g. P-0001)..."
-                    />
-                  </div>
-                  
-                  {searchResults && searchResults.length > 0 && (
+                  {selectedPatient ? (
                     <div className="space-y-2">
-                      <Label>Select Patient</Label>
-                      <div className="space-y-2 max-h-40 overflow-y-auto">
-                        {searchResults.map((patient) => {
-                          const fullName = patient.profile?.first_name && patient.profile?.last_name
-                            ? `${patient.profile.first_name} ${patient.profile.last_name}`.trim()
-                            : 'Name not available';
-                          
-                          return (
-                            <div
-                              key={patient.id}
-                              className={`p-4 border-2 rounded-lg cursor-pointer transition-all duration-200 ${
-                                selectedPatient?.id === patient.id 
-                                  ? 'border-blue-500 bg-blue-50 shadow-md ring-1 ring-blue-200' 
-                                  : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
-                              }`}
-                              onClick={() => setSelectedPatient(patient)}
-                            >
-                              <div className="flex items-center justify-between mb-2">
-                                <div className="font-semibold text-lg text-gray-900">
-                                  {fullName}
-                                </div>
-                                {selectedPatient?.id === patient.id && (
-                                  <div className="text-blue-600 text-sm font-medium flex items-center gap-1">
-                                    <span className="text-blue-500">✓</span> Selected
-                                  </div>
-                                )}
-                              </div>
-                              <div className="space-y-1 text-sm text-gray-600">
-                                <div><strong>Patient ID:</strong> {patient.patient_number || 'Not assigned'}</div>
-                                {patient.profile?.phone && (
-                                  <div><strong>Phone:</strong> {patient.profile.phone}</div>
-                                )}
-                                {patient.profile?.email && (
-                                  <div><strong>Email:</strong> {patient.profile.email}</div>
-                                )}
-                              </div>
-                            </div>
-                          );
-                        })}
+                      <Label>Selected Patient</Label>
+                      <div className="p-4 border-2 border-blue-500 bg-blue-50 rounded-lg flex items-center justify-between">
+                        <div>
+                          <div className="font-semibold text-lg text-gray-900">
+                            {selectedPatient.profile?.first_name} {selectedPatient.profile?.last_name}
+                          </div>
+                          <div className="text-sm text-gray-600 space-y-0.5">
+                            <div><strong>Patient ID:</strong> {selectedPatient.patient_number || 'N/A'}</div>
+                            {selectedPatient.profile?.phone && <div><strong>Phone:</strong> {selectedPatient.profile.phone}</div>}
+                          </div>
+                        </div>
+                        <Button variant="ghost" size="sm" onClick={() => setSelectedPatient(null)}>
+                          <X className="w-4 h-4" />
+                        </Button>
                       </div>
                     </div>
+                  ) : (
+                    <>
+                      <div className="space-y-2">
+                        <Label htmlFor="search">Search by Patient ID</Label>
+                        <Input
+                          id="search"
+                          value={searchTerm}
+                          onChange={(e) => setSearchTerm(e.target.value)}
+                          placeholder="Enter Patient ID (e.g. P-0001)..."
+                        />
+                      </div>
+                      {searchResults && searchResults.length > 0 && (
+                        <div className="space-y-2">
+                          <Label>Select Patient</Label>
+                          <div className="space-y-2 max-h-40 overflow-y-auto">
+                            {searchResults.map((patient) => {
+                              const fullName = patient.profile?.first_name && patient.profile?.last_name
+                                ? `${patient.profile.first_name} ${patient.profile.last_name}`.trim()
+                                : 'Name not available';
+                              return (
+                                <div
+                                  key={patient.id}
+                                  className="p-4 border-2 border-gray-200 hover:border-gray-300 hover:bg-gray-50 rounded-lg cursor-pointer transition-all duration-200"
+                                  onClick={() => setSelectedPatient(patient)}
+                                >
+                                  <div className="font-semibold text-lg text-gray-900">{fullName}</div>
+                                  <div className="space-y-1 text-sm text-gray-600">
+                                    <div><strong>Patient ID:</strong> {patient.patient_number || 'Not assigned'}</div>
+                                    {patient.profile?.phone && <div><strong>Phone:</strong> {patient.profile.phone}</div>}
+                                    {patient.profile?.email && <div><strong>Email:</strong> {patient.profile.email}</div>}
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+                    </>
                   )}
                 </TabsContent>
                 
