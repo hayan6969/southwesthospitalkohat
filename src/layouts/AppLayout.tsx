@@ -12,7 +12,7 @@ interface AppLayoutProps {
   hideSidebar?: boolean;
 }
 
-const AppLayout = ({ children, sidebarRole }: AppLayoutProps) => {
+const AppLayout = ({ children, sidebarRole, hideSidebar }: AppLayoutProps) => {
   const { profile, signOut } = useAuth();
 
   if (!profile) {
