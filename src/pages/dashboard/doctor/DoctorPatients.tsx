@@ -130,7 +130,7 @@ export default function DoctorPatients() {
                      </TableCell>
                      <TableCell>
                        <div className="font-medium">
-                         {patient.profiles?.first_name} {patient.profiles?.last_name}
+                         {(patient.profiles as any)?.first_name} {(patient.profiles as any)?.last_name}
                        </div>
                      </TableCell>
                     <TableCell>
