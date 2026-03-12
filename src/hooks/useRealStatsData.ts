@@ -95,7 +95,7 @@ export const useRealStatsData = () => {
 
       const [appointmentsTrend, revenueTrend] = await Promise.all([
         generateTrendData('appointments'),
-        generateTrendData('invoices', 'amount')
+        generateTrendData('appointments', true)
       ]);
 
       // Generate static trends for doctors and patients
