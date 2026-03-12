@@ -57,25 +57,27 @@ export const useRealStatsData = () => {
       };
 
       // Generate trend data for the last 5 days (only for tables with created_at)
-      const generateTrendData = async (table: 'appointments' | 'invoices', valueField: string = 'id') => {
+      const generateTrendData = async (table: 'appointments', isRevenue: boolean = false) => {
         const data = [];
         for (let i = 4; i >= 0; i--) {
           const date = subDays(today, i);
           const start = startOfDay(date);
           const end = endOfDay(date);
           
-          if (valueField === 'amount' && table === 'invoices') {
+          if (isRevenue) {
             const { data: dayData } = await supabase
-              .from(table)
-              .select('amount')
+              .from('appointments')
+              .select('consultation_fee_at_time')
+              .eq('status', 'completed')
+              .eq('payment_status', 'paid')
               .gte('created_at', start.toISOString())
               .lte('created_at', end.toISOString());
             
-            const value = dayData?.reduce((sum: number, item: any) => sum + (item.amount || 0), 0) || 0;
+            const value = dayData?.reduce((sum: number, item: any) => sum + (item.consultation_fee_at_time || 0), 0) || 0;
             data.push({ value });
           } else {
             const { data: dayData } = await supabase
-              .from(table)
+              .from('appointments')
               .select('id')
               .gte('created_at', start.toISOString())
               .lte('created_at', end.toISOString());
