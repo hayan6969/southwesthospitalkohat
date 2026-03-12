@@ -1,0 +1,1 @@
+ALTER TABLE public.doctors ADD CONSTRAINT doctors_id_fkey FOREIGN KEY (id) REFERENCES public.profiles(id) ON DELETE CASCADE;

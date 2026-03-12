@@ -456,7 +456,15 @@ export type Database = {
           license_number?: string | null
           specialization?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "doctors_id_fkey"
+            columns: ["id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       emergency_expenses: {
         Row: {
@@ -1144,7 +1152,15 @@ export type Database = {
           id?: string
           patient_number?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "patients_id_fkey"
+            columns: ["id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       payroll: {
         Row: {
