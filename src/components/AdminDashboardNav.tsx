@@ -5,8 +5,6 @@ import {
   DollarSign, 
   Pill, 
   UserCog, 
-  Stethoscope,
-  Users,
   Calendar
 } from "lucide-react";
 
@@ -30,7 +28,7 @@ export function AdminDashboardNav() {
   const currentDashboard = getCurrentDashboard();
 
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex items-center gap-2 whitespace-nowrap">
       {dashboards.map((dashboard) => {
         const Icon = dashboard.icon;
         const isActive = currentDashboard === dashboard.path;
@@ -41,14 +39,15 @@ export function AdminDashboardNav() {
             variant={isActive ? "default" : "outline"}
             size="sm"
             onClick={() => navigate(dashboard.path)}
-            className={`flex items-center gap-2 ${
+            className={`flex items-center gap-1.5 text-xs sm:text-sm sm:gap-2 ${
               isActive 
                 ? "bg-primary text-primary-foreground shadow-sm" 
                 : "hover:bg-accent hover:text-accent-foreground"
             }`}
           >
-            <Icon className="w-4 h-4" />
-            {dashboard.label}
+            <Icon className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+            <span className="hidden sm:inline">{dashboard.label}</span>
+            <span className="sm:hidden">{dashboard.label}</span>
           </Button>
         );
       })}

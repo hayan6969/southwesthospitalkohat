@@ -1,6 +1,8 @@
 
 import { NavLink } from "react-router-dom";
-import { User, Users, Calendar, FileText, Inbox, Info, Activity, Building2, Shield, Pill, Clock, TestTube, CreditCard, Calculator, Receipt, Settings, ChartBar, UserPlus, Stethoscope, Upload, CheckCircle, RotateCcw, FlaskConical } from "lucide-react";
+import { User, Users, Calendar, FileText, Inbox, Info, Activity, Building2, Shield, Pill, Clock, TestTube, CreditCard, Calculator, Receipt, Settings, ChartBar, UserPlus, Stethoscope, Upload, CheckCircle, RotateCcw, FlaskConical, Menu, X } from "lucide-react";
+import { useState } from "react";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 type SidebarNavProps = {
   role: string;
@@ -82,16 +84,26 @@ const navsByRole: Record<string, { label: string; to: string; icon: React.Elemen
 
 export function SidebarNav({ role }: SidebarNavProps) {
   const items = navsByRole[role] ?? [];
-  return (
-    <aside className="bg-slate-900 w-64 py-6 flex flex-col">
-      <div className="px-6 mb-8">
+  const isMobile = useIsMobile();
+  const [open, setOpen] = useState(false);
+
+  const sidebarContent = (
+    <>
+      <div className="px-6 mb-8 flex items-center justify-between">
         <h2 className="text-white font-semibold text-lg">Main Menu</h2>
+        {isMobile && (
+          <button onClick={() => setOpen(false)} className="text-slate-300 hover:text-white">
+            <X size={20} />
+          </button>
+        )}
       </div>
       <nav className="flex-1 flex flex-col gap-1 px-4">
         {items.map((item) => (
           <NavLink
             key={item.to}
             to={item.to}
+            end={item.to === `/dashboard/${role}` || item.to === "/dashboard/pharmacy" || item.to === "/dashboard/finance"}
+            onClick={() => isMobile && setOpen(false)}
             className={({ isActive }) =>
               `flex items-center px-4 py-3 gap-3 rounded-lg font-medium transition-all
                ${isActive 
@@ -114,6 +126,43 @@ export function SidebarNav({ role }: SidebarNavProps) {
           </div>
         </div>
       </div>
+    </>
+  );
+
+  if (isMobile) {
+    return (
+      <>
+        {/* Mobile hamburger button - fixed */}
+        <button
+          onClick={() => setOpen(true)}
+          className="fixed top-4 left-4 z-50 bg-slate-900 text-white p-2 rounded-lg shadow-lg md:hidden"
+        >
+          <Menu size={20} />
+        </button>
+
+        {/* Overlay */}
+        {open && (
+          <div
+            className="fixed inset-0 bg-black/50 z-40 md:hidden"
+            onClick={() => setOpen(false)}
+          />
+        )}
+
+        {/* Slide-out sidebar */}
+        <aside
+          className={`fixed inset-y-0 left-0 z-50 bg-slate-900 w-64 py-6 flex flex-col transform transition-transform duration-300 ease-in-out md:hidden ${
+            open ? "translate-x-0" : "-translate-x-full"
+          }`}
+        >
+          {sidebarContent}
+        </aside>
+      </>
+    );
+  }
+
+  return (
+    <aside className="bg-slate-900 w-64 py-6 flex flex-col shrink-0">
+      {sidebarContent}
     </aside>
   );
 }
