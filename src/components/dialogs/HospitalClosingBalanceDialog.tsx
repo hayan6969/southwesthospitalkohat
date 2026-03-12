@@ -22,7 +22,7 @@ export function HospitalClosingBalanceDialog({
   onOpenChange, 
   selectedDate 
 }: HospitalClosingBalanceDialogProps) {
-  const [closingBalance, setClosingBalance] = useState<number>(0);
+  const [closingBalance, setClosingBalance] = useState<string>("0");
   const [notes, setNotes] = useState<string>("");
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -30,7 +30,6 @@ export function HospitalClosingBalanceDialog({
 
   const targetDate = format(selectedDate, 'yyyy-MM-dd');
 
-  // Fetch existing closing balance for the selected date
   useEffect(() => {
     if (open) {
       fetchClosingBalance();
@@ -40,7 +39,6 @@ export function HospitalClosingBalanceDialog({
   const fetchClosingBalance = async () => {
     setIsLoading(true);
     try {
-      // Get the latest closing balance (single value that gets updated)
       const { data: latestBalance } = await supabase
         .from('hospital_closing_balance')
         .select('*')
@@ -49,15 +47,15 @@ export function HospitalClosingBalanceDialog({
         .maybeSingle();
 
       if (latestBalance) {
-        setClosingBalance(latestBalance.closing_balance || 0);
+        setClosingBalance(String(latestBalance.closing_balance || 0));
         setNotes(latestBalance.notes || "");
       } else {
-        setClosingBalance(0);
+        setClosingBalance("");
         setNotes("");
       }
     } catch (error) {
       console.error('Error fetching closing balance:', error);
-      setClosingBalance(0);
+      setClosingBalance("");
       setNotes("");
     } finally {
       setIsLoading(false);
@@ -66,8 +64,8 @@ export function HospitalClosingBalanceDialog({
 
   const handleSaveClosingBalance = async () => {
     setIsSaving(true);
+    const numericBalance = parseFloat(closingBalance) || 0;
     try {
-      // Get the latest record to update (single balance system)
       const { data: latestRecord } = await supabase
         .from('hospital_closing_balance')
         .select('id')
@@ -76,28 +74,24 @@ export function HospitalClosingBalanceDialog({
         .maybeSingle();
 
       if (latestRecord) {
-        // Update the existing record
         const { error } = await supabase
           .from('hospital_closing_balance')
           .update({ 
             closing_date: targetDate,
-            closing_balance: closingBalance,
+            closing_balance: numericBalance,
             notes: notes,
             updated_at: new Date().toISOString()
           })
           .eq('id', latestRecord.id);
-
         if (error) throw error;
       } else {
-        // Create the first record
         const { error } = await supabase
           .from('hospital_closing_balance')
-          .insert({ 
+          .insert([{ 
             closing_date: targetDate,
-            closing_balance: closingBalance,
+            closing_balance: numericBalance,
             notes: notes
-          });
-
+          }]);
         if (error) throw error;
       }
 
@@ -105,9 +99,7 @@ export function HospitalClosingBalanceDialog({
         title: "Success",
         description: "Closing balance updated successfully",
       });
-
       onOpenChange(false);
-
     } catch (error) {
       console.error('Error saving closing balance:', error);
       toast({
@@ -134,7 +126,7 @@ export function HospitalClosingBalanceDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[600px]">
+      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-3 text-2xl">
             <Calculator className="w-7 h-7" />
@@ -143,7 +135,6 @@ export function HospitalClosingBalanceDialog({
         </DialogHeader>
 
         <div className="space-y-6">
-          {/* Closing Balance Input */}
           <Card className="border-2 border-blue-200">
             <CardHeader>
               <CardTitle className="text-xl flex items-center gap-3">
@@ -160,7 +151,7 @@ export function HospitalClosingBalanceDialog({
                   id="closing-balance"
                   type="number"
                   value={closingBalance}
-                  onChange={(e) => setClosingBalance(Number(e.target.value) || 0)}
+                  onChange={(e) => setClosingBalance(e.target.value)}
                   placeholder="Enter yesterday's closing balance"
                   className="mt-2 h-12 text-lg"
                 />
@@ -183,7 +174,7 @@ export function HospitalClosingBalanceDialog({
                 <div className="flex justify-between items-center text-xl">
                   <span className="font-semibold">Current Closing Balance:</span>
                   <span className="font-bold text-blue-600">
-                    {formatPkrAmount(closingBalance)}
+                    {formatPkrAmount(parseFloat(closingBalance) || 0)}
                   </span>
                 </div>
                 <p className="text-sm text-muted-foreground mt-2">
