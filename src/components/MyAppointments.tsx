@@ -253,12 +253,19 @@ export const MyAppointments = () => {
 
   const handleCancelAppointment = async (appointmentId: string) => {
     try {
-      // Get the queue position data BEFORE making any changes
-      const { data: queueData, error: queueFetchError } = await supabase
-        .from('queue_positions')
-        .select('doctor_id, appointment_date, queue_position')
-        .eq('appointment_id', appointmentId)
-        .single();
+      // Get the queue position data and appointment details BEFORE making any changes
+      const [{ data: queueData, error: queueFetchError }, { data: appointmentData }] = await Promise.all([
+        supabase
+          .from('queue_positions')
+          .select('doctor_id, appointment_date, queue_position')
+          .eq('appointment_id', appointmentId)
+          .single(),
+        supabase
+          .from('appointments')
+          .select('patient_id, doctor_id')
+          .eq('id', appointmentId)
+          .single()
+      ]);
 
       if (queueFetchError) {
         console.error('Error fetching queue data:', queueFetchError);
@@ -277,20 +284,7 @@ export const MyAppointments = () => {
       if (appointmentError) throw appointmentError;
 
       // Also cancel related invoices for this appointment
-      const { data: relatedInvoices } = await supabase
-        .from('invoices')
-        .select('id, invoice_number')
-        .eq('patient_id', (await supabase.from('appointments').select('patient_id').eq('id', appointmentId).single()).data?.patient_id || '')
-        .like('invoice_number', 'INV-%');
-      
-      // Find invoices created around the same time as this appointment
-      const { data: appointmentData } = await supabase
-        .from('appointments')
-        .select('patient_id, doctor_id, created_at')
-        .eq('id', appointmentId)
-        .single();
-
-      if (appointmentData) {
+      if (appointmentData?.doctor_id) {
         await supabase
           .from('invoices')
           .update({ status: 'cancelled' })
