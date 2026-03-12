@@ -1098,6 +1098,63 @@ export const useCreateDepartment = () => {
   });
 };
 
+export const useUpdateDepartment = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async ({ id, ...updates }: { id: string; name?: string; description?: string }) => {
+      const { data, error } = await supabase
+        .from('departments')
+        .update(updates)
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['departments'] });
+    },
+  });
+};
+
+export const useDeleteDepartment = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from('departments')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['departments'] });
+    },
+  });
+};
+
+export const useDepartmentStaff = (departmentId: string | null) => {
+  return useQuery({
+    queryKey: ['department-staff', departmentId],
+    queryFn: async () => {
+      if (!departmentId) return [];
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id, first_name, last_name, email, role, phone')
+        .eq('department_id', departmentId)
+        .order('first_name');
+
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!departmentId,
+  });
+};
+
 export const useCreateDoctor = () => {
   const queryClient = useQueryClient();
   
