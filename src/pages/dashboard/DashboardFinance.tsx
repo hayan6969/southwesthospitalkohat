@@ -104,10 +104,16 @@ export default function DashboardFinance() {
     }
   });
 
-  // Calculate hospital revenue - Emergency consultations go to hospital, regular consultations go to doctors
-  // Hospital gets: EMERGENCY consultations, lab tests, OT hospital portion, pharmacy profit
+  // Calculate hospital revenue from paid invoices
   const emergencyConsultationRevenue = invoices?.filter(inv => 
     inv.status === 'paid' && inv.description?.toLowerCase().includes('emergency')
+  ).reduce((sum, invoice) => sum + (invoice.amount || 0), 0) || 0;
+
+  // Regular consultation revenue (paid, non-emergency)
+  const consultationRevenue = invoices?.filter(inv =>
+    inv.status === 'paid' &&
+    inv.description?.toLowerCase().includes('consultation') &&
+    !inv.description?.toLowerCase().includes('emergency')
   ).reduce((sum, invoice) => sum + (invoice.amount || 0), 0) || 0;
   
   // Calculate pharmacy revenue and profit correctly
@@ -144,8 +150,8 @@ export default function DashboardFinance() {
     return sum + (Number(schedule.total_cost) - Number(schedule.doctor_expense));
   }, 0) || 0;
   
-  // Hospital revenue = EMERGENCY consultations + lab + OT hospital portion + pharmacy profit
-  const hospitalRevenue = emergencyConsultationRevenue + labRevenue + otHospitalRevenue + pharmacyProfit;
+  // Hospital revenue = regular consultations + emergency consultations + lab + OT hospital portion + pharmacy profit
+  const hospitalRevenue = consultationRevenue + emergencyConsultationRevenue + labRevenue + otHospitalRevenue + pharmacyProfit;
   
   // Total revenue for display purposes includes pharmacy sales
   const totalRevenue = hospitalRevenue + pharmacyRevenue;
@@ -161,7 +167,17 @@ export default function DashboardFinance() {
   const currentMonth = new Date().getMonth();
   const currentYear = new Date().getFullYear();
   
-  // Monthly emergency consultation revenue (goes to hospital)
+  // Monthly regular consultations revenue (paid, non-emergency)
+  const currentMonthConsultationRevenue = invoices?.filter(invoice => {
+    const invoiceDate = new Date(invoice.paid_at || invoice.created_at);
+    return invoiceDate.getMonth() === currentMonth &&
+           invoiceDate.getFullYear() === currentYear &&
+           invoice.status === 'paid' &&
+           invoice.description?.toLowerCase().includes('consultation') &&
+           !invoice.description?.toLowerCase().includes('emergency');
+  }).reduce((sum, invoice) => sum + (invoice.amount || 0), 0) || 0;
+
+  // Monthly emergency consultation revenue
   const currentMonthEmergencyRevenue = invoices?.filter(invoice => {
     const invoiceDate = new Date(invoice.paid_at || invoice.created_at);
     return invoiceDate.getMonth() === currentMonth && 
@@ -207,8 +223,8 @@ export default function DashboardFinance() {
     return sum + (Number(schedule.total_cost) - Number(schedule.doctor_expense));
   }, 0) || 0;
   
-  // Monthly hospital revenue = emergency consultations + lab + OT hospital portion + pharmacy profit
-  const monthlyHospitalRevenue = currentMonthEmergencyRevenue + currentMonthLabRevenue + currentMonthOTHospitalRevenue + currentMonthPharmacyProfit;
+  // Monthly hospital revenue
+  const monthlyHospitalRevenue = currentMonthConsultationRevenue + currentMonthEmergencyRevenue + currentMonthLabRevenue + currentMonthOTHospitalRevenue + currentMonthPharmacyProfit;
   
   // Total monthly revenue for display includes pharmacy sales
   const monthlyRevenue = monthlyHospitalRevenue + currentMonthPharmacyRevenue;
