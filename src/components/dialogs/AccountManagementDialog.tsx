@@ -167,21 +167,23 @@ export function AccountManagementDialog() {
             />
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="department">Department</Label>
-            <Select value={departmentId} onValueChange={setDepartmentId}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select a department" />
-              </SelectTrigger>
-              <SelectContent>
-                {departments?.map((department) => (
-                  <SelectItem key={department.id} value={department.id}>
-                    {department.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          {['staff', 'nursing', 'ota'].includes(role) && (
+            <div className="space-y-2">
+              <Label htmlFor="department">Department {role === 'staff' ? '*' : ''}</Label>
+              <Select value={departmentId} onValueChange={setDepartmentId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a department" />
+                </SelectTrigger>
+                <SelectContent>
+                  {departments?.map((department) => (
+                    <SelectItem key={department.id} value={department.id}>
+                      {department.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
 
           <div className="flex justify-end space-x-2 pt-4">
             <Button type="button" variant="outline" onClick={() => setOpen(false)}>
