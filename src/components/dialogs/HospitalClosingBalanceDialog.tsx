@@ -22,7 +22,7 @@ export function HospitalClosingBalanceDialog({
   onOpenChange, 
   selectedDate 
 }: HospitalClosingBalanceDialogProps) {
-  const [closingBalance, setClosingBalance] = useState<number>(0);
+  const [closingBalance, setClosingBalance] = useState<string>("0");
   const [notes, setNotes] = useState<string>("");
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
