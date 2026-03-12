@@ -1518,30 +1518,28 @@ export const generateDailyClosingPDF = async (data: {
     try {
       const { supabase } = await import('@/integrations/supabase/client');
       
-      // Get the latest record to update
-      const { data: latestRecord } = await supabase
+      // Update/create only this closing date's record
+      const { data: existingDateRecord } = await supabase
         .from('hospital_closing_balance')
         .select('id')
-        .order('closing_date', { ascending: false })
+        .eq('closing_date', data.closingDate)
+        .order('updated_at', { ascending: false })
         .limit(1)
         .maybeSingle();
 
-      if (latestRecord) {
-        // Update the existing record with new balance
+      if (existingDateRecord) {
         await supabase
           .from('hospital_closing_balance')
-          .update({ 
-            closing_date: data.closingDate,
+          .update({
             closing_balance: newClosingBalance,
             notes: `Updated from daily closing on ${data.closingDate}`,
             updated_at: new Date().toISOString()
           })
-          .eq('id', latestRecord.id);
+          .eq('id', existingDateRecord.id);
       } else {
-        // Create the first record
         await supabase
           .from('hospital_closing_balance')
-          .insert({ 
+          .insert({
             closing_date: data.closingDate,
             closing_balance: newClosingBalance,
             notes: `First closing balance created on ${data.closingDate}`

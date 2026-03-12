@@ -39,18 +39,21 @@ export function HospitalClosingBalanceDialog({
   const fetchClosingBalance = async () => {
     setIsLoading(true);
     try {
-      // First check if there's already a record for today's date
-      const { data: todayBalance } = await supabase
+      // Load the latest record for the selected date (handles accidental duplicates safely)
+      const { data: selectedDateBalance, error } = await supabase
         .from('hospital_closing_balance')
         .select('*')
         .eq('closing_date', targetDate)
+        .order('updated_at', { ascending: false })
+        .limit(1)
         .maybeSingle();
 
-      if (todayBalance) {
-        setClosingBalance(String(todayBalance.closing_balance || 0));
-        setNotes(todayBalance.notes || "");
+      if (error) throw error;
+
+      if (selectedDateBalance) {
+        setClosingBalance(String(selectedDateBalance.closing_balance || 0));
+        setNotes(selectedDateBalance.notes || "");
       } else {
-        // No record for today - start fresh
         setClosingBalance("");
         setNotes("");
       }
@@ -66,33 +69,39 @@ export function HospitalClosingBalanceDialog({
   const handleSaveClosingBalance = async () => {
     setIsSaving(true);
     const numericBalance = parseFloat(closingBalance) || 0;
+
     try {
-      const { data: latestRecord } = await supabase
+      // Update only the selected date's record (never overwrite another day)
+      const { data: selectedDateRecord, error: selectedDateRecordError } = await supabase
         .from('hospital_closing_balance')
         .select('id')
-        .order('closing_date', { ascending: false })
+        .eq('closing_date', targetDate)
+        .order('updated_at', { ascending: false })
         .limit(1)
         .maybeSingle();
 
-      if (latestRecord) {
+      if (selectedDateRecordError) throw selectedDateRecordError;
+
+      if (selectedDateRecord) {
         const { error } = await supabase
           .from('hospital_closing_balance')
-          .update({ 
-            closing_date: targetDate,
+          .update({
             closing_balance: numericBalance,
             notes: notes,
             updated_at: new Date().toISOString()
           })
-          .eq('id', latestRecord.id);
+          .eq('id', selectedDateRecord.id);
+
         if (error) throw error;
       } else {
         const { error } = await supabase
           .from('hospital_closing_balance')
-          .insert([{ 
+          .insert([{
             closing_date: targetDate,
             closing_balance: numericBalance,
             notes: notes
           }]);
+
         if (error) throw error;
       }
 
