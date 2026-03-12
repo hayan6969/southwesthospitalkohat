@@ -384,15 +384,15 @@ export default function DoctorSchedule() { // Fixed ordering syntax
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Queue #</TableHead>
-              <TableHead>Date & Time</TableHead>
-              <TableHead>Patient</TableHead>
-              <TableHead>Patient ID</TableHead>
-              <TableHead>Type</TableHead>
-              <TableHead>Payment</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Actions</TableHead>
-              <TableHead>Prescription</TableHead>
+              <TableHead className="w-[70px] text-center">Queue #</TableHead>
+              <TableHead className="w-[140px]">Date & Time</TableHead>
+              <TableHead className="w-[140px]">Patient</TableHead>
+              <TableHead className="w-[90px]">Patient ID</TableHead>
+              <TableHead className="w-[100px]">Type</TableHead>
+              <TableHead className="w-[130px]">Payment</TableHead>
+              <TableHead className="w-[100px]">Status</TableHead>
+              <TableHead className="min-w-[280px]">Actions</TableHead>
+              <TableHead className="w-[110px]">Prescription</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
