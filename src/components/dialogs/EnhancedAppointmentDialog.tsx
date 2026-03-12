@@ -15,7 +15,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { toast } from "sonner";
-import { Plus, Search, UserPlus, Check, ChevronsUpDown } from "lucide-react";
+import { Plus, Search, UserPlus, Check, ChevronsUpDown, X } from "lucide-react";
 import { formatCurrency } from "@/utils/currency";
 import { generateInvoicePDF } from "@/utils/pdfGenerator";
 import { getCurrentPakistanDate, getCurrentPakistanTimeString, formatDateForDisplay, formatTimeForDisplay, fromPakistanTime } from "@/utils/timezone";
