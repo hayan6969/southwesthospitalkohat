@@ -41,6 +41,7 @@ const navsByRole: Record<string, { label: string; to: string; icon: React.Elemen
   ],
   admin: [
     { label: "Dashboard", to: "/dashboard/admin", icon: Info },
+    { label: "Departments", to: "/dashboard/admin/departments", icon: Building2 },
     { label: "Account Management", to: "/dashboard/admin/accounts", icon: Users },
     { label: "System Settings", to: "/dashboard/admin/settings", icon: Settings },
   ],
