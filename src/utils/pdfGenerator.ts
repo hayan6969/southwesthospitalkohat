@@ -356,7 +356,10 @@ export const generateInvoicePDF = async (invoice: any) => {
     doc.text(new Date(invoice.due_date).toLocaleDateString(), 65, yPosition + 5);
   }
 
-  yPosition += 60; // Adjusted for larger info box
+  // Move to just below the info box
+  // Info box starts at (initial yPosition - 5) and has height 60, so bottom is at (initial + 55)
+  // But yPosition has been incremented inside the box, so just add a small gap
+  yPosition += 20;
 
   // Services table
   const tableStartY = yPosition;
