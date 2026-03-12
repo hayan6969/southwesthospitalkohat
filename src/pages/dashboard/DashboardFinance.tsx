@@ -154,8 +154,8 @@ export default function DashboardFinance() {
   // Hospital profit (excluding pharmacy profit which is already included in hospitalRevenue)
   const totalProfit = hospitalRevenue - totalExpenses;
   
-  const paidInvoices = invoices?.filter(inv => inv.status === 'paid' && inv.status !== 'cancelled') || [];
-  const pendingInvoices = invoices?.filter(inv => inv.status === 'pending' && inv.status !== 'cancelled') || [];
+  const paidInvoices = invoices?.filter(inv => inv.status === 'paid') || [];
+  const pendingInvoices = invoices?.filter(inv => inv.status === 'pending') || [];
 
   // Calculate current month's revenue
   const currentMonth = new Date().getMonth();
