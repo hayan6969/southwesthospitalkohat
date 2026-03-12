@@ -148,8 +148,8 @@ export function DoctorAnalytics() {
       earnings: number;
       appointments: any[];
     }> = {};
-    
-    appointments.forEach(apt => {
+    // Only use confirmed appointments for monthly breakdown
+    confirmedAppointments.forEach(apt => {
       const month = format(new Date(apt.appointment_date), 'MMM yyyy');
       if (!monthlyData[month]) {
         monthlyData[month] = { 
