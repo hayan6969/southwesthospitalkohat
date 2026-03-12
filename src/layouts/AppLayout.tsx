@@ -9,6 +9,7 @@ import { AdminDashboardNav } from "@/components/AdminDashboardNav";
 interface AppLayoutProps {
   children: ReactNode;
   sidebarRole?: string;
+  hideSidebar?: boolean;
 }
 
 const AppLayout = ({ children, sidebarRole }: AppLayoutProps) => {
