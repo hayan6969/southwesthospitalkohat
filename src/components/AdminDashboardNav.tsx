@@ -5,11 +5,13 @@ import {
   DollarSign, 
   Pill, 
   UserCog, 
-  Calendar
+  Calendar,
+  Building2
 } from "lucide-react";
 
 const dashboards = [
   { path: "/dashboard/admin", label: "Admin", icon: Settings },
+  { path: "/dashboard/admin/departments", label: "Departments", icon: Building2 },
   { path: "/dashboard/finance", label: "Finance", icon: DollarSign },
   { path: "/dashboard/pharmacy", label: "Pharmacy", icon: Pill },
   { path: "/dashboard/staff", label: "Staff", icon: UserCog },
@@ -22,13 +24,15 @@ export function AdminDashboardNav() {
 
   const getCurrentDashboard = () => {
     const path = location.pathname;
-    return dashboards.find(d => path.startsWith(d.path))?.path || "";
+    // Check more specific paths first (departments before admin)
+    const sorted = [...dashboards].sort((a, b) => b.path.length - a.path.length);
+    return sorted.find(d => path.startsWith(d.path))?.path || "";
   };
 
   const currentDashboard = getCurrentDashboard();
 
   return (
-    <div className="flex items-center gap-2 whitespace-nowrap">
+    <div className="flex items-center gap-1.5 sm:gap-2 whitespace-nowrap overflow-x-auto">
       {dashboards.map((dashboard) => {
         const Icon = dashboard.icon;
         const isActive = currentDashboard === dashboard.path;
@@ -39,15 +43,14 @@ export function AdminDashboardNav() {
             variant={isActive ? "default" : "outline"}
             size="sm"
             onClick={() => navigate(dashboard.path)}
-            className={`flex items-center gap-1.5 text-xs sm:text-sm sm:gap-2 ${
+            className={`flex items-center gap-1.5 text-xs px-2.5 py-1.5 h-8 sm:text-sm sm:px-3 sm:h-9 ${
               isActive 
                 ? "bg-primary text-primary-foreground shadow-sm" 
                 : "hover:bg-accent hover:text-accent-foreground"
             }`}
           >
-            <Icon className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-            <span className="hidden sm:inline">{dashboard.label}</span>
-            <span className="sm:hidden">{dashboard.label}</span>
+            <Icon className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
+            <span>{dashboard.label}</span>
           </Button>
         );
       })}
