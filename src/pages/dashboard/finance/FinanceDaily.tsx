@@ -93,7 +93,7 @@ export default function FinanceDaily() {
       // Hospital invoices (consultations) - filter based on cutoff time (AFTER closing, not AT)
       const {
         data: hospitalInvoices
-      } = await supabase.from('invoices').select('amount, created_at, description, emergency_patient_data').eq('status', 'paid').gt('created_at', cutoffTime) // Use gt (>) not gte (>=) to exclude boundary
+      } = await supabase.from('invoices').select('amount, created_at, description, emergency_patient_data, invoice_number').eq('status', 'paid').gt('created_at', cutoffTime) // Use gt (>) not gte (>=) to exclude boundary
       .lte('created_at', upperBound);
       console.log('Hospital invoices found:', hospitalInvoices?.length, hospitalInvoices);
 
@@ -184,10 +184,16 @@ export default function FinanceDaily() {
       console.log('Miscellaneous income found:', miscIncome?.length, miscIncome);
 
       // Calculate totals
-      // Hospital revenue ONLY from emergency consultations (regular consultations go to doctors)
-      // Include both emergency appointments and emergency invoices
+      // Hospital revenue includes paid consultation invoices + emergency + lab + x-ray + OT + miscellaneous
+      const isEmergencyInvoice = (invoice: { description?: string | null; emergency_patient_data?: unknown }) =>
+        invoice.description?.toLowerCase().includes('emergency') || Boolean(invoice.emergency_patient_data);
+
+      const consultationRevenue = hospitalInvoices?.filter(inv =>
+        (inv.invoice_number?.startsWith('INV-') ?? false) && !isEmergencyInvoice(inv)
+      ).reduce((sum, inv) => sum + Number(inv.amount), 0) || 0;
+
       const emergencyAppointmentRevenue = emergencyAppointments?.reduce((sum, apt) => sum + (apt.consultation_fee_at_time || 0), 0) || 0;
-      const emergencyInvoiceRevenue = hospitalInvoices?.filter(inv => inv.description?.toLowerCase().includes('emergency') || inv.emergency_patient_data)?.reduce((sum, inv) => sum + Number(inv.amount), 0) || 0;
+      const emergencyInvoiceRevenue = hospitalInvoices?.filter(isEmergencyInvoice).reduce((sum, inv) => sum + Number(inv.amount), 0) || 0;
       const emergencyRevenue = emergencyAppointmentRevenue + emergencyInvoiceRevenue;
 
       // Calculate pharmacy revenue and profit correctly
@@ -244,8 +250,8 @@ export default function FinanceDaily() {
       const totalExpenses = expenses?.reduce((sum, exp) => sum + exp.amount, 0) || 0;
       const totalRefunds = refunds?.reduce((sum, ref) => sum + ref.amount, 0) || 0;
 
-      // Total hospital revenue = emergency consultations + lab + xray + OT hospital portion + miscellaneous income (NO pharmacy profit)
-      const totalHospitalRevenue = emergencyRevenue + labRevenue + xrayRevenue + otHospitalRevenue + miscellaneousIncome;
+      // Total hospital revenue = consultations + emergency + lab + xray + OT hospital portion + miscellaneous income
+      const totalHospitalRevenue = consultationRevenue + emergencyRevenue + labRevenue + xrayRevenue + otHospitalRevenue + miscellaneousIncome;
       const totalHospitalProfit = totalHospitalRevenue - totalExpenses;
 
       // Categorize refunds
@@ -572,10 +578,17 @@ export default function FinanceDaily() {
       console.log('   OT schedules:', otSchedules.length);
 
       // Calculate revenues with exact data
+      const isEmergencyInvoice = (invoice: { description?: string | null; emergency_patient_data?: unknown }) =>
+        invoice.description?.toLowerCase().includes('emergency') || Boolean(invoice.emergency_patient_data);
+
+      const consultationRevenue = hospitalInvoices
+        .filter(inv => (inv.invoice_number?.startsWith('INV-') ?? false) && !isEmergencyInvoice(inv))
+        .reduce((sum, inv) => sum + Number(inv.amount), 0);
+
       const emergencyAppointmentRevenue = emergencyAppointments.reduce((sum, apt) => 
         sum + (apt.consultation_fee_at_time || 0), 0);
       const emergencyInvoiceRevenue = hospitalInvoices
-        .filter(inv => inv.description?.toLowerCase().includes('emergency') || inv.emergency_patient_data)
+        .filter(isEmergencyInvoice)
         .reduce((sum, inv) => sum + Number(inv.amount), 0);
       const emergencyRevenue = emergencyAppointmentRevenue + emergencyInvoiceRevenue;
 
@@ -624,7 +637,7 @@ export default function FinanceDaily() {
       const totalExpenses = expenses.reduce((sum, exp) => sum + exp.amount, 0);
       const totalRefunds = refunds.reduce((sum, ref) => sum + ref.amount, 0);
 
-      const totalHospitalRevenue = emergencyRevenue + labRevenue + xrayRevenue + otHospitalRevenue + miscIncome;
+      const totalHospitalRevenue = consultationRevenue + emergencyRevenue + labRevenue + xrayRevenue + otHospitalRevenue + miscIncome;
       const totalStockValue = totalStock.reduce((sum, medicine) => 
         sum + (medicine.stock_quantity * medicine.purchase_price), 0);
 
