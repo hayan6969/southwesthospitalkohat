@@ -154,7 +154,7 @@ export default function DashboardPatient() {
                   data={patientAppointments.slice(0, 5).map(appointment => [
                     format(new Date(appointment.appointment_date), 'MMM d, yyyy'),
                     appointment.doctor?.profiles ? 
-                      `Dr. ${appointment.doctor.profiles.first_name} ${appointment.doctor.profiles.last_name}` : 
+                      `Dr. ${(appointment.doctor as any).profiles?.first_name} ${(appointment.doctor as any).profiles?.last_name}` : 
                       'Unknown Doctor',
                     appointment.type || 'Consultation'
                   ])}
