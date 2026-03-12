@@ -97,12 +97,12 @@ export default function StaffAppointments() {
         created_at: new Date().toISOString(),
         patient: {
           users: {
-            first_name: patientData?.profiles?.first_name || '',
-            last_name: patientData?.profiles?.last_name || '',
-            email: patientData?.profiles?.email || ''
+            first_name: (patientData?.profiles as any)?.first_name || '',
+            last_name: (patientData?.profiles as any)?.last_name || '',
+            email: (patientData?.profiles as any)?.email || ''
           }
         },
-        description: `${appointment.type} consultation with Dr. ${doctorData?.profiles?.first_name || ''} ${doctorData?.profiles?.last_name || ''}`,
+        description: `${appointment.type} consultation with Dr. ${(doctorData?.profiles as any)?.first_name || ''} ${(doctorData?.profiles as any)?.last_name || ''}`,
         amount: doctorData?.consultation_fee || 2000, // Default fee if not set
         status: 'paid'
       };
