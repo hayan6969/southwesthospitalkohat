@@ -724,12 +724,12 @@ export function StaffCounter() {
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Time</TableHead>
-                        <TableHead>Invoice Number</TableHead>
-                        <TableHead>Patient Name</TableHead>
-                        <TableHead>Amount</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Actions</TableHead>
+                        <TableHead className="w-[100px]">Time</TableHead>
+                        <TableHead className="w-[140px]">Invoice Number</TableHead>
+                        <TableHead className="w-[180px]">Patient Name</TableHead>
+                        <TableHead className="w-[120px]">Amount</TableHead>
+                        <TableHead className="w-[100px]">Status</TableHead>
+                        <TableHead className="w-[120px]">Actions</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
