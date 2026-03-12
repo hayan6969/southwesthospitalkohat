@@ -666,7 +666,7 @@ export default function FinancePayroll() {
                     Add Employee Template
                   </Button>
                 </DialogTrigger>
-                <DialogContent>
+                <DialogContent className="max-h-[90vh] overflow-y-auto">
                   <DialogHeader>
                     <DialogTitle>
                       {editingTemplate ? 'Edit Employee Template' : 'Create Employee Template'}
