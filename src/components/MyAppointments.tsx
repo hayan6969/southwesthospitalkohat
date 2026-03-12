@@ -276,6 +276,29 @@ export const MyAppointments = () => {
 
       if (appointmentError) throw appointmentError;
 
+      // Also cancel related invoices for this appointment
+      const { data: relatedInvoices } = await supabase
+        .from('invoices')
+        .select('id, invoice_number')
+        .eq('patient_id', (await supabase.from('appointments').select('patient_id').eq('id', appointmentId).single()).data?.patient_id || '')
+        .like('invoice_number', 'INV-%');
+      
+      // Find invoices created around the same time as this appointment
+      const { data: appointmentData } = await supabase
+        .from('appointments')
+        .select('patient_id, doctor_id, created_at')
+        .eq('id', appointmentId)
+        .single();
+
+      if (appointmentData) {
+        await supabase
+          .from('invoices')
+          .update({ status: 'cancelled' })
+          .eq('patient_id', appointmentData.patient_id)
+          .eq('doctor_id', appointmentData.doctor_id)
+          .neq('status', 'cancelled');
+      }
+
       // Update the queue position status to 'skipped'
       const { error: queueError } = await supabase
         .from('queue_positions')
