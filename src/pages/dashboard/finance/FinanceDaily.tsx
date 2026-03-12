@@ -710,41 +710,46 @@ export default function FinanceDaily() {
       console.log('✅ Daily closing created successfully with exact timestamp range');
       console.log('   Next closing will use time > ', closingData.closingTime);
 
-      // Update hospital closing balance with the new balance
-      // Get current closing balance
+      // Update hospital closing balance for the current closing date
+      // IMPORTANT: previous balance must come from a date BEFORE this closing date
       const {
-        data: currentBalance
-      } = await supabase.from('hospital_closing_balance').select('closing_balance').order('closing_date', {
+        data: previousDayBalanceRecord
+      } = await supabase.from('hospital_closing_balance').select('closing_balance').lt('closing_date', closingData.closingDate).order('closing_date', {
+        ascending: false
+      }).order('updated_at', {
         ascending: false
       }).limit(1).maybeSingle();
-      const previousBalance = currentBalance?.closing_balance || 0;
+      const previousBalance = Number(previousDayBalanceRecord?.closing_balance || 0);
       const newClosingBalance = previousBalance + closingData.netProfit;
 
-      // Update the closing balance
+      // Upsert by date (never overwrite an unrelated latest row)
       const {
-        data: latestRecord
-      } = await supabase.from('hospital_closing_balance').select('id').order('closing_date', {
+        data: existingDateBalance,
+        error: existingDateBalanceError
+      } = await supabase.from('hospital_closing_balance').select('id').eq('closing_date', closingData.closingDate).order('updated_at', {
         ascending: false
       }).limit(1).maybeSingle();
-      if (latestRecord) {
-        // Update existing record
+
+      if (existingDateBalanceError) {
+        console.error('Error checking existing closing balance:', existingDateBalanceError);
+      }
+
+      if (existingDateBalance) {
         const {
           error: balanceError
         } = await supabase.from('hospital_closing_balance').update({
-          closing_date: closingData.closingDate,
           closing_balance: newClosingBalance,
-          notes: `Auto-updated from daily closing. Previous: ${formatPkrAmount(previousBalance)}, Net Profit: ${formatPkrAmount(closingData.netProfit)}`,
+          notes: `Auto-updated from daily closing. Previous day balance: ${formatPkrAmount(previousBalance)}, Net Profit: ${formatPkrAmount(closingData.netProfit)}`,
           updated_at: new Date().toISOString()
-        }).eq('id', latestRecord.id);
+        }).eq('id', existingDateBalance.id);
         if (balanceError) console.error('Error updating closing balance:', balanceError);
       } else {
-        // Create first record
         const {
           error: balanceError
         } = await supabase.from('hospital_closing_balance').insert({
           closing_date: closingData.closingDate,
           closing_balance: newClosingBalance,
-          notes: `Initial closing balance from daily closing. Net Profit: ${formatPkrAmount(closingData.netProfit)}`
+          notes: `Initial closing balance from daily closing. Previous day balance: ${formatPkrAmount(previousBalance)}, Net Profit: ${formatPkrAmount(closingData.netProfit)}`
         });
         if (balanceError) console.error('Error creating closing balance:', balanceError);
       }
