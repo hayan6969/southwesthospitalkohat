@@ -310,7 +310,7 @@ export function AdminFinanceAnalytics() {
 }
 
 function calculateAnalytics(data: FinanceData) {
-  const { hospitalInvoices, pharmacyInvoices, labReports, xrayReports, otSchedules, expenses } = data;
+  const { hospitalInvoices, pharmacyInvoices, labReports, xrayReports, otSchedules, expenses, completedAppointments } = data;
   const today = new Date();
   const startOfToday = startOfDay(today);
   const endOfToday = endOfDay(today);
@@ -318,18 +318,17 @@ function calculateAnalytics(data: FinanceData) {
   const endOfThisMonth = endOfMonth(today);
 
   // IMPORTANT: Correct revenue flow separation
-  // Doctor revenue: Regular appointment consultation fees + OT doctor expenses
-  // Hospital revenue: EMERGENCY consultations + Lab tests + OT hospital portion (total - doctor expense) + pharmacy profit
+  // Doctor revenue: Only from COMPLETED & PAID appointments (consultation fees) + OT doctor expenses
+  // Hospital revenue: EMERGENCY consultations + Lab tests + OT hospital portion + pharmacy profit
 
   // Emergency consultations go to hospital
   const emergencyConsultationRevenue = hospitalInvoices.filter(inv => 
     inv.status === 'paid' && inv.description?.toLowerCase().includes('emergency')
   ).reduce((sum, inv) => sum + Number(inv.amount), 0);
   
-  // Regular consultations go to doctors (not counted in hospital revenue)
-  const doctorConsultationRevenue = hospitalInvoices.filter(inv => 
-    inv.status === 'paid' && (!inv.description?.toLowerCase().includes('emergency'))
-  ).reduce((sum, inv) => sum + Number(inv.amount), 0);
+  // Regular consultations - use completed appointments data instead of invoices
+  const doctorConsultationRevenue = completedAppointments
+    .reduce((sum, apt) => sum + (Number(apt.consultation_fee_at_time) || 0), 0);
   
   // Calculate pharmacy revenue and profit
   const pharmacyRevenue = pharmacyInvoices.reduce((sum, inv) => sum + Number(inv.final_amount), 0);
