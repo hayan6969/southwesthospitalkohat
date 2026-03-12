@@ -168,7 +168,7 @@ export default function DashboardPatient() {
                     </div>
                     <div className="text-xs text-gray-600">
                       {appointment.doctor?.profiles ? 
-                        `Dr. ${appointment.doctor.profiles.first_name} ${appointment.doctor.profiles.last_name}` : 
+                        `Dr. ${(appointment.doctor as any).profiles?.first_name} ${(appointment.doctor as any).profiles?.last_name}` : 
                         'Unknown Doctor'}
                     </div>
                     <div className="text-xs text-blue-600">{appointment.type || 'Consultation'}</div>

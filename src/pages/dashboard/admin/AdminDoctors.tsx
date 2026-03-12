@@ -69,10 +69,10 @@ export default function AdminDoctors() {
                             <Mail className="w-3 h-3 text-gray-400" />
                             {(doctor.profiles as any)?.email}
                           </div>
-                          {doctor.profiles?.phone && (
+                          {(doctor.profiles as any)?.phone && (
                             <div className="flex items-center gap-2 text-sm">
                               <Phone className="w-3 h-3 text-gray-400" />
-                              {doctor.profiles?.phone}
+                              {(doctor.profiles as any)?.phone}
                             </div>
                           )}
                         </div>

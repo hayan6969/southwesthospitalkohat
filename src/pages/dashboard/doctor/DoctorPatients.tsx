@@ -136,7 +136,7 @@ export default function DoctorPatients() {
                     <TableCell>
                       {patient.date_of_birth ? format(new Date(patient.date_of_birth), 'MMM d, yyyy') : 'N/A'}
                     </TableCell>
-                    <TableCell>{patient.profiles?.phone || patient.emergency_contact_phone || 'N/A'}</TableCell>
+                    <TableCell>{(patient.profiles as any)?.phone || patient.emergency_contact_phone || 'N/A'}</TableCell>
                     <TableCell>
                       <span className="px-2 py-1 bg-red-100 text-red-700 rounded-full text-sm font-medium">
                         {patient.blood_type || 'Unknown'}

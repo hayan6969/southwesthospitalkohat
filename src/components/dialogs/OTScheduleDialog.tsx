@@ -384,8 +384,9 @@ export function OTScheduleDialog() {
         .eq('id', patientId)
         .single();
 
-      const phoneNumber = patientData?.profiles?.phone || 
-        (patientData?.profiles?.email ? patientData.profiles.email.split('@')[0].replace(/[^0-9]/g, '') : 'N/A');
+      const profileData = patientData?.profiles as any;
+      const phoneNumber = profileData?.phone || 
+        (profileData?.email ? profileData.email.split('@')[0].replace(/[^0-9]/g, '') : 'N/A');
 
       // Build items array with detailed breakdown
       const items = [];

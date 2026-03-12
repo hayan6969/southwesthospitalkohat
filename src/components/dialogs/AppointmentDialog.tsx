@@ -155,7 +155,7 @@ export function AppointmentDialog() {
               <SelectContent portal={false} className="z-[9999] max-h-[300px] bg-popover">
                 {doctors?.map((doctor) => (
                   <SelectItem key={doctor.id} value={doctor.id}>
-                    Dr. {doctor.profiles?.first_name} {doctor.profiles?.last_name} - {doctor.specialization}
+                    Dr. {(doctor as any).profiles?.first_name} {(doctor as any).profiles?.last_name} - {doctor.specialization}
                   </SelectItem>
                 ))}
               </SelectContent>

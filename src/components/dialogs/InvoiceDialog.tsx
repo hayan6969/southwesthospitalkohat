@@ -70,8 +70,9 @@ export function InvoiceDialog() {
         .eq('id', patientId)
         .single();
       
-      const patientName = patientData?.profiles
-        ? `${patientData.profiles.first_name} ${patientData.profiles.last_name}`
+      const profileData = patientData?.profiles as any;
+      const patientName = profileData
+        ? `${profileData.first_name} ${profileData.last_name}`
         : getPatientName(patientId, patientNames || []);
       
       const invoiceData = {
@@ -84,10 +85,10 @@ export function InvoiceDialog() {
         patient: {
           patient_number: patientData?.patient_number || 'N/A',
           users: {
-            first_name: patientData?.profiles?.first_name || patientName.split(' ')[0] || '',
-            last_name: patientData?.profiles?.last_name || patientName.split(' ').slice(1).join(' ') || '',
-            email: patientData?.profiles?.email || '',
-            phone: patientData?.profiles?.phone || ''
+            first_name: profileData?.first_name || patientName.split(' ')[0] || '',
+            last_name: profileData?.last_name || patientName.split(' ').slice(1).join(' ') || '',
+            email: profileData?.email || '',
+            phone: profileData?.phone || ''
           }
         }
       };

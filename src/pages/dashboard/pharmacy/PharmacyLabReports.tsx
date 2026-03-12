@@ -82,7 +82,7 @@ export default function PharmacyLabReports() {
         .limit(10);
 
       if (error) throw error;
-      setSearchResults(data || []);
+      setSearchResults((data as any) || []);
     } catch (error) {
       console.error("Error searching patients:", error);
       toast.error("Failed to search patients");

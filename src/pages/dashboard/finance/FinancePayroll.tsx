@@ -197,7 +197,7 @@ export default function FinancePayroll() {
   // Generate Monthly Payroll Mutation
   const generatePayrollMutation = useMutation({
     mutationFn: async (month: string) => {
-      const { data, error } = await supabase.rpc('generate_monthly_payroll', {
+      const { data, error } = await supabase.rpc('generate_monthly_payroll' as any, {
         target_month: month
       });
       if (error) throw error;

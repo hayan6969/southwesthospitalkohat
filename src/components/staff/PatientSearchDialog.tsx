@@ -76,9 +76,9 @@ export function PatientSearchDialog() {
         phone: searchPhone, // Use the searched phone number
         first_name: data.first_name,
         last_name: data.last_name,
-        patient_number: data.patients.patient_number || "",
-        date_of_birth: data.patients.date_of_birth || "",
-        cnic: data.patients.cnic || "",
+        patient_number: (data.patients as any)?.patient_number || "",
+        date_of_birth: (data.patients as any)?.date_of_birth || "",
+        cnic: (data.patients as any)?.cnic || "",
       };
 
       setPatient(patientData);

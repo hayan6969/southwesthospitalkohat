@@ -383,8 +383,8 @@ export function PatientDetailDialog({ isOpen, onClose, patient }: PatientDetailD
                           </TableCell>
                           <TableCell>{report.test_name}</TableCell>
                           <TableCell>
-                            {report.doctor?.profiles?.first_name && report.doctor?.profiles?.last_name 
-                              ? `Dr. ${report.doctor.profiles.first_name} ${report.doctor.profiles.last_name}`
+                             {(report.doctor as any)?.profiles?.first_name && (report.doctor as any)?.profiles?.last_name 
+                              ? `Dr. ${(report.doctor as any).profiles.first_name} ${(report.doctor as any).profiles.last_name}`
                               : report.external_doctor_name || 'External Doctor'
                             }
                           </TableCell>
