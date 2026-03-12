@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
-import { LogOut, User } from "lucide-react";
+import { LogOut, User, Menu } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { StaffCounter } from "@/components/staff/StaffCounter";
 import { StaffLab } from "@/components/staff/StaffLab";
@@ -31,27 +31,31 @@ export default function DashboardStaff() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <header className="bg-white shadow-sm border-b border-gray-200 px-6 py-4">
+      <header className="bg-white shadow-sm border-b border-gray-200 px-4 sm:px-6 py-3 sm:py-4">
         <div className="flex justify-between items-center">
-          <div className="flex items-center gap-6">
+          <div className="flex items-center gap-3 sm:gap-6">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+              <h1 className="text-lg sm:text-2xl font-bold text-gray-900 flex items-center gap-2">
                 {hospitalSettings?.logo_url ? (
                   <img 
                     src={hospitalSettings.logo_url} 
                     alt="Hospital Logo" 
-                    className="w-8 h-8 object-contain"
+                    className="w-6 h-6 sm:w-8 sm:h-8 object-contain"
                   />
                 ) : (
-                  <span className="inline-block w-2 h-8 bg-blue-500 rounded-full" />
+                  <span className="inline-block w-2 h-6 sm:h-8 bg-blue-500 rounded-full" />
                 )}
-                {hospitalSettings?.hospital_name || "HIMS"}
+                <span className="truncate">{hospitalSettings?.hospital_name || "HIMS"}</span>
               </h1>
             </div>
-            {profile.role === 'admin' && <AdminDashboardNav />}
+            {profile.role === 'admin' && (
+              <div className="hidden lg:block">
+                <AdminDashboardNav />
+              </div>
+            )}
           </div>
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2 text-sm text-gray-600">
+          <div className="flex items-center gap-2 sm:gap-4">
+            <div className="hidden sm:flex items-center gap-2 text-sm text-gray-600">
               <User className="w-4 h-4" />
               <span>{profile.first_name} {profile.last_name}</span>
               <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs">
@@ -60,71 +64,73 @@ export default function DashboardStaff() {
             </div>
             <Button variant="outline" size="sm" onClick={signOut} className="flex items-center gap-2">
               <LogOut className="w-4 h-4" />
-              Sign Out
+              <span className="hidden sm:inline">Sign Out</span>
             </Button>
           </div>
         </div>
+        {profile.role === 'admin' && (
+          <div className="lg:hidden mt-3 overflow-x-auto -mx-4 px-4">
+            <AdminDashboardNav />
+          </div>
+        )}
       </header>
 
       {/* Main Content */}
-      <main className="p-6">
-        <div className="space-y-6">
-          <div className="flex items-center justify-between">
+      <main className="p-3 sm:p-6">
+        <div className="space-y-4 sm:space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
-              <p className="text-gray-600 mt-1">Manage hospital operations across departments</p>
+              <p className="text-gray-600 mt-1 text-sm sm:text-base">Manage hospital operations across departments</p>
             </div>
             <PatientSearchDialog />
           </div>
 
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid w-full grid-cols-6">
-              <TabsTrigger value="counter" className="flex items-center gap-2">
-                <Receipt className="w-4 h-4" />
-                Counter
-              </TabsTrigger>
-              <TabsTrigger value="lab" className="flex items-center gap-2">
-                <TestTube className="w-4 h-4" />
-                Lab
-              </TabsTrigger>
-              <TabsTrigger value="lab-reports" className="flex items-center gap-2">
-                <Search className="w-4 h-4" />
-                Lab Reports
-              </TabsTrigger>
-              <TabsTrigger value="xray" className="flex items-center gap-2">
-                <Image className="w-4 h-4" />
-                X-ray
-              </TabsTrigger>
-              <TabsTrigger value="ot" className="flex items-center gap-2">
-                <Building2 className="w-4 h-4" />
-                OT
-              </TabsTrigger>
-              <TabsTrigger value="invoices" className="flex items-center gap-2">
-                <FileText className="w-4 h-4" />
-                Invoices
-              </TabsTrigger>
-            </TabsList>
+            <div className="overflow-x-auto -mx-3 px-3 sm:mx-0 sm:px-0">
+              <TabsList className="inline-flex w-auto min-w-full sm:grid sm:w-full sm:grid-cols-6">
+                <TabsTrigger value="counter" className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm whitespace-nowrap">
+                  <Receipt className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                  Counter
+                </TabsTrigger>
+                <TabsTrigger value="lab" className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm whitespace-nowrap">
+                  <TestTube className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                  Lab
+                </TabsTrigger>
+                <TabsTrigger value="lab-reports" className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm whitespace-nowrap">
+                  <Search className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                  Lab Reports
+                </TabsTrigger>
+                <TabsTrigger value="xray" className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm whitespace-nowrap">
+                  <Image className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                  X-ray
+                </TabsTrigger>
+                <TabsTrigger value="ot" className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm whitespace-nowrap">
+                  <Building2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                  OT
+                </TabsTrigger>
+                <TabsTrigger value="invoices" className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm whitespace-nowrap">
+                  <FileText className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                  Invoices
+                </TabsTrigger>
+              </TabsList>
+            </div>
 
-            <TabsContent value="counter" className="mt-6">
+            <TabsContent value="counter" className="mt-4 sm:mt-6">
               <StaffCounter />
             </TabsContent>
-
-            <TabsContent value="lab" className="mt-6">
+            <TabsContent value="lab" className="mt-4 sm:mt-6">
               <StaffLab />
             </TabsContent>
-
-            <TabsContent value="lab-reports" className="mt-6">
+            <TabsContent value="lab-reports" className="mt-4 sm:mt-6">
               <StaffLabReports />
             </TabsContent>
-
-            <TabsContent value="xray" className="mt-6">
+            <TabsContent value="xray" className="mt-4 sm:mt-6">
               <StaffXray />
             </TabsContent>
-
-            <TabsContent value="ot" className="mt-6">
+            <TabsContent value="ot" className="mt-4 sm:mt-6">
               <StaffOT />
             </TabsContent>
-
-            <TabsContent value="invoices" className="mt-6">
+            <TabsContent value="invoices" className="mt-4 sm:mt-6">
               <StaffInvoices />
             </TabsContent>
           </Tabs>
