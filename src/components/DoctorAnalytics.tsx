@@ -218,10 +218,10 @@ export function DoctorAnalytics() {
 
     // Status distribution
     const statusData = {
-      completed: appointments.filter(apt => apt.status === 'completed').length,
-      scheduled: appointments.filter(apt => apt.status === 'scheduled').length,
-      cancelled: appointments.filter(apt => apt.status === 'cancelled').length,
-      rescheduled: appointments.filter(apt => apt.status === 'rescheduled').length
+      completed: confirmedAppointments.filter(apt => apt.status === 'completed').length,
+      scheduled: confirmedAppointments.filter(apt => apt.status === 'scheduled').length,
+      cancelled: 0,
+      rescheduled: 0
     };
 
     const statusChartData = Object.entries(statusData).map(([status, count]) => ({
