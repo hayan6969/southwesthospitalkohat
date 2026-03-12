@@ -622,14 +622,14 @@ export function StaffCounter() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Position</TableHead>
-                      <TableHead>Patient ID</TableHead>
-                      <TableHead>Patient Name</TableHead>
-                      <TableHead>Doctor</TableHead>
-                      <TableHead>People Ahead</TableHead>
-                      <TableHead>Booking Type</TableHead>
-                      <TableHead>Payment Status</TableHead>
-                      <TableHead>Actions</TableHead>
+                      <TableHead className="w-[80px]">Position</TableHead>
+                      <TableHead className="w-[100px]">Patient ID</TableHead>
+                      <TableHead className="w-[160px]">Patient Name</TableHead>
+                      <TableHead className="w-[150px]">Doctor</TableHead>
+                      <TableHead className="w-[120px]">People Ahead</TableHead>
+                      <TableHead className="w-[110px]">Booking Type</TableHead>
+                      <TableHead className="w-[130px]">Payment Status</TableHead>
+                      <TableHead className="w-[160px]">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
