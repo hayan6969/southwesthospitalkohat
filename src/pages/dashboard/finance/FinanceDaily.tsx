@@ -93,7 +93,7 @@ export default function FinanceDaily() {
       // Hospital invoices (consultations) - filter based on cutoff time (AFTER closing, not AT)
       const {
         data: hospitalInvoices
-      } = await supabase.from('invoices').select('amount, created_at, description, emergency_patient_data').eq('status', 'paid').gt('created_at', cutoffTime) // Use gt (>) not gte (>=) to exclude boundary
+      } = await supabase.from('invoices').select('amount, created_at, description, emergency_patient_data, invoice_number').eq('status', 'paid').gt('created_at', cutoffTime) // Use gt (>) not gte (>=) to exclude boundary
       .lte('created_at', upperBound);
       console.log('Hospital invoices found:', hospitalInvoices?.length, hospitalInvoices);
 
