@@ -230,7 +230,7 @@ export function DoctorAnalytics() {
     }));
 
     return {
-      totalAppointments: appointments.length,
+      totalAppointments: confirmedAppointments.length,
       completedAppointments: completedAppointments.length,
       completedOtOperations: completedOtOperations.length,
       totalOtEarnings,
