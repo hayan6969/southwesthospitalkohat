@@ -239,7 +239,7 @@ export function DoctorAnalytics() {
       receivedEarnings,
       pendingEarnings,
       thisMonthEarnings,
-      totalPatients: new Set(appointments.map(apt => apt.patient_id)).size,
+      totalPatients: new Set(confirmedAppointments.map(apt => apt.patient_id)).size,
       medicalRecordsCount: medicalRecords.length,
       chartData,
       statusChartData,
