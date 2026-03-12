@@ -17,35 +17,33 @@ export const useRealStatsData = () => {
       // (doctors and patients don't have created_at columns)
       const [
         todayAppointmentsResult,
-        todayInvoicesResult,
-        yesterdayAppointmentsResult,
-        yesterdayInvoicesResult
+        yesterdayAppointmentsResult
       ] = await Promise.all([
-        // Today's data
-        supabase.from('appointments').select('id').gte('created_at', todayStart.toISOString()).lte('created_at', todayEnd.toISOString()),
-        supabase.from('invoices').select('amount').gte('created_at', todayStart.toISOString()).lte('created_at', todayEnd.toISOString()),
-        // Yesterday's data
-        supabase.from('appointments').select('id').gte('created_at', yesterdayStart.toISOString()).lte('created_at', yesterdayEnd.toISOString()),
-        supabase.from('invoices').select('amount').gte('created_at', yesterdayStart.toISOString()).lte('created_at', yesterdayEnd.toISOString())
+        supabase.from('appointments').select('id, consultation_fee_at_time, status, payment_status').gte('created_at', todayStart.toISOString()).lte('created_at', todayEnd.toISOString()),
+        supabase.from('appointments').select('id, consultation_fee_at_time, status, payment_status').gte('created_at', yesterdayStart.toISOString()).lte('created_at', yesterdayEnd.toISOString()),
       ]);
 
       // Get total counts
-      const [totalDoctors, totalPatients, totalAppointments, totalInvoices] = await Promise.all([
+      const [totalDoctors, totalPatients, totalAppointments, allCompletedAppointments] = await Promise.all([
         supabase.from('doctors').select('id', { count: 'exact' }),
         supabase.from('patients').select('id', { count: 'exact' }),
         supabase.from('appointments').select('id', { count: 'exact' }),
-        supabase.from('invoices').select('amount')
+        supabase.from('appointments').select('consultation_fee_at_time').eq('status', 'completed').eq('payment_status', 'paid')
       ]);
 
-      // Calculate totals
+      // Calculate totals - only count revenue from completed & paid appointments
       const todayAppointmentsCount = todayAppointmentsResult.data?.length || 0;
-      const todayRevenue = todayInvoicesResult.data?.reduce((sum, invoice) => sum + (invoice.amount || 0), 0) || 0;
+      const todayRevenue = todayAppointmentsResult.data
+        ?.filter(a => a.status === 'completed' && a.payment_status === 'paid')
+        .reduce((sum, a) => sum + (a.consultation_fee_at_time || 0), 0) || 0;
 
       const yesterdayAppointmentsCount = yesterdayAppointmentsResult.data?.length || 0;
-      const yesterdayRevenue = yesterdayInvoicesResult.data?.reduce((sum, invoice) => sum + (invoice.amount || 0), 0) || 0;
+      const yesterdayRevenue = yesterdayAppointmentsResult.data
+        ?.filter(a => a.status === 'completed' && a.payment_status === 'paid')
+        .reduce((sum, a) => sum + (a.consultation_fee_at_time || 0), 0) || 0;
 
-      // Only include hospital invoices (not OT doctor expenses) in total revenue
-      const totalRevenue = totalInvoices.data?.reduce((sum, invoice) => sum + (invoice.amount || 0), 0) || 0;
+      // Revenue from completed & paid appointments only
+      const totalRevenue = allCompletedAppointments.data?.reduce((sum, a) => sum + (a.consultation_fee_at_time || 0), 0) || 0;
 
       // Calculate percentage changes
       const calculateChange = (today: number, yesterday: number) => {
@@ -59,25 +57,27 @@ export const useRealStatsData = () => {
       };
 
       // Generate trend data for the last 5 days (only for tables with created_at)
-      const generateTrendData = async (table: 'appointments' | 'invoices', valueField: string = 'id') => {
+      const generateTrendData = async (table: 'appointments', isRevenue: boolean = false) => {
         const data = [];
         for (let i = 4; i >= 0; i--) {
           const date = subDays(today, i);
           const start = startOfDay(date);
           const end = endOfDay(date);
           
-          if (valueField === 'amount' && table === 'invoices') {
+          if (isRevenue) {
             const { data: dayData } = await supabase
-              .from(table)
-              .select('amount')
+              .from('appointments')
+              .select('consultation_fee_at_time')
+              .eq('status', 'completed')
+              .eq('payment_status', 'paid')
               .gte('created_at', start.toISOString())
               .lte('created_at', end.toISOString());
             
-            const value = dayData?.reduce((sum: number, item: any) => sum + (item.amount || 0), 0) || 0;
+            const value = dayData?.reduce((sum: number, item: any) => sum + (item.consultation_fee_at_time || 0), 0) || 0;
             data.push({ value });
           } else {
             const { data: dayData } = await supabase
-              .from(table)
+              .from('appointments')
               .select('id')
               .gte('created_at', start.toISOString())
               .lte('created_at', end.toISOString());
@@ -95,7 +95,7 @@ export const useRealStatsData = () => {
 
       const [appointmentsTrend, revenueTrend] = await Promise.all([
         generateTrendData('appointments'),
-        generateTrendData('invoices', 'amount')
+        generateTrendData('appointments', true)
       ]);
 
       // Generate static trends for doctors and patients
