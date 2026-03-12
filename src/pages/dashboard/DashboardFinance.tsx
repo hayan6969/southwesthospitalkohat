@@ -330,8 +330,12 @@ export default function DashboardFinance() {
             <CardContent>
               <div className="space-y-3">
                 <div className="flex justify-between">
-                  <span>Hospital Services</span>
-                  <span className="font-medium">{formatPkrAmount(hospitalRevenue)}</span>
+                  <span>Consultation Revenue</span>
+                  <span className="font-medium">{formatPkrAmount(consultationRevenue)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Emergency Revenue</span>
+                  <span className="font-medium">{formatPkrAmount(emergencyConsultationRevenue)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span>Pharmacy Profit</span>
