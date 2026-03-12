@@ -578,10 +578,17 @@ export default function FinanceDaily() {
       console.log('   OT schedules:', otSchedules.length);
 
       // Calculate revenues with exact data
+      const isEmergencyInvoice = (invoice: { description?: string | null; emergency_patient_data?: unknown }) =>
+        invoice.description?.toLowerCase().includes('emergency') || Boolean(invoice.emergency_patient_data);
+
+      const consultationRevenue = hospitalInvoices
+        .filter(inv => (inv.invoice_number?.startsWith('INV-') ?? false) && !isEmergencyInvoice(inv))
+        .reduce((sum, inv) => sum + Number(inv.amount), 0);
+
       const emergencyAppointmentRevenue = emergencyAppointments.reduce((sum, apt) => 
         sum + (apt.consultation_fee_at_time || 0), 0);
       const emergencyInvoiceRevenue = hospitalInvoices
-        .filter(inv => inv.description?.toLowerCase().includes('emergency') || inv.emergency_patient_data)
+        .filter(isEmergencyInvoice)
         .reduce((sum, inv) => sum + Number(inv.amount), 0);
       const emergencyRevenue = emergencyAppointmentRevenue + emergencyInvoiceRevenue;
 
@@ -630,7 +637,7 @@ export default function FinanceDaily() {
       const totalExpenses = expenses.reduce((sum, exp) => sum + exp.amount, 0);
       const totalRefunds = refunds.reduce((sum, ref) => sum + ref.amount, 0);
 
-      const totalHospitalRevenue = emergencyRevenue + labRevenue + xrayRevenue + otHospitalRevenue + miscIncome;
+      const totalHospitalRevenue = consultationRevenue + emergencyRevenue + labRevenue + xrayRevenue + otHospitalRevenue + miscIncome;
       const totalStockValue = totalStock.reduce((sum, medicine) => 
         sum + (medicine.stock_quantity * medicine.purchase_price), 0);
 
