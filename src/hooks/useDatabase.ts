@@ -288,6 +288,7 @@ export const useInvoices = () => {
           *,
           patient:patients(*,profiles(first_name, last_name, phone, email))
         `)
+        .neq('status', 'cancelled')
         .order('created_at', { ascending: false });
 
       if (error) throw error;

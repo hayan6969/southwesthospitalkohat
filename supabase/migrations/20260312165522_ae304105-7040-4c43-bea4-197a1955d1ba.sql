@@ -1,0 +1,2 @@
+UPDATE public.invoices SET status = 'cancelled' WHERE invoice_number = 'INV-1773332049031' AND patient_id = '1342e247-90da-4b52-83d6-8e04d6362988';
+UPDATE public.invoices SET doctor_id = '7ec1f07f-1283-4889-b4c7-2b131db03c3b' WHERE invoice_number = 'INV-1773334214525' AND patient_id = 'a3931f3b-2146-4243-98ab-7c26325805a9';
