@@ -384,15 +384,15 @@ export default function DoctorSchedule() { // Fixed ordering syntax
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Queue #</TableHead>
-              <TableHead>Date & Time</TableHead>
-              <TableHead>Patient</TableHead>
-              <TableHead>Patient ID</TableHead>
-              <TableHead>Type</TableHead>
-              <TableHead>Payment</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Actions</TableHead>
-              <TableHead>Prescription</TableHead>
+              <TableHead className="w-[70px] text-center">Queue #</TableHead>
+              <TableHead className="w-[140px]">Date & Time</TableHead>
+              <TableHead className="w-[140px]">Patient</TableHead>
+              <TableHead className="w-[90px]">Patient ID</TableHead>
+              <TableHead className="w-[100px]">Type</TableHead>
+              <TableHead className="w-[130px]">Payment</TableHead>
+              <TableHead className="w-[100px]">Status</TableHead>
+              <TableHead className="min-w-[280px]">Actions</TableHead>
+              <TableHead className="w-[110px]">Prescription</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -410,8 +410,8 @@ export default function DoctorSchedule() { // Fixed ordering syntax
               appointmentsList.map((appointment) => (
                 <TableRow key={appointment.id} className="hover:bg-gray-50">
                   {/* Queue Position */}
-                  <TableCell>
-                    <div className="flex items-center gap-2">
+                  <TableCell className="text-center">
+                    <div className="flex items-center justify-center gap-1">
                       <Hash className="w-4 h-4 text-gray-400" />
                       <span className="font-medium text-lg">
                         {appointment.queue_position || '-'}
