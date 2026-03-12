@@ -103,22 +103,24 @@ export function DoctorAnalytics() {
 
     const { appointments, invoices, medicalRecords, otOperations, consultationFee } = analyticsData;
 
-    // Calculate earnings using historical consultation fees
-    const completedAppointments = appointments.filter(apt => apt.status === 'completed');
-    const paidAppointments = appointments.filter(apt => apt.payment_status === 'paid');
+    // Only count appointments where payment is confirmed (paid) or marked free
+    const confirmedAppointments = appointments.filter(apt => 
+      apt.payment_status === 'paid' || apt.cleared_at
+    );
+    const completedAppointments = confirmedAppointments.filter(apt => apt.status === 'completed');
+    const paidAppointments = confirmedAppointments.filter(apt => apt.payment_status === 'paid');
     
     // Calculate OT earnings
     const completedOtOperations = otOperations.filter(op => op.status === 'completed');
     const totalOtEarnings = completedOtOperations.reduce((sum, op) => sum + (op.doctor_expense || 0), 0);
     
-    // Doctor earns consultation fee for all completed appointments (including free ones)
-    // The hospital pays the doctor even when patient doesn't pay (free appointments)
+    // Doctor earns consultation fee only for confirmed (paid/free) completed appointments
     const consultationEarnings = completedAppointments.reduce((sum, apt) => sum + (apt.consultation_fee_at_time || 0), 0);
     const totalEarnings = consultationEarnings + totalOtEarnings;
     
     // Received earnings = paid appointments + free appointments (marked as cleared)
-    const freeAppointments = appointments.filter(apt => apt.status === 'completed' && apt.cleared_at);
-    const receivedConsultationEarnings = paidAppointments.reduce((sum, apt) => sum + (apt.consultation_fee_at_time || 0), 0);
+    const freeAppointments = confirmedAppointments.filter(apt => apt.status === 'completed' && apt.cleared_at);
+    const receivedConsultationEarnings = paidAppointments.filter(apt => apt.status === 'completed').reduce((sum, apt) => sum + (apt.consultation_fee_at_time || 0), 0);
     const freeConsultationEarnings = freeAppointments.reduce((sum, apt) => sum + (apt.consultation_fee_at_time || 0), 0);
     const receivedEarnings = receivedConsultationEarnings + freeConsultationEarnings;
     const pendingEarnings = totalEarnings - receivedEarnings;
