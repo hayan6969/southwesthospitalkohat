@@ -91,7 +91,24 @@ export const useDepartments = () => {
         .order('name');
 
       if (error) throw error;
-      return data;
+      
+      // Get staff counts per department
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('department_id')
+        .not('department_id', 'is', null);
+      
+      const staffCounts: Record<string, number> = {};
+      profiles?.forEach(p => {
+        if (p.department_id) {
+          staffCounts[p.department_id] = (staffCounts[p.department_id] || 0) + 1;
+        }
+      });
+      
+      return (data || []).map(dept => ({
+        ...dept,
+        staff_count: staffCounts[dept.id] || 0
+      }));
     }
   });
 };
@@ -1078,6 +1095,63 @@ export const useCreateDepartment = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['departments'] });
     },
+  });
+};
+
+export const useUpdateDepartment = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async ({ id, ...updates }: { id: string; name?: string; description?: string }) => {
+      const { data, error } = await supabase
+        .from('departments')
+        .update(updates)
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['departments'] });
+    },
+  });
+};
+
+export const useDeleteDepartment = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from('departments')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['departments'] });
+    },
+  });
+};
+
+export const useDepartmentStaff = (departmentId: string | null) => {
+  return useQuery({
+    queryKey: ['department-staff', departmentId],
+    queryFn: async () => {
+      if (!departmentId) return [];
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id, first_name, last_name, email, role, phone')
+        .eq('department_id', departmentId)
+        .order('first_name');
+
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!departmentId,
   });
 };
 

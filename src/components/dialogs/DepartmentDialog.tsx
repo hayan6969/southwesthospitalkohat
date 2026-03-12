@@ -1,6 +1,6 @@
 
-import { useState } from "react";
-import { useCreateDepartment } from "@/hooks/useDatabase";
+import { useState, useEffect } from "react";
+import { useCreateDepartment, useUpdateDepartment } from "@/hooks/useDatabase";
 import { useAuditLogger } from "@/hooks/useAuditLogger";
 import { useAuth } from "@/hooks/useAuth";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -11,14 +11,41 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { Plus } from "lucide-react";
 
-export function DepartmentDialog() {
+interface DepartmentDialogProps {
+  department?: { id: string; name: string; description: string | null } | null;
+  trigger?: React.ReactNode;
+  onClose?: () => void;
+}
+
+export function DepartmentDialog({ department, trigger, onClose }: DepartmentDialogProps) {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
 
   const createDepartment = useCreateDepartment();
+  const updateDepartment = useUpdateDepartment();
   const { logCreate } = useAuditLogger();
   const { user } = useAuth();
+
+  const isEditing = !!department;
+
+  useEffect(() => {
+    if (department && open) {
+      setName(department.name);
+      setDescription(department.description || "");
+    }
+  }, [department, open]);
+
+  const handleOpenChange = (isOpen: boolean) => {
+    setOpen(isOpen);
+    if (!isOpen) {
+      if (!isEditing) {
+        setName("");
+        setDescription("");
+      }
+      onClose?.();
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -29,41 +56,44 @@ export function DepartmentDialog() {
     }
 
     try {
-      await createDepartment.mutateAsync({
-        name: name.trim(),
-        description: description.trim() || undefined
-      });
+      if (isEditing) {
+        await updateDepartment.mutateAsync({
+          id: department.id,
+          name: name.trim(),
+          description: description.trim() || null
+        });
+        toast.success("Department updated successfully");
+      } else {
+        await createDepartment.mutateAsync({
+          name: name.trim(),
+          description: description.trim() || undefined
+        });
+        await logCreate("Department", `Department "${name.trim()}" was created`, user?.id);
+        toast.success("Department created successfully");
+      }
       
-      // Log the audit event with current user ID
-      await logCreate(
-        "Department",
-        `Department "${name.trim()}" was created`,
-        user?.id
-      );
-      
-      toast.success("Department created successfully");
-      setOpen(false);
-      
-      // Reset form
-      setName("");
-      setDescription("");
+      handleOpenChange(false);
     } catch (error) {
-      toast.error("Failed to create department");
-      console.error("Error creating department:", error);
+      toast.error(isEditing ? "Failed to update department" : "Failed to create department");
+      console.error("Error:", error);
     }
   };
 
+  const isPending = createDepartment.isPending || updateDepartment.isPending;
+
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
-        <Button className="bg-blue-600 hover:bg-blue-700">
-          <Plus className="w-4 h-4 mr-2" />
-          Add Department
-        </Button>
+        {trigger || (
+          <Button className="bg-blue-600 hover:bg-blue-700">
+            <Plus className="w-4 h-4 mr-2" />
+            Add Department
+          </Button>
+        )}
       </DialogTrigger>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Create New Department</DialogTitle>
+          <DialogTitle>{isEditing ? "Edit Department" : "Create New Department"}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
@@ -89,11 +119,11 @@ export function DepartmentDialog() {
           </div>
 
           <div className="flex justify-end space-x-2">
-            <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+            <Button type="button" variant="outline" onClick={() => handleOpenChange(false)}>
               Cancel
             </Button>
-            <Button type="submit" disabled={createDepartment.isPending}>
-              {createDepartment.isPending ? "Creating..." : "Create Department"}
+            <Button type="submit" disabled={isPending}>
+              {isPending ? (isEditing ? "Updating..." : "Creating...") : (isEditing ? "Update Department" : "Create Department")}
             </Button>
           </div>
         </form>
