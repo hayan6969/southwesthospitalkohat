@@ -58,7 +58,7 @@ export default function AdminDoctors() {
                           <UserCheck className="w-4 h-4 text-gray-400" />
                           <div>
                             <div className="font-medium">
-                              Dr. {doctor.profiles?.first_name} {doctor.profiles?.last_name}
+                              Dr. {(doctor.profiles as any)?.first_name} {(doctor.profiles as any)?.last_name}
                             </div>
                           </div>
                         </div>
