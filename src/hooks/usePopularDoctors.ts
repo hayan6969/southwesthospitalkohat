@@ -55,7 +55,7 @@ export const usePopularDoctors = () => {
         
         return {
           id: doctor.doctor_id,
-          name: `Dr. ${doctor.doctor_data?.profiles?.first_name || 'Unknown'} ${doctor.doctor_data?.profiles?.last_name || ''}`.trim(),
+          name: `Dr. ${(doctor.doctor_data as any)?.profiles?.first_name || 'Unknown'} ${(doctor.doctor_data as any)?.profiles?.last_name || ''}`.trim(),
           specialization: doctor.doctor_data?.specialization || 'General Medicine',
           totalAppointments: doctor.total_appointments,
           completedAppointments: doctor.completed_appointments,

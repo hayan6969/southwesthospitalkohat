@@ -80,10 +80,10 @@ export const useDoctorNames = () => {
         // Flatten the data structure to match the expected format
         const formattedData = data?.map(doctor => ({
           id: doctor.id,
-          first_name: doctor.profiles.first_name,
-          last_name: doctor.profiles.last_name,
-          phone: doctor.profiles.phone,
-          email: doctor.profiles.email,
+          first_name: (doctor.profiles as any)?.first_name,
+          last_name: (doctor.profiles as any)?.last_name,
+          phone: (doctor.profiles as any)?.phone,
+          email: (doctor.profiles as any)?.email,
         })) || [];
         
         // Cache the data for offline use

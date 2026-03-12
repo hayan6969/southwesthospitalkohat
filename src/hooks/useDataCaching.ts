@@ -27,8 +27,8 @@ export const useDataCaching = () => {
           id: doctor.id,
           first_name: doctor.first_name,
           last_name: doctor.last_name,
-          specialization: doctor.doctors?.specialization || '',
-          consultation_fee: doctor.doctors?.consultation_fee || 0
+          specialization: (doctor.doctors as any)?.specialization || '',
+          consultation_fee: (doctor.doctors as any)?.consultation_fee || 0
         }));
         
         localStorage.setItem('cached_doctors', JSON.stringify(processedDoctors));

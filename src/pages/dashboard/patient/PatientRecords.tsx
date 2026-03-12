@@ -206,10 +206,10 @@ export default function PatientRecords() {
                             <User className="w-4 h-4 text-muted-foreground flex-shrink-0 mt-0.5" />
                             <div>
                               <div className="font-medium text-sm">
-                                Dr. {record.doctor?.profiles?.first_name} {record.doctor?.profiles?.last_name}
+                                Dr. {(record.doctor as any)?.profiles?.first_name} {(record.doctor as any)?.profiles?.last_name}
                               </div>
                               <div className="text-xs text-muted-foreground">
-                                {record.doctor?.specialization}
+                                {(record.doctor as any)?.specialization}
                               </div>
                             </div>
                           </div>
@@ -289,10 +289,10 @@ export default function PatientRecords() {
                               <User className="w-4 h-4 text-muted-foreground" />
                               <div>
                                 <div className="font-medium">
-                                  Dr. {record.doctor?.profiles?.first_name} {record.doctor?.profiles?.last_name}
+                                  Dr. {(record.doctor as any)?.profiles?.first_name} {(record.doctor as any)?.profiles?.last_name}
                                 </div>
                                 <div className="text-sm text-muted-foreground">
-                                  {record.doctor?.specialization}
+                                  {(record.doctor as any)?.specialization}
                                 </div>
                               </div>
                             </div>

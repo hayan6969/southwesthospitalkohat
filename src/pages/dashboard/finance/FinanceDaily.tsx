@@ -1108,7 +1108,7 @@ export default function FinanceDaily() {
                       <CardContent>
                         <div className="space-y-2 max-h-32 overflow-y-auto">
                           {detailedData.emergencyAppointments.map((apt, idx) => <div key={idx} className="flex justify-between p-2 bg-gray-50 rounded">
-                              <span className="text-sm">{apt.patients?.profiles?.first_name} {apt.patients?.profiles?.last_name}</span>
+                              <span className="text-sm">{(apt.patients?.profiles as any)?.first_name} {(apt.patients?.profiles as any)?.last_name}</span>
                               <Badge>{formatPkrAmount(apt.consultation_fee_at_time || 0)}</Badge>
                             </div>)}
                         </div>

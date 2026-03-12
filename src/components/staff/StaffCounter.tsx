@@ -383,10 +383,10 @@ export function StaffCounter() {
           emergency_contact_name: patientData?.emergency_contact_name || '',
           emergency_contact_phone: patientData?.emergency_contact_phone || '',
           users: {
-            first_name: patientData?.profiles?.first_name || patientName.split(' ')[0] || '',
-            last_name: patientData?.profiles?.last_name || patientName.split(' ').slice(1).join(' ') || '',
-            email: patientData?.profiles?.email || '',
-            phone: patientData?.profiles?.phone || ''
+            first_name: (patientData?.profiles as any)?.first_name || patientName.split(' ')[0] || '',
+            last_name: (patientData?.profiles as any)?.last_name || patientName.split(' ').slice(1).join(' ') || '',
+            email: (patientData?.profiles as any)?.email || '',
+            phone: (patientData?.profiles as any)?.phone || ''
           }
         }
       };

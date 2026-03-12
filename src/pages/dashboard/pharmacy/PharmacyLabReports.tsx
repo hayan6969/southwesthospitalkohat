@@ -82,7 +82,7 @@ export default function PharmacyLabReports() {
         .limit(10);
 
       if (error) throw error;
-      setSearchResults(data || []);
+      setSearchResults((data as any) || []);
     } catch (error) {
       console.error("Error searching patients:", error);
       toast.error("Failed to search patients");
@@ -121,8 +121,8 @@ export default function PharmacyLabReports() {
         .order('test_date', { ascending: false });
 
       if (error) throw error;
-      setLabReports(data || []);
-      setFilteredReports(data || []);
+      setLabReports((data as any) || []);
+      setFilteredReports((data as any) || []);
     } catch (error) {
       console.error("Error fetching lab reports:", error);
       toast.error("Failed to fetch lab reports");

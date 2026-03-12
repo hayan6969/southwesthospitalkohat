@@ -145,8 +145,8 @@ const OfflineMode = () => {
       } else {
         const formattedDoctors = doctorsData.map(doctor => ({
           id: doctor.id,
-          first_name: doctor.profiles.first_name,
-          last_name: doctor.profiles.last_name,
+          first_name: (doctor.profiles as any)?.first_name,
+          last_name: (doctor.profiles as any)?.last_name,
           specialization: doctor.specialization || 'General',
           consultation_fee: doctor.consultation_fee || 0
         }));

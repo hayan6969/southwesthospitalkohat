@@ -188,9 +188,9 @@ export default function DashboardOTA() {
           date_of_birth: schedule.patient?.date_of_birth || null,
           address: schedule.patient?.address || '',
           profile: {
-            first_name: schedule.patient?.profiles?.first_name || '',
-            last_name: schedule.patient?.profiles?.last_name || '',
-            phone: schedule.patient?.profiles?.phone || ''
+            first_name: (schedule.patient?.profiles as any)?.first_name || '',
+            last_name: (schedule.patient?.profiles as any)?.last_name || '',
+            phone: (schedule.patient?.profiles as any)?.phone || ''
           }
         },
         operation: {

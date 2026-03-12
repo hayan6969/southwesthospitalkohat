@@ -80,10 +80,10 @@ export function DoctorPayments() {
       return data?.map(payment => ({
         ...payment,
         doctor: {
-          id: payment.doctor.id,
-          first_name: payment.doctor.profiles.first_name,
-          last_name: payment.doctor.profiles.last_name,
-          consultation_fee: payment.doctor.consultation_fee
+          id: (payment.doctor as any).id,
+          first_name: (payment.doctor as any).profiles?.first_name,
+          last_name: (payment.doctor as any).profiles?.last_name,
+          consultation_fee: (payment.doctor as any).consultation_fee
         }
       })) as DoctorPayment[];
     },

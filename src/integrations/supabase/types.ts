@@ -1860,6 +1860,10 @@ export type Database = {
         Args: { target_date: string }
         Returns: number
       }
+      generate_monthly_payroll: {
+        Args: { target_month: string }
+        Returns: number
+      }
       generate_patient_number: { Args: never; Returns: string }
       get_current_user_role: { Args: never; Returns: string }
       get_last_daily_closing: {

@@ -439,8 +439,8 @@ export default function FinanceInvoices() {
       doc.setFont('helvetica', 'bold');
       doc.text('Patient:', 20, yPosition + 5);
       doc.setFont('helvetica', 'normal');
-      const patientName = invoice.patient?.profiles?.first_name && invoice.patient?.profiles?.last_name 
-        ? `${invoice.patient.profiles.first_name} ${invoice.patient.profiles.last_name}`
+      const patientName = (invoice.patient as any)?.profiles?.first_name && (invoice.patient as any)?.profiles?.last_name 
+        ? `${(invoice.patient as any).profiles.first_name} ${(invoice.patient as any).profiles.last_name}`
         : 'Walk-in Patient';
       doc.text(patientName, 60, yPosition + 5);
       
@@ -460,8 +460,8 @@ export default function FinanceInvoices() {
       doc.setFont('helvetica', 'bold');
       doc.text('Patient:', 20, yPosition + 5);
       doc.setFont('helvetica', 'normal');
-      const patientName = invoice.patient?.profiles?.first_name && invoice.patient?.profiles?.last_name 
-        ? `${invoice.patient.profiles.first_name} ${invoice.patient.profiles.last_name}`
+      const patientName = (invoice.patient as any)?.profiles?.first_name && (invoice.patient as any)?.profiles?.last_name 
+        ? `${(invoice.patient as any).profiles.first_name} ${(invoice.patient as any).profiles.last_name}`
         : 'Unknown Patient';
       doc.text(patientName, 60, yPosition + 5);
       

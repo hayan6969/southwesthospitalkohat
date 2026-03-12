@@ -58,7 +58,7 @@ export default function AdminDoctors() {
                           <UserCheck className="w-4 h-4 text-gray-400" />
                           <div>
                             <div className="font-medium">
-                              Dr. {doctor.profiles?.first_name} {doctor.profiles?.last_name}
+                              Dr. {(doctor.profiles as any)?.first_name} {(doctor.profiles as any)?.last_name}
                             </div>
                           </div>
                         </div>
@@ -67,12 +67,12 @@ export default function AdminDoctors() {
                         <div className="space-y-1">
                           <div className="flex items-center gap-2 text-sm">
                             <Mail className="w-3 h-3 text-gray-400" />
-                            {doctor.profiles?.email}
+                            {(doctor.profiles as any)?.email}
                           </div>
-                          {doctor.profiles?.phone && (
+                          {(doctor.profiles as any)?.phone && (
                             <div className="flex items-center gap-2 text-sm">
                               <Phone className="w-3 h-3 text-gray-400" />
-                              {doctor.profiles?.phone}
+                              {(doctor.profiles as any)?.phone}
                             </div>
                           )}
                         </div>
