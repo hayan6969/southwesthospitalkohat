@@ -148,7 +148,7 @@ export default function FinanceIncome() {
 
   // Emergency consultation revenue (hospital only gets emergency fees, not regular consultations)
   const emergencyRevenue = invoices?.filter(inv => 
-    inv.description?.toLowerCase().includes('emergency')
+    inv.status === 'paid' && inv.description?.toLowerCase().includes('emergency')
   ).reduce((sum, invoice) => sum + (invoice.amount || 0), 0) || 0;
   
   const pharmacyRevenue = pharmacyInvoices?.reduce((sum, invoice) => sum + (invoice.final_amount || 0), 0) || 0;

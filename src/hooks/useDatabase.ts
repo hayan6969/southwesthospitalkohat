@@ -7,17 +7,20 @@ export const useStats = () => {
   return useQuery({
     queryKey: ['stats'],
     queryFn: async () => {
-      const [doctorsResult, patientsResult, appointmentsResult] = await Promise.all([
+      const [doctorsResult, patientsResult, appointmentsResult, paidAppointments] = await Promise.all([
         supabase.from('doctors').select('id'),
         supabase.from('patients').select('id'),
-        supabase.from('appointments').select('id')
+        supabase.from('appointments').select('id'),
+        supabase.from('appointments').select('consultation_fee_at_time').eq('status', 'completed').eq('payment_status', 'paid')
       ]);
+
+      const totalRevenue = paidAppointments.data?.reduce((sum, a) => sum + (a.consultation_fee_at_time || 0), 0) || 0;
 
       return {
         totalDoctors: doctorsResult.data?.length || 0,
         totalPatients: patientsResult.data?.length || 0,
         totalAppointments: appointmentsResult.data?.length || 0,
-        totalRevenue: 55240
+        totalRevenue
       };
     }
   });
