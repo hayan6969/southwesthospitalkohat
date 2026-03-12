@@ -10,7 +10,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "12.2.3 (519615d)"
+    PostgrestVersion: "14.4"
   }
   public: {
     Tables: {
@@ -86,35 +86,35 @@ export type Database = {
       assessment_entries: {
         Row: {
           assessment: string | null
-          created_at: string
-          entry_date: string
-          entry_time: string
+          created_at: string | null
+          entry_date: string | null
+          entry_time: string | null
           id: string
           ot_schedule_id: string
           plan: string | null
-          updated_at: string
+          updated_at: string | null
           user_email: string
         }
         Insert: {
           assessment?: string | null
-          created_at?: string
-          entry_date?: string
-          entry_time?: string
+          created_at?: string | null
+          entry_date?: string | null
+          entry_time?: string | null
           id?: string
           ot_schedule_id: string
           plan?: string | null
-          updated_at?: string
+          updated_at?: string | null
           user_email: string
         }
         Update: {
           assessment?: string | null
-          created_at?: string
-          entry_date?: string
-          entry_time?: string
+          created_at?: string | null
+          entry_date?: string | null
+          entry_time?: string | null
           id?: string
           ot_schedule_id?: string
           plan?: string | null
-          updated_at?: string
+          updated_at?: string | null
           user_email?: string
         }
         Relationships: []
@@ -158,47 +158,47 @@ export type Database = {
         Row: {
           closing_date: string
           closing_time: string
-          created_at: string
+          created_at: string | null
           day_name: string
-          hospital_revenue: number
+          hospital_revenue: number | null
           id: string
-          net_profit: number
-          pharmacy_profit: number
-          pharmacy_revenue: number
-          total_expenses: number
-          total_refunds: number
+          net_profit: number | null
+          pharmacy_profit: number | null
+          pharmacy_revenue: number | null
+          total_expenses: number | null
+          total_refunds: number | null
           transactions_data: Json | null
-          updated_at: string
+          updated_at: string | null
         }
         Insert: {
           closing_date: string
           closing_time: string
-          created_at?: string
+          created_at?: string | null
           day_name: string
-          hospital_revenue?: number
+          hospital_revenue?: number | null
           id?: string
-          net_profit?: number
-          pharmacy_profit?: number
-          pharmacy_revenue?: number
-          total_expenses?: number
-          total_refunds?: number
+          net_profit?: number | null
+          pharmacy_profit?: number | null
+          pharmacy_revenue?: number | null
+          total_expenses?: number | null
+          total_refunds?: number | null
           transactions_data?: Json | null
-          updated_at?: string
+          updated_at?: string | null
         }
         Update: {
           closing_date?: string
           closing_time?: string
-          created_at?: string
+          created_at?: string | null
           day_name?: string
-          hospital_revenue?: number
+          hospital_revenue?: number | null
           id?: string
-          net_profit?: number
-          pharmacy_profit?: number
-          pharmacy_revenue?: number
-          total_expenses?: number
-          total_refunds?: number
+          net_profit?: number | null
+          pharmacy_profit?: number | null
+          pharmacy_revenue?: number | null
+          total_expenses?: number | null
+          total_refunds?: number | null
           transactions_data?: Json | null
-          updated_at?: string
+          updated_at?: string | null
         }
         Relationships: []
       }
@@ -226,108 +226,108 @@ export type Database = {
       doctor_availability: {
         Row: {
           availability_date: string
-          created_at: string
+          created_at: string | null
           doctor_id: string
           id: string
-          is_available: boolean
-          updated_at: string
+          is_available: boolean | null
+          updated_at: string | null
         }
         Insert: {
           availability_date: string
-          created_at?: string
+          created_at?: string | null
           doctor_id: string
           id?: string
-          is_available?: boolean
-          updated_at?: string
+          is_available?: boolean | null
+          updated_at?: string | null
         }
         Update: {
           availability_date?: string
-          created_at?: string
+          created_at?: string | null
           doctor_id?: string
           id?: string
-          is_available?: boolean
-          updated_at?: string
+          is_available?: boolean | null
+          updated_at?: string | null
         }
         Relationships: []
       }
       doctor_daily_status: {
         Row: {
-          accepting_appointments: boolean
-          created_at: string
+          accepting_appointments: boolean | null
+          created_at: string | null
           doctor_id: string
           id: string
           status_date: string
-          updated_at: string
+          updated_at: string | null
         }
         Insert: {
-          accepting_appointments?: boolean
-          created_at?: string
+          accepting_appointments?: boolean | null
+          created_at?: string | null
           doctor_id: string
           id?: string
           status_date: string
-          updated_at?: string
+          updated_at?: string | null
         }
         Update: {
-          accepting_appointments?: boolean
-          created_at?: string
+          accepting_appointments?: boolean | null
+          created_at?: string | null
           doctor_id?: string
           id?: string
           status_date?: string
-          updated_at?: string
+          updated_at?: string | null
         }
         Relationships: []
       }
       doctor_payments: {
         Row: {
-          appointment_count: number
-          consultation_earnings: number
-          created_at: string
+          appointment_count: number | null
+          consultation_earnings: number | null
+          created_at: string | null
           doctor_id: string
           id: string
           notes: string | null
-          ot_count: number
-          ot_earnings: number
+          ot_count: number | null
+          ot_earnings: number | null
           paid_at: string | null
           paid_by: string | null
-          payment_status: string
+          payment_status: string | null
           period_end: string
           period_start: string
-          total_earnings: number
-          updated_at: string
+          total_earnings: number | null
+          updated_at: string | null
         }
         Insert: {
-          appointment_count?: number
-          consultation_earnings?: number
-          created_at?: string
+          appointment_count?: number | null
+          consultation_earnings?: number | null
+          created_at?: string | null
           doctor_id: string
           id?: string
           notes?: string | null
-          ot_count?: number
-          ot_earnings?: number
+          ot_count?: number | null
+          ot_earnings?: number | null
           paid_at?: string | null
           paid_by?: string | null
-          payment_status?: string
+          payment_status?: string | null
           period_end: string
           period_start: string
-          total_earnings?: number
-          updated_at?: string
+          total_earnings?: number | null
+          updated_at?: string | null
         }
         Update: {
-          appointment_count?: number
-          consultation_earnings?: number
-          created_at?: string
+          appointment_count?: number | null
+          consultation_earnings?: number | null
+          created_at?: string | null
           doctor_id?: string
           id?: string
           notes?: string | null
-          ot_count?: number
-          ot_earnings?: number
+          ot_count?: number | null
+          ot_earnings?: number | null
           paid_at?: string | null
           paid_by?: string | null
-          payment_status?: string
+          payment_status?: string | null
           period_end?: string
           period_start?: string
-          total_earnings?: number
-          updated_at?: string
+          total_earnings?: number | null
+          updated_at?: string | null
         }
         Relationships: [
           {
@@ -348,37 +348,37 @@ export type Database = {
       }
       doctor_specific_schedules: {
         Row: {
-          created_at: string
+          created_at: string | null
           doctor_id: string
-          end_time: string
+          end_time: string | null
           id: string
-          is_working: boolean
+          is_working: boolean | null
           notes: string | null
           specific_date: string
-          start_time: string
-          updated_at: string
+          start_time: string | null
+          updated_at: string | null
         }
         Insert: {
-          created_at?: string
+          created_at?: string | null
           doctor_id: string
-          end_time?: string
+          end_time?: string | null
           id?: string
-          is_working?: boolean
+          is_working?: boolean | null
           notes?: string | null
           specific_date: string
-          start_time?: string
-          updated_at?: string
+          start_time?: string | null
+          updated_at?: string | null
         }
         Update: {
-          created_at?: string
+          created_at?: string | null
           doctor_id?: string
-          end_time?: string
+          end_time?: string | null
           id?: string
-          is_working?: boolean
+          is_working?: boolean | null
           notes?: string | null
           specific_date?: string
-          start_time?: string
-          updated_at?: string
+          start_time?: string | null
+          updated_at?: string | null
         }
         Relationships: [
           {
@@ -392,34 +392,34 @@ export type Database = {
       }
       doctor_working_hours: {
         Row: {
-          created_at: string
+          created_at: string | null
           day_of_week: number
           doctor_id: string
-          end_time: string
+          end_time: string | null
           id: string
-          is_working: boolean
-          start_time: string
-          updated_at: string
+          is_working: boolean | null
+          start_time: string | null
+          updated_at: string | null
         }
         Insert: {
-          created_at?: string
+          created_at?: string | null
           day_of_week: number
           doctor_id: string
-          end_time?: string
+          end_time?: string | null
           id?: string
-          is_working?: boolean
-          start_time?: string
-          updated_at?: string
+          is_working?: boolean | null
+          start_time?: string | null
+          updated_at?: string | null
         }
         Update: {
-          created_at?: string
+          created_at?: string | null
           day_of_week?: number
           doctor_id?: string
-          end_time?: string
+          end_time?: string | null
           id?: string
-          is_working?: boolean
-          start_time?: string
-          updated_at?: string
+          is_working?: boolean | null
+          start_time?: string | null
+          updated_at?: string | null
         }
         Relationships: [
           {
@@ -456,40 +456,32 @@ export type Database = {
           license_number?: string | null
           specialization?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "doctors_id_fkey"
-            columns: ["id"]
-            isOneToOne: true
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       emergency_expenses: {
         Row: {
-          cost: number
-          created_at: string
+          cost: number | null
+          created_at: string | null
           created_by: string | null
           id: string
           name: string
-          updated_at: string
+          updated_at: string | null
         }
         Insert: {
-          cost?: number
-          created_at?: string
+          cost?: number | null
+          created_at?: string | null
           created_by?: string | null
           id?: string
           name: string
-          updated_at?: string
+          updated_at?: string | null
         }
         Update: {
-          cost?: number
-          created_at?: string
+          cost?: number | null
+          created_at?: string | null
           created_by?: string | null
           id?: string
           name?: string
-          updated_at?: string
+          updated_at?: string | null
         }
         Relationships: []
       }
@@ -497,116 +489,116 @@ export type Database = {
         Row: {
           amount: number
           category: string
-          created_at: string
+          created_at: string | null
           created_by: string | null
           description: string
           expense_date: string
           id: string
-          updated_at: string
+          updated_at: string | null
         }
         Insert: {
           amount: number
           category: string
-          created_at?: string
+          created_at?: string | null
           created_by?: string | null
           description: string
           expense_date?: string
           id?: string
-          updated_at?: string
+          updated_at?: string | null
         }
         Update: {
           amount?: number
           category?: string
-          created_at?: string
+          created_at?: string | null
           created_by?: string | null
           description?: string
           expense_date?: string
           id?: string
-          updated_at?: string
+          updated_at?: string | null
         }
         Relationships: []
       }
       hospital_closing_balance: {
         Row: {
-          closing_balance: number
+          closing_balance: number | null
           closing_date: string
-          created_at: string
+          created_at: string | null
           created_by: string | null
           id: string
           notes: string | null
-          updated_at: string
+          updated_at: string | null
         }
         Insert: {
-          closing_balance?: number
+          closing_balance?: number | null
           closing_date: string
-          created_at?: string
+          created_at?: string | null
           created_by?: string | null
           id?: string
           notes?: string | null
-          updated_at?: string
+          updated_at?: string | null
         }
         Update: {
-          closing_balance?: number
+          closing_balance?: number | null
           closing_date?: string
-          created_at?: string
+          created_at?: string | null
           created_by?: string | null
           id?: string
           notes?: string | null
-          updated_at?: string
+          updated_at?: string | null
         }
         Relationships: []
       }
       hospital_settings: {
         Row: {
-          booking_lead_time_hours: number
-          closing_time: string
+          booking_lead_time_hours: number | null
+          closing_time: string | null
           contact_number: string | null
           created_at: string | null
           emergency_consultation_fee: number | null
-          emergency_slots_percentage: number
+          emergency_slots_percentage: number | null
           hospital_address: string | null
-          hospital_name: string
+          hospital_name: string | null
           id: string
           logo_url: string | null
-          max_appointments_per_doctor: number
-          opening_time: string
+          max_appointments_per_doctor: number | null
+          opening_time: string | null
           payroll_payment_date: number | null
           updated_at: string | null
-          working_days: string[]
+          working_days: string[] | null
         }
         Insert: {
-          booking_lead_time_hours?: number
-          closing_time?: string
+          booking_lead_time_hours?: number | null
+          closing_time?: string | null
           contact_number?: string | null
           created_at?: string | null
           emergency_consultation_fee?: number | null
-          emergency_slots_percentage?: number
+          emergency_slots_percentage?: number | null
           hospital_address?: string | null
-          hospital_name?: string
+          hospital_name?: string | null
           id?: string
           logo_url?: string | null
-          max_appointments_per_doctor?: number
-          opening_time?: string
+          max_appointments_per_doctor?: number | null
+          opening_time?: string | null
           payroll_payment_date?: number | null
           updated_at?: string | null
-          working_days?: string[]
+          working_days?: string[] | null
         }
         Update: {
-          booking_lead_time_hours?: number
-          closing_time?: string
+          booking_lead_time_hours?: number | null
+          closing_time?: string | null
           contact_number?: string | null
           created_at?: string | null
           emergency_consultation_fee?: number | null
-          emergency_slots_percentage?: number
+          emergency_slots_percentage?: number | null
           hospital_address?: string | null
-          hospital_name?: string
+          hospital_name?: string | null
           id?: string
           logo_url?: string | null
-          max_appointments_per_doctor?: number
-          opening_time?: string
+          max_appointments_per_doctor?: number | null
+          opening_time?: string | null
           payroll_payment_date?: number | null
           updated_at?: string | null
-          working_days?: string[]
+          working_days?: string[] | null
         }
         Relationships: []
       }
@@ -615,37 +607,40 @@ export type Database = {
           amount: number
           created_at: string | null
           description: string | null
+          doctor_id: string | null
           due_date: string | null
           emergency_patient_data: Json | null
           id: string
           invoice_number: string
           paid_at: string | null
           patient_id: string
-          status: Database["public"]["Enums"]["invoice_status"] | null
+          status: string | null
         }
         Insert: {
           amount: number
           created_at?: string | null
           description?: string | null
+          doctor_id?: string | null
           due_date?: string | null
           emergency_patient_data?: Json | null
           id?: string
           invoice_number: string
           paid_at?: string | null
           patient_id: string
-          status?: Database["public"]["Enums"]["invoice_status"] | null
+          status?: string | null
         }
         Update: {
           amount?: number
           created_at?: string | null
           description?: string | null
+          doctor_id?: string | null
           due_date?: string | null
           emergency_patient_data?: Json | null
           id?: string
           invoice_number?: string
           paid_at?: string | null
           patient_id?: string
-          status?: Database["public"]["Enums"]["invoice_status"] | null
+          status?: string | null
         }
         Relationships: [
           {
@@ -669,7 +664,7 @@ export type Database = {
           price: number | null
           result_file_url: string | null
           results: string | null
-          status: Database["public"]["Enums"]["lab_status"] | null
+          status: string | null
           test_date: string | null
           test_id: string | null
           test_name: string
@@ -685,7 +680,7 @@ export type Database = {
           price?: number | null
           result_file_url?: string | null
           results?: string | null
-          status?: Database["public"]["Enums"]["lab_status"] | null
+          status?: string | null
           test_date?: string | null
           test_id?: string | null
           test_name: string
@@ -701,7 +696,7 @@ export type Database = {
           price?: number | null
           result_file_url?: string | null
           results?: string | null
-          status?: Database["public"]["Enums"]["lab_status"] | null
+          status?: string | null
           test_date?: string | null
           test_id?: string | null
           test_name?: string
@@ -733,36 +728,36 @@ export type Database = {
       lab_tests: {
         Row: {
           category: string | null
-          created_at: string
+          created_at: string | null
           description: string | null
           id: string
           name: string
           normal_range: string | null
           preparation_instructions: string | null
           price: number
-          updated_at: string
+          updated_at: string | null
         }
         Insert: {
           category?: string | null
-          created_at?: string
+          created_at?: string | null
           description?: string | null
           id?: string
           name: string
           normal_range?: string | null
           preparation_instructions?: string | null
           price: number
-          updated_at?: string
+          updated_at?: string | null
         }
         Update: {
           category?: string | null
-          created_at?: string
+          created_at?: string | null
           description?: string | null
           id?: string
           name?: string
           normal_range?: string | null
           preparation_instructions?: string | null
           price?: number
-          updated_at?: string
+          updated_at?: string | null
         }
         Relationships: []
       }
@@ -871,57 +866,57 @@ export type Database = {
       miscellaneous_income: {
         Row: {
           amount: number
-          created_at: string
+          created_at: string | null
           created_by: string | null
           description: string
           id: string
           income_date: string
-          updated_at: string
+          updated_at: string | null
         }
         Insert: {
           amount: number
-          created_at?: string
+          created_at?: string | null
           created_by?: string | null
           description: string
           id?: string
           income_date?: string
-          updated_at?: string
+          updated_at?: string | null
         }
         Update: {
           amount?: number
-          created_at?: string
+          created_at?: string | null
           created_by?: string | null
           description?: string
           id?: string
           income_date?: string
-          updated_at?: string
+          updated_at?: string | null
         }
         Relationships: []
       }
       ot_expenses: {
         Row: {
           cost: number
-          created_at: string
+          created_at: string | null
           expense_name: string
           id: string
           operation_id: string
-          updated_at: string
+          updated_at: string | null
         }
         Insert: {
           cost: number
-          created_at?: string
+          created_at?: string | null
           expense_name: string
           id?: string
           operation_id: string
-          updated_at?: string
+          updated_at?: string | null
         }
         Update: {
           cost?: number
-          created_at?: string
+          created_at?: string | null
           expense_name?: string
           id?: string
           operation_id?: string
-          updated_at?: string
+          updated_at?: string | null
         }
         Relationships: [
           {
@@ -935,22 +930,22 @@ export type Database = {
       }
       ot_operations: {
         Row: {
-          created_at: string
+          created_at: string | null
           id: string
           operation_name: string
-          updated_at: string
+          updated_at: string | null
         }
         Insert: {
-          created_at?: string
+          created_at?: string | null
           id?: string
           operation_name: string
-          updated_at?: string
+          updated_at?: string | null
         }
         Update: {
-          created_at?: string
+          created_at?: string | null
           id?: string
           operation_name?: string
-          updated_at?: string
+          updated_at?: string | null
         }
         Relationships: []
       }
@@ -958,21 +953,21 @@ export type Database = {
         Row: {
           created_at: string | null
           id: string
-          is_available: boolean
+          is_available: boolean | null
           room_name: string
           updated_at: string | null
         }
         Insert: {
           created_at?: string | null
           id?: string
-          is_available?: boolean
+          is_available?: boolean | null
           room_name: string
           updated_at?: string | null
         }
         Update: {
           created_at?: string | null
           id?: string
-          is_available?: boolean
+          is_available?: boolean | null
           room_name?: string
           updated_at?: string | null
         }
@@ -1063,7 +1058,7 @@ export type Database = {
       }
       patient_documents: {
         Row: {
-          created_at: string
+          created_at: string | null
           document_label: string
           document_name: string
           file_size: number | null
@@ -1071,11 +1066,11 @@ export type Database = {
           file_url: string
           id: string
           patient_id: string
-          updated_at: string
+          updated_at: string | null
           uploaded_by: string | null
         }
         Insert: {
-          created_at?: string
+          created_at?: string | null
           document_label: string
           document_name: string
           file_size?: number | null
@@ -1083,11 +1078,11 @@ export type Database = {
           file_url: string
           id?: string
           patient_id: string
-          updated_at?: string
+          updated_at?: string | null
           uploaded_by?: string | null
         }
         Update: {
-          created_at?: string
+          created_at?: string | null
           document_label?: string
           document_name?: string
           file_size?: number | null
@@ -1095,7 +1090,7 @@ export type Database = {
           file_url?: string
           id?: string
           patient_id?: string
-          updated_at?: string
+          updated_at?: string | null
           uploaded_by?: string | null
         }
         Relationships: [
@@ -1149,21 +1144,13 @@ export type Database = {
           id?: string
           patient_number?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "patients_id_fkey"
-            columns: ["id"]
-            isOneToOne: true
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       payroll: {
         Row: {
           allowances: number | null
           base_salary: number
-          created_at: string
+          created_at: string | null
           created_by: string | null
           deductions: number | null
           employee_id: string
@@ -1174,12 +1161,12 @@ export type Database = {
           pay_period: string
           role: string
           status: string
-          updated_at: string
+          updated_at: string | null
         }
         Insert: {
           allowances?: number | null
           base_salary: number
-          created_at?: string
+          created_at?: string | null
           created_by?: string | null
           deductions?: number | null
           employee_id: string
@@ -1190,12 +1177,12 @@ export type Database = {
           pay_period: string
           role: string
           status?: string
-          updated_at?: string
+          updated_at?: string | null
         }
         Update: {
           allowances?: number | null
           base_salary?: number
-          created_at?: string
+          created_at?: string | null
           created_by?: string | null
           deductions?: number | null
           employee_id?: string
@@ -1206,7 +1193,7 @@ export type Database = {
           pay_period?: string
           role?: string
           status?: string
-          updated_at?: string
+          updated_at?: string | null
         }
         Relationships: [
           {
@@ -1222,7 +1209,7 @@ export type Database = {
         Row: {
           allowances: number | null
           base_salary: number
-          created_at: string
+          created_at: string | null
           created_by: string | null
           deductions: number | null
           employee_id: string
@@ -1231,12 +1218,12 @@ export type Database = {
           is_active: boolean | null
           net_salary: number
           role: string
-          updated_at: string
+          updated_at: string | null
         }
         Insert: {
           allowances?: number | null
           base_salary: number
-          created_at?: string
+          created_at?: string | null
           created_by?: string | null
           deductions?: number | null
           employee_id: string
@@ -1245,12 +1232,12 @@ export type Database = {
           is_active?: boolean | null
           net_salary: number
           role: string
-          updated_at?: string
+          updated_at?: string | null
         }
         Update: {
           allowances?: number | null
           base_salary?: number
-          created_at?: string
+          created_at?: string | null
           created_by?: string | null
           deductions?: number | null
           employee_id?: string
@@ -1259,7 +1246,7 @@ export type Database = {
           is_active?: boolean | null
           net_salary?: number
           role?: string
-          updated_at?: string
+          updated_at?: string | null
         }
         Relationships: [
           {
@@ -1273,28 +1260,28 @@ export type Database = {
       }
       pharmacy_account: {
         Row: {
-          created_at: string
+          created_at: string | null
           created_by: string | null
           id: string
           notes: string | null
-          starting_balance: number
-          updated_at: string
+          starting_balance: number | null
+          updated_at: string | null
         }
         Insert: {
-          created_at?: string
+          created_at?: string | null
           created_by?: string | null
           id?: string
           notes?: string | null
-          starting_balance?: number
-          updated_at?: string
+          starting_balance?: number | null
+          updated_at?: string | null
         }
         Update: {
-          created_at?: string
+          created_at?: string | null
           created_by?: string | null
           id?: string
           notes?: string | null
-          starting_balance?: number
-          updated_at?: string
+          starting_balance?: number | null
+          updated_at?: string | null
         }
         Relationships: []
       }
@@ -1302,35 +1289,35 @@ export type Database = {
         Row: {
           amount: number
           bill_number: string | null
-          created_at: string
+          created_at: string | null
           created_by: string | null
           description: string | null
           expense_date: string
           expense_type: string
           id: string
-          updated_at: string
+          updated_at: string | null
         }
         Insert: {
           amount: number
           bill_number?: string | null
-          created_at?: string
+          created_at?: string | null
           created_by?: string | null
           description?: string | null
           expense_date?: string
           expense_type?: string
           id?: string
-          updated_at?: string
+          updated_at?: string | null
         }
         Update: {
           amount?: number
           bill_number?: string | null
-          created_at?: string
+          created_at?: string | null
           created_by?: string | null
           description?: string | null
           expense_date?: string
           expense_type?: string
           id?: string
-          updated_at?: string
+          updated_at?: string | null
         }
         Relationships: []
       }
@@ -1418,7 +1405,7 @@ export type Database = {
       postop_progress_entries: {
         Row: {
           blood_pressure: string | null
-          created_at: string
+          created_at: string | null
           entry_date: string
           id: string
           input_data: string | null
@@ -1427,12 +1414,12 @@ export type Database = {
           pulses: string | null
           remarks: string | null
           temperature: string | null
-          updated_at: string
+          updated_at: string | null
           user_email: string
         }
         Insert: {
           blood_pressure?: string | null
-          created_at?: string
+          created_at?: string | null
           entry_date: string
           id?: string
           input_data?: string | null
@@ -1441,12 +1428,12 @@ export type Database = {
           pulses?: string | null
           remarks?: string | null
           temperature?: string | null
-          updated_at?: string
+          updated_at?: string | null
           user_email: string
         }
         Update: {
           blood_pressure?: string | null
-          created_at?: string
+          created_at?: string | null
           entry_date?: string
           id?: string
           input_data?: string | null
@@ -1455,7 +1442,7 @@ export type Database = {
           pulses?: string | null
           remarks?: string | null
           temperature?: string | null
-          updated_at?: string
+          updated_at?: string | null
           user_email?: string
         }
         Relationships: [
@@ -1471,30 +1458,30 @@ export type Database = {
       prescriptions: {
         Row: {
           appointment_id: string
-          created_at: string
+          created_at: string | null
           doctor_id: string
           id: string
           patient_id: string
           prescription_text: string
-          updated_at: string
+          updated_at: string | null
         }
         Insert: {
           appointment_id: string
-          created_at?: string
+          created_at?: string | null
           doctor_id: string
           id?: string
           patient_id: string
           prescription_text: string
-          updated_at?: string
+          updated_at?: string | null
         }
         Update: {
           appointment_id?: string
-          created_at?: string
+          created_at?: string | null
           doctor_id?: string
           id?: string
           patient_id?: string
           prescription_text?: string
-          updated_at?: string
+          updated_at?: string | null
         }
         Relationships: []
       }
@@ -1596,7 +1583,7 @@ export type Database = {
       refunds: {
         Row: {
           amount: number
-          created_at: string
+          created_at: string | null
           description: string
           doctor_id: string | null
           id: string
@@ -1604,11 +1591,11 @@ export type Database = {
           processed_by: string
           refund_type: string
           related_record_id: string | null
-          updated_at: string
+          updated_at: string | null
         }
         Insert: {
           amount: number
-          created_at?: string
+          created_at?: string | null
           description: string
           doctor_id?: string | null
           id?: string
@@ -1616,11 +1603,11 @@ export type Database = {
           processed_by: string
           refund_type: string
           related_record_id?: string | null
-          updated_at?: string
+          updated_at?: string | null
         }
         Update: {
           amount?: number
-          created_at?: string
+          created_at?: string | null
           description?: string
           doctor_id?: string | null
           id?: string
@@ -1628,7 +1615,7 @@ export type Database = {
           processed_by?: string
           refund_type?: string
           related_record_id?: string | null
-          updated_at?: string
+          updated_at?: string | null
         }
         Relationships: [
           {
@@ -1649,33 +1636,33 @@ export type Database = {
       }
       treatment_chart_entries: {
         Row: {
-          created_at: string
+          created_at: string | null
           entry_date: string
           id: string
           investigation: string | null
           medicine: string | null
           ot_schedule_id: string
-          updated_at: string
+          updated_at: string | null
           user_email: string
         }
         Insert: {
-          created_at?: string
+          created_at?: string | null
           entry_date: string
           id?: string
           investigation?: string | null
           medicine?: string | null
           ot_schedule_id: string
-          updated_at?: string
+          updated_at?: string | null
           user_email: string
         }
         Update: {
-          created_at?: string
+          created_at?: string | null
           entry_date?: string
           id?: string
           investigation?: string | null
           medicine?: string | null
           ot_schedule_id?: string
-          updated_at?: string
+          updated_at?: string | null
           user_email?: string
         }
         Relationships: []
@@ -1689,7 +1676,7 @@ export type Database = {
           id: string
           last_name: string
           phone: string | null
-          role: Database["public"]["Enums"]["user_role"]
+          role: string
           updated_at: string | null
         }
         Insert: {
@@ -1700,7 +1687,7 @@ export type Database = {
           id?: string
           last_name: string
           phone?: string | null
-          role: Database["public"]["Enums"]["user_role"]
+          role: string
           updated_at?: string | null
         }
         Update: {
@@ -1711,7 +1698,7 @@ export type Database = {
           id?: string
           last_name?: string
           phone?: string | null
-          role?: Database["public"]["Enums"]["user_role"]
+          role?: string
           updated_at?: string | null
         }
         Relationships: [
@@ -1797,33 +1784,33 @@ export type Database = {
       xray_tests: {
         Row: {
           category: string | null
-          created_at: string
+          created_at: string | null
           description: string | null
           id: string
           name: string
           preparation_instructions: string | null
           price: number
-          updated_at: string
+          updated_at: string | null
         }
         Insert: {
           category?: string | null
-          created_at?: string
+          created_at?: string | null
           description?: string | null
           id?: string
           name: string
           preparation_instructions?: string | null
           price: number
-          updated_at?: string
+          updated_at?: string | null
         }
         Update: {
           category?: string | null
-          created_at?: string
+          created_at?: string | null
           description?: string | null
           id?: string
           name?: string
           preparation_instructions?: string | null
           price?: number
-          updated_at?: string
+          updated_at?: string | null
         }
         Relationships: []
       }
@@ -1873,14 +1860,6 @@ export type Database = {
         Args: { target_date: string }
         Returns: number
       }
-      generate_doctor_payments: {
-        Args: { target_month: string }
-        Returns: number
-      }
-      generate_monthly_payroll: {
-        Args: { target_month: string }
-        Returns: number
-      }
       generate_patient_number: { Args: never; Returns: string }
       get_current_user_role: { Args: never; Returns: string }
       get_last_daily_closing: {
@@ -1924,9 +1903,6 @@ export type Database = {
         | "completed"
         | "cancelled"
         | "rescheduled"
-      invoice_status: "paid" | "pending" | "overdue"
-      lab_status: "pending" | "completed" | "reviewed"
-      user_role: "patient" | "doctor" | "staff" | "admin"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -2060,9 +2036,6 @@ export const Constants = {
         "cancelled",
         "rescheduled",
       ],
-      invoice_status: ["paid", "pending", "overdue"],
-      lab_status: ["pending", "completed", "reviewed"],
-      user_role: ["patient", "doctor", "staff", "admin"],
     },
   },
 } as const
