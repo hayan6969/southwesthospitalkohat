@@ -318,19 +318,20 @@ export default function DashboardAdmin() {
           </div>
 
           <Tabs defaultValue="overview" className="space-y-6">
-            <TabsList className="grid w-full grid-cols-10 h-auto gap-1">
-              <TabsTrigger value="overview" className="whitespace-nowrap">Overview</TabsTrigger>
-              <TabsTrigger value="analytics" className="whitespace-nowrap">Analytics</TabsTrigger>
-              {/* <TabsTrigger value="finance" className="whitespace-nowrap">Finance</TabsTrigger> */}
-              <TabsTrigger value="accounts" className="whitespace-nowrap">Account Management</TabsTrigger>
-              <TabsTrigger value="pharmacy" className="whitespace-nowrap">Pharmacy</TabsTrigger>
-              <TabsTrigger value="lab" className="whitespace-nowrap">Lab</TabsTrigger>
-              <TabsTrigger value="xray" className="whitespace-nowrap">X-ray</TabsTrigger>
-              <TabsTrigger value="ot" className="whitespace-nowrap">OT</TabsTrigger>
-              <TabsTrigger value="emergency" className="whitespace-nowrap">Emergency</TabsTrigger>
-              <TabsTrigger value="logs" className="whitespace-nowrap">System Logs</TabsTrigger>
-              <TabsTrigger value="settings" className="whitespace-nowrap">Settings</TabsTrigger>
-            </TabsList>
+            <div className="overflow-x-auto -mx-3 px-3 sm:mx-0 sm:px-0">
+              <TabsList className="inline-flex w-auto min-w-full h-auto p-1 gap-0">
+                <TabsTrigger value="overview" className="whitespace-nowrap px-4 py-2 text-sm flex-1">Overview</TabsTrigger>
+                <TabsTrigger value="analytics" className="whitespace-nowrap px-4 py-2 text-sm flex-1">Analytics</TabsTrigger>
+                <TabsTrigger value="accounts" className="whitespace-nowrap px-4 py-2 text-sm flex-1">Account Management</TabsTrigger>
+                <TabsTrigger value="pharmacy" className="whitespace-nowrap px-4 py-2 text-sm flex-1">Pharmacy</TabsTrigger>
+                <TabsTrigger value="lab" className="whitespace-nowrap px-4 py-2 text-sm flex-1">Lab</TabsTrigger>
+                <TabsTrigger value="xray" className="whitespace-nowrap px-4 py-2 text-sm flex-1">X-ray</TabsTrigger>
+                <TabsTrigger value="ot" className="whitespace-nowrap px-4 py-2 text-sm flex-1">OT</TabsTrigger>
+                <TabsTrigger value="emergency" className="whitespace-nowrap px-4 py-2 text-sm flex-1">Emergency</TabsTrigger>
+                <TabsTrigger value="logs" className="whitespace-nowrap px-4 py-2 text-sm flex-1">System Logs</TabsTrigger>
+                <TabsTrigger value="settings" className="whitespace-nowrap px-4 py-2 text-sm flex-1">Settings</TabsTrigger>
+              </TabsList>
+            </div>
 
             <TabsContent value="overview" className="space-y-6">
               {/* Statistics Cards - 2x2 Grid Layout */}
