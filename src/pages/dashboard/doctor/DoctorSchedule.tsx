@@ -253,14 +253,31 @@ export default function DoctorSchedule() { // Fixed ordering syntax
     }
   };
 
-  const handleCancelAppointment = async (appointmentId: string) => {
+   const handleCancelAppointment = async (appointmentId: string) => {
     setCancellingAppointment(appointmentId);
     try {
+      // Get appointment details before cancelling
+      const { data: appointmentData } = await supabase
+        .from('appointments')
+        .select('patient_id, doctor_id')
+        .eq('id', appointmentId)
+        .single();
+
       await updateAppointment.mutateAsync({
         id: appointmentId,
         status: 'cancelled' as any,
         updated_at: new Date().toISOString()
       });
+
+      // Also cancel related invoices
+      if (appointmentData) {
+        await supabase
+          .from('invoices')
+          .update({ status: 'cancelled' })
+          .eq('patient_id', appointmentData.patient_id)
+          .eq('doctor_id', appointmentData.doctor_id)
+          .neq('status', 'cancelled');
+      }
 
       toast.success('Appointment cancelled successfully');
       refetchAppointments();

@@ -253,12 +253,19 @@ export const MyAppointments = () => {
 
   const handleCancelAppointment = async (appointmentId: string) => {
     try {
-      // Get the queue position data BEFORE making any changes
-      const { data: queueData, error: queueFetchError } = await supabase
-        .from('queue_positions')
-        .select('doctor_id, appointment_date, queue_position')
-        .eq('appointment_id', appointmentId)
-        .single();
+      // Get the queue position data and appointment details BEFORE making any changes
+      const [{ data: queueData, error: queueFetchError }, { data: appointmentData }] = await Promise.all([
+        supabase
+          .from('queue_positions')
+          .select('doctor_id, appointment_date, queue_position')
+          .eq('appointment_id', appointmentId)
+          .single(),
+        supabase
+          .from('appointments')
+          .select('patient_id, doctor_id')
+          .eq('id', appointmentId)
+          .single()
+      ]);
 
       if (queueFetchError) {
         console.error('Error fetching queue data:', queueFetchError);
@@ -275,6 +282,16 @@ export const MyAppointments = () => {
         .eq('id', appointmentId);
 
       if (appointmentError) throw appointmentError;
+
+      // Also cancel related invoices for this appointment
+      if (appointmentData?.doctor_id) {
+        await supabase
+          .from('invoices')
+          .update({ status: 'cancelled' })
+          .eq('patient_id', appointmentData.patient_id)
+          .eq('doctor_id', appointmentData.doctor_id)
+          .neq('status', 'cancelled');
+      }
 
       // Update the queue position status to 'skipped'
       const { error: queueError } = await supabase
