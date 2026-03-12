@@ -613,12 +613,10 @@ export default function FinanceInvoices() {
 
   // Combine all invoices into a single array with type information
   const allInvoices = [
-    ...(hospitalInvoices?.map(inv => {
-      // Categorize based on invoice number prefix
+    ...(hospitalInvoices?.filter(inv => inv.status === 'paid').map(inv => {
       let type = 'appointment';
       let typeLabel = 'Appointment';
       
-      // Check invoice number prefix to determine actual type
       if (inv.invoice_number?.startsWith('OT-')) {
         type = 'ot';
         typeLabel = 'Operation Theater';
