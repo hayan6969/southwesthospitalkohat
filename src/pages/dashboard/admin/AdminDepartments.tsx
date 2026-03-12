@@ -10,7 +10,7 @@ export default function AdminDepartments() {
   const { data: departments, isLoading } = useDepartments();
 
   return (
-    <AppLayout>
+    <AppLayout hideSidebar>
       <div className="space-y-8">
         <div className="flex items-center justify-between">
           <div>
