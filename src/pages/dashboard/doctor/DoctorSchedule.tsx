@@ -410,8 +410,8 @@ export default function DoctorSchedule() { // Fixed ordering syntax
               appointmentsList.map((appointment) => (
                 <TableRow key={appointment.id} className="hover:bg-gray-50">
                   {/* Queue Position */}
-                  <TableCell>
-                    <div className="flex items-center gap-2">
+                  <TableCell className="text-center">
+                    <div className="flex items-center justify-center gap-1">
                       <Hash className="w-4 h-4 text-gray-400" />
                       <span className="font-medium text-lg">
                         {appointment.queue_position || '-'}
