@@ -67,7 +67,7 @@ export default function AdminDoctors() {
                         <div className="space-y-1">
                           <div className="flex items-center gap-2 text-sm">
                             <Mail className="w-3 h-3 text-gray-400" />
-                            {doctor.profiles?.email}
+                            {(doctor.profiles as any)?.email}
                           </div>
                           {doctor.profiles?.phone && (
                             <div className="flex items-center gap-2 text-sm">
