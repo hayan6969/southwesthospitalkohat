@@ -91,7 +91,24 @@ export const useDepartments = () => {
         .order('name');
 
       if (error) throw error;
-      return data;
+      
+      // Get staff counts per department
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('department_id')
+        .not('department_id', 'is', null);
+      
+      const staffCounts: Record<string, number> = {};
+      profiles?.forEach(p => {
+        if (p.department_id) {
+          staffCounts[p.department_id] = (staffCounts[p.department_id] || 0) + 1;
+        }
+      });
+      
+      return (data || []).map(dept => ({
+        ...dept,
+        staff_count: staffCounts[dept.id] || 0
+      }));
     }
   });
 };
