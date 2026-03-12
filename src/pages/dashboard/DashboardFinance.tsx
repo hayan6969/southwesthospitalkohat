@@ -134,6 +134,7 @@ export default function DashboardFinance() {
   // Calculate lab revenue from paid invoices for lab tests (more accurate)
   const labRevenue = invoices?.filter(invoice => 
     invoice.status === 'paid' && 
+    invoice.status !== 'cancelled' &&
     invoice.description && 
     invoice.description.toLowerCase().includes('lab')
   ).reduce((sum, invoice) => sum + Number(invoice.amount), 0) || 0;
