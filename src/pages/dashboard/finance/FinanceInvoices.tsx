@@ -33,6 +33,7 @@ export default function FinanceInvoices() {
       const { data, error } = await supabase
         .from('invoices')
         .select('*')
+        .neq('status', 'cancelled')
         .order('created_at', { ascending: false });
       if (error) throw error;
       return data || [];
