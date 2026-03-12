@@ -336,6 +336,7 @@ export function StaffCounter() {
           .from('invoices')
           .insert({
             patient_id: appointment.patient_id,
+            doctor_id: appointment.doctor_id,
             amount: consultationFee, // Use doctor's actual consultation fee
             status: 'paid',
             paid_at: new Date().toISOString(),
