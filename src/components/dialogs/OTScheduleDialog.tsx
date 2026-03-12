@@ -14,7 +14,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { toast } from "sonner";
-import { Plus, Search, UserPlus, Check, ChevronsUpDown, Building2, Banknote } from "lucide-react";
+import { Plus, Search, UserPlus, Check, ChevronsUpDown, Building2, Banknote, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { formatPkrAmount } from "@/utils/currency";
 import { cn } from "@/lib/utils";
