@@ -39,17 +39,18 @@ export function HospitalClosingBalanceDialog({
   const fetchClosingBalance = async () => {
     setIsLoading(true);
     try {
-      const { data: latestBalance } = await supabase
+      // First check if there's already a record for today's date
+      const { data: todayBalance } = await supabase
         .from('hospital_closing_balance')
         .select('*')
-        .order('closing_date', { ascending: false })
-        .limit(1)
+        .eq('closing_date', targetDate)
         .maybeSingle();
 
-      if (latestBalance) {
-        setClosingBalance(String(latestBalance.closing_balance || 0));
-        setNotes(latestBalance.notes || "");
+      if (todayBalance) {
+        setClosingBalance(String(todayBalance.closing_balance || 0));
+        setNotes(todayBalance.notes || "");
       } else {
+        // No record for today - start fresh
         setClosingBalance("");
         setNotes("");
       }
