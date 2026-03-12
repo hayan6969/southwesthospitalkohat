@@ -30,7 +30,7 @@ export default function DoctorConsultationRates() {
         
         const fee = data?.consultation_fee || 0;
         setCurrentFee(fee);
-        setConsultationFee(fee.toString());
+        setConsultationFee(fee > 0 ? fee.toString() : "");
       } catch (error) {
         console.error('Error fetching consultation fee:', error);
       }
