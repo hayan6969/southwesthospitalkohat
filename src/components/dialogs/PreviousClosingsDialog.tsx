@@ -112,24 +112,36 @@ export function PreviousClosingsDialog() {
   const endIndex = startIndex + itemsPerPage;
   const paginatedClosings = filteredClosings.slice(startIndex, endIndex);
 
-  const handleViewPDF = async (closing: DailyClosing) => {
+  const getClosingPdfData = (closing: DailyClosing) => ({
+    closingDate: closing.closing_date,
+    closingTime: closing.closing_time,
+    dayName: closing.day_name,
+    hospitalRevenue: closing.hospital_revenue,
+    pharmacyRevenue: closing.pharmacy_revenue,
+    pharmacyProfit: closing.pharmacy_profit,
+    totalExpenses: closing.total_expenses,
+    totalRefunds: closing.total_refunds,
+    netProfit: closing.net_profit,
+    transactionsData: closing.transactions_data && Object.keys(closing.transactions_data).length > 0 ? closing.transactions_data : undefined
+  });
+
+  const handleSummaryPDF = async (closing: DailyClosing) => {
     try {
-      await generateDailyClosingPDF({
-        closingDate: closing.closing_date,
-        closingTime: closing.closing_time,
-        dayName: closing.day_name,
-        hospitalRevenue: closing.hospital_revenue,
-        pharmacyRevenue: closing.pharmacy_revenue,
-        pharmacyProfit: closing.pharmacy_profit,
-        totalExpenses: closing.total_expenses,
-        totalRefunds: closing.total_refunds,
-        netProfit: closing.net_profit,
-        transactionsData: closing.transactions_data && Object.keys(closing.transactions_data).length > 0 ? closing.transactions_data : undefined
-      });
-      toast.success("Daily closing PDF opened in new tab");
+      await generateDailyClosingSummaryPDF(getClosingPdfData(closing));
+      toast.success("Summary report opened in new tab");
     } catch (error) {
-      console.error('Error generating PDF:', error);
-      toast.error("Failed to generate PDF");
+      console.error('Error generating summary PDF:', error);
+      toast.error("Failed to generate summary PDF");
+    }
+  };
+
+  const handleDetailedPDF = async (closing: DailyClosing) => {
+    try {
+      await generateDailyClosingPDF(getClosingPdfData(closing));
+      toast.success("Detailed report opened in new tab");
+    } catch (error) {
+      console.error('Error generating detailed PDF:', error);
+      toast.error("Failed to generate detailed PDF");
     }
   };
 
