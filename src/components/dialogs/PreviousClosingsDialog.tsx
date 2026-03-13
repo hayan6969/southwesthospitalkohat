@@ -279,16 +279,17 @@ export function PreviousClosingsDialog() {
             <div className="max-h-[500px] overflow-y-auto">
               <Table>
                 <TableHeader className="sticky top-0 bg-background">
-                  <TableRow>
+                   <TableRow>
                     <TableHead>Date</TableHead>
                     <TableHead>Day</TableHead>
                     <TableHead>Closing Time</TableHead>
                     <TableHead>Hospital Revenue</TableHead>
+                    <TableHead>Doctor Revenue</TableHead>
                     <TableHead>Pharmacy Profit</TableHead>
                     <TableHead>Total Expenses</TableHead>
                     <TableHead>Net Profit</TableHead>
                     <TableHead>Actions</TableHead>
-                  </TableRow>
+                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {isLoading ? (
