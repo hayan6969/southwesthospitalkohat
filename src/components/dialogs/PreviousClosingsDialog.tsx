@@ -284,7 +284,7 @@ export function PreviousClosingsDialog() {
                     <TableHead>Day</TableHead>
                     <TableHead>Closing Time</TableHead>
                     <TableHead>Hospital Revenue</TableHead>
-                    <TableHead>Doctor Revenue</TableHead>
+                    <TableHead>Doctors Revenue</TableHead>
                     <TableHead>Pharmacy Profit</TableHead>
                     <TableHead>Total Expenses</TableHead>
                     <TableHead>Net Profit</TableHead>
