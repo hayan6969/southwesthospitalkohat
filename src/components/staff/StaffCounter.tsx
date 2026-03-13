@@ -332,17 +332,19 @@ export function StaffCounter() {
         invoiceData = data;
       } else {
         // Create new invoice
+        const { data: { user: currentUser } } = await supabase.auth.getUser();
         const { data, error } = await supabase
           .from('invoices')
           .insert({
             patient_id: appointment.patient_id,
             doctor_id: appointment.doctor_id,
-            amount: consultationFee, // Use doctor's actual consultation fee
+            amount: consultationFee,
             status: 'paid',
             paid_at: new Date().toISOString(),
             invoice_number: `INV-${Date.now()}`,
             description: `Consultation with ${getDoctorName(appointment.doctor_id, doctorNames || [])} - Patient: ${patientData?.patient_number || 'N/A'}`,
-            due_date: new Date().toISOString().split('T')[0]
+            due_date: new Date().toISOString().split('T')[0],
+            created_by: currentUser?.id || null
           })
           .select()
           .single();

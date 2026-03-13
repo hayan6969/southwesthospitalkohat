@@ -614,6 +614,7 @@ export type Database = {
         Row: {
           amount: number
           created_at: string | null
+          created_by: string | null
           description: string | null
           doctor_id: string | null
           due_date: string | null
@@ -627,6 +628,7 @@ export type Database = {
         Insert: {
           amount: number
           created_at?: string | null
+          created_by?: string | null
           description?: string | null
           doctor_id?: string | null
           due_date?: string | null
@@ -640,6 +642,7 @@ export type Database = {
         Update: {
           amount?: number
           created_at?: string | null
+          created_by?: string | null
           description?: string | null
           doctor_id?: string | null
           due_date?: string | null

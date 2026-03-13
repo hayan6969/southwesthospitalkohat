@@ -136,16 +136,18 @@ export function EmergencyConsultationDialog() {
       }
       
       // Create invoice for emergency consultation with total amount
+      const { data: { user: currentUser } } = await supabase.auth.getUser();
       const { data: invoiceData, error: invoiceError } = await supabase
         .from('invoices')
         .insert({
-          patient_id: '00000000-0000-0000-0000-000000000001', // Default emergency patient ID
+          patient_id: '00000000-0000-0000-0000-000000000001',
           invoice_number: invoiceNumber,
           amount: grandTotal,
           description: description,
           status: 'paid',
           paid_at: new Date().toISOString(),
           due_date: new Date().toISOString().split('T')[0],
+          created_by: currentUser?.id || null,
           emergency_patient_data: {
             name: patientName,
             cnic: cnic,

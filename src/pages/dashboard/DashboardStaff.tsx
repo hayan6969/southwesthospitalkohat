@@ -10,6 +10,7 @@ import { StaffOT } from "@/components/staff/StaffOT";
 import { StaffInvoices } from "@/components/staff/StaffInvoices";
 import { StaffLabReports } from "@/components/staff/StaffLabReports";
 import { StaffXray } from "@/components/staff/StaffXray";
+import { StaffRevenueBreakdown } from "@/components/staff/StaffRevenueBreakdown";
 import { PatientSearchDialog } from "@/components/staff/PatientSearchDialog";
 import { Receipt, TestTube, Building2, FileText, Image, Search } from "lucide-react";
 import { useHospitalSettings } from "@/hooks/useHospitalSettings";
@@ -115,8 +116,9 @@ export default function DashboardStaff() {
               </TabsList>
             </div>
 
-            <TabsContent value="counter" className="mt-4 sm:mt-6">
+            <TabsContent value="counter" className="mt-4 sm:mt-6 space-y-6">
               <StaffCounter />
+              <StaffRevenueBreakdown />
             </TabsContent>
             <TabsContent value="lab" className="mt-4 sm:mt-6">
               <StaffLab />
