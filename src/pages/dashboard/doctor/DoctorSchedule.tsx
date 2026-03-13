@@ -333,12 +333,8 @@ export default function DoctorSchedule() { // Fixed ordering syntax
   const upcomingAppointments = appointmentsWithQueue?.filter(apt => {
     const selectedDateStr = format(selectedDate, 'yyyy-MM-dd');
     const aptDateStr = formatInPakistanTime(apt.appointment_date, 'yyyy-MM-dd');
-    // Show scheduled appointments for the selected date, OR any past scheduled appointments that were never completed
-    const isSelectedDate = aptDateStr === selectedDateStr;
-    const isPastScheduled = apt.status === 'scheduled' && new Date(apt.appointment_date) < new Date() && aptDateStr <= selectedDateStr;
-    return apt.status === 'scheduled' && (isSelectedDate || isPastScheduled);
+    return apt.status === 'scheduled' && aptDateStr === selectedDateStr;
   }).sort((a, b) => {
-    // Sort by queue position first, then by appointment time
     if (a.queue_position && b.queue_position) {
       return a.queue_position - b.queue_position;
     }
@@ -347,9 +343,11 @@ export default function DoctorSchedule() { // Fixed ordering syntax
 
   // Filter past appointments based on user inputs
   const filteredPastAppointments = useMemo(() => {
+    const todayStr = format(getCurrentPakistanTime(), 'yyyy-MM-dd');
     const filtered = appointmentsWithQueue?.filter(apt => {
+      const aptDateStr = formatInPakistanTime(apt.appointment_date, 'yyyy-MM-dd');
       const isPastAppointment = apt.status === 'completed' || apt.status === 'cancelled' || 
-        (new Date(apt.appointment_date) < new Date() && apt.status !== 'scheduled');
+        (aptDateStr < todayStr && apt.status === 'scheduled');
       
       if (!isPastAppointment) return false;
       
