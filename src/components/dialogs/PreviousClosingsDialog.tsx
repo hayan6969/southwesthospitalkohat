@@ -124,7 +124,7 @@ export function PreviousClosingsDialog() {
         totalExpenses: closing.total_expenses,
         totalRefunds: closing.total_refunds,
         netProfit: closing.net_profit,
-        transactionsData: closing.transactions_data || {}
+        transactionsData: closing.transactions_data && Object.keys(closing.transactions_data).length > 0 ? closing.transactions_data : undefined
       });
       toast.success("Daily closing PDF opened in new tab");
     } catch (error) {
