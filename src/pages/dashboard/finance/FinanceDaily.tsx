@@ -366,7 +366,20 @@ export default function FinanceDaily() {
         cutoffTime: cutoffTime
       };
     },
-    enabled: showClosingDialog
+    enabled: true // Always fetch for the detailed report view
+  });
+
+  // Fetch staff profiles for operator names
+  const { data: staffProfiles } = useQuery({
+    queryKey: ['staff-profiles-daily'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id, first_name, last_name, role')
+        .in('role', ['staff', 'admin', 'finance']);
+      if (error) throw error;
+      return data;
+    }
   });
 
   // Fetch last closing report
