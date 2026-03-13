@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Calendar, RefreshCw, Building, AlertTriangle, TestTube, Activity, Pill, TrendingUp, TrendingDown, DollarSign, Receipt, FileText, Upload, Download, Clock, CheckCircle, Calculator, Banknote } from "lucide-react";
+import { DetailedDailyReport } from "@/components/DetailedDailyReport";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
@@ -365,7 +366,20 @@ export default function FinanceDaily() {
         cutoffTime: cutoffTime
       };
     },
-    enabled: showClosingDialog
+    enabled: true // Always fetch for the detailed report view
+  });
+
+  // Fetch staff profiles for operator names
+  const { data: staffProfiles } = useQuery({
+    queryKey: ['staff-profiles-daily'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id, first_name, last_name, role')
+        .in('role', ['staff', 'admin', 'finance']);
+      if (error) throw error;
+      return data;
+    }
   });
 
   // Fetch last closing report
@@ -990,6 +1004,22 @@ export default function FinanceDaily() {
             </div>
           </CardContent>
         </Card>}
+
+      {/* Detailed OPD-Style Report */}
+      {detailedData && (
+        <DetailedDailyReport
+          hospitalInvoices={detailedData.hospitalInvoices || []}
+          labReports={detailedData.labReports || []}
+          xrayReports={detailedData.xrayReports || []}
+          otSchedules={detailedData.otSchedules || []}
+          emergencyAppointments={detailedData.emergencyAppointments || []}
+          expenses={detailedData.expenses || []}
+          refunds={detailedData.refunds || []}
+          miscellaneousIncome={detailedData.miscellaneousIncome || []}
+          staffProfiles={staffProfiles || []}
+          reportDate={format(selectedDate, 'EEEE, MMMM d, yyyy')}
+        />
+      )}
 
       {/* Daily Closing Dialog */}
       <Dialog open={showClosingDialog} onOpenChange={setShowClosingDialog}>
