@@ -1547,9 +1547,14 @@ export const generateDailyClosingPDF = async (data: {
   // ===========================================
   // EXPENSES DETAIL SECTION
   // ===========================================
-  if (transactionsData?.expenses?.length > 0) {
-    drawSectionHeader('EXPENSES DETAIL');
-    
+  const expenseCount = transactionsData?.expenses?.length || 0;
+  drawSectionHeader(`EXPENSES (${expenseCount})`);
+
+  const detailedTotalExpenses = expenseCount > 0
+    ? transactionsData.expenses.reduce((s: number, e: any) => s + (e.amount || 0), 0)
+    : Number(data.totalExpenses || 0);
+
+  if (expenseCount > 0) {
     const expenseHeaders = ['Sr#', 'Category', 'Description / Bill', 'Date & Time', 'Amount'];
     const expenseColWidths = [10, 35, 65, 30, 30];
     const expenseRows: string[][] = transactionsData.expenses.map((exp: any, i: number) => [
@@ -1560,18 +1565,27 @@ export const generateDailyClosingPDF = async (data: {
       formatPkrAmount(exp.amount)
     ]);
 
-    const totalExp = transactionsData.expenses.reduce((s: number, e: any) => s + (e.amount || 0), 0);
-    expenseRows.push(['', '', '', 'Total Expenses:', formatPkrAmount(totalExp)]);
-
+    expenseRows.push(['', '', '', 'Total Expenses:', formatPkrAmount(detailedTotalExpenses)]);
     drawTable(expenseHeaders, expenseRows, expenseColWidths);
+  } else {
+    doc.setFont('helvetica', 'italic');
+    doc.setFontSize(10);
+    doc.setTextColor(150, 150, 150);
+    doc.text('No expenses recorded for this period', pageWidth / 2, yPosition, { align: 'center' });
+    yPosition += 12;
   }
 
   // ===========================================
   // REFUNDS DETAIL SECTION
   // ===========================================
-  if (transactionsData?.refunds?.length > 0) {
-    drawSectionHeader('REFUNDS & RETURNS DETAIL');
-    
+  const refundCount = transactionsData?.refunds?.length || 0;
+  drawSectionHeader(`REFUNDS & RETURNS (${refundCount})`);
+
+  const detailedTotalRefunds = refundCount > 0
+    ? transactionsData.refunds.reduce((s: number, r: any) => s + (r.amount || 0), 0)
+    : Number(data.totalRefunds || 0);
+
+  if (refundCount > 0) {
     const refundHeaders = ['Sr#', 'Refund Type', 'Description / Bill Reference', 'Date & Time', 'Amount'];
     const refundColWidths = [10, 35, 65, 30, 30];
     const refundRows: string[][] = transactionsData.refunds.map((ref: any, i: number) => [
@@ -1582,11 +1596,33 @@ export const generateDailyClosingPDF = async (data: {
       formatPkrAmount(ref.amount)
     ]);
 
-    const totalRef = transactionsData.refunds.reduce((s: number, r: any) => s + (r.amount || 0), 0);
-    refundRows.push(['', '', '', 'Total Refunds:', formatPkrAmount(totalRef)]);
-
+    refundRows.push(['', '', '', 'Total Refunds:', formatPkrAmount(detailedTotalRefunds)]);
     drawTable(refundHeaders, refundRows, refundColWidths);
+  } else {
+    doc.setFont('helvetica', 'italic');
+    doc.setFontSize(10);
+    doc.setTextColor(150, 150, 150);
+    doc.text('No refunds recorded for this period', pageWidth / 2, yPosition, { align: 'center' });
+    yPosition += 12;
   }
+
+  // ===========================================
+  // NET SUMMARY SECTION
+  // ===========================================
+  drawSectionHeader('NET SUMMARY');
+  const hospitalNetFromDetailed = grandHosShare - detailedTotalExpenses - detailedTotalRefunds;
+
+  drawTable(
+    ['Hos. Share', 'Doc. Share', 'Expenses', 'Refunds', 'Hospital Net Profit'],
+    [[
+      formatPkrAmount(grandHosShare),
+      formatPkrAmount(grandDocShare),
+      `(${formatPkrAmount(detailedTotalExpenses)})`,
+      `(${formatPkrAmount(detailedTotalRefunds)})`,
+      formatPkrAmount(hospitalNetFromDetailed)
+    ]],
+    [34, 34, 30, 30, 42]
+  );
 
   // ===========================================
   // PHARMACY SECTION
