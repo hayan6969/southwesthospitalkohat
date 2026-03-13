@@ -166,7 +166,7 @@ export function PreviousClosingsDialog() {
           Previous Closings
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-6xl max-h-[90vh] overflow-hidden">
+      <DialogContent className="max-w-[95vw] lg:max-w-6xl max-h-[90vh] overflow-hidden flex flex-col">
         <DialogHeader>
           <DialogTitle>Previous Daily Closings</DialogTitle>
         </DialogHeader>
