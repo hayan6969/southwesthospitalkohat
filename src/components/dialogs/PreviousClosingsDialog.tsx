@@ -61,6 +61,23 @@ export function PreviousClosingsDialog() {
     return lab + xray + ot + emergency + misc;
   };
 
+  // Compute doctor revenue (consultation fees + OT doctor expenses) from transactions_data
+  const computeDoctorRevenue = (td?: any): number => {
+    if (!td) return 0;
+    const hospitalInvoices = td.hospitalInvoices || [];
+    const consultationFees = hospitalInvoices
+      .filter((inv: any) =>
+        inv.invoice_number?.startsWith?.('INV-') &&
+        !inv.description?.toLowerCase?.().includes('emergency') &&
+        !inv.emergency_patient_data &&
+        !inv.invoice_number?.startsWith?.('EMG-') &&
+        !inv.invoice_number?.startsWith?.('EMERGENCY-')
+      )
+      .reduce((s: number, inv: any) => s + (Number(inv.amount) || 0), 0);
+    const otDoctorExpense = (td.otSchedules || []).reduce((s: number, ot: any) => s + (Number(ot.doctor_expense) || 0), 0);
+    return consultationFees + otDoctorExpense;
+  };
+
   // Fetch all previous daily closings
   const { data: closings, isLoading } = useQuery({
     queryKey: ['daily-closings'],
@@ -262,22 +279,23 @@ export function PreviousClosingsDialog() {
             <div className="max-h-[500px] overflow-y-auto">
               <Table>
                 <TableHeader className="sticky top-0 bg-background">
-                  <TableRow>
+                   <TableRow>
                     <TableHead>Date</TableHead>
                     <TableHead>Day</TableHead>
                     <TableHead>Closing Time</TableHead>
                     <TableHead>Hospital Revenue</TableHead>
+                    <TableHead>Doctor Revenue</TableHead>
                     <TableHead>Pharmacy Profit</TableHead>
                     <TableHead>Total Expenses</TableHead>
                     <TableHead>Net Profit</TableHead>
                     <TableHead>Actions</TableHead>
-                  </TableRow>
+                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {isLoading ? (
                     Array.from({ length: 5 }).map((_, i) => (
                       <TableRow key={i}>
-                        {Array.from({ length: 8 }).map((_, j) => (
+                        {Array.from({ length: 9 }).map((_, j) => (
                           <TableCell key={j}>
                             <div className="h-4 bg-gray-200 rounded animate-pulse"></div>
                           </TableCell>
@@ -301,6 +319,9 @@ export function PreviousClosingsDialog() {
                             const computed = computeServicesRevenue(closing.transactions_data);
                             return computed || closing.hospital_revenue;
                           })())}
+                        </TableCell>
+                        <TableCell className="font-medium text-indigo-600">
+                          {formatPkrAmount(computeDoctorRevenue(closing.transactions_data))}
                         </TableCell>
                         <TableCell className="font-medium text-blue-600">
                           {formatPkrAmount(closing.pharmacy_profit)}
@@ -326,7 +347,7 @@ export function PreviousClosingsDialog() {
                     ))
                   ) : (
                     <TableRow>
-                      <TableCell colSpan={8} className="text-center text-gray-500 py-8">
+                      <TableCell colSpan={9} className="text-center text-gray-500 py-8">
                         No previous closings found
                       </TableCell>
                     </TableRow>
