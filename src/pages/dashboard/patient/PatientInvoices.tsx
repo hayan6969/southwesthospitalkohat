@@ -1,6 +1,6 @@
 
-import AppLayout from "@/layouts/AppLayout";
-import { useInvoices } from "@/hooks/useDatabase";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Banknote, FileText, Calendar, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -12,10 +12,23 @@ import { useToast } from "@/hooks/use-toast";
 
 export default function PatientInvoices() {
   const { profile } = useAuth();
-  const { data: invoices, isLoading } = useInvoices();
   const { toast } = useToast();
 
-  const patientInvoices = invoices?.filter(invoice => invoice.patient_id === profile?.id) || [];
+  const { data: patientInvoices = [], isLoading } = useQuery({
+    queryKey: ['patient-invoices-page', profile?.id],
+    queryFn: async () => {
+      if (!profile?.id) return [];
+      const { data, error } = await supabase
+        .from('invoices')
+        .select('*')
+        .eq('patient_id', profile.id)
+        .neq('status', 'cancelled')
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!profile?.id,
+  });
 
   const handleDownloadInvoice = async (invoice: any) => {
     try {
