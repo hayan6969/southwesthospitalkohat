@@ -343,9 +343,11 @@ export default function DoctorSchedule() { // Fixed ordering syntax
 
   // Filter past appointments based on user inputs
   const filteredPastAppointments = useMemo(() => {
+    const todayStr = format(getCurrentPakistanTime(), 'yyyy-MM-dd');
     const filtered = appointmentsWithQueue?.filter(apt => {
+      const aptDateStr = formatInPakistanTime(apt.appointment_date, 'yyyy-MM-dd');
       const isPastAppointment = apt.status === 'completed' || apt.status === 'cancelled' || 
-        (new Date(apt.appointment_date) < new Date() && apt.status !== 'scheduled');
+        (aptDateStr < todayStr && apt.status === 'scheduled');
       
       if (!isPastAppointment) return false;
       
