@@ -11,10 +11,10 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { formatPkrAmount } from "@/utils/currency";
-import { History, FileText, ChevronLeft, ChevronRight, Calendar as CalendarIcon, Filter, Search, ArrowLeft, Eye } from "lucide-react";
+import { History, FileText, ChevronLeft, ChevronRight, Calendar as CalendarIcon, Filter, Search, ArrowLeft, ClipboardList } from "lucide-react";
 import { format } from "date-fns";
 import { formatInPakistanTime } from "@/utils/timezone";
-import { generateDailyClosingPDF } from "@/utils/pdfGenerator";
+import { generateDailyClosingPDF, generateDailyClosingSummaryPDF } from "@/utils/pdfGenerator";
 import { DetailedDailyReport } from "@/components/DetailedDailyReport";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -112,24 +112,36 @@ export function PreviousClosingsDialog() {
   const endIndex = startIndex + itemsPerPage;
   const paginatedClosings = filteredClosings.slice(startIndex, endIndex);
 
-  const handleViewPDF = async (closing: DailyClosing) => {
+  const getClosingPdfData = (closing: DailyClosing) => ({
+    closingDate: closing.closing_date,
+    closingTime: closing.closing_time,
+    dayName: closing.day_name,
+    hospitalRevenue: closing.hospital_revenue,
+    pharmacyRevenue: closing.pharmacy_revenue,
+    pharmacyProfit: closing.pharmacy_profit,
+    totalExpenses: closing.total_expenses,
+    totalRefunds: closing.total_refunds,
+    netProfit: closing.net_profit,
+    transactionsData: closing.transactions_data && Object.keys(closing.transactions_data).length > 0 ? closing.transactions_data : undefined
+  });
+
+  const handleSummaryPDF = async (closing: DailyClosing) => {
     try {
-      await generateDailyClosingPDF({
-        closingDate: closing.closing_date,
-        closingTime: closing.closing_time,
-        dayName: closing.day_name,
-        hospitalRevenue: closing.hospital_revenue,
-        pharmacyRevenue: closing.pharmacy_revenue,
-        pharmacyProfit: closing.pharmacy_profit,
-        totalExpenses: closing.total_expenses,
-        totalRefunds: closing.total_refunds,
-        netProfit: closing.net_profit,
-        transactionsData: closing.transactions_data && Object.keys(closing.transactions_data).length > 0 ? closing.transactions_data : undefined
-      });
-      toast.success("Daily closing PDF opened in new tab");
+      await generateDailyClosingSummaryPDF(getClosingPdfData(closing));
+      toast.success("Summary report opened in new tab");
     } catch (error) {
-      console.error('Error generating PDF:', error);
-      toast.error("Failed to generate PDF");
+      console.error('Error generating summary PDF:', error);
+      toast.error("Failed to generate summary PDF");
+    }
+  };
+
+  const handleDetailedPDF = async (closing: DailyClosing) => {
+    try {
+      await generateDailyClosingPDF(getClosingPdfData(closing));
+      toast.success("Detailed report opened in new tab");
+    } catch (error) {
+      console.error('Error generating detailed PDF:', error);
+      toast.error("Failed to generate detailed PDF");
     }
   };
 
@@ -221,10 +233,14 @@ export function PreviousClosingsDialog() {
                   <span className="font-medium text-blue-600">
                     Pharmacy Profit: {formatPkrAmount(selectedClosing.pharmacy_profit)}
                   </span>
-                  <div className="ml-auto">
-                    <Button size="sm" variant="outline" onClick={() => handleViewPDF(selectedClosing)} className="flex items-center gap-1">
+                  <div className="ml-auto flex gap-2">
+                    <Button size="sm" variant="outline" onClick={() => handleSummaryPDF(selectedClosing)} className="flex items-center gap-1">
+                      <ClipboardList className="w-3 h-3" />
+                      Summary
+                    </Button>
+                    <Button size="sm" variant="outline" onClick={() => handleDetailedPDF(selectedClosing)} className="flex items-center gap-1">
                       <FileText className="w-3 h-3" />
-                      Download PDF
+                      Detailed
                     </Button>
                   </div>
                 </div>
@@ -400,9 +416,18 @@ export function PreviousClosingsDialog() {
                                   <Button
                                     size="sm"
                                     variant="ghost"
-                                    onClick={(e) => { e.stopPropagation(); handleViewPDF(closing); }}
+                                    onClick={(e) => { e.stopPropagation(); handleSummaryPDF(closing); }}
                                     className="h-8 px-2"
-                                    title="Download PDF"
+                                    title="Summary Report"
+                                  >
+                                    <ClipboardList className="w-4 h-4" />
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    onClick={(e) => { e.stopPropagation(); handleDetailedPDF(closing); }}
+                                    className="h-8 px-2"
+                                    title="Detailed Report"
                                   >
                                     <FileText className="w-4 h-4" />
                                   </Button>

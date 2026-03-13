@@ -1919,3 +1919,255 @@ export const generateDailyClosingPDF = async (data: {
   const pdfUrl = URL.createObjectURL(pdfBlob);
   window.open(pdfUrl, '_blank');
 };
+
+// =============================================
+// SUMMARY DAILY CLOSING PDF (no patient names)
+// =============================================
+export const generateDailyClosingSummaryPDF = async (data: {
+  closingDate: string;
+  closingTime: string;
+  dayName: string;
+  hospitalRevenue: number;
+  pharmacyRevenue: number;
+  pharmacyProfit: number;
+  totalExpenses: number;
+  totalRefunds: number;
+  netProfit: number;
+  transactionsData?: any;
+}) => {
+  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const pageHeight = doc.internal.pageSize.height;
+  let yPosition = 20;
+
+  // Resolve transaction data
+  let transactionsData = data.transactionsData;
+  if (!transactionsData) {
+    transactionsData = await queryTransactionDataForDate(data.closingDate, data.closingTime);
+  }
+
+  // Get previous closing balance
+  let previousClosingBalance = 0;
+  const { data: prevBalanceRecord } = await supabase
+    .from('hospital_closing_balance')
+    .select('closing_balance')
+    .lt('closing_date', data.closingDate)
+    .order('closing_date', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (prevBalanceRecord) previousClosingBalance = Number(prevBalanceRecord.closing_balance || 0);
+
+  // Header
+  await addHospitalHeader(doc, 'Daily Summary Report');
+  yPosition += 60;
+
+  // Date info
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(16);
+  doc.setTextColor(40, 40, 40);
+  doc.text(`${data.dayName}, ${new Date(data.closingDate).toLocaleDateString()}`, pageWidth / 2, yPosition, { align: 'center' });
+  yPosition += 10;
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(11);
+  doc.setTextColor(100, 100, 100);
+  doc.text(`Closing Time: ${new Date(data.closingTime).toLocaleString()}`, pageWidth / 2, yPosition, { align: 'center' });
+  yPosition += 8;
+  doc.text(`Opening Balance: ${formatPkrAmount(previousClosingBalance)}`, pageWidth / 2, yPosition, { align: 'center' });
+  yPosition += 20;
+
+  const checkNewPage = (space: number = 30) => {
+    if (yPosition + space > pageHeight - 20) { doc.addPage(); yPosition = 20; }
+  };
+
+  // Helper: draw a simple two-column summary table
+  const drawSummaryTable = (title: string, rows: [string, string][]) => {
+    checkNewPage(15 + rows.length * 8);
+    // Section header
+    doc.setFillColor(240, 240, 240);
+    doc.rect(20, yPosition - 2, pageWidth - 40, 10, 'F');
+    doc.setDrawColor(200, 200, 200);
+    doc.rect(20, yPosition - 2, pageWidth - 40, 10);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(11);
+    doc.setTextColor(40, 40, 40);
+    doc.text(title, pageWidth / 2, yPosition + 5, { align: 'center' });
+    yPosition += 14;
+
+    rows.forEach((row, i) => {
+      if (i % 2 === 0) {
+        doc.setFillColor(250, 250, 250);
+        doc.rect(20, yPosition - 2, pageWidth - 40, 8, 'F');
+      }
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(10);
+      doc.setTextColor(50, 50, 50);
+      doc.text(row[0], 25, yPosition + 4);
+      doc.setFont('helvetica', 'bold');
+      doc.text(row[1], pageWidth - 25, yPosition + 4, { align: 'right' });
+      yPosition += 8;
+    });
+    // Border
+    doc.setDrawColor(200, 200, 200);
+    doc.rect(20, yPosition - rows.length * 8 - 2, pageWidth - 40, rows.length * 8);
+    yPosition += 10;
+  };
+
+  // Compute category totals
+  const hospitalInvoicesAll = transactionsData?.hospitalInvoices || [];
+  const isEmergencyInv = (inv: any) =>
+    inv.description?.toLowerCase().includes('emergency') ||
+    inv.emergency_patient_data ||
+    inv.invoice_number?.startsWith('EMG-') ||
+    inv.invoice_number?.startsWith('EMERGENCY-');
+
+  const opdRevenue = hospitalInvoicesAll
+    .filter((inv: any) => inv.invoice_number?.startsWith?.('INV-') && !isEmergencyInv(inv))
+    .reduce((s: number, inv: any) => s + (Number(inv.amount) || 0), 0);
+  const opdCount = hospitalInvoicesAll
+    .filter((inv: any) => inv.invoice_number?.startsWith?.('INV-') && !isEmergencyInv(inv)).length;
+
+  const emergencyInvRevenue = hospitalInvoicesAll.filter(isEmergencyInv)
+    .reduce((s: number, inv: any) => s + (Number(inv.amount) || 0), 0);
+  const emergencyAptRevenue = (transactionsData?.emergencyAppointments || [])
+    .reduce((s: number, e: any) => s + (Number(e.consultation_fee_at_time) || 0), 0);
+  const totalEmergency = emergencyInvRevenue + emergencyAptRevenue;
+  const emergencyCount = hospitalInvoicesAll.filter(isEmergencyInv).length + (transactionsData?.emergencyAppointments || []).length;
+
+  const labReports = transactionsData?.labReports || [];
+  const labRevenue = labReports.reduce((s: number, r: any) => s + (Number(r.price) || 0), 0);
+
+  const xrayReports = transactionsData?.xrayReports || [];
+  const xrayRevenue = xrayReports.reduce((s: number, r: any) => s + (Number(r.price) || 0), 0);
+
+  const otSchedules = transactionsData?.otSchedules || [];
+  const otTotalCost = otSchedules.reduce((s: number, ot: any) => s + (Number(ot.total_cost) || 0), 0);
+  const otDoctorExp = otSchedules.reduce((s: number, ot: any) => s + (Number(ot.doctor_expense) || 0), 0);
+  const otHosShare = otTotalCost - otDoctorExp;
+
+  const miscIncome = (transactionsData?.miscellaneousIncome || [])
+    .reduce((s: number, m: any) => s + (Number(m.amount) || 0), 0);
+
+  const totalDocShare = opdRevenue + otDoctorExp;
+  const totalHosShare = totalEmergency + labRevenue + xrayRevenue + otHosShare + miscIncome;
+
+  // ========== REVENUE BY CATEGORY ==========
+  drawSummaryTable('REVENUE BY CATEGORY', [
+    [`OPD Consultations (${opdCount})`, formatPkrAmount(opdRevenue)],
+    [`Emergency (${emergencyCount})`, formatPkrAmount(totalEmergency)],
+    [`Lab Reports (${labReports.length})`, formatPkrAmount(labRevenue)],
+    [`X-Ray Reports (${xrayReports.length})`, formatPkrAmount(xrayRevenue)],
+    [`OT / Operations (${otSchedules.length})`, formatPkrAmount(otTotalCost)],
+    ['Miscellaneous Income', formatPkrAmount(miscIncome)],
+  ]);
+
+  // ========== REVENUE SPLIT ==========
+  drawSummaryTable('REVENUE SPLIT', [
+    ['Total Doctor Share (OPD + OT)', formatPkrAmount(totalDocShare)],
+    ['Total Hospital Share', formatPkrAmount(totalHosShare)],
+  ]);
+
+  // ========== DOCTOR SUMMARY ==========
+  const doctorMap = new Map<string, { name: string; opdCount: number; opdRev: number; otCount: number; otRev: number }>();
+  hospitalInvoicesAll
+    .filter((inv: any) => inv.invoice_number?.startsWith?.('INV-') && !isEmergencyInv(inv))
+    .forEach((inv: any) => {
+      const did = inv.doctor_id || 'unknown';
+      const e = doctorMap.get(did) || { name: '', opdCount: 0, opdRev: 0, otCount: 0, otRev: 0 };
+      e.opdCount++; e.opdRev += Number(inv.amount) || 0;
+      if (!e.name && inv.description) { const m = inv.description.match(/(?:Dr\.?\s*)(.+)/i); if (m) e.name = `Dr. ${m[1].trim()}`; }
+      doctorMap.set(did, e);
+    });
+  otSchedules.forEach((ot: any) => {
+    const did = ot.doctor_id || ot.doctor_name || 'unknown';
+    const e = doctorMap.get(did) || { name: '', opdCount: 0, opdRev: 0, otCount: 0, otRev: 0 };
+    e.otCount++; e.otRev += Number(ot.doctor_expense) || 0;
+    if (!e.name && ot.doctor_name) e.name = ot.doctor_name;
+    doctorMap.set(did, e);
+  });
+
+  // Resolve names
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  const unresolvedIds = Array.from(doctorMap.keys()).filter(id => uuidRegex.test(id) && !doctorMap.get(id)?.name);
+  if (unresolvedIds.length > 0) {
+    const { data: profiles } = await supabase.from('profiles').select('id, first_name, last_name').in('id', unresolvedIds);
+    (profiles || []).forEach((p: any) => { const e = doctorMap.get(p.id); if (e) e.name = `Dr. ${p.first_name || ''} ${p.last_name || ''}`.trim(); });
+  }
+
+  const docEntries = Array.from(doctorMap.values()).filter(d => d.opdRev > 0 || d.otRev > 0).sort((a, b) => (b.opdRev + b.otRev) - (a.opdRev + a.otRev));
+  if (docEntries.length > 0) {
+    const docRows: [string, string][] = docEntries.map(d => [
+      `${d.name || 'Unknown'} — OPD: ${d.opdCount}, OT: ${d.otCount}`,
+      formatPkrAmount(d.opdRev + d.otRev)
+    ]);
+    docRows.push(['TOTAL', formatPkrAmount(docEntries.reduce((s, d) => s + d.opdRev + d.otRev, 0))]);
+    drawSummaryTable('DOCTOR SUMMARY', docRows);
+  }
+
+  // ========== EXPENSES & REFUNDS ==========
+  const expenses = transactionsData?.expenses || [];
+  const totalExp = expenses.reduce((s: number, e: any) => s + (Number(e.amount) || 0), 0);
+  const refunds = transactionsData?.refunds || [];
+  const totalRef = refunds.reduce((s: number, r: any) => s + (Number(r.amount) || 0), 0);
+
+  drawSummaryTable(`EXPENSES (${expenses.length})`, [
+    ...expenses.map((e: any) => [e.category + ': ' + (e.description || ''), formatPkrAmount(e.amount)] as [string, string]),
+    ['Total Expenses', formatPkrAmount(totalExp)]
+  ]);
+
+  if (refunds.length > 0) {
+    drawSummaryTable(`REFUNDS (${refunds.length})`, [
+      ...refunds.map((r: any) => [(r.refund_type || '').replace(/_/g, ' ') + ': ' + (r.description || ''), formatPkrAmount(r.amount)] as [string, string]),
+      ['Total Refunds', formatPkrAmount(totalRef)]
+    ]);
+  }
+
+  // ========== PHARMACY SUMMARY ==========
+  if (transactionsData?.pharmacyInvoices?.length > 0) {
+    const posInv = transactionsData.pharmacyInvoices.filter((inv: any) => (inv.final_amount || 0) >= 0);
+    const negInv = transactionsData.pharmacyInvoices.filter((inv: any) => (inv.final_amount || 0) < 0);
+    const grossSales = posInv.reduce((s: number, inv: any) => s + (inv.final_amount || 0), 0);
+    const returns = Math.abs(negInv.reduce((s: number, inv: any) => s + (inv.final_amount || 0), 0));
+    drawSummaryTable('PHARMACY SUMMARY', [
+      [`Sales (${posInv.length})`, formatPkrAmount(grossSales)],
+      [`Returns (${negInv.length})`, `(${formatPkrAmount(returns)})`],
+      ['Net Revenue', formatPkrAmount(grossSales - returns)],
+      ['Pharmacy Profit', formatPkrAmount(data.pharmacyProfit)],
+    ]);
+  }
+
+  // ========== NET SUMMARY ==========
+  const hospitalNet = totalHosShare - totalExp - totalRef;
+  drawSummaryTable('NET SUMMARY', [
+    ['Hospital Share', formatPkrAmount(totalHosShare)],
+    ['Doctor Share', formatPkrAmount(totalDocShare)],
+    ['Expenses', `(${formatPkrAmount(totalExp)})`],
+    ['Refunds', `(${formatPkrAmount(totalRef)})`],
+    ['Hospital Net Profit', formatPkrAmount(hospitalNet)],
+  ]);
+
+  // ========== CLOSING BALANCE ==========
+  const newClosingBalance = previousClosingBalance + hospitalNet;
+  checkNewPage(30);
+  doc.setFillColor(240, 255, 240);
+  doc.setDrawColor(100, 200, 100);
+  doc.setLineWidth(2);
+  doc.rect(20, yPosition - 5, pageWidth - 40, 20, 'FD');
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(14);
+  doc.setTextColor(0, 100, 0);
+  doc.text('NEW CLOSING BALANCE:', 30, yPosition + 8);
+  doc.text(formatPkrAmount(newClosingBalance), pageWidth - 30, yPosition + 8, { align: 'right' });
+  yPosition += 30;
+
+  // Footer
+  doc.setFont('helvetica', 'italic');
+  doc.setFontSize(9);
+  doc.setTextColor(100, 100, 100);
+  doc.text('This is a summary report. For transaction-level details, download the Detailed Report.', pageWidth / 2, yPosition, { align: 'center' });
+  yPosition += 8;
+  doc.text(`Generated on: ${new Date().toLocaleString()}`, pageWidth / 2, yPosition, { align: 'center' });
+
+  const pdfBlob = doc.output('blob');
+  const pdfUrl = URL.createObjectURL(pdfBlob);
+  window.open(pdfUrl, '_blank');
+};
