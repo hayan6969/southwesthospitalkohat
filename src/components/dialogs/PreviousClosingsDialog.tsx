@@ -347,7 +347,7 @@ export function PreviousClosingsDialog() {
                     ))
                   ) : (
                     <TableRow>
-                      <TableCell colSpan={8} className="text-center text-gray-500 py-8">
+                      <TableCell colSpan={9} className="text-center text-gray-500 py-8">
                         No previous closings found
                       </TableCell>
                     </TableRow>
