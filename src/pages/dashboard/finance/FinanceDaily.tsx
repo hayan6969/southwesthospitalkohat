@@ -246,56 +246,16 @@ export default function FinanceDaily() {
       const labRevenue = labInvoices?.reduce((sum, inv) => sum + (inv.amount || 0), 0) || 0;
       const xrayRevenue = xrayReports?.reduce((sum, xray) => sum + (xray.price || 0), 0) || 0;
       const otHospitalRevenue = otSchedules?.reduce((sum, ot) => sum + ((ot.total_cost || 0) - (ot.doctor_expense || 0)), 0) || 0;
+      const otDoctorExpense = otSchedules?.reduce((sum, ot) => sum + (ot.doctor_expense || 0), 0) || 0;
       const miscellaneousIncome = miscIncome?.reduce((sum, income) => sum + (income.amount || 0), 0) || 0;
       const totalExpenses = expenses?.reduce((sum, exp) => sum + exp.amount, 0) || 0;
       const totalRefunds = refunds?.reduce((sum, ref) => sum + ref.amount, 0) || 0;
 
-      // Total hospital revenue = consultations + emergency + lab + xray + OT hospital portion + miscellaneous income
-      const totalHospitalRevenue = consultationRevenue + emergencyRevenue + labRevenue + xrayRevenue + otHospitalRevenue + miscellaneousIncome;
-      const totalHospitalProfit = totalHospitalRevenue - totalExpenses;
+      // Doctor revenue = consultation fees + OT doctor expenses (belongs to doctors, not hospital)
+      const doctorRevenue = consultationRevenue + otDoctorExpense;
 
-      // Categorize refunds
-      const otRefunds = refunds?.filter(r => r.refund_type.includes('ot'))?.reduce((sum, r) => sum + r.amount, 0) || 0;
-      const pharmacyRefunds = pharmacyReturnsFromInvoices + (refunds?.filter(r => r.refund_type === 'pharmacy_invoice')?.reduce((sum, r) => sum + r.amount, 0) || 0);
-      const otherRefunds = refunds?.filter(r => !r.refund_type.includes('ot') && r.refund_type !== 'pharmacy_invoice')?.reduce((sum, r) => sum + r.amount, 0) || 0;
-      console.log('Calculated values:', {
-        emergencyRevenue,
-        pharmacyRevenue,
-        pharmacyProfit,
-        labRevenue,
-        xrayRevenue,
-        otHospitalRevenue,
-        miscellaneousIncome,
-        totalHospitalRevenue,
-        totalHospitalProfit,
-        totalExpenses,
-        totalRefunds,
-        otRefunds,
-        pharmacyRefunds,
-        otherRefunds,
-        cutoffTimeUsed: cutoffTime,
-        upperBoundUsed: upperBound,
-        lastClosingInfo: lastClosing ? formatInPakistanTime(new Date(lastClosing.closing_time), 'MMM d, yyyy h:mm a') : 'None'
-      });
-      return {
-        emergencyRevenue,
-        pharmacyRevenue,
-        pharmacyProfit,
-        labRevenue,
-        xrayRevenue,
-        otHospitalRevenue,
-        miscellaneousIncome,
-        totalHospitalRevenue,
-        totalHospitalProfit,
-        totalExpenses,
-        totalRefunds,
-        otRefunds,
-        pharmacyRefunds,
-        otherRefunds,
-        refunds: refunds || [],
-        lastClosing: lastClosing,
-        cutoffTime: cutoffTime
-      };
+      // Total hospital revenue excludes doctor consultation fees (those belong to doctor finances)
+      const totalHospitalRevenue = emergencyRevenue + labRevenue + xrayRevenue + otHospitalRevenue + miscellaneousIncome;
     },
     refetchInterval: 30000 // Refresh every 30 seconds
   });
