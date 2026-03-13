@@ -230,12 +230,20 @@ export default function DashboardFinance() {
     if (!schedule.total_cost || !schedule.doctor_expense) return sum;
     return sum + (Number(schedule.total_cost) - Number(schedule.doctor_expense));
   }, 0) || 0;
+  // Monthly OT doctor revenue
+  const currentMonthOTDoctorRevenue = otSchedules?.filter(schedule => {
+    const scheduleDate = new Date(schedule.created_at);
+    return scheduleDate.getMonth() === currentMonth && scheduleDate.getFullYear() === currentYear;
+  }).reduce((sum, schedule) => sum + (Number(schedule.doctor_expense) || 0), 0) || 0;
+
+  // Monthly doctors revenue
+  const monthlyDoctorsRevenue = currentMonthConsultationRevenue + currentMonthOTDoctorRevenue;
   
-  // Monthly hospital revenue
-  const monthlyHospitalRevenue = currentMonthConsultationRevenue + currentMonthEmergencyRevenue + currentMonthLabRevenue + currentMonthOTHospitalRevenue + currentMonthPharmacyProfit;
+  // Monthly hospital revenue (excludes doctor consultation fees)
+  const monthlyHospitalRevenue = currentMonthEmergencyRevenue + currentMonthLabRevenue + currentMonthOTHospitalRevenue + currentMonthPharmacyProfit;
   
-  // Total monthly revenue for display includes pharmacy sales
-  const monthlyRevenue = monthlyHospitalRevenue + currentMonthPharmacyRevenue;
+  // Total monthly revenue for display includes hospital + doctors + pharmacy sales
+  const monthlyRevenue = monthlyHospitalRevenue + monthlyDoctorsRevenue + currentMonthPharmacyRevenue;
 
   return (
     <div className="space-y-8">
