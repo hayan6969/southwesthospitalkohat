@@ -510,7 +510,7 @@ export default function DashboardAdmin() {
                             <span className="text-sm font-medium">Doctors</span>
                           </div>
                           <div className="text-right">
-                            <div className="text-sm font-semibold">{formatPkrAmount(financialAnalytics.doctorsRevenue)}</div>
+                            <div className="text-sm font-semibold">{formatPkrAmount(financialAnalytics.doctorsRevenue || 0)}</div>
                           </div>
                         </div>
                       </>
