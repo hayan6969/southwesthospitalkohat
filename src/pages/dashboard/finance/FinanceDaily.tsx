@@ -256,6 +256,35 @@ export default function FinanceDaily() {
 
       // Total hospital revenue excludes doctor consultation fees (those belong to doctor finances)
       const totalHospitalRevenue = emergencyRevenue + labRevenue + xrayRevenue + otHospitalRevenue + miscellaneousIncome;
+      const totalHospitalProfit = totalHospitalRevenue - totalExpenses;
+
+      // Categorize refunds
+      const otRefunds = refunds?.filter(r => r.refund_type.includes('ot'))?.reduce((sum, r) => sum + r.amount, 0) || 0;
+      const pharmacyRefunds = pharmacyReturnsFromInvoices + (refunds?.filter(r => r.refund_type === 'pharmacy_invoice')?.reduce((sum, r) => sum + r.amount, 0) || 0);
+      const otherRefunds = refunds?.filter(r => !r.refund_type.includes('ot') && r.refund_type !== 'pharmacy_invoice')?.reduce((sum, r) => sum + r.amount, 0) || 0;
+
+      return {
+        emergencyRevenue,
+        pharmacyRevenue,
+        pharmacyProfit,
+        labRevenue,
+        xrayRevenue,
+        otHospitalRevenue,
+        miscellaneousIncome,
+        totalHospitalRevenue,
+        totalHospitalProfit,
+        totalExpenses,
+        totalRefunds,
+        otRefunds,
+        pharmacyRefunds,
+        otherRefunds,
+        doctorRevenue,
+        consultationRevenue,
+        otDoctorExpense,
+        refunds: refunds || [],
+        lastClosing: lastClosing,
+        cutoffTime: cutoffTime
+      };
     },
     refetchInterval: 30000 // Refresh every 30 seconds
   });
