@@ -917,6 +917,7 @@ export default function FinanceDaily() {
           <StatsCard title="OT Doctor Fees" value={formatPkrAmount(dailyData?.otDoctorExpense || 0)} icon={<Activity className="w-5 h-5 text-indigo-600" />} loading={isLoading} />
           <StatsCard title="Total Doctor Revenue" value={formatPkrAmount(dailyData?.doctorRevenue || 0)} icon={<DollarSign className="w-5 h-5 text-indigo-600" />} loading={isLoading} />
         </div>
+      </div>
 
       {/* Pharmacy Cards */}
       <div>
