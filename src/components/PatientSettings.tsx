@@ -25,6 +25,13 @@ interface PatientData {
   cnic: string | null;
 }
 
+interface ProfileData {
+  first_name: string;
+  last_name: string;
+  phone: string | null;
+  email: string;
+}
+
 const bloodTypes = [
   "A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"
 ];
@@ -32,6 +39,7 @@ const bloodTypes = [
 export function PatientSettings() {
   const { profile } = useAuth();
   const [loading, setLoading] = useState(false);
+  const [fetchingData, setFetchingData] = useState(true);
   const [patientData, setPatientData] = useState<PatientData>({
     date_of_birth: null,
     blood_type: null,
@@ -41,6 +49,7 @@ export function PatientSettings() {
     address: null,
     cnic: null,
   });
+  const [profileData, setProfileData] = useState<ProfileData | null>(null);
   const [dateOfBirth, setDateOfBirth] = useState<Date | undefined>();
 
   // Extract phone from email if available
@@ -53,26 +62,40 @@ export function PatientSettings() {
   }, [profile?.id]);
 
   const fetchPatientData = async () => {
+    setFetchingData(true);
     try {
-      const { data, error } = await supabase
-        .from('patients')
-        .select('*')
-        .eq('id', profile?.id)
-        .single();
+      // Fetch both patient and profile data in parallel
+      const [patientResult, profileResult] = await Promise.all([
+        supabase
+          .from('patients')
+          .select('*')
+          .eq('id', profile?.id)
+          .single(),
+        supabase
+          .from('profiles')
+          .select('first_name, last_name, phone, email')
+          .eq('id', profile?.id)
+          .single()
+      ]);
 
-      if (error && error.code !== 'PGRST116') { // Not found error
-        console.error('Error fetching patient data:', error);
-        return;
+      if (patientResult.error && patientResult.error.code !== 'PGRST116') {
+        console.error('Error fetching patient data:', patientResult.error);
       }
 
-      if (data) {
-        setPatientData(data);
-        if (data.date_of_birth) {
-          setDateOfBirth(new Date(data.date_of_birth));
+      if (patientResult.data) {
+        setPatientData(patientResult.data);
+        if (patientResult.data.date_of_birth) {
+          setDateOfBirth(new Date(patientResult.data.date_of_birth));
         }
+      }
+
+      if (profileResult.data) {
+        setProfileData(profileResult.data);
       }
     } catch (error) {
       console.error('Error fetching patient data:', error);
+    } finally {
+      setFetchingData(false);
     }
   };
 
@@ -114,6 +137,38 @@ export function PatientSettings() {
         <User className="w-5 h-5" />
         <h2 className="text-xl sm:text-2xl font-bold">Patient Settings</h2>
       </div>
+
+      {/* Profile Info (read-only from registration) */}
+      {profileData && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Account Information</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>First Name</Label>
+                <Input value={profileData.first_name || ''} disabled className="bg-muted" />
+              </div>
+              <div className="space-y-2">
+                <Label>Last Name</Label>
+                <Input value={profileData.last_name || ''} disabled className="bg-muted" />
+              </div>
+              <div className="space-y-2">
+                <Label>Phone Number</Label>
+                <div className="flex items-center gap-2 p-2 bg-muted rounded-md border">
+                  <Phone className="w-4 h-4 text-muted-foreground" />
+                  <span className="text-sm">{profileData.phone || extractedPhone || 'N/A'}</span>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label>Patient Number</Label>
+                <Input value={(patientData as any)?.patient_number || 'N/A'} disabled className="bg-muted" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <Card>
         <CardHeader>
