@@ -886,6 +886,36 @@ export default function FinanceDaily() {
             Closing Balance
           </Button>
           
+          <Button 
+            onClick={() => {
+              if (dailyData) {
+                exportDailyClosingToCSV({
+                  date: format(selectedDate, 'yyyy-MM-dd'),
+                  hospitalRevenue: dailyData.totalHospitalRevenue || 0,
+                  doctorRevenue: dailyData.doctorRevenue || 0,
+                  consultationRevenue: dailyData.consultationRevenue || 0,
+                  otDoctorExpense: dailyData.otDoctorExpense || 0,
+                  emergencyRevenue: dailyData.emergencyRevenue || 0,
+                  labRevenue: dailyData.labRevenue || 0,
+                  xrayRevenue: dailyData.xrayRevenue || 0,
+                  otHospitalRevenue: dailyData.otHospitalRevenue || 0,
+                  miscellaneousIncome: dailyData.miscellaneousIncome || 0,
+                  pharmacyRevenue: dailyData.pharmacyRevenue || 0,
+                  pharmacyProfit: dailyData.pharmacyProfit || 0,
+                  totalExpenses: dailyData.totalExpenses || 0,
+                  totalRefunds: dailyData.totalRefunds || 0,
+                  netProfit: dailyData.totalHospitalProfit || 0,
+                });
+              }
+            }}
+            variant="outline" 
+            className="flex items-center gap-2"
+            disabled={!dailyData}
+          >
+            <Download className="h-4 w-4" />
+            Export CSV
+          </Button>
+
           <Button onClick={handleDailyClosing} className="flex items-center gap-2 bg-green-600 hover:bg-green-700">
             <FileText className="h-4 w-4" />
             Daily Closing
