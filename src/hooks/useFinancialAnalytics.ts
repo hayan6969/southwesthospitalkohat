@@ -268,8 +268,20 @@ export const useFinancialAnalytics = (selectedMonth?: Date) => {
           );
           const emergencyInvoiceRevenue = emergencyInvoices.reduce((s: number, inv: any) => 
             s + (Number(inv.amount) || 0), 0);
-          totalEmergencyRevenue += (emergencyAppointments + emergencyInvoiceRevenue);
-        }
+           totalEmergencyRevenue += (emergencyAppointments + emergencyInvoiceRevenue);
+
+           // Doctors revenue: OPD consultation invoices (INV- prefix, non-emergency) + OT doctor expense
+           const isEmergencyInv = (inv: any) =>
+             inv?.description?.toLowerCase?.().includes('emergency') ||
+             inv?.emergency_patient_data ||
+             inv?.invoice_number?.startsWith?.('EMG-') ||
+             inv?.invoice_number?.startsWith?.('EMERGENCY-');
+           const opdConsultation = (td.hospitalInvoices || [])
+             .filter((inv: any) => inv.invoice_number?.startsWith?.('INV-') && !isEmergencyInv(inv))
+             .reduce((s: number, inv: any) => s + (Number(inv.amount) || 0), 0);
+           const otDoctorExp = (td.otSchedules || []).reduce((s: number, ot: any) => s + (Number(ot.doctor_expense) || 0), 0);
+           totalDoctorsRevenue += opdConsultation + otDoctorExp;
+         }
       });
 
       // Calculate profits
