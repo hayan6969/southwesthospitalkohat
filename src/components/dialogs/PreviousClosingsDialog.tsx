@@ -320,6 +320,9 @@ export function PreviousClosingsDialog() {
                             return computed || closing.hospital_revenue;
                           })())}
                         </TableCell>
+                        <TableCell className="font-medium text-indigo-600">
+                          {formatPkrAmount(computeDoctorRevenue(closing.transactions_data))}
+                        </TableCell>
                         <TableCell className="font-medium text-blue-600">
                           {formatPkrAmount(closing.pharmacy_profit)}
                         </TableCell>
