@@ -166,12 +166,12 @@ export function PreviousClosingsDialog() {
           Previous Closings
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-6xl max-h-[90vh] overflow-hidden">
+      <DialogContent className="max-w-[95vw] lg:max-w-6xl max-h-[90vh] overflow-hidden flex flex-col">
         <DialogHeader>
           <DialogTitle>Previous Daily Closings</DialogTitle>
         </DialogHeader>
         
-        <div className="space-y-4">
+        <div className="space-y-4 overflow-y-auto flex-1 min-h-0">
           {/* Filters */}
           <Card>
             <CardHeader>
@@ -276,8 +276,8 @@ export function PreviousClosingsDialog() {
 
           {/* Table */}
           <div className="border rounded-lg overflow-hidden">
-            <div className="max-h-[500px] overflow-y-auto">
-              <Table>
+            <div className="max-h-[400px] overflow-auto">
+              <Table className="min-w-[900px]">
                 <TableHeader className="sticky top-0 bg-background">
                    <TableRow>
                     <TableHead>Date</TableHead>
