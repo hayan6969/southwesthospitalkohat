@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Calendar, RefreshCw, Building, AlertTriangle, TestTube, Activity, Pill, TrendingUp, TrendingDown, DollarSign, Receipt, FileText, Upload, Download, Clock, CheckCircle, Calculator } from "lucide-react";
+import { Calendar, RefreshCw, Building, AlertTriangle, TestTube, Activity, Pill, TrendingUp, TrendingDown, DollarSign, Receipt, FileText, Upload, Download, Clock, CheckCircle, Calculator, Banknote } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
@@ -246,37 +246,23 @@ export default function FinanceDaily() {
       const labRevenue = labInvoices?.reduce((sum, inv) => sum + (inv.amount || 0), 0) || 0;
       const xrayRevenue = xrayReports?.reduce((sum, xray) => sum + (xray.price || 0), 0) || 0;
       const otHospitalRevenue = otSchedules?.reduce((sum, ot) => sum + ((ot.total_cost || 0) - (ot.doctor_expense || 0)), 0) || 0;
+      const otDoctorExpense = otSchedules?.reduce((sum, ot) => sum + (ot.doctor_expense || 0), 0) || 0;
       const miscellaneousIncome = miscIncome?.reduce((sum, income) => sum + (income.amount || 0), 0) || 0;
       const totalExpenses = expenses?.reduce((sum, exp) => sum + exp.amount, 0) || 0;
       const totalRefunds = refunds?.reduce((sum, ref) => sum + ref.amount, 0) || 0;
 
-      // Total hospital revenue = consultations + emergency + lab + xray + OT hospital portion + miscellaneous income
-      const totalHospitalRevenue = consultationRevenue + emergencyRevenue + labRevenue + xrayRevenue + otHospitalRevenue + miscellaneousIncome;
+      // Doctor revenue = consultation fees + OT doctor expenses (belongs to doctors, not hospital)
+      const doctorRevenue = consultationRevenue + otDoctorExpense;
+
+      // Total hospital revenue excludes doctor consultation fees (those belong to doctor finances)
+      const totalHospitalRevenue = emergencyRevenue + labRevenue + xrayRevenue + otHospitalRevenue + miscellaneousIncome;
       const totalHospitalProfit = totalHospitalRevenue - totalExpenses;
 
       // Categorize refunds
       const otRefunds = refunds?.filter(r => r.refund_type.includes('ot'))?.reduce((sum, r) => sum + r.amount, 0) || 0;
       const pharmacyRefunds = pharmacyReturnsFromInvoices + (refunds?.filter(r => r.refund_type === 'pharmacy_invoice')?.reduce((sum, r) => sum + r.amount, 0) || 0);
       const otherRefunds = refunds?.filter(r => !r.refund_type.includes('ot') && r.refund_type !== 'pharmacy_invoice')?.reduce((sum, r) => sum + r.amount, 0) || 0;
-      console.log('Calculated values:', {
-        emergencyRevenue,
-        pharmacyRevenue,
-        pharmacyProfit,
-        labRevenue,
-        xrayRevenue,
-        otHospitalRevenue,
-        miscellaneousIncome,
-        totalHospitalRevenue,
-        totalHospitalProfit,
-        totalExpenses,
-        totalRefunds,
-        otRefunds,
-        pharmacyRefunds,
-        otherRefunds,
-        cutoffTimeUsed: cutoffTime,
-        upperBoundUsed: upperBound,
-        lastClosingInfo: lastClosing ? formatInPakistanTime(new Date(lastClosing.closing_time), 'MMM d, yyyy h:mm a') : 'None'
-      });
+
       return {
         emergencyRevenue,
         pharmacyRevenue,
@@ -292,6 +278,9 @@ export default function FinanceDaily() {
         otRefunds,
         pharmacyRefunds,
         otherRefunds,
+        doctorRevenue,
+        consultationRevenue,
+        otDoctorExpense,
         refunds: refunds || [],
         lastClosing: lastClosing,
         cutoffTime: cutoffTime
@@ -920,6 +909,16 @@ export default function FinanceDaily() {
         </div>
       </div>
 
+      {/* Doctor Revenue Cards */}
+      <div>
+        <h2 className="text-xl font-semibold mb-4">Doctor Revenue</h2>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <StatsCard title="Consultation Fees" value={formatPkrAmount(dailyData?.consultationRevenue || 0)} icon={<Banknote className="w-5 h-5 text-indigo-600" />} loading={isLoading} />
+          <StatsCard title="OT Doctor Fees" value={formatPkrAmount(dailyData?.otDoctorExpense || 0)} icon={<Activity className="w-5 h-5 text-indigo-600" />} loading={isLoading} />
+          <StatsCard title="Total Doctor Revenue" value={formatPkrAmount(dailyData?.doctorRevenue || 0)} icon={<DollarSign className="w-5 h-5 text-indigo-600" />} loading={isLoading} />
+        </div>
+      </div>
+
       {/* Pharmacy Cards */}
       <div>
         <h2 className="text-xl font-semibold mb-4">Pharmacy Performance</h2>
@@ -1164,7 +1163,34 @@ export default function FinanceDaily() {
                 </div>
               </div>
 
-              {/* Expenses Section */}
+              {/* Doctor Revenue Section */}
+              <div>
+                <h3 className="text-xl font-semibold mb-4 flex items-center gap-2">
+                  <Banknote className="h-5 w-5 text-indigo-600" />
+                  Doctor Revenue
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <Card>
+                    <CardContent className="p-4">
+                      <div className="text-sm text-muted-foreground">Consultation Fees</div>
+                      <div className="text-lg font-bold">{formatPkrAmount(dailyData?.consultationRevenue || 0)}</div>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardContent className="p-4">
+                      <div className="text-sm text-muted-foreground">OT Doctor Fees</div>
+                      <div className="text-lg font-bold">{formatPkrAmount(dailyData?.otDoctorExpense || 0)}</div>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardContent className="p-4">
+                      <div className="text-sm text-muted-foreground">Total Doctor Revenue</div>
+                      <div className="text-lg font-bold text-indigo-600">{formatPkrAmount(dailyData?.doctorRevenue || 0)}</div>
+                    </CardContent>
+                  </Card>
+                </div>
+              </div>
+
               {detailedData?.expenses && detailedData.expenses.length > 0 && <div>
                   <h3 className="text-xl font-semibold mb-4 flex items-center gap-2">
                     <Receipt className="h-5 w-5 text-orange-600" />

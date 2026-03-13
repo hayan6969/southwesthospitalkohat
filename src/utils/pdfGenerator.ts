@@ -1309,8 +1309,45 @@ export const generateDailyClosingPDF = async (data: {
   }
 
   // ===========================================
-  // PHARMACY EXPENSES SECTION
+  // DOCTOR REVENUE SECTION
   // ===========================================
+  checkNewPage(80);
+  drawSectionHeader('DOCTOR REVENUE');
+
+  // Calculate doctor consultation revenue from hospital invoices (INV- prefix, non-emergency)
+  const doctorConsultationInvoices = hospitalInvoicesAll.filter((inv: any) =>
+    inv.invoice_number?.startsWith?.('INV-') &&
+    !inv.description?.toLowerCase?.().includes('emergency') &&
+    !inv.emergency_patient_data &&
+    !inv.invoice_number?.startsWith?.('EMG-') &&
+    !inv.invoice_number?.startsWith?.('EMERGENCY-')
+  );
+  const doctorConsultationRevenue = doctorConsultationInvoices.reduce((sum: number, inv: any) => sum + (Number(inv.amount) || 0), 0);
+  const doctorOTExpense = transactionsData?.otSchedules?.reduce((sum: number, ot: any) => sum + (ot.doctor_expense || 0), 0) || 0;
+  const totalDoctorRevenue = doctorConsultationRevenue + doctorOTExpense;
+
+  if (totalDoctorRevenue > 0) {
+    const doctorRevenueHeaders = ['Revenue Type', 'Count', 'Amount'];
+    const doctorRevenueColWidths = [80, 30, 40];
+    const doctorRevenueRows: string[][] = [];
+
+    if (doctorConsultationRevenue > 0) {
+      doctorRevenueRows.push(['Consultation Fees', doctorConsultationInvoices.length.toString(), formatPkrAmount(doctorConsultationRevenue)]);
+    }
+    if (doctorOTExpense > 0) {
+      doctorRevenueRows.push(['OT Doctor Fees', (transactionsData?.otSchedules?.length || 0).toString(), formatPkrAmount(doctorOTExpense)]);
+    }
+    doctorRevenueRows.push(['Total Doctor Revenue', '', formatPkrAmount(totalDoctorRevenue)]);
+
+    drawTable(doctorRevenueHeaders, doctorRevenueRows, doctorRevenueColWidths);
+  } else {
+    doc.setFont('helvetica', 'italic');
+    doc.setFontSize(10);
+    doc.setTextColor(150, 150, 150);
+    doc.text('No doctor revenue recorded for this date.', pageWidth / 2, yPosition, { align: 'center' });
+    yPosition += 25;
+  }
+
   if (transactionsData?.pharmacyExpenses?.length > 0) {
     drawSectionHeader('PHARMACY EXPENSES');
 
@@ -1443,6 +1480,7 @@ export const generateDailyClosingPDF = async (data: {
   
   const summaryRows = [
     ['Hospital Services Revenue', formatPkrAmount(correctHospitalServicesRevenue)],
+    ['Doctor Revenue (Consultation + OT Fees)', formatPkrAmount(totalDoctorRevenue)],
     ['Pharmacy Revenue', formatPkrAmount(data.pharmacyRevenue)],
     ['Pharmacy Profit', formatPkrAmount(data.pharmacyProfit)],
     ['Total Daily Expenses', `(${formatPkrAmount(data.totalExpenses)})`],
