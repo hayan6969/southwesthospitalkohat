@@ -1180,6 +1180,11 @@ export const generateDailyClosingPDF = async (data: {
   // DETAILED OPD-STYLE TRANSACTION REPORT
   // ===========================================
   drawSectionHeader('DETAILED TRANSACTION REPORT');
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(8);
+  doc.setTextColor(110, 110, 110);
+  doc.text('Grouped by service category and shift (Night: 12am–8am, Morning: 8am–2pm, Evening: 2pm–12am)', pageWidth / 2, yPosition, { align: 'center' });
+  yPosition += 10;
 
   // Helper: determine shift from timestamp
   const getShiftFromTime = (dateStr: string): string => {
@@ -1201,10 +1206,54 @@ export const generateDailyClosingPDF = async (data: {
     } catch { return '—'; }
   };
 
-  // Build all transaction items
-  interface TxnItem { patientName: string; time: string; procedure: string; consultant: string; amount: number; docShare: number; hosShare: string | number; operator: string; category: string; shift: string; }
+  interface TxnItem {
+    patientName: string;
+    time: string;
+    procedure: string;
+    consultant: string;
+    amount: number;
+    docShare: number;
+    hosShare: string | number;
+    operator: string;
+    category: string;
+    shift: string;
+  }
+
   const allTxns: TxnItem[] = [];
   const hospitalInvoicesAll = transactionsData?.hospitalInvoices || [];
+
+  // Resolve operator names from profile IDs so PDF matches on-screen report
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  const operatorIdSet = new Set<string>();
+  const collectOperatorId = (value?: string | null) => {
+    if (value && uuidRegex.test(value)) operatorIdSet.add(value);
+  };
+
+  hospitalInvoicesAll.forEach((inv: any) => collectOperatorId(inv.created_by));
+  (transactionsData?.miscellaneousIncome || []).forEach((misc: any) => collectOperatorId(misc.created_by));
+
+  const operatorNamesById = new Map<string, string>();
+  if (operatorIdSet.size > 0) {
+    const { data: operatorProfiles } = await supabase
+      .from('profiles')
+      .select('id, first_name, last_name')
+      .in('id', Array.from(operatorIdSet));
+
+    (operatorProfiles || []).forEach((profile: any) => {
+      const fullName = `${profile.first_name || ''} ${profile.last_name || ''}`.trim();
+      operatorNamesById.set(profile.id, fullName || '—');
+    });
+  }
+
+  const resolveOperatorName = (value?: string | null) => {
+    if (!value) return '—';
+    if (operatorNamesById.has(value)) return operatorNamesById.get(value) || '—';
+    return uuidRegex.test(value) ? '—' : value;
+  };
+
+  let grandTotal = 0;
+  let grandDocShare = 0;
+  let grandHosShare = 0;
 
   const isEmergencyInv = (inv: any) =>
     inv.description?.toLowerCase().includes('emergency') ||
