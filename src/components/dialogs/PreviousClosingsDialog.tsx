@@ -416,9 +416,18 @@ export function PreviousClosingsDialog() {
                                   <Button
                                     size="sm"
                                     variant="ghost"
-                                    onClick={(e) => { e.stopPropagation(); handleViewPDF(closing); }}
+                                    onClick={(e) => { e.stopPropagation(); handleSummaryPDF(closing); }}
                                     className="h-8 px-2"
-                                    title="Download PDF"
+                                    title="Summary Report"
+                                  >
+                                    <ClipboardList className="w-4 h-4" />
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    onClick={(e) => { e.stopPropagation(); handleDetailedPDF(closing); }}
+                                    className="h-8 px-2"
+                                    title="Detailed Report"
                                   >
                                     <FileText className="w-4 h-4" />
                                   </Button>
