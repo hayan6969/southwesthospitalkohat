@@ -277,7 +277,7 @@ export function PreviousClosingsDialog() {
           {/* Table */}
           <div className="border rounded-lg overflow-hidden">
             <div className="max-h-[400px] overflow-auto">
-              <Table>
+              <Table className="min-w-[900px]">
                 <TableHeader className="sticky top-0 bg-background">
                    <TableRow>
                     <TableHead>Date</TableHead>
