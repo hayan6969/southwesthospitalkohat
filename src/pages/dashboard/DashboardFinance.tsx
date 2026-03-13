@@ -149,15 +149,23 @@ export default function DashboardFinance() {
     if (!schedule.total_cost || !schedule.doctor_expense) return sum;
     return sum + (Number(schedule.total_cost) - Number(schedule.doctor_expense));
   }, 0) || 0;
+
+  // Doctor's OT earnings
+  const otDoctorRevenue = otSchedules?.reduce((sum, schedule) => {
+    return sum + (Number(schedule.doctor_expense) || 0);
+  }, 0) || 0;
   
-  // Hospital revenue = regular consultations + emergency consultations + lab + OT hospital portion + pharmacy profit
-  const hospitalRevenue = consultationRevenue + emergencyConsultationRevenue + labRevenue + otHospitalRevenue + pharmacyProfit;
+  // Doctors Revenue = consultation fees + OT doctor expenses (separate from hospital)
+  const doctorsRevenue = consultationRevenue + otDoctorRevenue;
   
-  // Total revenue for display purposes includes pharmacy sales
-  const totalRevenue = hospitalRevenue + pharmacyRevenue;
+  // Hospital revenue = emergency consultations + lab + OT hospital portion + pharmacy profit (excludes doctor consultation fees)
+  const hospitalRevenue = emergencyConsultationRevenue + labRevenue + otHospitalRevenue + pharmacyProfit;
+  
+  // Total revenue for display purposes includes hospital + doctors + pharmacy sales
+  const totalRevenue = hospitalRevenue + doctorsRevenue + pharmacyRevenue;
   const totalExpenses = expenses?.reduce((sum, exp) => sum + (exp.amount || 0), 0) || 0;
   
-  // Hospital profit (excluding pharmacy profit which is already included in hospitalRevenue)
+  // Total profit
   const totalProfit = hospitalRevenue - totalExpenses;
   
   const paidInvoices = invoices?.filter(inv => inv.status === 'paid') || [];
