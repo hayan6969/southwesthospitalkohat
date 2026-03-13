@@ -14,7 +14,7 @@ import { formatPkrAmount } from "@/utils/currency";
 import { History, FileText, ChevronLeft, ChevronRight, Calendar as CalendarIcon, Filter, Search, ArrowLeft, ClipboardList } from "lucide-react";
 import { format } from "date-fns";
 import { formatInPakistanTime } from "@/utils/timezone";
-import { generateDailyClosingPDF } from "@/utils/pdfGenerator";
+import { generateDailyClosingPDF, generateDailyClosingSummaryPDF } from "@/utils/pdfGenerator";
 import { DetailedDailyReport } from "@/components/DetailedDailyReport";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
