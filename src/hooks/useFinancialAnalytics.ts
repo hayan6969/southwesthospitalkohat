@@ -13,6 +13,7 @@ interface FinancialMetrics {
   labRevenue: number;
   xrayRevenue: number;
   emergencyRevenue: number;
+  doctorsRevenue: number;
   totalExpenses: number;
   pharmacyInvoicesCount: number;
   pharmacyInvoicesAmount: number;
