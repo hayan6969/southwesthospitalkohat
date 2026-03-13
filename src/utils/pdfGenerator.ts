@@ -1545,6 +1545,86 @@ export const generateDailyClosingPDF = async (data: {
   }
 
   // ===========================================
+  // DOCTOR SUMMARY SECTION
+  // ===========================================
+  drawSectionHeader('DOCTOR SUMMARY');
+
+  // Aggregate revenue per doctor from OPD invoices and OT schedules
+  const doctorRevenueMap = new Map<string, { name: string; opdCount: number; opdRevenue: number; otCount: number; otRevenue: number }>();
+
+  // OPD consultations — group by doctor_id from invoices
+  hospitalInvoicesAll
+    .filter((inv: any) => inv.invoice_number?.startsWith?.('INV-') && !isEmergencyInv(inv))
+    .forEach((inv: any) => {
+      const doctorId = inv.doctor_id || 'unknown';
+      const existing = doctorRevenueMap.get(doctorId) || { name: '', opdCount: 0, opdRevenue: 0, otCount: 0, otRevenue: 0 };
+      existing.opdCount += 1;
+      existing.opdRevenue += Number(inv.amount) || 0;
+      // Try to resolve doctor name from description (e.g. "Consultation - Dr. XYZ")
+      if (!existing.name && inv.description) {
+        const match = inv.description.match(/(?:Dr\.?\s*)(.+)/i);
+        if (match) existing.name = `Dr. ${match[1].trim()}`;
+      }
+      doctorRevenueMap.set(doctorId, existing);
+    });
+
+  // OT schedules — group by doctor_id or doctor_name
+  (transactionsData?.otSchedules || []).forEach((ot: any) => {
+    const doctorId = ot.doctor_id || ot.doctor_name || 'unknown';
+    const existing = doctorRevenueMap.get(doctorId) || { name: '', opdCount: 0, opdRevenue: 0, otCount: 0, otRevenue: 0 };
+    existing.otCount += 1;
+    existing.otRevenue += Number(ot.doctor_expense) || 0;
+    if (!existing.name && ot.doctor_name) existing.name = ot.doctor_name;
+    doctorRevenueMap.set(doctorId, existing);
+  });
+
+  // Resolve doctor names for any UUIDs we haven't resolved yet
+  const unresolvedDoctorIds = Array.from(doctorRevenueMap.keys()).filter(id => uuidRegex.test(id) && !doctorRevenueMap.get(id)?.name);
+  if (unresolvedDoctorIds.length > 0) {
+    const { data: doctorProfiles } = await supabase
+      .from('profiles')
+      .select('id, first_name, last_name')
+      .in('id', unresolvedDoctorIds);
+    (doctorProfiles || []).forEach((p: any) => {
+      const entry = doctorRevenueMap.get(p.id);
+      if (entry) entry.name = `Dr. ${p.first_name || ''} ${p.last_name || ''}`.trim();
+    });
+  }
+
+  const doctorSummaryEntries = Array.from(doctorRevenueMap.values())
+    .filter(d => d.opdRevenue > 0 || d.otRevenue > 0)
+    .sort((a, b) => (b.opdRevenue + b.otRevenue) - (a.opdRevenue + a.otRevenue));
+
+  if (doctorSummaryEntries.length > 0) {
+    const docSumHeaders = ['Sr#', 'Doctor Name', 'OPD Patients', 'OPD Revenue', 'OT Cases', 'OT Revenue', 'Total Revenue'];
+    const docSumColWidths = [8, 45, 20, 28, 18, 28, 28];
+    const docSumRows: string[][] = doctorSummaryEntries.map((d, i) => [
+      String(i + 1),
+      d.name || 'Unknown',
+      String(d.opdCount),
+      formatPkrAmount(d.opdRevenue),
+      String(d.otCount),
+      formatPkrAmount(d.otRevenue),
+      formatPkrAmount(d.opdRevenue + d.otRevenue),
+    ]);
+
+    // Add totals row
+    const totalOpdCount = doctorSummaryEntries.reduce((s, d) => s + d.opdCount, 0);
+    const totalOpdRev = doctorSummaryEntries.reduce((s, d) => s + d.opdRevenue, 0);
+    const totalOtCount = doctorSummaryEntries.reduce((s, d) => s + d.otCount, 0);
+    const totalOtRev = doctorSummaryEntries.reduce((s, d) => s + d.otRevenue, 0);
+    docSumRows.push(['', 'TOTAL', String(totalOpdCount), formatPkrAmount(totalOpdRev), String(totalOtCount), formatPkrAmount(totalOtRev), formatPkrAmount(totalOpdRev + totalOtRev)]);
+
+    drawTable(docSumHeaders, docSumRows, docSumColWidths);
+  } else {
+    doc.setFont('helvetica', 'italic');
+    doc.setFontSize(10);
+    doc.setTextColor(150, 150, 150);
+    doc.text('No doctor revenue recorded for this period.', pageWidth / 2, yPosition, { align: 'center' });
+    yPosition += 12;
+  }
+
+  // ===========================================
   // EXPENSES DETAIL SECTION
   // ===========================================
   const expenseCount = transactionsData?.expenses?.length || 0;
