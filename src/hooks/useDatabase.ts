@@ -706,10 +706,8 @@ export const useCreateAppointmentWithInvoice = () => {
       }
 
       // Create appointment with paid status for staff bookings
-      // Counter appointments are walk-ins, so they are completed immediately
       const appointmentWithPayment = {
         ...appointmentData.appointment,
-        status: 'completed',
         payment_status: 'paid',
         booking_type: 'counter',
         invoice_generated_at: new Date().toISOString()
