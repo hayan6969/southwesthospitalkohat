@@ -504,6 +504,15 @@ export default function DashboardAdmin() {
                             <div className="text-sm font-semibold">{formatPkrAmount(financialAnalytics.pharmacySales)}</div>
                           </div>
                         </div>
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center space-x-3">
+                            <div className="w-3 h-3 rounded-full bg-indigo-500" />
+                            <span className="text-sm font-medium">Doctors</span>
+                          </div>
+                          <div className="text-right">
+                            <div className="text-sm font-semibold">{formatPkrAmount(financialAnalytics.doctorsRevenue)}</div>
+                          </div>
+                        </div>
                       </>
                     )}
                   </div>

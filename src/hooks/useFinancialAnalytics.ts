@@ -13,6 +13,7 @@ interface FinancialMetrics {
   labRevenue: number;
   xrayRevenue: number;
   emergencyRevenue: number;
+  doctorsRevenue: number;
   totalExpenses: number;
   pharmacyInvoicesCount: number;
   pharmacyInvoicesAmount: number;
@@ -200,7 +201,8 @@ export const useFinancialAnalytics = (selectedMonth?: Date) => {
           operationsRevenue: 0,
           labRevenue: 0,
           xrayRevenue: 0,
-          emergencyRevenue: 0,
+           emergencyRevenue: 0,
+           doctorsRevenue: 0,
           totalExpenses: 0,
           pharmacyInvoicesCount: 0,
           pharmacyInvoicesAmount: 0,
@@ -224,7 +226,8 @@ export const useFinancialAnalytics = (selectedMonth?: Date) => {
       let totalLabRevenue = 0;
       let totalXrayRevenue = 0;
       let totalOperationsRevenue = 0;
-      let totalEmergencyRevenue = 0;
+       let totalEmergencyRevenue = 0;
+       let totalDoctorsRevenue = 0;
 
       dailyClosings.forEach(closing => {
         // Use computed hospital revenue (recalculated from transactions_data)
@@ -265,8 +268,20 @@ export const useFinancialAnalytics = (selectedMonth?: Date) => {
           );
           const emergencyInvoiceRevenue = emergencyInvoices.reduce((s: number, inv: any) => 
             s + (Number(inv.amount) || 0), 0);
-          totalEmergencyRevenue += (emergencyAppointments + emergencyInvoiceRevenue);
-        }
+           totalEmergencyRevenue += (emergencyAppointments + emergencyInvoiceRevenue);
+
+           // Doctors revenue: OPD consultation invoices (INV- prefix, non-emergency) + OT doctor expense
+           const isEmergencyInv = (inv: any) =>
+             inv?.description?.toLowerCase?.().includes('emergency') ||
+             inv?.emergency_patient_data ||
+             inv?.invoice_number?.startsWith?.('EMG-') ||
+             inv?.invoice_number?.startsWith?.('EMERGENCY-');
+           const opdConsultation = (td.hospitalInvoices || [])
+             .filter((inv: any) => inv.invoice_number?.startsWith?.('INV-') && !isEmergencyInv(inv))
+             .reduce((s: number, inv: any) => s + (Number(inv.amount) || 0), 0);
+           const otDoctorExp = (td.otSchedules || []).reduce((s: number, ot: any) => s + (Number(ot.doctor_expense) || 0), 0);
+           totalDoctorsRevenue += opdConsultation + otDoctorExp;
+         }
       });
 
       // Calculate profits
@@ -335,8 +350,9 @@ export const useFinancialAnalytics = (selectedMonth?: Date) => {
         operationsRevenue: totalOperationsRevenue,
         labRevenue: totalLabRevenue,
         xrayRevenue: totalXrayRevenue,
-        emergencyRevenue: totalEmergencyRevenue,
-        totalExpenses,
+         emergencyRevenue: totalEmergencyRevenue,
+         doctorsRevenue: totalDoctorsRevenue,
+         totalExpenses,
         pharmacyInvoicesCount: finalPharmacyInvoicesCount,
         pharmacyInvoicesAmount: finalPharmacyInvoicesAmount,
         pharmacyExpensesCount: finalPharmacyExpensesCount,
