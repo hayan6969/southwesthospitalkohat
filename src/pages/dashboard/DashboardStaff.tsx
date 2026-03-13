@@ -117,8 +117,9 @@ export default function DashboardStaff() {
               </TabsList>
             </div>
 
-            <TabsContent value="counter" className="mt-4 sm:mt-6">
+            <TabsContent value="counter" className="mt-4 sm:mt-6 space-y-6">
               <StaffCounter />
+              <StaffRevenueBreakdown />
             </TabsContent>
             <TabsContent value="lab" className="mt-4 sm:mt-6">
               <StaffLab />
