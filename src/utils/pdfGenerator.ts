@@ -1272,7 +1272,7 @@ export const generateDailyClosingPDF = async (data: {
       amount: Number(inv.amount) || 0,
       docShare: Number(inv.amount) || 0,
       hosShare: 0,
-      operator: inv.created_by || '—',
+      operator: resolveOperatorName(inv.created_by),
       category: 'OPD',
       shift: getShiftFromTime(inv.created_at),
     });
@@ -1290,7 +1290,7 @@ export const generateDailyClosingPDF = async (data: {
       amount: Number(inv.amount) || 0,
       docShare: 0,
       hosShare: Number(inv.amount) || 0,
-      operator: inv.created_by || '—',
+      operator: resolveOperatorName(inv.created_by),
       category: 'Emergency',
       shift: getShiftFromTime(inv.created_at),
     });
