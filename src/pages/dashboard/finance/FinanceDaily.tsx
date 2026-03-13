@@ -909,6 +909,15 @@ export default function FinanceDaily() {
         </div>
       </div>
 
+      {/* Doctor Revenue Cards */}
+      <div>
+        <h2 className="text-xl font-semibold mb-4">Doctor Revenue</h2>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <StatsCard title="Consultation Fees" value={formatPkrAmount(dailyData?.consultationRevenue || 0)} icon={<Banknote className="w-5 h-5 text-indigo-600" />} loading={isLoading} />
+          <StatsCard title="OT Doctor Fees" value={formatPkrAmount(dailyData?.otDoctorExpense || 0)} icon={<Activity className="w-5 h-5 text-indigo-600" />} loading={isLoading} />
+          <StatsCard title="Total Doctor Revenue" value={formatPkrAmount(dailyData?.doctorRevenue || 0)} icon={<DollarSign className="w-5 h-5 text-indigo-600" />} loading={isLoading} />
+        </div>
+
       {/* Pharmacy Cards */}
       <div>
         <h2 className="text-xl font-semibold mb-4">Pharmacy Performance</h2>
