@@ -61,6 +61,23 @@ export function PreviousClosingsDialog() {
     return lab + xray + ot + emergency + misc;
   };
 
+  // Compute doctor revenue (consultation fees + OT doctor expenses) from transactions_data
+  const computeDoctorRevenue = (td?: any): number => {
+    if (!td) return 0;
+    const hospitalInvoices = td.hospitalInvoices || [];
+    const consultationFees = hospitalInvoices
+      .filter((inv: any) =>
+        inv.invoice_number?.startsWith?.('INV-') &&
+        !inv.description?.toLowerCase?.().includes('emergency') &&
+        !inv.emergency_patient_data &&
+        !inv.invoice_number?.startsWith?.('EMG-') &&
+        !inv.invoice_number?.startsWith?.('EMERGENCY-')
+      )
+      .reduce((s: number, inv: any) => s + (Number(inv.amount) || 0), 0);
+    const otDoctorExpense = (td.otSchedules || []).reduce((s: number, ot: any) => s + (Number(ot.doctor_expense) || 0), 0);
+    return consultationFees + otDoctorExpense;
+  };
+
   // Fetch all previous daily closings
   const { data: closings, isLoading } = useQuery({
     queryKey: ['daily-closings'],
