@@ -11,7 +11,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { formatPkrAmount } from "@/utils/currency";
-import { History, FileText, ChevronLeft, ChevronRight, Calendar as CalendarIcon, Filter, Search, ArrowLeft, Eye } from "lucide-react";
+import { History, FileText, ChevronLeft, ChevronRight, Calendar as CalendarIcon, Filter, Search, ArrowLeft, ClipboardList } from "lucide-react";
 import { format } from "date-fns";
 import { formatInPakistanTime } from "@/utils/timezone";
 import { generateDailyClosingPDF } from "@/utils/pdfGenerator";
