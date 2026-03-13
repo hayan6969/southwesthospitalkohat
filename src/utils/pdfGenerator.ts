@@ -1398,9 +1398,6 @@ export const generateDailyClosingPDF = async (data: {
     yPosition += 15;
   } else {
     let srNo = 0;
-    let grandTotal = 0;
-    let grandDocShare = 0;
-    let grandHosShare = 0;
 
     // Draw table header
     const drawDetailHeader = () => {
