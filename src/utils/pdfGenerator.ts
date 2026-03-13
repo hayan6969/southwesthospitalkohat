@@ -1374,7 +1374,7 @@ export const generateDailyClosingPDF = async (data: {
       amount: Number(misc.amount) || 0,
       docShare: 0,
       hosShare: Number(misc.amount) || 0,
-      operator: misc.created_by || '—',
+      operator: resolveOperatorName(misc.created_by),
       category: 'Miscellaneous',
       shift: getShiftFromTime(misc.created_at),
     });
