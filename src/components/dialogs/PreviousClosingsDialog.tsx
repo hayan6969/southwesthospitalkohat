@@ -295,7 +295,7 @@ export function PreviousClosingsDialog() {
                   {isLoading ? (
                     Array.from({ length: 5 }).map((_, i) => (
                       <TableRow key={i}>
-                        {Array.from({ length: 8 }).map((_, j) => (
+                        {Array.from({ length: 9 }).map((_, j) => (
                           <TableCell key={j}>
                             <div className="h-4 bg-gray-200 rounded animate-pulse"></div>
                           </TableCell>
