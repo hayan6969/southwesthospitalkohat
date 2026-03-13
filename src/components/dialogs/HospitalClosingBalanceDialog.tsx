@@ -8,8 +8,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { formatPkrAmount } from "@/utils/currency";
-import { Wallet, Calculator, Save } from "lucide-react";
-import { format } from "date-fns";
+import { Wallet, Calculator, Save, Lock } from "lucide-react";
+import { format, subDays } from "date-fns";
 
 interface HospitalClosingBalanceDialogProps {
   open: boolean;
@@ -23,24 +23,37 @@ export function HospitalClosingBalanceDialog({
   selectedDate 
 }: HospitalClosingBalanceDialogProps) {
   const [closingBalance, setClosingBalance] = useState<string>("0");
+  const [previousBalance, setPreviousBalance] = useState<number>(0);
   const [notes, setNotes] = useState<string>("");
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [hasExistingRecord, setHasExistingRecord] = useState(false);
   const { toast } = useToast();
 
   const targetDate = format(selectedDate, 'yyyy-MM-dd');
 
   useEffect(() => {
     if (open) {
-      fetchClosingBalance();
+      fetchData();
     }
   }, [open, targetDate]);
 
-  const fetchClosingBalance = async () => {
+  const fetchData = async () => {
     setIsLoading(true);
     try {
-      // Load the latest record for the selected date (handles accidental duplicates safely)
-      const { data: selectedDateBalance, error } = await supabase
+      // Fetch previous day's closing balance (locked/read-only)
+      const { data: prevBalance } = await supabase
+        .from('hospital_closing_balance')
+        .select('closing_balance')
+        .lt('closing_date', targetDate)
+        .order('closing_date', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      setPreviousBalance(prevBalance?.closing_balance || 0);
+
+      // Check if current date already has a record
+      const { data: currentRecord, error } = await supabase
         .from('hospital_closing_balance')
         .select('*')
         .eq('closing_date', targetDate)
@@ -50,17 +63,20 @@ export function HospitalClosingBalanceDialog({
 
       if (error) throw error;
 
-      if (selectedDateBalance) {
-        setClosingBalance(String(selectedDateBalance.closing_balance || 0));
-        setNotes(selectedDateBalance.notes || "");
+      if (currentRecord) {
+        setClosingBalance(String(currentRecord.closing_balance || 0));
+        setNotes(currentRecord.notes || "");
+        setHasExistingRecord(true);
       } else {
-        setClosingBalance("");
+        setClosingBalance("0");
         setNotes("");
+        setHasExistingRecord(false);
       }
     } catch (error) {
       console.error('Error fetching closing balance:', error);
-      setClosingBalance("");
+      setClosingBalance("0");
       setNotes("");
+      setPreviousBalance(0);
     } finally {
       setIsLoading(false);
     }
@@ -71,8 +87,7 @@ export function HospitalClosingBalanceDialog({
     const numericBalance = parseFloat(closingBalance) || 0;
 
     try {
-      // Update only the selected date's record (never overwrite another day)
-      const { data: selectedDateRecord, error: selectedDateRecordError } = await supabase
+      const { data: existingRecord, error: fetchError } = await supabase
         .from('hospital_closing_balance')
         .select('id')
         .eq('closing_date', targetDate)
@@ -80,9 +95,9 @@ export function HospitalClosingBalanceDialog({
         .limit(1)
         .maybeSingle();
 
-      if (selectedDateRecordError) throw selectedDateRecordError;
+      if (fetchError) throw fetchError;
 
-      if (selectedDateRecord) {
+      if (existingRecord) {
         const { error } = await supabase
           .from('hospital_closing_balance')
           .update({
@@ -90,7 +105,7 @@ export function HospitalClosingBalanceDialog({
             notes: notes,
             updated_at: new Date().toISOString()
           })
-          .eq('id', selectedDateRecord.id);
+          .eq('id', existingRecord.id);
 
         if (error) throw error;
       } else {
@@ -145,30 +160,54 @@ export function HospitalClosingBalanceDialog({
         </DialogHeader>
 
         <div className="space-y-6">
+          {/* Previous Balance - Locked/Read-only */}
+          <Card className="border-2 border-gray-300 bg-muted/50">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg flex items-center gap-3">
+                <Lock className="w-5 h-5 text-gray-500" />
+                Previous Closing Balance
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="bg-background border rounded-lg p-4">
+                <div className="flex justify-between items-center">
+                  <span className="text-muted-foreground font-medium">Old Balance:</span>
+                  <span className="font-bold text-xl text-muted-foreground">
+                    {formatPkrAmount(previousBalance)}
+                  </span>
+                </div>
+              </div>
+              <p className="text-xs text-muted-foreground mt-2">
+                This is the last saved closing balance before {format(selectedDate, 'MMM dd, yyyy')}. It cannot be edited from here.
+              </p>
+            </CardContent>
+          </Card>
+
+          {/* New Closing Balance - Editable */}
           <Card className="border-2 border-blue-200">
-            <CardHeader>
-              <CardTitle className="text-xl flex items-center gap-3">
-                <Wallet className="w-6 h-6 text-blue-600" />
-                Yesterday's Closing Balance
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg flex items-center gap-3">
+                <Wallet className="w-5 h-5 text-blue-600" />
+                Today's Closing Balance
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
-                <Label htmlFor="closing-balance" className="text-lg font-medium">
-                  Closing Balance Amount (PKR)
+                <Label htmlFor="closing-balance" className="text-base font-medium">
+                  New Closing Balance (PKR)
                 </Label>
                 <Input
                   id="closing-balance"
                   type="number"
                   value={closingBalance}
                   onChange={(e) => setClosingBalance(e.target.value)}
-                  placeholder="Enter yesterday's closing balance"
+                  placeholder="Enter closing balance"
                   className="mt-2 h-12 text-lg"
                 />
               </div>
               
               <div>
-                <Label htmlFor="notes" className="text-lg font-medium">
+                <Label htmlFor="notes" className="text-base font-medium">
                   Notes (Optional)
                 </Label>
                 <Textarea
@@ -181,15 +220,14 @@ export function HospitalClosingBalanceDialog({
               </div>
 
               <div className="bg-blue-50 p-4 rounded-lg">
-                <div className="flex justify-between items-center text-xl">
-                  <span className="font-semibold">Current Closing Balance:</span>
+                <div className="flex justify-between items-center text-lg">
+                  <span className="font-semibold">New Closing Balance:</span>
                   <span className="font-bold text-blue-600">
                     {formatPkrAmount(parseFloat(closingBalance) || 0)}
                   </span>
                 </div>
                 <p className="text-sm text-muted-foreground mt-2">
-                  This amount will be used as the starting balance for today's financial calculations.
-                  Today's profit/loss will be added/subtracted to calculate the new closing balance.
+                  This amount will be used as the starting balance for the next day's financial calculations.
                 </p>
               </div>
             </CardContent>
