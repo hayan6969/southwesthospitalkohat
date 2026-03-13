@@ -10,6 +10,8 @@ import { StaffOT } from "@/components/staff/StaffOT";
 import { StaffInvoices } from "@/components/staff/StaffInvoices";
 import { StaffLabReports } from "@/components/staff/StaffLabReports";
 import { StaffXray } from "@/components/staff/StaffXray";
+import { StaffRevenueBreakdown } from "@/components/staff/StaffRevenueBreakdown";
+import { StaffXray } from "@/components/staff/StaffXray";
 import { PatientSearchDialog } from "@/components/staff/PatientSearchDialog";
 import { Receipt, TestTube, Building2, FileText, Image, Search } from "lucide-react";
 import { useHospitalSettings } from "@/hooks/useHospitalSettings";
