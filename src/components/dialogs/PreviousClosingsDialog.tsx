@@ -400,15 +400,6 @@ export function PreviousClosingsDialog() {
                                   <Button
                                     size="sm"
                                     variant="ghost"
-                                    onClick={(e) => { e.stopPropagation(); handleViewReport(closing); }}
-                                    className="h-8 px-2"
-                                    title="View detailed report"
-                                  >
-                                    <Eye className="w-4 h-4" />
-                                  </Button>
-                                  <Button
-                                    size="sm"
-                                    variant="ghost"
                                     onClick={(e) => { e.stopPropagation(); handleViewPDF(closing); }}
                                     className="h-8 px-2"
                                     title="Download PDF"
