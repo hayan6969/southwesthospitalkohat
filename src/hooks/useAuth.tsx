@@ -171,17 +171,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const signIn = async (email: string, password: string) => {
     try {
-      // Clean up any existing auth state first
-      cleanupAuthState();
-      
-      // Attempt to sign out any existing session
-      try {
-        await supabase.auth.signOut({ scope: 'global' });
-      } catch (err) {
-        // Continue even if this fails
-        console.log('No existing session to sign out');
-      }
-
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
@@ -195,40 +184,26 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       if (data.user) {
         console.log('✅ User signed in successfully:', data.user.email);
         const profileData = await fetchUserProfile(data.user.id);
-        console.log('✅ Profile data fetched:', profileData);
         
         // Check if user account is active
         if (profileData && !profileData.is_active) {
-          console.log('❌ User account is inactive, signing out');
           await supabase.auth.signOut();
           return { error: { message: "Your account has been temporarily blocked. Please contact the administrator." } };
         }
         
-        // Log successful login
         if (profileData) {
           logLogin(data.user.id, data.user.email || '');
         }
         
-        // Redirect based on user role
         if (profileData?.role) {
-          console.log('🔄 Redirecting to dashboard for role:', profileData.role);
-          
           let dashboardRole;
-          // Handle special role mappings
           if (profileData.role.includes('pharmacist')) {
             dashboardRole = 'pharmacy';
           } else {
             dashboardRole = profileData.role;
           }
           
-          console.log('🎯 Final dashboard URL:', `/dashboard/${dashboardRole}`);
-          
-          // Force a clean redirect
-          setTimeout(() => {
-            window.location.href = `/dashboard/${dashboardRole}`;
-          }, 200); // Slightly longer delay to ensure everything is set
-        } else {
-          console.error('❌ No role found in profile data');
+          window.location.href = `/dashboard/${dashboardRole}`;
         }
       }
 
