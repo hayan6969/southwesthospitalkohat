@@ -226,7 +226,8 @@ export const useFinancialAnalytics = (selectedMonth?: Date) => {
       let totalLabRevenue = 0;
       let totalXrayRevenue = 0;
       let totalOperationsRevenue = 0;
-      let totalEmergencyRevenue = 0;
+       let totalEmergencyRevenue = 0;
+       let totalDoctorsRevenue = 0;
 
       dailyClosings.forEach(closing => {
         // Use computed hospital revenue (recalculated from transactions_data)
