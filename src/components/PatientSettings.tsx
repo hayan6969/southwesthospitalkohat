@@ -25,6 +25,13 @@ interface PatientData {
   cnic: string | null;
 }
 
+interface ProfileData {
+  first_name: string;
+  last_name: string;
+  phone: string | null;
+  email: string;
+}
+
 const bloodTypes = [
   "A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"
 ];
