@@ -138,6 +138,38 @@ export function PatientSettings() {
         <h2 className="text-xl sm:text-2xl font-bold">Patient Settings</h2>
       </div>
 
+      {/* Profile Info (read-only from registration) */}
+      {profileData && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Account Information</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>First Name</Label>
+                <Input value={profileData.first_name || ''} disabled className="bg-muted" />
+              </div>
+              <div className="space-y-2">
+                <Label>Last Name</Label>
+                <Input value={profileData.last_name || ''} disabled className="bg-muted" />
+              </div>
+              <div className="space-y-2">
+                <Label>Phone Number</Label>
+                <div className="flex items-center gap-2 p-2 bg-muted rounded-md border">
+                  <Phone className="w-4 h-4 text-muted-foreground" />
+                  <span className="text-sm">{profileData.phone || extractedPhone || 'N/A'}</span>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label>Patient Number</Label>
+                <Input value={(patientData as any)?.patient_number || 'N/A'} disabled className="bg-muted" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       <Card>
         <CardHeader>
           <CardTitle>Personal Information</CardTitle>
