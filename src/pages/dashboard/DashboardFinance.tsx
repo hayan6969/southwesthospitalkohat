@@ -149,15 +149,23 @@ export default function DashboardFinance() {
     if (!schedule.total_cost || !schedule.doctor_expense) return sum;
     return sum + (Number(schedule.total_cost) - Number(schedule.doctor_expense));
   }, 0) || 0;
+
+  // Doctor's OT earnings
+  const otDoctorRevenue = otSchedules?.reduce((sum, schedule) => {
+    return sum + (Number(schedule.doctor_expense) || 0);
+  }, 0) || 0;
   
-  // Hospital revenue = regular consultations + emergency consultations + lab + OT hospital portion + pharmacy profit
-  const hospitalRevenue = consultationRevenue + emergencyConsultationRevenue + labRevenue + otHospitalRevenue + pharmacyProfit;
+  // Doctors Revenue = consultation fees + OT doctor expenses (separate from hospital)
+  const doctorsRevenue = consultationRevenue + otDoctorRevenue;
   
-  // Total revenue for display purposes includes pharmacy sales
-  const totalRevenue = hospitalRevenue + pharmacyRevenue;
+  // Hospital revenue = emergency consultations + lab + OT hospital portion + pharmacy profit (excludes doctor consultation fees)
+  const hospitalRevenue = emergencyConsultationRevenue + labRevenue + otHospitalRevenue + pharmacyProfit;
+  
+  // Total revenue for display purposes includes hospital + doctors + pharmacy sales
+  const totalRevenue = hospitalRevenue + doctorsRevenue + pharmacyRevenue;
   const totalExpenses = expenses?.reduce((sum, exp) => sum + (exp.amount || 0), 0) || 0;
   
-  // Hospital profit (excluding pharmacy profit which is already included in hospitalRevenue)
+  // Total profit
   const totalProfit = hospitalRevenue - totalExpenses;
   
   const paidInvoices = invoices?.filter(inv => inv.status === 'paid') || [];
@@ -222,12 +230,20 @@ export default function DashboardFinance() {
     if (!schedule.total_cost || !schedule.doctor_expense) return sum;
     return sum + (Number(schedule.total_cost) - Number(schedule.doctor_expense));
   }, 0) || 0;
+  // Monthly OT doctor revenue
+  const currentMonthOTDoctorRevenue = otSchedules?.filter(schedule => {
+    const scheduleDate = new Date(schedule.created_at);
+    return scheduleDate.getMonth() === currentMonth && scheduleDate.getFullYear() === currentYear;
+  }).reduce((sum, schedule) => sum + (Number(schedule.doctor_expense) || 0), 0) || 0;
+
+  // Monthly doctors revenue
+  const monthlyDoctorsRevenue = currentMonthConsultationRevenue + currentMonthOTDoctorRevenue;
   
-  // Monthly hospital revenue
-  const monthlyHospitalRevenue = currentMonthConsultationRevenue + currentMonthEmergencyRevenue + currentMonthLabRevenue + currentMonthOTHospitalRevenue + currentMonthPharmacyProfit;
+  // Monthly hospital revenue (excludes doctor consultation fees)
+  const monthlyHospitalRevenue = currentMonthEmergencyRevenue + currentMonthLabRevenue + currentMonthOTHospitalRevenue + currentMonthPharmacyProfit;
   
-  // Total monthly revenue for display includes pharmacy sales
-  const monthlyRevenue = monthlyHospitalRevenue + currentMonthPharmacyRevenue;
+  // Total monthly revenue for display includes hospital + doctors + pharmacy sales
+  const monthlyRevenue = monthlyHospitalRevenue + monthlyDoctorsRevenue + currentMonthPharmacyRevenue;
 
   return (
     <div className="space-y-8">
@@ -256,12 +272,18 @@ export default function DashboardFinance() {
           </div>
           
           {/* Second Row - Revenue Breakdown */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             <StatsCard
               title="Hospital Revenue"
               value={formatPkrAmount(hospitalRevenue)}
               icon={<Receipt className="w-5 h-5 text-blue-600" />}
-              loading={invoicesLoading}
+              loading={invoicesLoading || labLoading || otLoading}
+            />
+            <StatsCard
+              title="Doctors Revenue"
+              value={formatPkrAmount(doctorsRevenue)}
+              icon={<Users className="w-5 h-5 text-indigo-600" />}
+              loading={invoicesLoading || otLoading}
             />
             <StatsCard
               title="Pharmacy Revenue"
@@ -330,8 +352,8 @@ export default function DashboardFinance() {
             <CardContent>
               <div className="space-y-3">
                 <div className="flex justify-between">
-                  <span>Consultation Revenue</span>
-                  <span className="font-medium">{formatPkrAmount(consultationRevenue)}</span>
+                  <span>Doctors Revenue</span>
+                  <span className="font-medium text-indigo-600">{formatPkrAmount(doctorsRevenue)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span>Emergency Revenue</span>
