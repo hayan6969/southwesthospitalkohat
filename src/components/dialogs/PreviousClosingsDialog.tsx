@@ -276,7 +276,7 @@ export function PreviousClosingsDialog() {
 
           {/* Table */}
           <div className="border rounded-lg overflow-hidden">
-            <div className="max-h-[500px] overflow-y-auto">
+            <div className="max-h-[400px] overflow-auto">
               <Table>
                 <TableHeader className="sticky top-0 bg-background">
                    <TableRow>
