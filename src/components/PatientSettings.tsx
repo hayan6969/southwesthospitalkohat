@@ -39,6 +39,7 @@ const bloodTypes = [
 export function PatientSettings() {
   const { profile } = useAuth();
   const [loading, setLoading] = useState(false);
+  const [fetchingData, setFetchingData] = useState(true);
   const [patientData, setPatientData] = useState<PatientData>({
     date_of_birth: null,
     blood_type: null,
@@ -48,6 +49,7 @@ export function PatientSettings() {
     address: null,
     cnic: null,
   });
+  const [profileData, setProfileData] = useState<ProfileData | null>(null);
   const [dateOfBirth, setDateOfBirth] = useState<Date | undefined>();
 
   // Extract phone from email if available
@@ -60,26 +62,40 @@ export function PatientSettings() {
   }, [profile?.id]);
 
   const fetchPatientData = async () => {
+    setFetchingData(true);
     try {
-      const { data, error } = await supabase
-        .from('patients')
-        .select('*')
-        .eq('id', profile?.id)
-        .single();
+      // Fetch both patient and profile data in parallel
+      const [patientResult, profileResult] = await Promise.all([
+        supabase
+          .from('patients')
+          .select('*')
+          .eq('id', profile?.id)
+          .single(),
+        supabase
+          .from('profiles')
+          .select('first_name, last_name, phone, email')
+          .eq('id', profile?.id)
+          .single()
+      ]);
 
-      if (error && error.code !== 'PGRST116') { // Not found error
-        console.error('Error fetching patient data:', error);
-        return;
+      if (patientResult.error && patientResult.error.code !== 'PGRST116') {
+        console.error('Error fetching patient data:', patientResult.error);
       }
 
-      if (data) {
-        setPatientData(data);
-        if (data.date_of_birth) {
-          setDateOfBirth(new Date(data.date_of_birth));
+      if (patientResult.data) {
+        setPatientData(patientResult.data);
+        if (patientResult.data.date_of_birth) {
+          setDateOfBirth(new Date(patientResult.data.date_of_birth));
         }
+      }
+
+      if (profileResult.data) {
+        setProfileData(profileResult.data);
       }
     } catch (error) {
       console.error('Error fetching patient data:', error);
+    } finally {
+      setFetchingData(false);
     }
   };
 
