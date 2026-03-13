@@ -333,7 +333,10 @@ export default function DoctorSchedule() { // Fixed ordering syntax
   const upcomingAppointments = appointmentsWithQueue?.filter(apt => {
     const selectedDateStr = format(selectedDate, 'yyyy-MM-dd');
     const aptDateStr = formatInPakistanTime(apt.appointment_date, 'yyyy-MM-dd');
-    return apt.status === 'scheduled' && aptDateStr === selectedDateStr;
+    // Show scheduled appointments for the selected date, OR any past scheduled appointments that were never completed
+    const isSelectedDate = aptDateStr === selectedDateStr;
+    const isPastScheduled = apt.status === 'scheduled' && new Date(apt.appointment_date) < new Date() && aptDateStr <= selectedDateStr;
+    return apt.status === 'scheduled' && (isSelectedDate || isPastScheduled);
   }).sort((a, b) => {
     // Sort by queue position first, then by appointment time
     if (a.queue_position && b.queue_position) {
