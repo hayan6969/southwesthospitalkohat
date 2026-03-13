@@ -637,7 +637,8 @@ export default function FinanceDaily() {
       const totalExpenses = expenses.reduce((sum, exp) => sum + exp.amount, 0);
       const totalRefunds = refunds.reduce((sum, ref) => sum + ref.amount, 0);
 
-      const totalHospitalRevenue = consultationRevenue + emergencyRevenue + labRevenue + xrayRevenue + otHospitalRevenue + miscIncome;
+      // Hospital revenue excludes consultation fees (those belong to doctor finances)
+      const totalHospitalRevenue = emergencyRevenue + labRevenue + xrayRevenue + otHospitalRevenue + miscIncome;
       const totalStockValue = totalStock.reduce((sum, medicine) => 
         sum + (medicine.stock_quantity * medicine.purchase_price), 0);
 
