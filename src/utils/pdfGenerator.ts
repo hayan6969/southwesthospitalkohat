@@ -1177,49 +1177,402 @@ export const generateDailyClosingPDF = async (data: {
   };
 
   // ===========================================
+  // DETAILED OPD-STYLE TRANSACTION REPORT
+  // ===========================================
+  drawSectionHeader('DETAILED TRANSACTION REPORT');
+
+  // Helper: determine shift from timestamp
+  const getShiftFromTime = (dateStr: string): string => {
+    const hour = new Date(dateStr).getHours();
+    const pkHour = (hour + 5) % 24;
+    if (pkHour >= 0 && pkHour < 8) return 'Night';
+    if (pkHour >= 8 && pkHour < 14) return 'Morning';
+    return 'Evening';
+  };
+
+  const formatTime = (dateStr: string): string => {
+    try {
+      const d = new Date(dateStr);
+      const h = (d.getHours() + 5) % 24;
+      const m = d.getMinutes();
+      const ampm = h >= 12 ? 'PM' : 'AM';
+      const hh = h % 12 || 12;
+      return `${hh}:${String(m).padStart(2, '0')} ${ampm}`;
+    } catch { return '—'; }
+  };
+
+  // Build all transaction items
+  interface TxnItem { patientName: string; time: string; procedure: string; consultant: string; amount: number; docShare: number; hosShare: string | number; operator: string; category: string; shift: string; }
+  const allTxns: TxnItem[] = [];
+  const hospitalInvoicesAll = transactionsData?.hospitalInvoices || [];
+
+  const isEmergencyInv = (inv: any) =>
+    inv.description?.toLowerCase().includes('emergency') ||
+    inv.emergency_patient_data ||
+    inv.invoice_number?.startsWith('EMG-') ||
+    inv.invoice_number?.startsWith('EMERGENCY-');
+
+  // OPD Consultations
+  hospitalInvoicesAll.filter((inv: any) => inv.invoice_number?.startsWith?.('INV-') && !isEmergencyInv(inv)).forEach((inv: any) => {
+    const p = inv.patients?.profiles;
+    allTxns.push({
+      patientName: p ? `${p.first_name || ''} ${p.last_name || ''}`.trim() : 'Unknown',
+      time: inv.created_at,
+      procedure: inv.description || 'OPD Consultancy',
+      consultant: '—',
+      amount: Number(inv.amount) || 0,
+      docShare: Number(inv.amount) || 0,
+      hosShare: 0,
+      operator: inv.created_by || '—',
+      category: 'OPD',
+      shift: getShiftFromTime(inv.created_at),
+    });
+  });
+
+  // Emergency invoices
+  hospitalInvoicesAll.filter(isEmergencyInv).forEach((inv: any) => {
+    const p = inv.patients?.profiles;
+    const epd = inv.emergency_patient_data as any;
+    allTxns.push({
+      patientName: p ? `${p.first_name || ''} ${p.last_name || ''}`.trim() : (epd?.name || 'Unknown'),
+      time: inv.created_at,
+      procedure: inv.description || 'Emergency',
+      consultant: '—',
+      amount: Number(inv.amount) || 0,
+      docShare: 0,
+      hosShare: Number(inv.amount) || 0,
+      operator: inv.created_by || '—',
+      category: 'Emergency',
+      shift: getShiftFromTime(inv.created_at),
+    });
+  });
+
+  // Emergency appointments
+  (transactionsData?.emergencyAppointments || []).forEach((apt: any) => {
+    const p = apt.patients?.profiles;
+    allTxns.push({
+      patientName: p ? `${p.first_name || ''} ${p.last_name || ''}`.trim() : 'Unknown',
+      time: apt.appointment_date,
+      procedure: 'Emergency Consultation',
+      consultant: apt.doctors?.profiles ? `Dr. ${apt.doctors.profiles.first_name} ${apt.doctors.profiles.last_name}` : '—',
+      amount: Number(apt.consultation_fee_at_time) || 0,
+      docShare: 0,
+      hosShare: Number(apt.consultation_fee_at_time) || 0,
+      operator: '—',
+      category: 'Emergency',
+      shift: getShiftFromTime(apt.appointment_date),
+    });
+  });
+
+  // Lab reports
+  (transactionsData?.labReports || []).forEach((lab: any) => {
+    const p = lab.patients?.profiles;
+    allTxns.push({
+      patientName: p ? `${p.first_name || ''} ${p.last_name || ''}`.trim() : 'Unknown',
+      time: lab.created_at || lab.test_date,
+      procedure: lab.test_name || 'Lab Test',
+      consultant: '—',
+      amount: Number(lab.price) || 0,
+      docShare: 0,
+      hosShare: Number(lab.price) || 0,
+      operator: '—',
+      category: 'Lab',
+      shift: getShiftFromTime(lab.created_at || lab.test_date),
+    });
+  });
+
+  // X-ray reports
+  (transactionsData?.xrayReports || []).forEach((xray: any) => {
+    const p = (xray as any).patients?.profiles;
+    allTxns.push({
+      patientName: p ? `${p.first_name || ''} ${p.last_name || ''}`.trim() : 'Unknown',
+      time: xray.created_at,
+      procedure: xray.test_name || 'X-Ray',
+      consultant: '—',
+      amount: Number(xray.price) || 0,
+      docShare: 0,
+      hosShare: Number(xray.price) || 0,
+      operator: '—',
+      category: 'X-Ray',
+      shift: getShiftFromTime(xray.created_at),
+    });
+  });
+
+  // OT schedules
+  (transactionsData?.otSchedules || []).forEach((ot: any) => {
+    const p = ot.patients?.profiles;
+    allTxns.push({
+      patientName: p ? `${p.first_name || ''} ${p.last_name || ''}`.trim() : 'Unknown',
+      time: ot.created_at,
+      procedure: ot.ot_operations?.operation_name || ot.notes || 'Surgery',
+      consultant: ot.doctor_name || '—',
+      amount: Number(ot.total_cost) || 0,
+      docShare: Number(ot.doctor_expense) || 0,
+      hosShare: (Number(ot.total_cost) || 0) - (Number(ot.doctor_expense) || 0),
+      operator: '—',
+      category: 'OT',
+      shift: getShiftFromTime(ot.created_at),
+    });
+  });
+
+  // Miscellaneous income
+  (transactionsData?.miscellaneousIncome || []).forEach((misc: any) => {
+    allTxns.push({
+      patientName: '—',
+      time: misc.created_at,
+      procedure: misc.description || 'Miscellaneous',
+      consultant: '—',
+      amount: Number(misc.amount) || 0,
+      docShare: 0,
+      hosShare: Number(misc.amount) || 0,
+      operator: misc.created_by || '—',
+      category: 'Miscellaneous',
+      shift: getShiftFromTime(misc.created_at),
+    });
+  });
+
+  // Group by category then shift
+  const categoryOrder = ['OPD', 'Emergency', 'Lab', 'X-Ray', 'OT', 'Miscellaneous'];
+  const shiftOrder = ['Night', 'Morning', 'Evening'];
+
+  // Table column widths for detailed report
+  const detailColWidths = [8, 30, 14, 35, 25, 18, 18, 18, 18];
+  const detailHeaders = ['Sr#', 'Patient', 'Time', 'Procedure', 'Consultant', 'Amount', 'Doc.Share', 'Hos.Share', 'Operator'];
+  const totalTableWidth = detailColWidths.reduce((a, b) => a + b, 0);
+  const detailStartX = (pageWidth - totalTableWidth) / 2;
+
+  if (allTxns.length === 0) {
+    doc.setFont('helvetica', 'italic');
+    doc.setFontSize(10);
+    doc.setTextColor(150, 150, 150);
+    doc.text('No transactions recorded for this period.', pageWidth / 2, yPosition, { align: 'center' });
+    yPosition += 15;
+  } else {
+    let srNo = 0;
+    let grandTotal = 0;
+    let grandDocShare = 0;
+    let grandHosShare = 0;
+
+    // Draw table header
+    const drawDetailHeader = () => {
+      checkNewPage(20);
+      doc.setFillColor(50, 50, 50);
+      doc.rect(detailStartX, yPosition, totalTableWidth, 8, 'F');
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(6);
+      doc.setTextColor(255, 255, 255);
+      let xPos = detailStartX + 1;
+      detailHeaders.forEach((h, i) => {
+        doc.text(h, xPos, yPosition + 5.5);
+        xPos += detailColWidths[i];
+      });
+      yPosition += 8;
+    };
+
+    drawDetailHeader();
+
+    categoryOrder.forEach(cat => {
+      const catItems = allTxns.filter(t => t.category === cat);
+      if (catItems.length === 0) return;
+
+      // Category header row
+      checkNewPage(15);
+      doc.setFillColor(230, 240, 250);
+      doc.rect(detailStartX, yPosition, totalTableWidth, 7, 'F');
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(7);
+      doc.setTextColor(40, 60, 120);
+      doc.text(cat.toUpperCase() + ' SERVICES', detailStartX + 3, yPosition + 5);
+      yPosition += 7;
+
+      let catTotal = 0, catDoc = 0, catHos = 0;
+
+      shiftOrder.forEach(shift => {
+        const shiftItems = catItems.filter(t => t.shift === shift).sort((a, b) => new Date(a.time).getTime() - new Date(b.time).getTime());
+        if (shiftItems.length === 0) return;
+
+        // Shift sub-header
+        if (yPosition + 15 > pageHeight - 20) { doc.addPage(); yPosition = 15; drawDetailHeader(); }
+        doc.setFillColor(245, 245, 245);
+        doc.rect(detailStartX, yPosition, totalTableWidth, 6, 'F');
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(6);
+        doc.setTextColor(100, 100, 100);
+        doc.text(`  ${shift}`, detailStartX + 2, yPosition + 4.5);
+        yPosition += 6;
+
+        let shiftTotal = 0, shiftDoc = 0, shiftHos = 0;
+
+        shiftItems.forEach(item => {
+          srNo++;
+          if (yPosition + 8 > pageHeight - 20) { doc.addPage(); yPosition = 15; drawDetailHeader(); }
+
+          // Alternate row bg
+          if (srNo % 2 === 0) {
+            doc.setFillColor(252, 252, 252);
+            doc.rect(detailStartX, yPosition, totalTableWidth, 7, 'F');
+          }
+
+          doc.setFont('helvetica', 'normal');
+          doc.setFontSize(6);
+          doc.setTextColor(40, 40, 40);
+
+          let xPos = detailStartX + 1;
+          const rowData = [
+            String(srNo),
+            (item.patientName || '').substring(0, 18),
+            formatTime(item.time),
+            (item.procedure || '').substring(0, 22),
+            (item.consultant || '').substring(0, 16),
+            formatPkrAmount(item.amount),
+            item.docShare > 0 ? formatPkrAmount(item.docShare) : '—',
+            Number(item.hosShare) > 0 ? formatPkrAmount(Number(item.hosShare)) : '—',
+            (item.operator || '—').substring(0, 12),
+          ];
+
+          rowData.forEach((cell, i) => {
+            if (i >= 5 && i <= 7) {
+              doc.text(cell, xPos + detailColWidths[i] - 2, yPosition + 5, { align: 'right' });
+            } else {
+              doc.text(cell, xPos, yPosition + 5);
+            }
+            xPos += detailColWidths[i];
+          });
+
+          shiftTotal += item.amount;
+          shiftDoc += item.docShare;
+          shiftHos += Number(item.hosShare);
+          yPosition += 7;
+        });
+
+        // Shift sub-total
+        if (yPosition + 8 > pageHeight - 20) { doc.addPage(); yPosition = 15; drawDetailHeader(); }
+        doc.setFillColor(240, 240, 240);
+        doc.rect(detailStartX, yPosition, totalTableWidth, 6, 'F');
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(6);
+        doc.setTextColor(80, 80, 80);
+        doc.text(`${shift} / Sub Total:`, detailStartX + 3, yPosition + 4.5);
+        const stX = detailStartX + detailColWidths[0] + detailColWidths[1] + detailColWidths[2] + detailColWidths[3] + detailColWidths[4];
+        doc.text(formatPkrAmount(shiftTotal), stX + detailColWidths[5] - 2, yPosition + 4.5, { align: 'right' });
+        doc.text(formatPkrAmount(shiftDoc), stX + detailColWidths[5] + detailColWidths[6] - 2, yPosition + 4.5, { align: 'right' });
+        doc.text(formatPkrAmount(shiftHos), stX + detailColWidths[5] + detailColWidths[6] + detailColWidths[7] - 2, yPosition + 4.5, { align: 'right' });
+        yPosition += 6;
+
+        catTotal += shiftTotal;
+        catDoc += shiftDoc;
+        catHos += shiftHos;
+      });
+
+      // Category sub-total
+      if (yPosition + 8 > pageHeight - 20) { doc.addPage(); yPosition = 15; drawDetailHeader(); }
+      doc.setFillColor(220, 230, 245);
+      doc.rect(detailStartX, yPosition, totalTableWidth, 7, 'F');
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(6.5);
+      doc.setTextColor(40, 60, 120);
+      doc.text(`${cat} / Sub Total:`, detailStartX + 3, yPosition + 5);
+      const ctX = detailStartX + detailColWidths[0] + detailColWidths[1] + detailColWidths[2] + detailColWidths[3] + detailColWidths[4];
+      doc.text(formatPkrAmount(catTotal), ctX + detailColWidths[5] - 2, yPosition + 5, { align: 'right' });
+      doc.text(formatPkrAmount(catDoc), ctX + detailColWidths[5] + detailColWidths[6] - 2, yPosition + 5, { align: 'right' });
+      doc.text(formatPkrAmount(catHos), ctX + detailColWidths[5] + detailColWidths[6] + detailColWidths[7] - 2, yPosition + 5, { align: 'right' });
+      yPosition += 8;
+
+      grandTotal += catTotal;
+      grandDocShare += catDoc;
+      grandHosShare += catHos;
+    });
+
+    // Grand total
+    checkNewPage(12);
+    doc.setFillColor(40, 40, 40);
+    doc.rect(detailStartX, yPosition, totalTableWidth, 8, 'F');
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(7);
+    doc.setTextColor(255, 255, 255);
+    doc.text('GRAND TOTAL:', detailStartX + 3, yPosition + 5.5);
+    const gtX = detailStartX + detailColWidths[0] + detailColWidths[1] + detailColWidths[2] + detailColWidths[3] + detailColWidths[4];
+    doc.text(formatPkrAmount(grandTotal), gtX + detailColWidths[5] - 2, yPosition + 5.5, { align: 'right' });
+    doc.text(formatPkrAmount(grandDocShare), gtX + detailColWidths[5] + detailColWidths[6] - 2, yPosition + 5.5, { align: 'right' });
+    doc.text(formatPkrAmount(grandHosShare), gtX + detailColWidths[5] + detailColWidths[6] + detailColWidths[7] - 2, yPosition + 5.5, { align: 'right' });
+    yPosition += 15;
+  }
+
+  // ===========================================
+  // EXPENSES DETAIL SECTION
+  // ===========================================
+  if (transactionsData?.expenses?.length > 0) {
+    drawSectionHeader('EXPENSES DETAIL');
+    
+    const expenseHeaders = ['Sr#', 'Category', 'Description / Bill', 'Date & Time', 'Amount'];
+    const expenseColWidths = [10, 35, 65, 30, 30];
+    const expenseRows: string[][] = transactionsData.expenses.map((exp: any, i: number) => [
+      String(i + 1),
+      exp.category || '—',
+      exp.description || '—',
+      exp.created_at ? formatTime(exp.created_at) + ' ' + new Date(exp.expense_date).toLocaleDateString() : new Date(exp.expense_date).toLocaleDateString(),
+      formatPkrAmount(exp.amount)
+    ]);
+
+    const totalExp = transactionsData.expenses.reduce((s: number, e: any) => s + (e.amount || 0), 0);
+    expenseRows.push(['', '', '', 'Total Expenses:', formatPkrAmount(totalExp)]);
+
+    drawTable(expenseHeaders, expenseRows, expenseColWidths);
+  }
+
+  // ===========================================
+  // REFUNDS DETAIL SECTION
+  // ===========================================
+  if (transactionsData?.refunds?.length > 0) {
+    drawSectionHeader('REFUNDS & RETURNS DETAIL');
+    
+    const refundHeaders = ['Sr#', 'Refund Type', 'Description / Bill Reference', 'Date & Time', 'Amount'];
+    const refundColWidths = [10, 35, 65, 30, 30];
+    const refundRows: string[][] = transactionsData.refunds.map((ref: any, i: number) => [
+      String(i + 1),
+      (ref.refund_type || '').replace(/_/g, ' '),
+      ref.description || '—',
+      ref.created_at ? formatTime(ref.created_at) + ' ' + new Date(ref.created_at).toLocaleDateString() : '—',
+      formatPkrAmount(ref.amount)
+    ]);
+
+    const totalRef = transactionsData.refunds.reduce((s: number, r: any) => s + (r.amount || 0), 0);
+    refundRows.push(['', '', '', 'Total Refunds:', formatPkrAmount(totalRef)]);
+
+    drawTable(refundHeaders, refundRows, refundColWidths);
+  }
+
+  // ===========================================
   // PHARMACY SECTION
   // ===========================================
   drawSectionHeader('PHARMACY TRANSACTIONS');
 
-  // Pharmacy Sales Summary
   if (transactionsData?.pharmacyInvoices?.length > 0) {
-    const totalInvoices = transactionsData.pharmacyInvoices.length;
-    const totalItems = transactionsData.pharmacyInvoices.reduce((sum: number, invoice: any) =>
-      sum + (invoice.pharmacy_invoice_items?.length || 0), 0);
-    
-    // Calculate detailed breakdown
     const positiveInvoices = transactionsData.pharmacyInvoices.filter((inv: any) => (inv.final_amount || 0) >= 0);
     const negativeInvoices = transactionsData.pharmacyInvoices.filter((inv: any) => (inv.final_amount || 0) < 0);
     
     const salesCount = positiveInvoices.length;
     const returnsCount = negativeInvoices.length;
-    
     const grossSalesRevenue = positiveInvoices.reduce((sum: number, inv: any) => sum + (inv.final_amount || 0), 0);
     const returnsAmount = Math.abs(negativeInvoices.reduce((sum: number, inv: any) => sum + (inv.final_amount || 0), 0));
     const netRevenue = grossSalesRevenue - returnsAmount;
     
-    // Calculate gross profit from sales
     const grossProfit = positiveInvoices.reduce((totalProfit: number, invoice: any) => {
-      const invoiceProfit = (invoice.pharmacy_invoice_items || []).reduce((itemsProfit: number, item: any) => {
-        if (item.medicines && item.medicines.selling_price && item.medicines.purchase_price) {
-          const profitPerUnit = item.medicines.selling_price - item.medicines.purchase_price;
-          return itemsProfit + (profitPerUnit * item.quantity);
+      return totalProfit + (invoice.pharmacy_invoice_items || []).reduce((itemsProfit: number, item: any) => {
+        if (item.medicines?.selling_price && item.medicines?.purchase_price) {
+          return itemsProfit + ((item.medicines.selling_price - item.medicines.purchase_price) * item.quantity);
         }
         return itemsProfit;
       }, 0);
-      return totalProfit + invoiceProfit;
     }, 0);
     
-    // Calculate profit lost in returns
     const profitLostInReturns = negativeInvoices.reduce((totalProfit: number, invoice: any) => {
-      const invoiceProfit = (invoice.pharmacy_invoice_items || []).reduce((itemsProfit: number, item: any) => {
-        if (item.medicines && item.medicines.selling_price && item.medicines.purchase_price) {
-          const profitPerUnit = item.medicines.selling_price - item.medicines.purchase_price;
-          return itemsProfit + (profitPerUnit * Math.abs(item.quantity));
+      return totalProfit + (invoice.pharmacy_invoice_items || []).reduce((itemsProfit: number, item: any) => {
+        if (item.medicines?.selling_price && item.medicines?.purchase_price) {
+          return itemsProfit + ((item.medicines.selling_price - item.medicines.purchase_price) * Math.abs(item.quantity));
         }
         return itemsProfit;
       }, 0);
-      return totalProfit + invoiceProfit;
     }, 0);
     
     const netProfit = grossProfit - profitLostInReturns;
@@ -1227,12 +1580,10 @@ export const generateDailyClosingPDF = async (data: {
     const pharmacySummaryHeaders = ['Summary', 'Count', 'Amount'];
     const pharmacySummaryColWidths = [80, 30, 40];
     const pharmacySummaryRows = [
-      ['Total Invoices (Sales + Returns)', `${totalInvoices} (${salesCount} + ${returnsCount})`, ''],
       ['Gross Sales Revenue', salesCount.toString(), formatPkrAmount(grossSalesRevenue)],
       ['Returns Amount', returnsCount.toString(), `(${formatPkrAmount(returnsAmount)})`],
       ['Net Revenue', '-', formatPkrAmount(netRevenue)],
-      ['Total Items Sold', totalItems.toString(), '-'],
-      ['Gross Profit (from sales)', '-', formatPkrAmount(grossProfit)],
+      ['Gross Profit', '-', formatPkrAmount(grossProfit)],
       ['Profit Lost in Returns', '-', `(${formatPkrAmount(profitLostInReturns)})`],
       ['Net Profit', '-', formatPkrAmount(netProfit)]
     ];
@@ -1243,306 +1594,123 @@ export const generateDailyClosingPDF = async (data: {
     doc.setFontSize(10);
     doc.setTextColor(150, 150, 150);
     doc.text('No pharmacy transactions recorded for this date.', pageWidth / 2, yPosition, { align: 'center' });
-    yPosition += 25;
+    yPosition += 15;
   }
 
-  // ===========================================
-  // HOSPITAL SERVICES SECTION
-  // ===========================================
-  drawSectionHeader('HOSPITAL SERVICES');
-
-  // Hospital Services Summary
-  const hospitalInvoicesAll = transactionsData?.hospitalInvoices || [];
-  const labInvoicesHS = hospitalInvoicesAll.filter((inv: any) => inv.invoice_number?.startsWith?.('LAB-'));
-  const labCount = labInvoicesHS.length;
-  const xrayCount = transactionsData?.xrayReports?.length || 0;
-  const otCount = transactionsData?.otSchedules?.length || 0;
-  const emergencyAppointmentCount = transactionsData?.emergencyAppointments?.length || 0;
-  
-  // Count emergency invoices from hospital invoices
-  const emergencyInvoices = transactionsData?.hospitalInvoices?.filter((inv: any) => 
-    inv.description?.toLowerCase().includes('emergency') || 
-    inv.emergency_patient_data ||
-    inv.invoice_number?.startsWith('EMG-') ||
-    inv.invoice_number?.startsWith('EMERGENCY-')
-  ) || [];
-  const emergencyInvoiceCount = emergencyInvoices.length;
-  const totalEmergencyCount = emergencyAppointmentCount + emergencyInvoiceCount;
-  
-  const labRevenue = labInvoicesHS.reduce((sum: number, inv: any) => sum + (Number(inv.amount) || 0), 0);
-  const xrayRevenue = transactionsData?.xrayReports?.reduce((sum: number, xray: any) => sum + (xray.price || 0), 0) || 0;
-  const otRevenue = transactionsData?.otSchedules?.reduce((sum: number, ot: any) => sum + ((ot.total_cost || 0) - (ot.doctor_expense || 0)), 0) || 0;
-  const emergencyAppointmentRevenue = transactionsData?.emergencyAppointments?.reduce((sum: number, emergency: any) => sum + (emergency.consultation_fee_at_time || 0), 0) || 0;
-  const emergencyInvoiceRevenue = emergencyInvoices.reduce((sum: number, inv: any) => sum + (inv.amount || 0), 0);
-  const totalEmergencyRevenue = emergencyAppointmentRevenue + emergencyInvoiceRevenue;
-  
-  // Calculate correct hospital services revenue (excluding pharmacy profit and misc income)
-  const hospitalServicesRevenue = labRevenue + xrayRevenue + otRevenue + totalEmergencyRevenue;
-
-  if (labCount > 0 || xrayCount > 0 || otCount > 0 || totalEmergencyCount > 0) {
-    const servicesSummaryHeaders = ['Service Type', 'Count', 'Revenue'];
-    const servicesSummaryColWidths = [80, 30, 40];
-    const servicesSummaryRows = [];
-
-    if (labCount > 0) {
-      servicesSummaryRows.push(['Laboratory Tests', labCount.toString(), formatPkrAmount(labRevenue)]);
-    }
-    if (xrayCount > 0) {
-      servicesSummaryRows.push(['X-ray Services', xrayCount.toString(), formatPkrAmount(xrayRevenue)]);
-    }
-    if (otCount > 0) {
-      servicesSummaryRows.push(['OT Operations', otCount.toString(), formatPkrAmount(otRevenue)]);
-    }
-    if (totalEmergencyCount > 0) {
-      servicesSummaryRows.push(['Emergency Services', totalEmergencyCount.toString(), formatPkrAmount(totalEmergencyRevenue)]);
-    }
-    
-    servicesSummaryRows.push(['Total Hospital Services', (labCount + xrayCount + otCount + totalEmergencyCount).toString(), formatPkrAmount(hospitalServicesRevenue)]);
-
-    drawTable(servicesSummaryHeaders, servicesSummaryRows, servicesSummaryColWidths);
-  } else {
-    doc.setFont('helvetica', 'italic');
-    doc.setFontSize(10);
-    doc.setTextColor(150, 150, 150);
-    doc.text('No hospital services recorded for this date.', pageWidth / 2, yPosition, { align: 'center' });
-    yPosition += 25;
-  }
-
-  // ===========================================
-  // DOCTOR REVENUE SECTION
-  // ===========================================
-  checkNewPage(80);
-  drawSectionHeader('DOCTOR REVENUE');
-
-  // Calculate doctor consultation revenue from hospital invoices (INV- prefix, non-emergency)
-  const doctorConsultationInvoices = hospitalInvoicesAll.filter((inv: any) =>
-    inv.invoice_number?.startsWith?.('INV-') &&
-    !inv.description?.toLowerCase?.().includes('emergency') &&
-    !inv.emergency_patient_data &&
-    !inv.invoice_number?.startsWith?.('EMG-') &&
-    !inv.invoice_number?.startsWith?.('EMERGENCY-')
-  );
-  const doctorConsultationRevenue = doctorConsultationInvoices.reduce((sum: number, inv: any) => sum + (Number(inv.amount) || 0), 0);
-  const doctorOTExpense = transactionsData?.otSchedules?.reduce((sum: number, ot: any) => sum + (ot.doctor_expense || 0), 0) || 0;
-  const totalDoctorRevenue = doctorConsultationRevenue + doctorOTExpense;
-
-  if (totalDoctorRevenue > 0) {
-    const doctorRevenueHeaders = ['Revenue Type', 'Count', 'Amount'];
-    const doctorRevenueColWidths = [80, 30, 40];
-    const doctorRevenueRows: string[][] = [];
-
-    if (doctorConsultationRevenue > 0) {
-      doctorRevenueRows.push(['Consultation Fees', doctorConsultationInvoices.length.toString(), formatPkrAmount(doctorConsultationRevenue)]);
-    }
-    if (doctorOTExpense > 0) {
-      doctorRevenueRows.push(['OT Doctor Fees', (transactionsData?.otSchedules?.length || 0).toString(), formatPkrAmount(doctorOTExpense)]);
-    }
-    doctorRevenueRows.push(['Total Doctor Revenue', '', formatPkrAmount(totalDoctorRevenue)]);
-
-    drawTable(doctorRevenueHeaders, doctorRevenueRows, doctorRevenueColWidths);
-  } else {
-    doc.setFont('helvetica', 'italic');
-    doc.setFontSize(10);
-    doc.setTextColor(150, 150, 150);
-    doc.text('No doctor revenue recorded for this date.', pageWidth / 2, yPosition, { align: 'center' });
-    yPosition += 25;
-  }
-
+  // Pharmacy Expenses
   if (transactionsData?.pharmacyExpenses?.length > 0) {
     drawSectionHeader('PHARMACY EXPENSES');
-
-    const totalPharmacyExpenses = transactionsData.pharmacyExpenses.reduce((sum: number, exp: any) => sum + exp.amount, 0);
-    const expenseCount = transactionsData.pharmacyExpenses.length;
-    
-    const pharmacyExpensesSummaryHeaders = ['Summary', 'Count', 'Amount'];
-    const pharmacyExpensesSummaryColWidths = [80, 30, 40];
-    const pharmacyExpensesSummaryRows = [
-      ['Total Pharmacy Bills', expenseCount.toString(), formatPkrAmount(totalPharmacyExpenses)],
-      ['Bills Breakdown', 'See Details Below', '-']
-    ];
-
-    drawTable(pharmacyExpensesSummaryHeaders, pharmacyExpensesSummaryRows, pharmacyExpensesSummaryColWidths);
-    
-    yPosition += 10;
-    
-    // Detailed pharmacy expenses
     const pharmacyBillHeaders = ['Type', 'Bill No.', 'Description', 'Amount', 'Date'];
     const pharmacyBillColWidths = [35, 25, 55, 30, 25];
-    const pharmacyBillRows: string[][] = [];
-
-    transactionsData.pharmacyExpenses.forEach((expense: any) => {
-      const typeDisplay = expense.expense_type === 'hospital_profit_withdrawal' 
-        ? 'Profit Withdrawal' 
-        : 'Bill Payment';
-      
-      pharmacyBillRows.push([
-        typeDisplay,
-        expense.bill_number || 'N/A',
-        expense.description || '',
-        formatPkrAmount(expense.amount),
-        new Date(expense.expense_date).toLocaleDateString()
-      ]);
-    });
-
+    const pharmacyBillRows: string[][] = transactionsData.pharmacyExpenses.map((expense: any) => [
+      expense.expense_type === 'hospital_profit_withdrawal' ? 'Profit Withdrawal' : 'Bill Payment',
+      expense.bill_number || 'N/A',
+      expense.description || '',
+      formatPkrAmount(expense.amount),
+      new Date(expense.expense_date).toLocaleDateString()
+    ]);
     drawTable(pharmacyBillHeaders, pharmacyBillRows, pharmacyBillColWidths);
-  }
-
-  // ===========================================
-  // EXPENSES SECTION
-  // ===========================================
-  if (transactionsData?.expenses?.length > 0) {
-    drawSectionHeader('DAILY EXPENSES');
-
-    const expenseHeaders = ['Category', 'Description', 'Amount', 'Date'];
-    const expenseColWidths = [40, 70, 30, 30];
-    const expenseRows: string[][] = [];
-
-    transactionsData.expenses.forEach((expense: any) => {
-      expenseRows.push([
-        expense.category,
-        expense.description,
-        formatPkrAmount(expense.amount),
-        new Date(expense.expense_date).toLocaleDateString()
-      ]);
-    });
-
-    drawTable(expenseHeaders, expenseRows, expenseColWidths);
-  }
-
-  // ===========================================
-  // REFUNDS SECTION
-  // ===========================================
-  if (transactionsData?.refunds?.length > 0) {
-    drawSectionHeader('REFUNDS & RETURNS');
-
-    const refundHeaders = ['Type', 'Description', 'Amount', 'Date'];
-    const refundColWidths = [40, 70, 30, 30];
-    const refundRows: string[][] = [];
-
-    transactionsData.refunds.forEach((refund: any) => {
-      refundRows.push([
-        refund.refund_type,
-        refund.description,
-        formatPkrAmount(refund.amount),
-        new Date(refund.created_at).toLocaleDateString()
-      ]);
-    });
-
-    drawTable(refundHeaders, refundRows, refundColWidths);
   }
 
   // ===========================================
   // FINANCIAL SUMMARY SECTION
   // ===========================================
   checkNewPage(100);
-  
   drawSectionHeader('FINANCIAL SUMMARY');
 
-  // Pharmacy Account Summary with full details
+  // Pharmacy Account Summary
   drawSubHeader('Pharmacy Account Summary');
-  
-  // Get pharmacy account data from transactions
   const pharmacyStartingBalance = transactionsData?.pharmacyAccount?.starting_balance || 0;
   const pharmacyExpenses = transactionsData?.pharmacyExpenses?.reduce((sum: number, exp: any) => sum + exp.amount, 0) || 0;
   const netPharmacyBalance = pharmacyStartingBalance + data.pharmacyProfit - pharmacyExpenses;
   
-  const pharmacySummaryHeaders = ['Description', 'Amount'];
-  const pharmacySummaryColWidths = [130, 50]; // Increased width for description
-  const pharmacySummaryRows = [
-    ['Opening Balance', formatPkrAmount(pharmacyStartingBalance)],
-    ['Todays Sales Revenue', formatPkrAmount(data.pharmacyRevenue)],
-    ['Todays Gross Profit', formatPkrAmount(data.pharmacyProfit)],
-    ['Bills Paid Today', `(${formatPkrAmount(pharmacyExpenses)})`],
-    ['Current Account Balance', formatPkrAmount(netPharmacyBalance)],
-    ['Total Medicines Stock Value', formatPkrAmount(transactionsData?.totalStockValue || 0)]
-  ];
-
-  drawTable(pharmacySummaryHeaders, pharmacySummaryRows, pharmacySummaryColWidths);
+  drawTable(
+    ['Description', 'Amount'],
+    [
+      ['Opening Balance', formatPkrAmount(pharmacyStartingBalance)],
+      ['Todays Sales Revenue', formatPkrAmount(data.pharmacyRevenue)],
+      ['Todays Gross Profit', formatPkrAmount(data.pharmacyProfit)],
+      ['Bills Paid Today', `(${formatPkrAmount(pharmacyExpenses)})`],
+      ['Current Account Balance', formatPkrAmount(netPharmacyBalance)],
+      ['Total Medicines Stock Value', formatPkrAmount(transactionsData?.totalStockValue || 0)]
+    ],
+    [130, 50]
+  );
   
   yPosition += 15;
-  
-  // Overall Summary table with better formatting
+
+  // Overall Summary
   drawSubHeader('Overall Daily Summary');
   
-  const summaryHeaders = ['Description', 'Amount'];
-  const summaryColWidths = [130, 50]; // Increased width for description
-  // Calculate correct values for summary (recalculate to ensure accuracy)
-  const correctLabRevenue = (transactionsData?.hospitalInvoices || [])
+  const correctLabRevenue = hospitalInvoicesAll
     .filter((inv: any) => inv.invoice_number?.startsWith?.('LAB-'))
     .reduce((sum: number, inv: any) => sum + (Number(inv.amount) || 0), 0);
   const correctXrayRevenue = transactionsData?.xrayReports?.reduce((sum: number, xray: any) => sum + (xray.price || 0), 0) || 0;
   const correctOtRevenue = transactionsData?.otSchedules?.reduce((sum: number, ot: any) => sum + ((ot.total_cost || 0) - (ot.doctor_expense || 0)), 0) || 0;
-  // Use the same totalEmergencyRevenue calculation (includes both appointments and invoices)
+  const emergencyAppointmentRevenue = transactionsData?.emergencyAppointments?.reduce((sum: number, e: any) => sum + (e.consultation_fee_at_time || 0), 0) || 0;
+  const emergencyInvoiceRevenue = hospitalInvoicesAll.filter(isEmergencyInv).reduce((sum: number, inv: any) => sum + (Number(inv.amount) || 0), 0);
+  const totalEmergencyRevenue = emergencyAppointmentRevenue + emergencyInvoiceRevenue;
   const correctMiscIncome = transactionsData?.miscellaneousIncome?.reduce((sum: number, income: any) => sum + (income.amount || 0), 0) || 0;
-  
-  // Hospital services revenue should match the HOSPITAL SERVICES section calculation
   const correctHospitalServicesRevenue = correctLabRevenue + correctXrayRevenue + correctOtRevenue + totalEmergencyRevenue + correctMiscIncome;
-  
-  const summaryRows = [
-    ['Hospital Services Revenue', formatPkrAmount(correctHospitalServicesRevenue)],
-    ['Doctor Revenue (Consultation + OT Fees)', formatPkrAmount(totalDoctorRevenue)],
-    ['Pharmacy Revenue', formatPkrAmount(data.pharmacyRevenue)],
-    ['Pharmacy Profit', formatPkrAmount(data.pharmacyProfit)],
-    ['Total Daily Expenses', `(${formatPkrAmount(data.totalExpenses)})`],
-    ['Total Refunds and Returns', `(${formatPkrAmount(data.totalRefunds)})`]
-  ];
 
-  drawTable(summaryHeaders, summaryRows, summaryColWidths);
+  const doctorConsultationRevenue = hospitalInvoicesAll
+    .filter((inv: any) => inv.invoice_number?.startsWith?.('INV-') && !isEmergencyInv(inv))
+    .reduce((sum: number, inv: any) => sum + (Number(inv.amount) || 0), 0);
+  const doctorOTExpense = transactionsData?.otSchedules?.reduce((sum: number, ot: any) => sum + (ot.doctor_expense || 0), 0) || 0;
+  const totalDoctorRevenue = doctorConsultationRevenue + doctorOTExpense;
+
+  drawTable(
+    ['Description', 'Amount'],
+    [
+      ['Hospital Services Revenue', formatPkrAmount(correctHospitalServicesRevenue)],
+      ['Doctor Revenue (Consultation + OT Fees)', formatPkrAmount(totalDoctorRevenue)],
+      ['Pharmacy Revenue', formatPkrAmount(data.pharmacyRevenue)],
+      ['Pharmacy Profit', formatPkrAmount(data.pharmacyProfit)],
+      ['Total Daily Expenses', `(${formatPkrAmount(data.totalExpenses)})`],
+      ['Total Refunds and Returns', `(${formatPkrAmount(data.totalRefunds)})`]
+    ],
+    [130, 50]
+  );
 
   // ===========================================
   // HOSPITAL CLOSING BALANCE CALCULATION
   // ===========================================
   checkNewPage(120);
-  
   drawSectionHeader('HOSPITAL CLOSING BALANCE CALCULATION');
 
-  // ALWAYS use recalculated hospital revenue from transactions (not stored value)
-  // This ensures all PDFs (new and historical) show correct calculations
-  // Hospital revenue = lab + xray + OT + emergency + misc income (NO pharmacy profit)
-  const computedHospitalRevenue = typeof correctHospitalServicesRevenue === 'number'
-    ? correctHospitalServicesRevenue
-    : data.hospitalRevenue;
+  const computedHospitalRevenue = correctHospitalServicesRevenue;
   const hospitalNetProfit = computedHospitalRevenue - data.totalExpenses - data.totalRefunds;
   const newClosingBalance = previousClosingBalance + hospitalNetProfit;
 
-  // Hospital Balance Summary
-  const balanceHeaders = ['Description', 'Amount'];
-  const balanceColWidths = [130, 50]; // Increased width for description
-  const balanceRows = [
-    ['Opening Balance (Previous Day)', formatPkrAmount(previousClosingBalance)],
-    ['Todays Hospital Revenue', formatPkrAmount(computedHospitalRevenue)],
-    ['Todays Hospital Expenses', `(${formatPkrAmount(data.totalExpenses)})`],
-    ['Todays Refunds', `(${formatPkrAmount(data.totalRefunds)})`],
-    ['Todays Hospital Net Profit/Loss', formatPkrAmount(hospitalNetProfit)]
-  ];
+  drawTable(
+    ['Description', 'Amount'],
+    [
+      ['Opening Balance (Previous Day)', formatPkrAmount(previousClosingBalance)],
+      ['Todays Hospital Revenue', formatPkrAmount(computedHospitalRevenue)],
+      ['Todays Hospital Expenses', `(${formatPkrAmount(data.totalExpenses)})`],
+      ['Todays Refunds', `(${formatPkrAmount(data.totalRefunds)})`],
+      ['Todays Hospital Net Profit/Loss', formatPkrAmount(hospitalNetProfit)]
+    ],
+    [130, 50]
+  );
 
-  drawTable(balanceHeaders, balanceRows, balanceColWidths);
-
-  // New Closing Balance - Special formatting
+  // New Closing Balance box
   yPosition += 15;
-  const newClosingBalanceY = yPosition;
-  
-  // Draw highlighted box for new closing balance
   doc.setFillColor(240, 255, 240);
   doc.setDrawColor(100, 200, 100);
   doc.setLineWidth(2);
-  doc.rect(20, newClosingBalanceY - 5, pageWidth - 40, 20, 'FD');
-  
+  doc.rect(20, yPosition - 5, pageWidth - 40, 20, 'FD');
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(16);
   doc.setTextColor(0, 100, 0);
-  doc.text('NEW CLOSING BALANCE:', 30, newClosingBalanceY + 8);
-  doc.text(formatPkrAmount(newClosingBalance), pageWidth - 30, newClosingBalanceY + 8, { align: 'right' });
-
+  doc.text('NEW CLOSING BALANCE:', 30, yPosition + 8);
+  doc.text(formatPkrAmount(newClosingBalance), pageWidth - 30, yPosition + 8, { align: 'right' });
   yPosition += 35;
 
-  // Save the new closing balance to database ONLY if this is a new closing (not viewing historical)
-  // If transactionsData was provided, this is a historical view and should not update the database
+  // Save closing balance (only for new closings)
   if (!data.transactionsData) {
     try {
       const { supabase } = await import('@/integrations/supabase/client');
-      
-      // Update/create only this closing date's record
       const { data: existingDateRecord } = await supabase
         .from('hospital_closing_balance')
         .select('id')
@@ -1552,33 +1720,24 @@ export const generateDailyClosingPDF = async (data: {
         .maybeSingle();
 
       if (existingDateRecord) {
-        await supabase
-          .from('hospital_closing_balance')
-          .update({
-            closing_balance: newClosingBalance,
-            notes: `Updated from daily closing on ${data.closingDate}`,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', existingDateRecord.id);
+        await supabase.from('hospital_closing_balance').update({
+          closing_balance: newClosingBalance,
+          notes: `Updated from daily closing on ${data.closingDate}`,
+          updated_at: new Date().toISOString()
+        }).eq('id', existingDateRecord.id);
       } else {
-        await supabase
-          .from('hospital_closing_balance')
-          .insert({
-            closing_date: data.closingDate,
-            closing_balance: newClosingBalance,
-            notes: `First closing balance created on ${data.closingDate}`
-          });
+        await supabase.from('hospital_closing_balance').insert({
+          closing_date: data.closingDate,
+          closing_balance: newClosingBalance,
+          notes: `First closing balance created on ${data.closingDate}`
+        });
       }
     } catch (error) {
       console.error('Error updating closing balance:', error);
     }
-  } else {
-    console.log('Historical closing view - skipping database update for closing balance');
   }
 
-  // ===========================================
-  // FOOTER
-  // ===========================================
+  // Footer
   yPosition += 15;
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(10);
@@ -1587,7 +1746,6 @@ export const generateDailyClosingPDF = async (data: {
   yPosition += 8;
   doc.text('Hospital closing balance includes only hospital revenue, expenses, and refunds.', pageWidth / 2, yPosition, { align: 'center' });
   yPosition += 8;
-  
   doc.setFont('helvetica', 'italic');
   doc.setFontSize(9);
   doc.text('This report was generated automatically by the hospital management system.', pageWidth / 2, yPosition, { align: 'center' });
