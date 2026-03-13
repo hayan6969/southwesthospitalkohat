@@ -1005,6 +1005,22 @@ export default function FinanceDaily() {
           </CardContent>
         </Card>}
 
+      {/* Detailed OPD-Style Report */}
+      {detailedData && (
+        <DetailedDailyReport
+          hospitalInvoices={detailedData.hospitalInvoices || []}
+          labReports={detailedData.labReports || []}
+          xrayReports={detailedData.xrayReports || []}
+          otSchedules={detailedData.otSchedules || []}
+          emergencyAppointments={detailedData.emergencyAppointments || []}
+          expenses={detailedData.expenses || []}
+          refunds={detailedData.refunds || []}
+          miscellaneousIncome={detailedData.miscellaneousIncome || []}
+          staffProfiles={staffProfiles || []}
+          reportDate={format(selectedDate, 'EEEE, MMMM d, yyyy')}
+        />
+      )}
+
       {/* Daily Closing Dialog */}
       <Dialog open={showClosingDialog} onOpenChange={setShowClosingDialog}>
         <DialogContent className="max-w-6xl max-h-[90vh]">
