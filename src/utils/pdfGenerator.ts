@@ -1480,6 +1480,7 @@ export const generateDailyClosingPDF = async (data: {
   
   const summaryRows = [
     ['Hospital Services Revenue', formatPkrAmount(correctHospitalServicesRevenue)],
+    ['Doctor Revenue (Consultation + OT Fees)', formatPkrAmount(totalDoctorRevenue)],
     ['Pharmacy Revenue', formatPkrAmount(data.pharmacyRevenue)],
     ['Pharmacy Profit', formatPkrAmount(data.pharmacyProfit)],
     ['Total Daily Expenses', `(${formatPkrAmount(data.totalExpenses)})`],
