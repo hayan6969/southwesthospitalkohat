@@ -1163,7 +1163,34 @@ export default function FinanceDaily() {
                 </div>
               </div>
 
-              {/* Expenses Section */}
+              {/* Doctor Revenue Section */}
+              <div>
+                <h3 className="text-xl font-semibold mb-4 flex items-center gap-2">
+                  <Banknote className="h-5 w-5 text-indigo-600" />
+                  Doctor Revenue
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <Card>
+                    <CardContent className="p-4">
+                      <div className="text-sm text-muted-foreground">Consultation Fees</div>
+                      <div className="text-lg font-bold">{formatPkrAmount(dailyData?.consultationRevenue || 0)}</div>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardContent className="p-4">
+                      <div className="text-sm text-muted-foreground">OT Doctor Fees</div>
+                      <div className="text-lg font-bold">{formatPkrAmount(dailyData?.otDoctorExpense || 0)}</div>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardContent className="p-4">
+                      <div className="text-sm text-muted-foreground">Total Doctor Revenue</div>
+                      <div className="text-lg font-bold text-indigo-600">{formatPkrAmount(dailyData?.doctorRevenue || 0)}</div>
+                    </CardContent>
+                  </Card>
+                </div>
+              </div>
+
               {detailedData?.expenses && detailedData.expenses.length > 0 && <div>
                   <h3 className="text-xl font-semibold mb-4 flex items-center gap-2">
                     <Receipt className="h-5 w-5 text-orange-600" />
