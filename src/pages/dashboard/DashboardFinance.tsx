@@ -1,18 +1,21 @@
 
 import { StatsCard } from "@/components/StatsCard";
-import { Calculator, TrendingUp, Users, Receipt, Banknote, Minus, Pill, TrendingDown, Building2, Stethoscope, FlaskConical, Syringe, AlertTriangle, Activity } from "lucide-react";
+import { Calculator, TrendingUp, Users, Receipt, Banknote, Minus, Pill, TrendingDown, Building2, Stethoscope, FlaskConical, Syringe, AlertTriangle, Activity, FileSpreadsheet, Scan } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useInvoices, useStats } from "@/hooks/useDatabase";
 import { formatPkrAmount } from "@/utils/currency";
 import { useHospitalSettings } from "@/hooks/useHospitalSettings";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
+import { format } from "date-fns";
+import { formatInPakistanTime } from "@/utils/timezone";
+import { exportDailyClosingToCSV } from "@/utils/exportUtils";
 
 export default function DashboardFinance() {
   const { data: invoices, isLoading: invoicesLoading } = useInvoices();
@@ -82,7 +85,7 @@ export default function DashboardFinance() {
   });
 
   // Get pharmacy account and expenses
-  const { data: pharmacyAccount, isLoading: pharmacyAccountLoading } = useQuery({
+  const { data: pharmacyAccount } = useQuery({
     queryKey: ['pharmacy-account'],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -96,11 +99,38 @@ export default function DashboardFinance() {
     }
   });
 
-  const { data: pharmacyExpenses, isLoading: pharmacyExpensesLoading } = useQuery({
+  const { data: pharmacyExpenses } = useQuery({
     queryKey: ['pharmacy-expenses'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('pharmacy_expenses')
+        .select('*')
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return data;
+    }
+  });
+
+  // Get X-ray reports
+  const { data: xrayReports } = useQuery({
+    queryKey: ['xray-reports-revenue'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('xray_reports')
+        .select('*')
+        .not('price', 'is', null)
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return data;
+    }
+  });
+
+  // Get miscellaneous income
+  const { data: miscIncome } = useQuery({
+    queryKey: ['misc-income-revenue'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('miscellaneous_income')
         .select('*')
         .order('created_at', { ascending: false });
       if (error) throw error;
@@ -120,6 +150,26 @@ export default function DashboardFinance() {
       return data;
     }
   });
+
+  // Get staff profiles for operator tracking
+  const { data: staffProfiles } = useQuery({
+    queryKey: ['staff-profiles-operators'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id, first_name, last_name, role')
+        .in('role', ['staff', 'admin', 'finance']);
+      if (error) throw error;
+      return data;
+    }
+  });
+
+  // Helper to get operator name
+  const getOperatorName = (createdBy: string | null) => {
+    if (!createdBy) return '—';
+    const staff = staffProfiles?.find(s => s.id === createdBy);
+    return staff ? `${staff.first_name} ${staff.last_name}` : '—';
+  };
 
   // Calculate hospital revenue from paid invoices
   const emergencyConsultationRevenue = invoices?.filter(inv => 
@@ -156,6 +206,8 @@ export default function DashboardFinance() {
     invoice.description && 
     invoice.description.toLowerCase().includes('lab')
   ).reduce((sum, invoice) => sum + Number(invoice.amount), 0) || 0;
+
+  const xrayRevenue = xrayReports?.reduce((sum, xray) => sum + (Number(xray.price) || 0), 0) || 0;
   
   const otHospitalRevenue = otSchedules?.reduce((sum, schedule) => {
     if (!schedule.total_cost || !schedule.doctor_expense) return sum;
@@ -165,19 +217,21 @@ export default function DashboardFinance() {
   const otDoctorRevenue = otSchedules?.reduce((sum, schedule) => {
     return sum + (Number(schedule.doctor_expense) || 0);
   }, 0) || 0;
+
+  const miscellaneousIncome = miscIncome?.reduce((sum, m) => sum + (m.amount || 0), 0) || 0;
   
   const doctorsRevenue = consultationRevenue + otDoctorRevenue;
-  const hospitalRevenue = emergencyConsultationRevenue + labRevenue + otHospitalRevenue + pharmacyProfit;
-  const totalRevenue = hospitalRevenue + doctorsRevenue + pharmacyRevenue;
+  const hospitalRevenue = emergencyConsultationRevenue + labRevenue + xrayRevenue + otHospitalRevenue + miscellaneousIncome;
   const totalExpenses = expenses?.reduce((sum, exp) => sum + (exp.amount || 0), 0) || 0;
-  const totalProfit = hospitalRevenue - totalExpenses;
+  const hospitalNetProfit = hospitalRevenue + pharmacyProfit - totalExpenses;
+  const totalRevenue = hospitalRevenue + doctorsRevenue + pharmacyRevenue;
+  const pharmacyTotalExpenses = pharmacyExpenses?.reduce((sum, exp) => sum + exp.amount, 0) || 0;
 
   // Per-doctor revenue breakdown
   const perDoctorRevenue = doctorProfiles?.map(doctor => {
     const profile = doctor.profiles as any;
     const doctorName = profile ? `Dr. ${profile.first_name} ${profile.last_name}` : 'Unknown';
     
-    // Consultation revenue for this doctor
     const drConsultation = invoices?.filter(inv =>
       inv.status === 'paid' &&
       inv.doctor_id === doctor.id &&
@@ -185,11 +239,9 @@ export default function DashboardFinance() {
       !inv.description?.toLowerCase().includes('emergency')
     ).reduce((sum, inv) => sum + (inv.amount || 0), 0) || 0;
 
-    // OT revenue for this doctor
     const drOT = otSchedules?.filter(s => s.doctor_id === doctor.id)
       .reduce((sum, s) => sum + (Number(s.doctor_expense) || 0), 0) || 0;
 
-    // Appointment count
     const appointmentCount = invoices?.filter(inv =>
       inv.status === 'paid' &&
       inv.doctor_id === doctor.id &&
@@ -197,7 +249,6 @@ export default function DashboardFinance() {
       !inv.description?.toLowerCase().includes('emergency')
     ).length || 0;
 
-    // OT count
     const otCount = otSchedules?.filter(s => s.doctor_id === doctor.id).length || 0;
 
     return {
@@ -212,288 +263,401 @@ export default function DashboardFinance() {
   })?.filter(d => d.totalRevenue > 0 || d.appointmentCount > 0)
     .sort((a, b) => b.totalRevenue - a.totalRevenue) || [];
 
-  const pharmacyTotalExpenses = pharmacyExpenses?.reduce((sum, exp) => sum + exp.amount, 0) || 0;
+  // Per-staff revenue (counter invoices created_by)
+  const perStaffRevenue = staffProfiles?.map(staff => {
+    const staffInvoices = invoices?.filter(inv => 
+      inv.status === 'paid' && (inv as any).created_by === staff.id
+    ) || [];
+    const totalGenerated = staffInvoices.reduce((sum, inv) => sum + (inv.amount || 0), 0);
+    return {
+      id: staff.id,
+      name: `${staff.first_name} ${staff.last_name}`,
+      role: staff.role,
+      invoiceCount: staffInvoices.length,
+      totalGenerated,
+    };
+  })?.filter(s => s.totalGenerated > 0)
+    .sort((a, b) => b.totalGenerated - a.totalGenerated) || [];
 
-  // Calculate current month's revenue
+  // Calculate monthly revenue
   const currentMonth = new Date().getMonth();
   const currentYear = new Date().getFullYear();
   
-  const currentMonthConsultationRevenue = invoices?.filter(invoice => {
-    const invoiceDate = new Date(invoice.paid_at || invoice.created_at);
-    return invoiceDate.getMonth() === currentMonth &&
-           invoiceDate.getFullYear() === currentYear &&
-           invoice.status === 'paid' &&
-           invoice.description?.toLowerCase().includes('consultation') &&
-           !invoice.description?.toLowerCase().includes('emergency');
-  }).reduce((sum, invoice) => sum + (invoice.amount || 0), 0) || 0;
+  const monthlyHospitalRevenue = invoices?.filter(inv => {
+    const d = new Date(inv.created_at);
+    return d.getMonth() === currentMonth && d.getFullYear() === currentYear &&
+      inv.status === 'paid' && inv.description?.toLowerCase().includes('emergency');
+  }).reduce((s, i) => s + (i.amount || 0), 0) || 0;
 
-  const currentMonthEmergencyRevenue = invoices?.filter(invoice => {
-    const invoiceDate = new Date(invoice.paid_at || invoice.created_at);
-    return invoiceDate.getMonth() === currentMonth && 
-           invoiceDate.getFullYear() === currentYear && 
-           invoice.status === 'paid' &&
-           invoice.description?.toLowerCase().includes('emergency');
-  }).reduce((sum, invoice) => sum + (invoice.amount || 0), 0) || 0;
-  
-  const currentMonthPharmacyRevenue = pharmacyInvoices?.filter(invoice => {
-    const invoiceDate = new Date(invoice.created_at);
-    return invoiceDate.getMonth() === currentMonth && invoiceDate.getFullYear() === currentYear;
-  }).reduce((sum, invoice) => sum + (invoice.final_amount || 0), 0) || 0;
-  
-  const currentMonthPharmacyProfit = pharmacyInvoices?.filter(invoice => {
-    const invoiceDate = new Date(invoice.created_at);
-    return invoiceDate.getMonth() === currentMonth && invoiceDate.getFullYear() === currentYear;
-  }).reduce((totalProfit, invoice) => {
-    const invoiceProfit = (invoice.pharmacy_invoice_items || []).reduce((itemsProfit: number, item: any) => {
-      if (item.medicines && item.medicines.selling_price && item.medicines.purchase_price) {
-        const profitPerUnit = item.medicines.selling_price - item.medicines.purchase_price;
-        return itemsProfit + (profitPerUnit * item.quantity);
-      }
-      return itemsProfit;
-    }, 0);
-    return totalProfit + invoiceProfit;
-  }, 0) || 0;
-  
-  const currentMonthLabRevenue = invoices?.filter(invoice => {
-    const invoiceDate = new Date(invoice.created_at);
-    return invoiceDate.getMonth() === currentMonth && 
-           invoiceDate.getFullYear() === currentYear && 
-           invoice.status === 'paid' &&
-           invoice.description && 
-           invoice.description.toLowerCase().includes('lab');
-  }).reduce((sum, invoice) => sum + Number(invoice.amount), 0) || 0;
-  
-  const currentMonthOTHospitalRevenue = otSchedules?.filter(schedule => {
-    const scheduleDate = new Date(schedule.created_at);
-    return scheduleDate.getMonth() === currentMonth && scheduleDate.getFullYear() === currentYear;
-  }).reduce((sum, schedule) => {
-    if (!schedule.total_cost || !schedule.doctor_expense) return sum;
-    return sum + (Number(schedule.total_cost) - Number(schedule.doctor_expense));
-  }, 0) || 0;
+  const monthlyDoctorsRevenue = invoices?.filter(inv => {
+    const d = new Date(inv.created_at);
+    return d.getMonth() === currentMonth && d.getFullYear() === currentYear &&
+      inv.status === 'paid' && inv.description?.toLowerCase().includes('consultation') &&
+      !inv.description?.toLowerCase().includes('emergency');
+  }).reduce((s, i) => s + (i.amount || 0), 0) || 0;
 
-  const currentMonthOTDoctorRevenue = otSchedules?.filter(schedule => {
-    const scheduleDate = new Date(schedule.created_at);
-    return scheduleDate.getMonth() === currentMonth && scheduleDate.getFullYear() === currentYear;
-  }).reduce((sum, schedule) => sum + (Number(schedule.doctor_expense) || 0), 0) || 0;
+  const monthlyPharmacyRevenue = pharmacyInvoices?.filter(inv => {
+    const d = new Date(inv.created_at);
+    return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
+  }).reduce((s, i) => s + (i.final_amount || 0), 0) || 0;
 
-  const monthlyDoctorsRevenue = currentMonthConsultationRevenue + currentMonthOTDoctorRevenue;
-  const monthlyHospitalRevenue = currentMonthEmergencyRevenue + currentMonthLabRevenue + currentMonthOTHospitalRevenue + currentMonthPharmacyProfit;
-  const monthlyRevenue = monthlyHospitalRevenue + monthlyDoctorsRevenue + currentMonthPharmacyRevenue;
-
+  const monthlyRevenue = monthlyHospitalRevenue + monthlyDoctorsRevenue + monthlyPharmacyRevenue;
   const maxDoctorRevenue = perDoctorRevenue.length > 0 ? perDoctorRevenue[0].totalRevenue : 1;
+
+  // Export full report
+  const handleExportCSV = () => {
+    exportDailyClosingToCSV({
+      date: format(new Date(), 'yyyy-MM-dd'),
+      hospitalRevenue,
+      doctorRevenue: doctorsRevenue,
+      consultationRevenue,
+      otDoctorExpense: otDoctorRevenue,
+      emergencyRevenue: emergencyConsultationRevenue,
+      labRevenue,
+      xrayRevenue,
+      otHospitalRevenue,
+      miscellaneousIncome,
+      pharmacyRevenue,
+      pharmacyProfit,
+      totalExpenses,
+      totalRefunds: 0,
+      netProfit: hospitalNetProfit,
+    });
+  };
 
   return (
     <div className="space-y-6">
-      {/* Top Stats Row */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <StatsCard
-          title="Total Revenue"
-          value={formatPkrAmount(totalRevenue)}
-          icon={<Banknote className="w-5 h-5 text-green-600" />}
-          loading={invoicesLoading || pharmacyLoading || labLoading || otLoading}
-        />
-        <StatsCard
-          title="Total Expenses"
-          value={formatPkrAmount(totalExpenses)}
-          icon={<Minus className="w-5 h-5 text-red-600" />}
-          loading={expensesLoading}
-        />
-        <StatsCard
-          title="Net Profit"
-          value={formatPkrAmount(totalProfit)}
-          icon={totalProfit >= 0 ? <TrendingUp className="w-5 h-5 text-green-600" /> : <TrendingDown className="w-5 h-5 text-red-600" />}
-          loading={invoicesLoading || pharmacyLoading || labLoading || expensesLoading || otLoading}
-        />
+      {/* Header with Export */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-2xl font-bold tracking-tight">Financial Overview</h2>
+          <p className="text-sm text-muted-foreground">
+            {hospitalSettings?.hospital_name || 'Hospital'} — {format(new Date(), 'EEEE, dd MMMM yyyy')}
+          </p>
+        </div>
+        <Button variant="outline" size="sm" onClick={handleExportCSV} className="flex items-center gap-2">
+          <FileSpreadsheet className="w-4 h-4" />
+          Export CSV
+        </Button>
       </div>
 
-      {/* Three Column Sections */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      {/* Top Summary Cards */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <Card className="bg-gradient-to-br from-green-50 to-emerald-50 border-green-200">
+          <CardContent className="pt-4 pb-3 px-4">
+            <p className="text-[11px] uppercase tracking-wider text-muted-foreground font-medium">Total Revenue</p>
+            <p className="text-xl font-bold text-green-700 mt-1">{formatPkrAmount(totalRevenue)}</p>
+          </CardContent>
+        </Card>
+        <Card className="bg-gradient-to-br from-red-50 to-rose-50 border-red-200">
+          <CardContent className="pt-4 pb-3 px-4">
+            <p className="text-[11px] uppercase tracking-wider text-muted-foreground font-medium">Total Expenses</p>
+            <p className="text-xl font-bold text-red-700 mt-1">-{formatPkrAmount(totalExpenses)}</p>
+          </CardContent>
+        </Card>
+        <Card className="bg-gradient-to-br from-blue-50 to-sky-50 border-blue-200">
+          <CardContent className="pt-4 pb-3 px-4">
+            <p className="text-[11px] uppercase tracking-wider text-muted-foreground font-medium">Hospital Net Profit</p>
+            <p className={`text-xl font-bold mt-1 ${hospitalNetProfit >= 0 ? 'text-blue-700' : 'text-red-700'}`}>
+              {formatPkrAmount(hospitalNetProfit)}
+            </p>
+          </CardContent>
+        </Card>
+        <Card className="bg-gradient-to-br from-indigo-50 to-violet-50 border-indigo-200">
+          <CardContent className="pt-4 pb-3 px-4">
+            <p className="text-[11px] uppercase tracking-wider text-muted-foreground font-medium">Doctors Revenue</p>
+            <p className="text-xl font-bold text-indigo-700 mt-1">{formatPkrAmount(doctorsRevenue)}</p>
+          </CardContent>
+        </Card>
+      </div>
 
-        {/* Hospital Revenue Section */}
-        <Card className="border-t-4 border-t-blue-500">
-          <CardHeader className="pb-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div className="p-2 rounded-lg bg-blue-50">
-                  <Building2 className="w-5 h-5 text-blue-600" />
-                </div>
-                <div>
-                  <CardTitle className="text-base">Hospital Revenue</CardTitle>
-                  <CardDescription className="text-xs">Services & facilities</CardDescription>
-                </div>
+      {/* ========== HOSPITAL REVENUE SECTION ========== */}
+      <Card className="border-l-4 border-l-blue-500">
+        <CardHeader className="pb-2">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-blue-100">
+                <Building2 className="w-5 h-5 text-blue-700" />
               </div>
-              <span className="text-xl font-bold text-blue-600">{formatPkrAmount(hospitalRevenue)}</span>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="space-y-2">
-              <div className="flex items-center justify-between py-2 px-3 rounded-lg bg-muted/50">
-                <div className="flex items-center gap-2">
-                  <AlertTriangle className="w-3.5 h-3.5 text-amber-500" />
-                  <span className="text-sm">Emergency</span>
-                </div>
-                <span className="text-sm font-semibold">{formatPkrAmount(emergencyConsultationRevenue)}</span>
-              </div>
-              <div className="flex items-center justify-between py-2 px-3 rounded-lg bg-muted/50">
-                <div className="flex items-center gap-2">
-                  <FlaskConical className="w-3.5 h-3.5 text-teal-500" />
-                  <span className="text-sm">Lab Services</span>
-                </div>
-                <span className="text-sm font-semibold">{formatPkrAmount(labRevenue)}</span>
-              </div>
-              <div className="flex items-center justify-between py-2 px-3 rounded-lg bg-muted/50">
-                <div className="flex items-center gap-2">
-                  <Syringe className="w-3.5 h-3.5 text-rose-500" />
-                  <span className="text-sm">OT (Hospital)</span>
-                </div>
-                <span className="text-sm font-semibold">{formatPkrAmount(otHospitalRevenue)}</span>
-              </div>
-              <div className="flex items-center justify-between py-2 px-3 rounded-lg bg-muted/50">
-                <div className="flex items-center gap-2">
-                  <Pill className="w-3.5 h-3.5 text-purple-500" />
-                  <span className="text-sm">Pharmacy Profit</span>
-                </div>
-                <span className="text-sm font-semibold">{formatPkrAmount(pharmacyProfit)}</span>
-              </div>
-            </div>
-            <Separator />
-            <div className="flex items-center justify-between py-2">
               <div>
-                <p className="text-xs text-muted-foreground">After Expenses</p>
-                <p className="text-sm font-medium">Expenses: {formatPkrAmount(totalExpenses)}</p>
-              </div>
-              <div className="text-right">
-                <p className="text-xs text-muted-foreground">Hospital Profit</p>
-                <p className={`text-lg font-bold ${(hospitalRevenue - totalExpenses) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                  {formatPkrAmount(hospitalRevenue - totalExpenses)}
-                </p>
+                <CardTitle className="text-lg">Hospital Revenue & Profit</CardTitle>
+                <CardDescription>Emergency, Lab, X-Ray, OT (Hospital Share), Miscellaneous — includes expenses & net profit</CardDescription>
               </div>
             </div>
-          </CardContent>
-        </Card>
+            <Badge variant="outline" className="text-blue-700 border-blue-300 bg-blue-50 text-base px-3 py-1">
+              {formatPkrAmount(hospitalRevenue)}
+            </Badge>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="border rounded-lg overflow-hidden">
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-blue-50/50">
+                  <TableHead className="font-semibold">Category</TableHead>
+                  <TableHead className="font-semibold text-right">Hos. Share</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                <TableRow>
+                  <TableCell className="flex items-center gap-2">
+                    <AlertTriangle className="w-4 h-4 text-amber-500" />
+                    Emergency Services
+                  </TableCell>
+                  <TableCell className="text-right font-medium">{formatPkrAmount(emergencyConsultationRevenue)}</TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell className="flex items-center gap-2">
+                    <FlaskConical className="w-4 h-4 text-teal-500" />
+                    Lab Services
+                  </TableCell>
+                  <TableCell className="text-right font-medium">{formatPkrAmount(labRevenue)}</TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell className="flex items-center gap-2">
+                    <Scan className="w-4 h-4 text-cyan-500" />
+                    X-Ray Services
+                  </TableCell>
+                  <TableCell className="text-right font-medium">{formatPkrAmount(xrayRevenue)}</TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell className="flex items-center gap-2">
+                    <Syringe className="w-4 h-4 text-rose-500" />
+                    OT (Hospital Portion)
+                  </TableCell>
+                  <TableCell className="text-right font-medium">{formatPkrAmount(otHospitalRevenue)}</TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell className="flex items-center gap-2">
+                    <Pill className="w-4 h-4 text-purple-500" />
+                    Pharmacy Profit
+                  </TableCell>
+                  <TableCell className="text-right font-medium">{formatPkrAmount(pharmacyProfit)}</TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell className="flex items-center gap-2">
+                    <Activity className="w-4 h-4 text-green-500" />
+                    Miscellaneous Income
+                  </TableCell>
+                  <TableCell className="text-right font-medium">{formatPkrAmount(miscellaneousIncome)}</TableCell>
+                </TableRow>
+              </TableBody>
+              <TableFooter>
+                <TableRow className="bg-blue-50/80">
+                  <TableCell className="font-bold">Total Hospital Revenue</TableCell>
+                  <TableCell className="text-right font-bold text-blue-700">{formatPkrAmount(hospitalRevenue + pharmacyProfit)}</TableCell>
+                </TableRow>
+                <TableRow className="bg-red-50/50">
+                  <TableCell className="font-semibold text-red-700">Less: Expenses</TableCell>
+                  <TableCell className="text-right font-semibold text-red-700">-{formatPkrAmount(totalExpenses)}</TableCell>
+                </TableRow>
+                <TableRow className={hospitalNetProfit >= 0 ? 'bg-green-50/80' : 'bg-red-50/80'}>
+                  <TableCell className="font-bold text-base">Hospital Net Profit</TableCell>
+                  <TableCell className={`text-right font-bold text-base ${hospitalNetProfit >= 0 ? 'text-green-700' : 'text-red-700'}`}>
+                    {formatPkrAmount(hospitalNetProfit)}
+                  </TableCell>
+                </TableRow>
+              </TableFooter>
+            </Table>
+          </div>
+        </CardContent>
+      </Card>
 
-        {/* Doctors Revenue Section */}
-        <Card className="border-t-4 border-t-indigo-500">
-          <CardHeader className="pb-3">
+      {/* ========== DOCTORS REVENUE SECTION ========== */}
+      <Card className="border-l-4 border-l-indigo-500">
+        <CardHeader className="pb-2">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-indigo-100">
+                <Stethoscope className="w-5 h-5 text-indigo-700" />
+              </div>
+              <div>
+                <CardTitle className="text-lg">Doctors Revenue</CardTitle>
+                <CardDescription>Consultation fees (Doc. Share) + OT Doctor Fees — per doctor breakdown</CardDescription>
+              </div>
+            </div>
+            <Badge variant="outline" className="text-indigo-700 border-indigo-300 bg-indigo-50 text-base px-3 py-1">
+              {formatPkrAmount(doctorsRevenue)}
+            </Badge>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {doctorsLoading || invoicesLoading ? (
+            <div className="space-y-3">
+              {[1,2,3].map(i => <div key={i} className="h-10 bg-muted/50 rounded animate-pulse" />)}
+            </div>
+          ) : perDoctorRevenue.length > 0 ? (
+            <div className="border rounded-lg overflow-hidden">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-indigo-50/50">
+                    <TableHead className="font-semibold">Doctor Name</TableHead>
+                    <TableHead className="font-semibold text-center">Consultations</TableHead>
+                    <TableHead className="font-semibold text-center">OT</TableHead>
+                    <TableHead className="font-semibold text-right">Consultation Fee</TableHead>
+                    <TableHead className="font-semibold text-right">OT Fee</TableHead>
+                    <TableHead className="font-semibold text-right">Doc. Share (Total)</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {perDoctorRevenue.map((doctor) => (
+                    <TableRow key={doctor.id}>
+                      <TableCell className="font-medium">{doctor.name}</TableCell>
+                      <TableCell className="text-center">
+                        <Badge variant="secondary" className="text-xs">{doctor.appointmentCount}</Badge>
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <Badge variant="outline" className="text-xs">{doctor.otCount}</Badge>
+                      </TableCell>
+                      <TableCell className="text-right">{formatPkrAmount(doctor.consultationRevenue)}</TableCell>
+                      <TableCell className="text-right">{formatPkrAmount(doctor.otRevenue)}</TableCell>
+                      <TableCell className="text-right font-bold text-indigo-700">{formatPkrAmount(doctor.totalRevenue)}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+                <TableFooter>
+                  <TableRow className="bg-indigo-50/80">
+                    <TableCell colSpan={3} className="font-bold">Total Doctors Revenue</TableCell>
+                    <TableCell className="text-right font-bold">{formatPkrAmount(consultationRevenue)}</TableCell>
+                    <TableCell className="text-right font-bold">{formatPkrAmount(otDoctorRevenue)}</TableCell>
+                    <TableCell className="text-right font-bold text-indigo-700">{formatPkrAmount(doctorsRevenue)}</TableCell>
+                  </TableRow>
+                </TableFooter>
+              </Table>
+            </div>
+          ) : (
+            <div className="text-center py-8 text-muted-foreground">
+              <Stethoscope className="w-8 h-8 mx-auto mb-2 opacity-40" />
+              <p className="text-sm">No doctor revenue recorded yet</p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* ========== STAFF COUNTER REVENUE SECTION ========== */}
+      {perStaffRevenue.length > 0 && (
+        <Card className="border-l-4 border-l-emerald-500">
+          <CardHeader className="pb-2">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div className="p-2 rounded-lg bg-indigo-50">
-                  <Stethoscope className="w-5 h-5 text-indigo-600" />
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-emerald-100">
+                  <Users className="w-5 h-5 text-emerald-700" />
                 </div>
                 <div>
-                  <CardTitle className="text-base">Doctors Revenue</CardTitle>
-                  <CardDescription className="text-xs">Consultation & OT fees</CardDescription>
+                  <CardTitle className="text-lg">Staff / Counter Revenue</CardTitle>
+                  <CardDescription>Revenue generated by each operator at the counter</CardDescription>
                 </div>
               </div>
-              <span className="text-xl font-bold text-indigo-600">{formatPkrAmount(doctorsRevenue)}</span>
             </div>
           </CardHeader>
-          <CardContent className="space-y-3">
-            {doctorsLoading || invoicesLoading ? (
-              <div className="space-y-3">
-                {[1,2,3].map(i => (
-                  <div key={i} className="h-12 bg-muted/50 rounded-lg animate-pulse" />
-                ))}
-              </div>
-            ) : perDoctorRevenue.length > 0 ? (
-              <div className="space-y-2.5">
-                {perDoctorRevenue.map((doctor) => (
-                  <div key={doctor.id} className="p-3 rounded-lg bg-muted/50 space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium truncate max-w-[140px]">{doctor.name}</span>
-                      <span className="text-sm font-bold text-indigo-600">{formatPkrAmount(doctor.totalRevenue)}</span>
-                    </div>
-                    <Progress value={(doctor.totalRevenue / maxDoctorRevenue) * 100} className="h-1.5" />
-                    <div className="flex gap-2 flex-wrap">
-                      {doctor.appointmentCount > 0 && (
-                        <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
-                          {doctor.appointmentCount} consultation{doctor.appointmentCount !== 1 ? 's' : ''} · {formatPkrAmount(doctor.consultationRevenue)}
-                        </Badge>
-                      )}
-                      {doctor.otCount > 0 && (
-                        <Badge variant="outline" className="text-[10px] px-1.5 py-0">
-                          {doctor.otCount} OT · {formatPkrAmount(doctor.otRevenue)}
-                        </Badge>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-8 text-muted-foreground">
-                <Stethoscope className="w-8 h-8 mx-auto mb-2 opacity-40" />
-                <p className="text-sm">No doctor revenue recorded yet</p>
-              </div>
-            )}
-            <Separator />
-            <div className="grid grid-cols-2 gap-3">
-              <div className="text-center p-2 rounded-lg bg-indigo-50/50">
-                <p className="text-xs text-muted-foreground">Consultations</p>
-                <p className="text-sm font-bold text-indigo-600">{formatPkrAmount(consultationRevenue)}</p>
-              </div>
-              <div className="text-center p-2 rounded-lg bg-indigo-50/50">
-                <p className="text-xs text-muted-foreground">OT Fees</p>
-                <p className="text-sm font-bold text-indigo-600">{formatPkrAmount(otDoctorRevenue)}</p>
-              </div>
+          <CardContent>
+            <div className="border rounded-lg overflow-hidden">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-emerald-50/50">
+                    <TableHead className="font-semibold">Operator</TableHead>
+                    <TableHead className="font-semibold text-center">Role</TableHead>
+                    <TableHead className="font-semibold text-center">Invoices</TableHead>
+                    <TableHead className="font-semibold text-right">Revenue Generated</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {perStaffRevenue.map((staff) => (
+                    <TableRow key={staff.id}>
+                      <TableCell className="font-medium">{staff.name}</TableCell>
+                      <TableCell className="text-center">
+                        <Badge variant="secondary" className="text-xs capitalize">{staff.role}</Badge>
+                      </TableCell>
+                      <TableCell className="text-center">{staff.invoiceCount}</TableCell>
+                      <TableCell className="text-right font-bold text-emerald-700">{formatPkrAmount(staff.totalGenerated)}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+                <TableFooter>
+                  <TableRow className="bg-emerald-50/80">
+                    <TableCell colSpan={2} className="font-bold">Total</TableCell>
+                    <TableCell className="text-center font-bold">{perStaffRevenue.reduce((s, st) => s + st.invoiceCount, 0)}</TableCell>
+                    <TableCell className="text-right font-bold text-emerald-700">
+                      {formatPkrAmount(perStaffRevenue.reduce((s, st) => s + st.totalGenerated, 0))}
+                    </TableCell>
+                  </TableRow>
+                </TableFooter>
+              </Table>
             </div>
           </CardContent>
         </Card>
+      )}
 
-        {/* Pharmacy Section */}
-        <Card className="border-t-4 border-t-purple-500">
-          <CardHeader className="pb-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div className="p-2 rounded-lg bg-purple-50">
-                  <Pill className="w-5 h-5 text-purple-600" />
-                </div>
-                <div>
-                  <CardTitle className="text-base">Pharmacy</CardTitle>
-                  <CardDescription className="text-xs">Sales, profit & account</CardDescription>
-                </div>
+      {/* ========== PHARMACY SECTION ========== */}
+      <Card className="border-l-4 border-l-purple-500">
+        <CardHeader className="pb-2">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-purple-100">
+                <Pill className="w-5 h-5 text-purple-700" />
               </div>
-              <span className="text-xl font-bold text-purple-600">{formatPkrAmount(pharmacyRevenue)}</span>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="space-y-2">
-              <div className="flex items-center justify-between py-2 px-3 rounded-lg bg-muted/50">
-                <span className="text-sm">Total Sales</span>
-                <span className="text-sm font-semibold">{formatPkrAmount(pharmacyRevenue)}</span>
-              </div>
-              <div className="flex items-center justify-between py-2 px-3 rounded-lg bg-green-50/50">
-                <span className="text-sm text-green-700">Gross Profit</span>
-                <span className="text-sm font-semibold text-green-600">{formatPkrAmount(pharmacyProfit)}</span>
-              </div>
-              <div className="flex items-center justify-between py-2 px-3 rounded-lg bg-red-50/50">
-                <span className="text-sm text-red-700">Bills & Expenses</span>
-                <span className="text-sm font-semibold text-red-600">-{formatPkrAmount(pharmacyTotalExpenses)}</span>
+              <div>
+                <CardTitle className="text-lg">Pharmacy</CardTitle>
+                <CardDescription>Sales revenue, profit & account summary</CardDescription>
               </div>
             </div>
-            <Separator />
-            <div className="space-y-2">
-              <div className="flex items-center justify-between py-2 px-3 rounded-lg bg-muted/30">
-                <span className="text-sm">Starting Balance</span>
-                <span className="text-sm font-medium">{formatPkrAmount(pharmacyAccount?.starting_balance || 0)}</span>
-              </div>
-              <div className="flex items-center justify-between py-2 px-3 rounded-lg bg-blue-50/50">
-                <span className="text-sm font-medium">Current Balance</span>
-                <span className="text-sm font-bold text-blue-600">
-                  {formatPkrAmount((pharmacyAccount?.starting_balance || 0) + pharmacyRevenue - pharmacyTotalExpenses)}
-                </span>
-              </div>
-              <div className="flex items-center justify-between py-2 px-3 rounded-lg bg-purple-50/50">
-                <span className="text-sm font-medium">Available Profit</span>
-                <span className="text-sm font-bold text-purple-600">
-                  {formatPkrAmount(pharmacyProfit - pharmacyTotalExpenses)}
-                </span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+            <Badge variant="outline" className="text-purple-700 border-purple-300 bg-purple-50 text-base px-3 py-1">
+              {formatPkrAmount(pharmacyRevenue)}
+            </Badge>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="border rounded-lg overflow-hidden">
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-purple-50/50">
+                  <TableHead className="font-semibold">Item</TableHead>
+                  <TableHead className="font-semibold text-right">Amount</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                <TableRow>
+                  <TableCell>Total Sales</TableCell>
+                  <TableCell className="text-right font-medium">{formatPkrAmount(pharmacyRevenue)}</TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell className="text-green-700">Gross Profit</TableCell>
+                  <TableCell className="text-right font-medium text-green-700">{formatPkrAmount(pharmacyProfit)}</TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell className="text-red-700">Bills & Expenses</TableCell>
+                  <TableCell className="text-right font-medium text-red-700">-{formatPkrAmount(pharmacyTotalExpenses)}</TableCell>
+                </TableRow>
+              </TableBody>
+              <TableFooter>
+                <TableRow className="bg-purple-50/50">
+                  <TableCell className="font-bold">Available Profit</TableCell>
+                  <TableCell className="text-right font-bold text-purple-700">{formatPkrAmount(pharmacyProfit - pharmacyTotalExpenses)}</TableCell>
+                </TableRow>
+              </TableFooter>
+            </Table>
+          </div>
 
-      {/* Bottom Row - Quick Actions & Monthly Summary */}
+          <div className="grid grid-cols-3 gap-3 mt-4">
+            <div className="text-center p-3 rounded-lg bg-muted/30 border">
+              <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">Starting Balance</p>
+              <p className="text-sm font-bold mt-1">{formatPkrAmount(pharmacyAccount?.starting_balance || 0)}</p>
+            </div>
+            <div className="text-center p-3 rounded-lg bg-blue-50/50 border border-blue-100">
+              <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">Current Balance</p>
+              <p className="text-sm font-bold text-blue-700 mt-1">
+                {formatPkrAmount((pharmacyAccount?.starting_balance || 0) + pharmacyRevenue - pharmacyTotalExpenses)}
+              </p>
+            </div>
+            <div className="text-center p-3 rounded-lg bg-purple-50/50 border border-purple-100">
+              <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">Net Profit</p>
+              <p className="text-sm font-bold text-purple-700 mt-1">{formatPkrAmount(pharmacyProfit - pharmacyTotalExpenses)}</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* ========== BOTTOM ROW ========== */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card>
           <CardHeader className="pb-3">
@@ -504,34 +668,19 @@ export default function DashboardFinance() {
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-2 gap-3">
-              <Button 
-                className="h-16 flex flex-col items-center justify-center text-sm"
-                onClick={() => navigate('/dashboard/finance/expenses')}
-              >
+              <Button className="h-14 flex flex-col items-center justify-center text-sm" onClick={() => navigate('/dashboard/finance/expenses')}>
                 <Minus className="w-5 h-5 mb-1" />
                 Add Expense
               </Button>
-              <Button 
-                className="h-16 flex flex-col items-center justify-center text-sm" 
-                variant="outline"
-                onClick={() => navigate('/dashboard/finance/doctor-payments')}
-              >
+              <Button className="h-14 flex flex-col items-center justify-center text-sm" variant="outline" onClick={() => navigate('/dashboard/finance/doctor-payments')}>
                 <Users className="w-5 h-5 mb-1" />
                 Doctor Payments
               </Button>
-              <Button 
-                className="h-16 flex flex-col items-center justify-center text-sm" 
-                variant="outline"
-                onClick={() => navigate('/dashboard/finance/payroll')}
-              >
+              <Button className="h-14 flex flex-col items-center justify-center text-sm" variant="outline" onClick={() => navigate('/dashboard/finance/payroll')}>
                 <Users className="w-5 h-5 mb-1" />
                 Staff Payroll
               </Button>
-              <Button 
-                className="h-16 flex flex-col items-center justify-center text-sm" 
-                variant="outline"
-                onClick={() => navigate('/dashboard/finance/analytics')}
-              >
+              <Button className="h-14 flex flex-col items-center justify-center text-sm" variant="outline" onClick={() => navigate('/dashboard/finance/analytics')}>
                 <TrendingUp className="w-5 h-5 mb-1" />
                 Analytics
               </Button>
@@ -553,21 +702,21 @@ export default function DashboardFinance() {
             <div className="grid grid-cols-3 gap-3">
               <div className="text-center p-3 rounded-lg bg-blue-50/50 border border-blue-100">
                 <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">Hospital</p>
-                <p className="text-sm font-bold text-blue-600 mt-1">{formatPkrAmount(monthlyHospitalRevenue)}</p>
+                <p className="text-sm font-bold text-blue-700 mt-1">{formatPkrAmount(monthlyHospitalRevenue)}</p>
               </div>
               <div className="text-center p-3 rounded-lg bg-indigo-50/50 border border-indigo-100">
                 <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">Doctors</p>
-                <p className="text-sm font-bold text-indigo-600 mt-1">{formatPkrAmount(monthlyDoctorsRevenue)}</p>
+                <p className="text-sm font-bold text-indigo-700 mt-1">{formatPkrAmount(monthlyDoctorsRevenue)}</p>
               </div>
               <div className="text-center p-3 rounded-lg bg-purple-50/50 border border-purple-100">
                 <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">Pharmacy</p>
-                <p className="text-sm font-bold text-purple-600 mt-1">{formatPkrAmount(currentMonthPharmacyRevenue)}</p>
+                <p className="text-sm font-bold text-purple-700 mt-1">{formatPkrAmount(monthlyPharmacyRevenue)}</p>
               </div>
             </div>
             <Separator className="my-3" />
             <div className="flex items-center justify-between px-1">
               <span className="text-sm font-medium">Total Monthly Revenue</span>
-              <span className="text-lg font-bold text-foreground">{formatPkrAmount(monthlyRevenue)}</span>
+              <span className="text-lg font-bold">{formatPkrAmount(monthlyRevenue)}</span>
             </div>
           </CardContent>
         </Card>
