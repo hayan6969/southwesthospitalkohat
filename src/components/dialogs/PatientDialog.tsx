@@ -47,6 +47,8 @@ export function PatientDialog() {
         last_name: lastName.trim(),
         phone: phone.trim(),
         cnic: cnic.trim(),
+        city: city || undefined,
+        area: area.trim() || undefined,
       };
       
       console.log('Attempting to register patient:', { 
