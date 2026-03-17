@@ -71,6 +71,20 @@ export default function FinanceExpenses() {
       })
     : allExpenses;
 
+  const uploadProofFile = async (file: File): Promise<string | null> => {
+    const fileExt = file.name.split('.').pop();
+    const fileName = `expense-${Date.now()}.${fileExt}`;
+    const { data, error } = await supabase.storage
+      .from('finance-proofs')
+      .upload(fileName, file);
+    if (error) {
+      console.error('Proof upload error:', error);
+      return null;
+    }
+    const { data: urlData } = supabase.storage.from('finance-proofs').getPublicUrl(data.path);
+    return urlData.publicUrl;
+  };
+
   const addExpenseMutation = useMutation({
     mutationFn: async (expenseData: {
       category: string;
@@ -78,11 +92,19 @@ export default function FinanceExpenses() {
       amount: number;
       expense_date: string;
     }) => {
+      let proofUrl: string | null = null;
+      if (proofFile) {
+        setUploadingProof(true);
+        proofUrl = await uploadProofFile(proofFile);
+        setUploadingProof(false);
+      }
+
       const { data, error } = await supabase
         .from('expenses')
         .insert([{
           ...expenseData,
-          created_by: user?.id
+          created_by: user?.id,
+          proof_url: proofUrl
         }])
         .select()
         .single();
@@ -93,14 +115,10 @@ export default function FinanceExpenses() {
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['expenses'] });
       setIsAddDialogOpen(false);
-      setFormData({
-        category: "",
-        description: "",
-        amount: "",
-      });
+      setFormData({ category: "", description: "", amount: "" });
       setSelectedDate(new Date());
+      setProofFile(null);
       
-      // Log expense creation
       logCreate(
         'Expense', 
         `Created expense: ${data.category} - ${data.description} (${formatPkrAmount(data.amount)})`,
