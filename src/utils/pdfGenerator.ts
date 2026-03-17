@@ -1951,6 +1951,8 @@ export const generateDailyClosingPDF = async (data: {
     }
   }
 
+  } // end if (!activeCategoryFilter)
+
   // Footer
   yPosition += 15;
   doc.setFont('helvetica', 'normal');
