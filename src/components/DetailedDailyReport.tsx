@@ -542,6 +542,103 @@ export function DetailedDailyReport({
         </CardContent>
       </Card>
 
+      {/* ========== STAFF COLLECTION SUMMARY ========== */}
+      {(() => {
+        // Aggregate revenue by staff (operator)
+        const staffMap: Record<string, { name: string; count: number; total: number }> = {};
+        transactions.forEach(t => {
+          if (t.operator && t.operator !== '—') {
+            if (!staffMap[t.operator]) staffMap[t.operator] = { name: t.operator, count: 0, total: 0 };
+            staffMap[t.operator].count += 1;
+            staffMap[t.operator].total += t.amountPaid;
+          }
+        });
+        const staffEntries = Object.values(staffMap).sort((a, b) => b.total - a.total);
+        if (staffEntries.length === 0) return null;
+        const staffGrandTotal = staffEntries.reduce((s, e) => s + e.total, 0);
+        return (
+          <Card className="border-l-4 border-l-emerald-400">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Users className="w-5 h-5 text-emerald-600" />
+                Staff Collection Summary
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-0">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-emerald-50/50">
+                    <TableHead className="w-[50px] font-semibold text-center">Sr #</TableHead>
+                    <TableHead className="font-semibold">Staff Name</TableHead>
+                    <TableHead className="font-semibold text-center">Transactions</TableHead>
+                    <TableHead className="font-semibold text-right">Total Collected</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {staffEntries.map((entry, idx) => (
+                    <TableRow key={entry.name}>
+                      <TableCell className="text-center text-xs">{idx + 1}</TableCell>
+                      <TableCell className="text-sm font-medium">{entry.name}</TableCell>
+                      <TableCell className="text-center text-sm">{entry.count}</TableCell>
+                      <TableCell className="text-right font-medium text-emerald-700">{formatPkrAmount(entry.total)}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+                <TableFooter>
+                  <TableRow className="bg-emerald-50/80">
+                    <TableCell colSpan={3} className="text-right font-bold">Total Staff Collection :</TableCell>
+                    <TableCell className="text-right font-bold text-emerald-700">{formatPkrAmount(staffGrandTotal)}</TableCell>
+                  </TableRow>
+                </TableFooter>
+              </Table>
+            </CardContent>
+          </Card>
+        );
+      })()}
+
+      {/* ========== EXPENSE PROOFS ========== */}
+      {(() => {
+        const proofsExpenses = (expenses || []).filter((e: any) => e.proof_url);
+        const proofsRefunds = (refunds || []).filter((r: any) => r.proof_url);
+        if (proofsExpenses.length === 0 && proofsRefunds.length === 0) return null;
+        return (
+          <Card className="border-l-4 border-l-violet-400">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <ImageIcon className="w-5 h-5 text-violet-600" />
+                Attached Receipts & Proofs
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                {proofsExpenses.map((exp: any) => (
+                  <a key={exp.id} href={exp.proof_url} target="_blank" rel="noopener noreferrer" className="group">
+                    <div className="border rounded-lg overflow-hidden hover:border-primary/50 transition-colors">
+                      <img src={exp.proof_url} alt={exp.description} className="w-full h-32 object-cover" />
+                      <div className="p-2 text-xs">
+                        <p className="font-medium truncate">Expense: {exp.description}</p>
+                        <p className="text-muted-foreground">{formatPkrAmount(exp.amount)}</p>
+                      </div>
+                    </div>
+                  </a>
+                ))}
+                {proofsRefunds.map((ref: any) => (
+                  <a key={ref.id} href={ref.proof_url} target="_blank" rel="noopener noreferrer" className="group">
+                    <div className="border rounded-lg overflow-hidden hover:border-primary/50 transition-colors">
+                      <img src={ref.proof_url} alt={ref.description} className="w-full h-32 object-cover" />
+                      <div className="p-2 text-xs">
+                        <p className="font-medium truncate">Refund: {ref.description}</p>
+                        <p className="text-muted-foreground">{formatPkrAmount(ref.amount)}</p>
+                      </div>
+                    </div>
+                  </a>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        );
+      })()}
+
       {/* ========== NET SUMMARY ========== */}
       <Card className="border-2 border-foreground/10">
         <CardContent className="p-4">

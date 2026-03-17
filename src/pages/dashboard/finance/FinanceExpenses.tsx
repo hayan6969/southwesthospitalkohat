@@ -404,6 +404,7 @@ export default function FinanceExpenses() {
                 <TableHead>Description</TableHead>
                 <TableHead>Amount</TableHead>
                 <TableHead>Date</TableHead>
+                <TableHead>Proof</TableHead>
                 <TableHead>Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -418,6 +419,17 @@ export default function FinanceExpenses() {
                     -{formatPkrAmount(expense.amount)}
                   </TableCell>
                   <TableCell>{format(new Date(expense.expense_date), 'MMM dd, yyyy')}</TableCell>
+                  <TableCell>
+                    {expense.proof_url ? (
+                      <a href={expense.proof_url} target="_blank" rel="noopener noreferrer">
+                        <Badge variant="secondary" className="flex items-center gap-1 cursor-pointer hover:bg-primary/10">
+                          <ImageIcon className="w-3 h-3" /> View
+                        </Badge>
+                      </a>
+                    ) : (
+                      <span className="text-xs text-muted-foreground">—</span>
+                    )}
+                  </TableCell>
                   <TableCell>
                     <Button 
                       size="sm" 
