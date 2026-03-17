@@ -234,14 +234,10 @@ export function PreviousClosingsDialog() {
                   <span className="font-medium text-blue-600">
                     Pharmacy Profit: {formatPkrAmount(selectedClosing.pharmacy_profit)}
                   </span>
-                  <div className="ml-auto flex gap-2">
-                    <Button size="sm" variant="outline" onClick={() => handleSummaryPDF(selectedClosing)} className="flex items-center gap-1">
-                      <ClipboardList className="w-3 h-3" />
-                      Summary
-                    </Button>
-                    <Button size="sm" variant="outline" onClick={() => handleDetailedPDF(selectedClosing)} className="flex items-center gap-1">
+                  <div className="ml-auto">
+                    <Button size="sm" variant="outline" onClick={() => handlePDF(selectedClosing)} className="flex items-center gap-1">
                       <FileText className="w-3 h-3" />
-                      Detailed
+                      Print {viewMode === "summary" ? "Summary" : "Detailed"} Report
                     </Button>
                   </div>
                 </div>
