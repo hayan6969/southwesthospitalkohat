@@ -34,6 +34,7 @@ import { AdminOT } from "./admin/AdminOT";
 import AdminXrays from "./admin/AdminXrays";
 import { AdminFinanceAnalytics } from "@/components/AdminFinanceAnalytics";
 import { EmergencyExpensesManager } from "@/components/admin/EmergencyExpensesManager";
+import { RegionWiseReport } from "@/components/RegionWiseReport";
 import { AuditLogDetailDialog } from "@/components/dialogs/AuditLogDetailDialog";
 import { AdminDashboardNav } from "@/components/AdminDashboardNav";
 
