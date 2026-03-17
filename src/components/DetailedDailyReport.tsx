@@ -97,6 +97,9 @@ export function DetailedDailyReport({
   staffProfiles,
   reportDate,
 }: DetailedReportProps) {
+  const [categoryFilter, setCategoryFilter] = useState<string>("all");
+  const [viewMode, setViewMode] = useState<string>("detailed");
+
   // Build transaction items from all sources
   const transactions: TransactionItem[] = [];
 
