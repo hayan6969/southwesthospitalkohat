@@ -11,12 +11,24 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { Plus } from "lucide-react";
 
+const PAKISTAN_CITIES = [
+  "Karachi", "Lahore", "Islamabad", "Rawalpindi", "Faisalabad",
+  "Multan", "Peshawar", "Quetta", "Sialkot", "Gujranwala",
+  "Hyderabad", "Bahawalpur", "Sargodha", "Abbottabad", "Mardan",
+  "Sukkur", "Larkana", "Sahiwal", "Jhang", "Rahim Yar Khan",
+  "Sheikhupura", "Gujrat", "Kasur", "Dera Ghazi Khan", "Muzaffarabad",
+  "Mirpur", "Chitral", "Swat", "Mansehra", "Jhelum",
+  "Other"
+];
+
 export function PatientDialog() {
   const [open, setOpen] = useState(false);
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [phone, setPhone] = useState("");
   const [cnic, setCnic] = useState("");
+  const [city, setCity] = useState("");
+  const [area, setArea] = useState("");
 
   const createPatientWithProfile = useCreatePatientWithProfile();
   const { logAction } = useAuditLogger();
@@ -35,6 +47,8 @@ export function PatientDialog() {
         last_name: lastName.trim(),
         phone: phone.trim(),
         cnic: cnic.trim(),
+        city: city || undefined,
+        area: area.trim() || undefined,
       };
       
       console.log('Attempting to register patient:', { 
@@ -65,6 +79,8 @@ export function PatientDialog() {
       setLastName("");
       setPhone("");
       setCnic("");
+      setCity("");
+      setArea("");
     } catch (error: any) {
       console.error("Error creating patient:", error);
       console.error("Error details:", {
@@ -147,6 +163,31 @@ export function PatientDialog() {
               placeholder="12345-6789012-3"
               required
             />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="city">City</Label>
+              <Select value={city} onValueChange={setCity}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select city" />
+                </SelectTrigger>
+                <SelectContent>
+                  {PAKISTAN_CITIES.map(c => (
+                    <SelectItem key={c} value={c}>{c}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="area">Area / Locality</Label>
+              <Input
+                id="area"
+                value={area}
+                onChange={(e) => setArea(e.target.value)}
+                placeholder="e.g. Gulberg, DHA"
+              />
+            </div>
           </div>
           
           <div className="text-sm text-gray-600 bg-blue-50 p-3 rounded-lg">

@@ -1128,7 +1128,9 @@ export type Database = {
         Row: {
           address: string | null
           allergies: string | null
+          area: string | null
           blood_type: string | null
+          city: string | null
           cnic: string | null
           date_of_birth: string | null
           emergency_contact_name: string | null
@@ -1139,7 +1141,9 @@ export type Database = {
         Insert: {
           address?: string | null
           allergies?: string | null
+          area?: string | null
           blood_type?: string | null
+          city?: string | null
           cnic?: string | null
           date_of_birth?: string | null
           emergency_contact_name?: string | null
@@ -1150,7 +1154,9 @@ export type Database = {
         Update: {
           address?: string | null
           allergies?: string | null
+          area?: string | null
           blood_type?: string | null
+          city?: string | null
           cnic?: string | null
           date_of_birth?: string | null
           emergency_contact_name?: string | null
