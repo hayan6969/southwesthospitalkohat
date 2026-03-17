@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -13,7 +13,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { formatPkrAmount } from "@/utils/currency";
-import { Plus, Receipt, TrendingDown, Calendar as CalendarIcon, Edit, Trash2 } from "lucide-react";
+import { Plus, Receipt, TrendingDown, Calendar as CalendarIcon, Edit, Trash2, Upload, Image as ImageIcon } from "lucide-react";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
@@ -29,12 +29,16 @@ interface Expense {
   expense_date: string;
   created_at: string;
   created_by: string;
+  proof_url?: string;
 }
 
 export default function FinanceExpenses() {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [filterDate, setFilterDate] = useState<Date | undefined>();
+  const [proofFile, setProofFile] = useState<File | null>(null);
+  const [uploadingProof, setUploadingProof] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [formData, setFormData] = useState({
     category: "",
     description: "",
@@ -67,6 +71,20 @@ export default function FinanceExpenses() {
       })
     : allExpenses;
 
+  const uploadProofFile = async (file: File): Promise<string | null> => {
+    const fileExt = file.name.split('.').pop();
+    const fileName = `expense-${Date.now()}.${fileExt}`;
+    const { data, error } = await supabase.storage
+      .from('finance-proofs')
+      .upload(fileName, file);
+    if (error) {
+      console.error('Proof upload error:', error);
+      return null;
+    }
+    const { data: urlData } = supabase.storage.from('finance-proofs').getPublicUrl(data.path);
+    return urlData.publicUrl;
+  };
+
   const addExpenseMutation = useMutation({
     mutationFn: async (expenseData: {
       category: string;
@@ -74,11 +92,19 @@ export default function FinanceExpenses() {
       amount: number;
       expense_date: string;
     }) => {
+      let proofUrl: string | null = null;
+      if (proofFile) {
+        setUploadingProof(true);
+        proofUrl = await uploadProofFile(proofFile);
+        setUploadingProof(false);
+      }
+
       const { data, error } = await supabase
         .from('expenses')
         .insert([{
           ...expenseData,
-          created_by: user?.id
+          created_by: user?.id,
+          proof_url: proofUrl
         }])
         .select()
         .single();
@@ -89,14 +115,10 @@ export default function FinanceExpenses() {
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['expenses'] });
       setIsAddDialogOpen(false);
-      setFormData({
-        category: "",
-        description: "",
-        amount: "",
-      });
+      setFormData({ category: "", description: "", amount: "" });
       setSelectedDate(new Date());
+      setProofFile(null);
       
-      // Log expense creation
       logCreate(
         'Expense', 
         `Created expense: ${data.category} - ${data.description} (${formatPkrAmount(data.amount)})`,
@@ -347,8 +369,27 @@ export default function FinanceExpenses() {
                     </PopoverContent>
                   </Popover>
                 </div>
-                <Button type="submit" className="w-full" disabled={addExpenseMutation.isPending}>
-                  {addExpenseMutation.isPending ? "Adding..." : "Add Expense"}
+                <div>
+                  <Label>Receipt / Proof (Optional)</Label>
+                  <div className="flex items-center gap-2 mt-1">
+                    <input
+                      type="file"
+                      ref={fileInputRef}
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(e) => setProofFile(e.target.files?.[0] || null)}
+                    />
+                    <Button type="button" variant="outline" size="sm" onClick={() => fileInputRef.current?.click()} className="flex items-center gap-2">
+                      <Upload className="w-4 h-4" />
+                      {proofFile ? proofFile.name : 'Attach Receipt'}
+                    </Button>
+                    {proofFile && (
+                      <Button type="button" variant="ghost" size="sm" onClick={() => setProofFile(null)} className="text-red-500 text-xs">Remove</Button>
+                    )}
+                  </div>
+                </div>
+                <Button type="submit" className="w-full" disabled={addExpenseMutation.isPending || uploadingProof}>
+                  {uploadingProof ? "Uploading proof..." : addExpenseMutation.isPending ? "Adding..." : "Add Expense"}
                 </Button>
               </form>
             </DialogContent>
@@ -363,6 +404,7 @@ export default function FinanceExpenses() {
                 <TableHead>Description</TableHead>
                 <TableHead>Amount</TableHead>
                 <TableHead>Date</TableHead>
+                <TableHead>Proof</TableHead>
                 <TableHead>Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -377,6 +419,17 @@ export default function FinanceExpenses() {
                     -{formatPkrAmount(expense.amount)}
                   </TableCell>
                   <TableCell>{format(new Date(expense.expense_date), 'MMM dd, yyyy')}</TableCell>
+                  <TableCell>
+                    {expense.proof_url ? (
+                      <a href={expense.proof_url} target="_blank" rel="noopener noreferrer">
+                        <Badge variant="secondary" className="flex items-center gap-1 cursor-pointer hover:bg-primary/10">
+                          <ImageIcon className="w-3 h-3" /> View
+                        </Badge>
+                      </a>
+                    ) : (
+                      <span className="text-xs text-muted-foreground">—</span>
+                    )}
+                  </TableCell>
                   <TableCell>
                     <Button 
                       size="sm" 

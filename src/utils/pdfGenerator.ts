@@ -1625,6 +1625,45 @@ export const generateDailyClosingPDF = async (data: {
   }
 
   // ===========================================
+  // STAFF COLLECTION SUMMARY
+  // ===========================================
+  drawSectionHeader('STAFF COLLECTION SUMMARY');
+
+  // Aggregate by operator
+  const staffCollectionMap = new Map<string, { name: string; count: number; total: number }>();
+  allTxns.forEach(txn => {
+    const op = txn.operator;
+    if (op && op !== '—') {
+      const existing = staffCollectionMap.get(op) || { name: op, count: 0, total: 0 };
+      existing.count += 1;
+      existing.total += txn.amount;
+      staffCollectionMap.set(op, existing);
+    }
+  });
+
+  const staffEntries = Array.from(staffCollectionMap.values()).sort((a, b) => b.total - a.total);
+
+  if (staffEntries.length > 0) {
+    const staffHeaders = ['Sr#', 'Staff Name', 'Transactions', 'Total Collected'];
+    const staffColWidths = [10, 60, 30, 40];
+    const staffRows: string[][] = staffEntries.map((s, i) => [
+      String(i + 1),
+      s.name,
+      String(s.count),
+      formatPkrAmount(s.total)
+    ]);
+    const staffGrandTotal = staffEntries.reduce((s, e) => s + e.total, 0);
+    staffRows.push(['', 'TOTAL', String(staffEntries.reduce((s, e) => s + e.count, 0)), formatPkrAmount(staffGrandTotal)]);
+    drawTable(staffHeaders, staffRows, staffColWidths);
+  } else {
+    doc.setFont('helvetica', 'italic');
+    doc.setFontSize(10);
+    doc.setTextColor(150, 150, 150);
+    doc.text('No staff-attributed transactions for this period.', pageWidth / 2, yPosition, { align: 'center' });
+    yPosition += 12;
+  }
+
+  // ===========================================
   // EXPENSES DETAIL SECTION
   // ===========================================
   const expenseCount = transactionsData?.expenses?.length || 0;

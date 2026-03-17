@@ -502,6 +502,7 @@ export type Database = {
           description: string
           expense_date: string
           id: string
+          proof_url: string | null
           updated_at: string | null
         }
         Insert: {
@@ -512,6 +513,7 @@ export type Database = {
           description: string
           expense_date?: string
           id?: string
+          proof_url?: string | null
           updated_at?: string | null
         }
         Update: {
@@ -522,6 +524,7 @@ export type Database = {
           description?: string
           expense_date?: string
           id?: string
+          proof_url?: string | null
           updated_at?: string | null
         }
         Relationships: []
@@ -1608,6 +1611,7 @@ export type Database = {
           id: string
           patient_id: string | null
           processed_by: string
+          proof_url: string | null
           refund_type: string
           related_record_id: string | null
           updated_at: string | null
@@ -1620,6 +1624,7 @@ export type Database = {
           id?: string
           patient_id?: string | null
           processed_by: string
+          proof_url?: string | null
           refund_type: string
           related_record_id?: string | null
           updated_at?: string | null
@@ -1632,6 +1637,7 @@ export type Database = {
           id?: string
           patient_id?: string | null
           processed_by?: string
+          proof_url?: string | null
           refund_type?: string
           related_record_id?: string | null
           updated_at?: string | null

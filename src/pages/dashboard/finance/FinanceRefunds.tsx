@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -18,7 +18,7 @@ import { toast } from "sonner";
 import { format } from "date-fns";
 import { formatPkrAmount } from "@/utils/currency";
 import { getCurrentPakistanTime } from "@/utils/timezone";
-import { RefreshCw, Plus, Filter, Search, Calendar as CalendarIcon, ChevronLeft, ChevronRight } from "lucide-react";
+import { RefreshCw, Plus, Filter, Search, Calendar as CalendarIcon, ChevronLeft, ChevronRight, Upload, Image as ImageIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface RefundFormData {
@@ -39,6 +39,9 @@ export default function FinanceRefunds() {
     doctorId: ""
   });
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  const [proofFile, setProofFile] = useState<File | null>(null);
+  const [uploadingProof, setUploadingProof] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   
   // Filtering and pagination state
   const [filteredRefunds, setFilteredRefunds] = useState<any[]>([]);
@@ -126,10 +129,30 @@ export default function FinanceRefunds() {
   const endIndex = startIndex + itemsPerPage;
   const paginatedRefunds = filteredRefunds.slice(startIndex, endIndex);
 
+  const uploadProofFile = async (file: File): Promise<string | null> => {
+    const fileExt = file.name.split('.').pop();
+    const fileName = `refund-${Date.now()}.${fileExt}`;
+    const { data, error } = await supabase.storage
+      .from('finance-proofs')
+      .upload(fileName, file);
+    if (error) {
+      console.error('Proof upload error:', error);
+      return null;
+    }
+    const { data: urlData } = supabase.storage.from('finance-proofs').getPublicUrl(data.path);
+    return urlData.publicUrl;
+  };
+
   // Create refund mutation
   const createRefundMutation = useMutation({
     mutationFn: async (refundData: RefundFormData) => {
-      // First, create the refund record
+      let proofUrl: string | null = null;
+      if (proofFile) {
+        setUploadingProof(true);
+        proofUrl = await uploadProofFile(proofFile);
+        setUploadingProof(false);
+      }
+
       const { data: refund, error: refundError } = await supabase
         .from('refunds')
         .insert({
@@ -137,14 +160,14 @@ export default function FinanceRefunds() {
           refund_type: refundData.refundType,
           description: refundData.description,
           doctor_id: refundData.doctorId || null,
-          processed_by: profile?.id
+          processed_by: profile?.id,
+          proof_url: proofUrl
         })
         .select()
         .single();
 
       if (refundError) throw refundError;
 
-      // Log the refund creation for audit trail
       const doctorName = refundData.doctorId ? 
         `Dr. ${doctors?.find(d => d.id === refundData.doctorId)?.first_name} ${doctors?.find(d => d.id === refundData.doctorId)?.last_name}` : 
         'N/A';
@@ -160,9 +183,10 @@ export default function FinanceRefunds() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['refunds'] });
       queryClient.invalidateQueries({ queryKey: ['financial-analytics'] });
-      queryClient.invalidateQueries({ queryKey: ['expenses'] }); // Also invalidate expenses
+      queryClient.invalidateQueries({ queryKey: ['expenses'] });
       setFormData({ amount: "", refundType: "", description: "", doctorId: "" });
       setShowConfirmDialog(false);
+      setProofFile(null);
       toast.success("Refund processed successfully");
     },
     onError: (error: any) => {
@@ -306,10 +330,30 @@ export default function FinanceRefunds() {
               />
             </div>
 
+            <div className="space-y-2">
+              <Label>Receipt / Proof (Optional)</Label>
+              <div className="flex items-center gap-2">
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => setProofFile(e.target.files?.[0] || null)}
+                />
+                <Button type="button" variant="outline" size="sm" onClick={() => fileInputRef.current?.click()} className="flex items-center gap-2">
+                  <Upload className="w-4 h-4" />
+                  {proofFile ? proofFile.name : 'Attach Receipt'}
+                </Button>
+                {proofFile && (
+                  <Button type="button" variant="ghost" size="sm" onClick={() => setProofFile(null)} className="text-red-500 text-xs">Remove</Button>
+                )}
+              </div>
+            </div>
+
             <AlertDialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
               <AlertDialogTrigger asChild>
-                <Button type="submit" className="w-full" disabled={createRefundMutation.isPending}>
-                  {createRefundMutation.isPending ? (
+                <Button type="submit" className="w-full" disabled={createRefundMutation.isPending || uploadingProof}>
+                  {uploadingProof ? "Uploading proof..." : createRefundMutation.isPending ? (
                     <>
                       <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
                       Processing Refund...
@@ -475,13 +519,14 @@ export default function FinanceRefunds() {
                       <TableHead>Type</TableHead>
                       <TableHead>Doctor</TableHead>
                       <TableHead>Description</TableHead>
+                      <TableHead>Proof</TableHead>
                       <TableHead>Processed By</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {filteredRefunds.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={6} className="text-center py-8 text-gray-500">
+                        <TableCell colSpan={7} className="text-center py-8 text-gray-500">
                           {refunds?.length === 0 
                             ? "No refunds processed yet" 
                             : "No refunds found for the selected filters"
@@ -511,6 +556,17 @@ export default function FinanceRefunds() {
                           </TableCell>
                           <TableCell className="max-w-xs truncate">
                             {refund.description}
+                          </TableCell>
+                          <TableCell>
+                            {refund.proof_url ? (
+                              <a href={refund.proof_url} target="_blank" rel="noopener noreferrer">
+                                <Badge variant="secondary" className="flex items-center gap-1 cursor-pointer hover:bg-primary/10">
+                                  <ImageIcon className="w-3 h-3" /> View
+                                </Badge>
+                              </a>
+                            ) : (
+                              <span className="text-xs text-muted-foreground">—</span>
+                            )}
                           </TableCell>
                           <TableCell>
                             {refund.processed_by_profile.first_name} {refund.processed_by_profile.last_name}
