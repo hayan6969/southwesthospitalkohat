@@ -442,26 +442,15 @@ export function PreviousClosingsDialog() {
                                     {formatPkrAmount(netProfit)}
                                   </p>
                                 </div>
-                                <div className="flex gap-1">
-                                  <Button
-                                    size="sm"
-                                    variant="ghost"
-                                    onClick={(e) => { e.stopPropagation(); handleSummaryPDF(closing); }}
-                                    className="h-8 px-2"
-                                    title="Summary Report"
-                                  >
-                                    <ClipboardList className="w-4 h-4" />
-                                  </Button>
-                                  <Button
-                                    size="sm"
-                                    variant="ghost"
-                                    onClick={(e) => { e.stopPropagation(); handleDetailedPDF(closing); }}
-                                    className="h-8 px-2"
-                                    title="Detailed Report"
-                                  >
-                                    <FileText className="w-4 h-4" />
-                                  </Button>
-                                </div>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={(e) => { e.stopPropagation(); handlePDF(closing); }}
+                                  className="h-8 px-2"
+                                  title={`${viewMode === "summary" ? "Summary" : "Detailed"} Report`}
+                                >
+                                  <FileText className="w-4 h-4" />
+                                </Button>
                               </div>
                             </div>
                           </CardContent>
