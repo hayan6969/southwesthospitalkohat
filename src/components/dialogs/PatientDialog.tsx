@@ -27,6 +27,8 @@ export function PatientDialog() {
   const [lastName, setLastName] = useState("");
   const [phone, setPhone] = useState("");
   const [cnic, setCnic] = useState("");
+  const [city, setCity] = useState("");
+  const [area, setArea] = useState("");
 
   const createPatientWithProfile = useCreatePatientWithProfile();
   const { logAction } = useAuditLogger();
