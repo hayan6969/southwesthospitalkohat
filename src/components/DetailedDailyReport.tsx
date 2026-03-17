@@ -98,9 +98,11 @@ export function DetailedDailyReport({
   miscellaneousIncome,
   staffProfiles,
   reportDate,
+  initialCategoryFilter = "all",
+  initialViewMode = "detailed",
 }: DetailedReportProps) {
-  const [categoryFilter, setCategoryFilter] = useState<string>("all");
-  const [viewMode, setViewMode] = useState<string>("detailed");
+  const [categoryFilter, setCategoryFilter] = useState<string>(initialCategoryFilter);
+  const [viewMode, setViewMode] = useState<string>(initialViewMode);
 
   // Build transaction items from all sources
   const transactions: TransactionItem[] = [];
