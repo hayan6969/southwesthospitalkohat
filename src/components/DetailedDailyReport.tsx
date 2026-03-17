@@ -52,6 +52,8 @@ interface DetailedReportProps {
   miscellaneousIncome: any[];
   staffProfiles: any[];
   reportDate: string;
+  initialCategoryFilter?: string;
+  initialViewMode?: string;
 }
 
 // Determine shift based on hour (Pakistan time)
