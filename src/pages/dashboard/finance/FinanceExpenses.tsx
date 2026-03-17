@@ -369,8 +369,27 @@ export default function FinanceExpenses() {
                     </PopoverContent>
                   </Popover>
                 </div>
-                <Button type="submit" className="w-full" disabled={addExpenseMutation.isPending}>
-                  {addExpenseMutation.isPending ? "Adding..." : "Add Expense"}
+                <div>
+                  <Label>Receipt / Proof (Optional)</Label>
+                  <div className="flex items-center gap-2 mt-1">
+                    <input
+                      type="file"
+                      ref={fileInputRef}
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(e) => setProofFile(e.target.files?.[0] || null)}
+                    />
+                    <Button type="button" variant="outline" size="sm" onClick={() => fileInputRef.current?.click()} className="flex items-center gap-2">
+                      <Upload className="w-4 h-4" />
+                      {proofFile ? proofFile.name : 'Attach Receipt'}
+                    </Button>
+                    {proofFile && (
+                      <Button type="button" variant="ghost" size="sm" onClick={() => setProofFile(null)} className="text-red-500 text-xs">Remove</Button>
+                    )}
+                  </div>
+                </div>
+                <Button type="submit" className="w-full" disabled={addExpenseMutation.isPending || uploadingProof}>
+                  {uploadingProof ? "Uploading proof..." : addExpenseMutation.isPending ? "Adding..." : "Add Expense"}
                 </Button>
               </form>
             </DialogContent>
