@@ -336,7 +336,7 @@ export default function FinanceRefunds() {
             </div>
 
             <div className="space-y-2">
-              <Label>Receipt / Proof (Optional)</Label>
+              <Label>Receipt / Proof <span className="text-destructive">*</span></Label>
               <div className="flex items-center gap-2">
                 <input
                   type="file"
@@ -350,9 +350,10 @@ export default function FinanceRefunds() {
                   {proofFile ? proofFile.name : 'Attach Receipt'}
                 </Button>
                 {proofFile && (
-                  <Button type="button" variant="ghost" size="sm" onClick={() => setProofFile(null)} className="text-red-500 text-xs">Remove</Button>
+                  <Button type="button" variant="ghost" size="sm" onClick={() => setProofFile(null)} className="text-destructive text-xs">Remove</Button>
                 )}
               </div>
+              {!proofFile && <p className="text-xs text-destructive mt-1">Proof attachment is required</p>}
             </div>
 
             <AlertDialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
