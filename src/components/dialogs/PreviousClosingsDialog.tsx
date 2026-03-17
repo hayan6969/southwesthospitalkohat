@@ -127,7 +127,8 @@ export function PreviousClosingsDialog() {
     totalExpenses: closing.total_expenses,
     totalRefunds: closing.total_refunds,
     netProfit: closing.net_profit,
-    transactionsData: closing.transactions_data && Object.keys(closing.transactions_data).length > 0 ? closing.transactions_data : undefined
+    transactionsData: closing.transactions_data && Object.keys(closing.transactions_data).length > 0 ? closing.transactions_data : undefined,
+    categoryFilter: categoryFilter,
   });
 
   const handleSummaryPDF = async (closing: DailyClosing) => {
