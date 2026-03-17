@@ -213,6 +213,11 @@ export default function FinanceRefunds() {
       return;
     }
 
+    if (!proofFile) {
+      toast.error("Please attach a receipt/proof");
+      return;
+    }
+
     setShowConfirmDialog(true);
   };
 
