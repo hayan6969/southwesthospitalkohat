@@ -879,8 +879,8 @@ export const useCreatePatientWithProfile = () => {
       last_name: string;
       phone: string;
       cnic: string;
+      province?: string;
       city?: string;
-      area?: string;
     }) => {
       // If offline, store in offline storage
       if (!navigator.onLine) {
