@@ -129,10 +129,30 @@ export default function FinanceRefunds() {
   const endIndex = startIndex + itemsPerPage;
   const paginatedRefunds = filteredRefunds.slice(startIndex, endIndex);
 
+  const uploadProofFile = async (file: File): Promise<string | null> => {
+    const fileExt = file.name.split('.').pop();
+    const fileName = `refund-${Date.now()}.${fileExt}`;
+    const { data, error } = await supabase.storage
+      .from('finance-proofs')
+      .upload(fileName, file);
+    if (error) {
+      console.error('Proof upload error:', error);
+      return null;
+    }
+    const { data: urlData } = supabase.storage.from('finance-proofs').getPublicUrl(data.path);
+    return urlData.publicUrl;
+  };
+
   // Create refund mutation
   const createRefundMutation = useMutation({
     mutationFn: async (refundData: RefundFormData) => {
-      // First, create the refund record
+      let proofUrl: string | null = null;
+      if (proofFile) {
+        setUploadingProof(true);
+        proofUrl = await uploadProofFile(proofFile);
+        setUploadingProof(false);
+      }
+
       const { data: refund, error: refundError } = await supabase
         .from('refunds')
         .insert({
@@ -140,14 +160,14 @@ export default function FinanceRefunds() {
           refund_type: refundData.refundType,
           description: refundData.description,
           doctor_id: refundData.doctorId || null,
-          processed_by: profile?.id
+          processed_by: profile?.id,
+          proof_url: proofUrl
         })
         .select()
         .single();
 
       if (refundError) throw refundError;
 
-      // Log the refund creation for audit trail
       const doctorName = refundData.doctorId ? 
         `Dr. ${doctors?.find(d => d.id === refundData.doctorId)?.first_name} ${doctors?.find(d => d.id === refundData.doctorId)?.last_name}` : 
         'N/A';
@@ -163,9 +183,10 @@ export default function FinanceRefunds() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['refunds'] });
       queryClient.invalidateQueries({ queryKey: ['financial-analytics'] });
-      queryClient.invalidateQueries({ queryKey: ['expenses'] }); // Also invalidate expenses
+      queryClient.invalidateQueries({ queryKey: ['expenses'] });
       setFormData({ amount: "", refundType: "", description: "", doctorId: "" });
       setShowConfirmDialog(false);
+      setProofFile(null);
       toast.success("Refund processed successfully");
     },
     onError: (error: any) => {
