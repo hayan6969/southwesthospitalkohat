@@ -131,23 +131,18 @@ export function PreviousClosingsDialog() {
     categoryFilter: categoryFilter,
   });
 
-  const handleSummaryPDF = async (closing: DailyClosing) => {
+  const handlePDF = async (closing: DailyClosing) => {
     try {
-      await generateDailyClosingSummaryPDF(getClosingPdfData(closing));
-      toast.success("Summary report opened in new tab");
+      const pdfData = getClosingPdfData(closing);
+      if (viewMode === "summary") {
+        await generateDailyClosingSummaryPDF(pdfData);
+      } else {
+        await generateDailyClosingPDF(pdfData);
+      }
+      toast.success(`${viewMode === "summary" ? "Summary" : "Detailed"} report opened in new tab`);
     } catch (error) {
-      console.error('Error generating summary PDF:', error);
-      toast.error("Failed to generate summary PDF");
-    }
-  };
-
-  const handleDetailedPDF = async (closing: DailyClosing) => {
-    try {
-      await generateDailyClosingPDF(getClosingPdfData(closing));
-      toast.success("Detailed report opened in new tab");
-    } catch (error) {
-      console.error('Error generating detailed PDF:', error);
-      toast.error("Failed to generate detailed PDF");
+      console.error('Error generating PDF:', error);
+      toast.error("Failed to generate PDF");
     }
   };
 
