@@ -10,7 +10,6 @@ import { toast } from '@/hooks/use-toast';
 import { Eye, EyeOff, User, Lock, Mail, Phone, Search } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { ALL_PROVINCES, getCitiesForProvince } from '@/utils/pakistanCities';
-import { supabase } from '@/integrations/supabase/client';
 
 export default function Auth() {
   const { signIn, signUp, loading } = useAuth();
