@@ -370,7 +370,7 @@ export default function FinanceExpenses() {
                   </Popover>
                 </div>
                 <div>
-                  <Label>Receipt / Proof (Optional)</Label>
+                  <Label>Receipt / Proof <span className="text-destructive">*</span></Label>
                   <div className="flex items-center gap-2 mt-1">
                     <input
                       type="file"
@@ -384,9 +384,10 @@ export default function FinanceExpenses() {
                       {proofFile ? proofFile.name : 'Attach Receipt'}
                     </Button>
                     {proofFile && (
-                      <Button type="button" variant="ghost" size="sm" onClick={() => setProofFile(null)} className="text-red-500 text-xs">Remove</Button>
+                      <Button type="button" variant="ghost" size="sm" onClick={() => setProofFile(null)} className="text-destructive text-xs">Remove</Button>
                     )}
                   </div>
+                  {!proofFile && <p className="text-xs text-destructive mt-1">Proof attachment is required</p>}
                 </div>
                 <Button type="submit" className="w-full" disabled={addExpenseMutation.isPending || uploadingProof}>
                   {uploadingProof ? "Uploading proof..." : addExpenseMutation.isPending ? "Adding..." : "Add Expense"}
