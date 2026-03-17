@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -18,7 +18,7 @@ import { toast } from "sonner";
 import { format } from "date-fns";
 import { formatPkrAmount } from "@/utils/currency";
 import { getCurrentPakistanTime } from "@/utils/timezone";
-import { RefreshCw, Plus, Filter, Search, Calendar as CalendarIcon, ChevronLeft, ChevronRight } from "lucide-react";
+import { RefreshCw, Plus, Filter, Search, Calendar as CalendarIcon, ChevronLeft, ChevronRight, Upload, Image as ImageIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface RefundFormData {
