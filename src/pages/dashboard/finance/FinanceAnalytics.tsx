@@ -156,16 +156,18 @@ export default function FinanceAnalytics() {
 
       {/* Key Metrics Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        <MetricCard title="Pharmacy Sales" value={formatPkrAmount(pharmacySales)} color="text-blue-600" sub="Total sales" />
-        <MetricCard title="Pharmacy Profit" value={formatPkrAmount(pharmacyProfit)} color="text-green-600" sub="After discounts" />
-        <MetricCard title="Hospital Revenue" value={formatPkrAmount(hospitalRevenue)} color="text-purple-600" sub="Without pharmacy" />
-        <MetricCard title="Hospital Profit (No Pharmacy)" value={formatPkrAmount(hospitalProfitWithoutPharmacy)} color={hospitalProfitWithoutPharmacy >= 0 ? 'text-green-600' : 'text-red-600'} sub="Revenue - Expenses" />
+        <MetricCard title="Total Revenue" value={formatPkrAmount(totalRevenue)} color="text-blue-700" sub="Hospital Share + Doctors Revenue" />
+        <MetricCard title="Doctors Revenue" value={formatPkrAmount(doctorsRevenue)} color="text-indigo-600" sub="OPD consultations + OT doctor fees" />
+        <MetricCard title="Hospital Share" value={formatPkrAmount(hospitalRevenue)} color="text-purple-600" sub="Lab + X-ray + OT + Emergency + Misc" />
+        <MetricCard title="Hospital Profit (No Pharmacy)" value={formatPkrAmount(hospitalProfitWithoutPharmacy)} color={hospitalProfitWithoutPharmacy >= 0 ? 'text-green-600' : 'text-red-600'} sub="Hos. Share - Expenses" />
         <MetricCard title="Hospital Profit (With Pharmacy)" value={formatPkrAmount(hospitalProfitWithPharmacy)} color={hospitalProfitWithPharmacy >= 0 ? 'text-green-600' : 'text-red-600'} sub="Including pharmacy profit" />
         <MetricCard title="Total Expenses" value={formatPkrAmount(totalExpenses)} color="text-red-600" sub="All expenses" />
-        <MetricCard title="Operations Revenue" value={formatPkrAmount(operationsRevenue)} color="text-indigo-600" sub="Hospital share only" />
         <MetricCard title="Lab Revenue" value={formatPkrAmount(labRevenue)} color="text-amber-600" sub="All lab tests" />
         <MetricCard title="X-ray Revenue" value={formatPkrAmount(xrayRevenue)} color="text-violet-600" sub="All X-ray tests" />
+        <MetricCard title="Operations Revenue" value={formatPkrAmount(operationsRevenue)} color="text-cyan-600" sub="Hospital share only" />
         <MetricCard title="Emergency Revenue" value={formatPkrAmount(emergencyRevenue)} color="text-rose-600" sub="Emergency consultations" />
+        <MetricCard title="Pharmacy Sales" value={formatPkrAmount(pharmacySales)} color="text-blue-600" sub="Total sales" />
+        <MetricCard title="Pharmacy Profit" value={formatPkrAmount(pharmacyProfit)} color="text-green-600" sub="After discounts" />
         <Card>
           <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Pharmacy Invoices</CardTitle></CardHeader>
           <CardContent>
