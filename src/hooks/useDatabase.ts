@@ -679,6 +679,7 @@ export const useCreateAppointmentWithInvoice = () => {
           data: {
             id: tempInvoiceId,
             patient_id: appointmentData.appointment.patient_id,
+            doctor_id: appointmentData.appointment.doctor_id,
             amount: appointmentData.consultationFee,
             description: `Consultation with Dr. ${appointmentData.doctorName} - Patient: ${appointmentData.patientNumber || 'N/A'}`,
             invoice_number: `INV-TEMP-${Date.now()}`,
