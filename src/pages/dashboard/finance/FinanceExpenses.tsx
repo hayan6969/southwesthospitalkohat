@@ -184,6 +184,14 @@ export default function FinanceExpenses() {
       });
       return;
     }
+    if (!proofFile) {
+      toast({
+        title: "Error",
+        description: "Please attach a receipt/proof",
+        variant: "destructive",
+      });
+      return;
+    }
     
     addExpenseMutation.mutate({
       ...formData,
