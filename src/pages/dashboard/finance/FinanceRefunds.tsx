@@ -519,13 +519,14 @@ export default function FinanceRefunds() {
                       <TableHead>Type</TableHead>
                       <TableHead>Doctor</TableHead>
                       <TableHead>Description</TableHead>
+                      <TableHead>Proof</TableHead>
                       <TableHead>Processed By</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {filteredRefunds.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={6} className="text-center py-8 text-gray-500">
+                        <TableCell colSpan={7} className="text-center py-8 text-gray-500">
                           {refunds?.length === 0 
                             ? "No refunds processed yet" 
                             : "No refunds found for the selected filters"
@@ -555,6 +556,17 @@ export default function FinanceRefunds() {
                           </TableCell>
                           <TableCell className="max-w-xs truncate">
                             {refund.description}
+                          </TableCell>
+                          <TableCell>
+                            {refund.proof_url ? (
+                              <a href={refund.proof_url} target="_blank" rel="noopener noreferrer">
+                                <Badge variant="secondary" className="flex items-center gap-1 cursor-pointer hover:bg-primary/10">
+                                  <ImageIcon className="w-3 h-3" /> View
+                                </Badge>
+                              </a>
+                            ) : (
+                              <span className="text-xs text-muted-foreground">—</span>
+                            )}
                           </TableCell>
                           <TableCell>
                             {refund.processed_by_profile.first_name} {refund.processed_by_profile.last_name}
