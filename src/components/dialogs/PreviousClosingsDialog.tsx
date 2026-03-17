@@ -11,7 +11,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { formatPkrAmount } from "@/utils/currency";
-import { History, FileText, ChevronLeft, ChevronRight, Calendar as CalendarIcon, Filter, Search, ArrowLeft, ClipboardList, ListFilter } from "lucide-react";
+import { History, FileText, ChevronLeft, ChevronRight, Calendar as CalendarIcon, Filter, Search, ArrowLeft, ListFilter } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { format } from "date-fns";
 import { formatInPakistanTime } from "@/utils/timezone";
@@ -131,23 +131,18 @@ export function PreviousClosingsDialog() {
     categoryFilter: categoryFilter,
   });
 
-  const handleSummaryPDF = async (closing: DailyClosing) => {
+  const handlePDF = async (closing: DailyClosing) => {
     try {
-      await generateDailyClosingSummaryPDF(getClosingPdfData(closing));
-      toast.success("Summary report opened in new tab");
+      const pdfData = getClosingPdfData(closing);
+      if (viewMode === "summary") {
+        await generateDailyClosingSummaryPDF(pdfData);
+      } else {
+        await generateDailyClosingPDF(pdfData);
+      }
+      toast.success(`${viewMode === "summary" ? "Summary" : "Detailed"} report opened in new tab`);
     } catch (error) {
-      console.error('Error generating summary PDF:', error);
-      toast.error("Failed to generate summary PDF");
-    }
-  };
-
-  const handleDetailedPDF = async (closing: DailyClosing) => {
-    try {
-      await generateDailyClosingPDF(getClosingPdfData(closing));
-      toast.success("Detailed report opened in new tab");
-    } catch (error) {
-      console.error('Error generating detailed PDF:', error);
-      toast.error("Failed to generate detailed PDF");
+      console.error('Error generating PDF:', error);
+      toast.error("Failed to generate PDF");
     }
   };
 
@@ -239,14 +234,10 @@ export function PreviousClosingsDialog() {
                   <span className="font-medium text-blue-600">
                     Pharmacy Profit: {formatPkrAmount(selectedClosing.pharmacy_profit)}
                   </span>
-                  <div className="ml-auto flex gap-2">
-                    <Button size="sm" variant="outline" onClick={() => handleSummaryPDF(selectedClosing)} className="flex items-center gap-1">
-                      <ClipboardList className="w-3 h-3" />
-                      Summary
-                    </Button>
-                    <Button size="sm" variant="outline" onClick={() => handleDetailedPDF(selectedClosing)} className="flex items-center gap-1">
+                  <div className="ml-auto">
+                    <Button size="sm" variant="outline" onClick={() => handlePDF(selectedClosing)} className="flex items-center gap-1">
                       <FileText className="w-3 h-3" />
-                      Detailed
+                      Print {viewMode === "summary" ? "Summary" : "Detailed"} Report
                     </Button>
                   </div>
                 </div>
@@ -451,26 +442,15 @@ export function PreviousClosingsDialog() {
                                     {formatPkrAmount(netProfit)}
                                   </p>
                                 </div>
-                                <div className="flex gap-1">
-                                  <Button
-                                    size="sm"
-                                    variant="ghost"
-                                    onClick={(e) => { e.stopPropagation(); handleSummaryPDF(closing); }}
-                                    className="h-8 px-2"
-                                    title="Summary Report"
-                                  >
-                                    <ClipboardList className="w-4 h-4" />
-                                  </Button>
-                                  <Button
-                                    size="sm"
-                                    variant="ghost"
-                                    onClick={(e) => { e.stopPropagation(); handleDetailedPDF(closing); }}
-                                    className="h-8 px-2"
-                                    title="Detailed Report"
-                                  >
-                                    <FileText className="w-4 h-4" />
-                                  </Button>
-                                </div>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={(e) => { e.stopPropagation(); handlePDF(closing); }}
+                                  className="h-8 px-2"
+                                  title={`${viewMode === "summary" ? "Summary" : "Detailed"} Report`}
+                                >
+                                  <FileText className="w-4 h-4" />
+                                </Button>
                               </div>
                             </div>
                           </CardContent>
