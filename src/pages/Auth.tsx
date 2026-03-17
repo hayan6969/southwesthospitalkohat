@@ -1,13 +1,15 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from '@/hooks/use-toast';
-import { Eye, EyeOff, User, Lock, Mail, Phone } from 'lucide-react';
+import { Eye, EyeOff, User, Lock, Mail, Phone, Search } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { ALL_PROVINCES, getCitiesForProvince } from '@/utils/pakistanCities';
 
 export default function Auth() {
   const { signIn, signUp, loading } = useAuth();
@@ -36,7 +38,16 @@ export default function Auth() {
     confirmCnic: '',
     date_of_birth: '',
     address: '',
+    province: '',
+    city: '',
   });
+  const [citySearch, setCitySearch] = useState("");
+
+  const availableCities = useMemo(() => {
+    const cities = getCitiesForProvince(signupData.province);
+    if (!citySearch.trim()) return cities;
+    return cities.filter(c => c.toLowerCase().includes(citySearch.toLowerCase()));
+  }, [signupData.province, citySearch]);
 
   // Auth cleanup function to resolve authentication conflicts
   const cleanupAuthState = () => {
@@ -191,7 +202,10 @@ export default function Auth() {
           confirmCnic: '',
           date_of_birth: '',
           address: '',
+          province: '',
+          city: '',
         });
+        setCitySearch("");
       }
     } catch (error) {
       toast({
@@ -452,6 +466,62 @@ export default function Auth() {
                       value={signupData.address}
                       onChange={(e) => setSignupData({ ...signupData, address: e.target.value })}
                     />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Province (Optional)</Label>
+                      <Select 
+                        value={signupData.province} 
+                        onValueChange={(val) => {
+                          setSignupData({ ...signupData, province: val, city: '' });
+                          setCitySearch("");
+                        }}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select province" />
+                        </SelectTrigger>
+                        <SelectContent portal={false} className="z-[9999]">
+                          {ALL_PROVINCES.map(p => (
+                            <SelectItem key={p} value={p}>{p}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>City (Optional)</Label>
+                      <Select 
+                        value={signupData.city} 
+                        onValueChange={(val) => setSignupData({ ...signupData, city: val })}
+                        disabled={!signupData.province}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder={signupData.province ? "Select city" : "Province first"} />
+                        </SelectTrigger>
+                        <SelectContent portal={false} className="z-[9999] max-h-[200px]">
+                          <div className="px-2 pb-2 sticky top-0 bg-popover">
+                            <div className="relative">
+                              <Search className="absolute left-2 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
+                              <Input
+                                placeholder="Search city..."
+                                value={citySearch}
+                                onChange={(e) => setCitySearch(e.target.value)}
+                                className="h-8 pl-7 text-sm"
+                                onClick={(e) => e.stopPropagation()}
+                                onKeyDown={(e) => e.stopPropagation()}
+                              />
+                            </div>
+                          </div>
+                          {availableCities.length === 0 ? (
+                            <div className="text-sm text-muted-foreground text-center py-2">No cities found</div>
+                          ) : (
+                            availableCities.map(c => (
+                              <SelectItem key={c} value={c}>{c}</SelectItem>
+                            ))
+                          )}
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
                   
                   <Button type="submit" className="w-full" disabled={isLoading}>
