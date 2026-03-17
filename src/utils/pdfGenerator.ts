@@ -1381,8 +1381,12 @@ export const generateDailyClosingPDF = async (data: {
     });
   });
 
+  // Apply category filter if specified
+  const activeCategoryFilter = data.categoryFilter && data.categoryFilter !== 'all' ? data.categoryFilter : null;
+  const filteredTxns = activeCategoryFilter ? allTxns.filter(t => t.category === activeCategoryFilter) : allTxns;
+
   // Group by category then shift
-  const categoryOrder = ['OPD', 'Emergency', 'Lab', 'X-Ray', 'OT', 'Miscellaneous'];
+  const categoryOrder = activeCategoryFilter ? [activeCategoryFilter] : ['OPD', 'Emergency', 'Lab', 'X-Ray', 'OT', 'Miscellaneous'];
   const shiftOrder = ['Night', 'Morning', 'Evening'];
 
   // Table column widths for detailed report
