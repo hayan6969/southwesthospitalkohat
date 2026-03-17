@@ -468,6 +468,62 @@ export default function Auth() {
                       onChange={(e) => setSignupData({ ...signupData, address: e.target.value })}
                     />
                   </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Province (Optional)</Label>
+                      <Select 
+                        value={signupData.province} 
+                        onValueChange={(val) => {
+                          setSignupData({ ...signupData, province: val, city: '' });
+                          setCitySearch("");
+                        }}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select province" />
+                        </SelectTrigger>
+                        <SelectContent portal={false} className="z-[9999]">
+                          {ALL_PROVINCES.map(p => (
+                            <SelectItem key={p} value={p}>{p}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>City (Optional)</Label>
+                      <Select 
+                        value={signupData.city} 
+                        onValueChange={(val) => setSignupData({ ...signupData, city: val })}
+                        disabled={!signupData.province}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder={signupData.province ? "Select city" : "Province first"} />
+                        </SelectTrigger>
+                        <SelectContent portal={false} className="z-[9999] max-h-[200px]">
+                          <div className="px-2 pb-2 sticky top-0 bg-popover">
+                            <div className="relative">
+                              <Search className="absolute left-2 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
+                              <Input
+                                placeholder="Search city..."
+                                value={citySearch}
+                                onChange={(e) => setCitySearch(e.target.value)}
+                                className="h-8 pl-7 text-sm"
+                                onClick={(e) => e.stopPropagation()}
+                                onKeyDown={(e) => e.stopPropagation()}
+                              />
+                            </div>
+                          </div>
+                          {availableCities.length === 0 ? (
+                            <div className="text-sm text-muted-foreground text-center py-2">No cities found</div>
+                          ) : (
+                            availableCities.map(c => (
+                              <SelectItem key={c} value={c}>{c}</SelectItem>
+                            ))
+                          )}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
                   
                   <Button type="submit" className="w-full" disabled={isLoading}>
                     {isLoading ? 'Creating Account...' : 'Create Patient Account'}
