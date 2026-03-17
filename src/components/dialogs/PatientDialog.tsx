@@ -164,6 +164,31 @@ export function PatientDialog() {
               required
             />
           </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="city">City</Label>
+              <Select value={city} onValueChange={setCity}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select city" />
+                </SelectTrigger>
+                <SelectContent>
+                  {PAKISTAN_CITIES.map(c => (
+                    <SelectItem key={c} value={c}>{c}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="area">Area / Locality</Label>
+              <Input
+                id="area"
+                value={area}
+                onChange={(e) => setArea(e.target.value)}
+                placeholder="e.g. Gulberg, DHA"
+              />
+            </div>
+          </div>
           
           <div className="text-sm text-gray-600 bg-blue-50 p-3 rounded-lg">
             <p>• <strong>Phone number:</strong> Used as username for login (must be unique per patient)</p>
