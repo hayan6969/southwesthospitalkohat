@@ -1401,7 +1401,7 @@ export const generateDailyClosingPDF = async (data: {
   const totalTableWidth = detailColWidths.reduce((a, b) => a + b, 0);
   const detailStartX = (pageWidth - totalTableWidth) / 2;
 
-  if (allTxns.length === 0) {
+  if (filteredTxns.length === 0) {
     doc.setFont('helvetica', 'italic');
     doc.setFontSize(10);
     doc.setTextColor(150, 150, 150);
@@ -1429,7 +1429,7 @@ export const generateDailyClosingPDF = async (data: {
     drawDetailHeader();
 
     categoryOrder.forEach(cat => {
-      const catItems = allTxns.filter(t => t.category === cat);
+      const catItems = filteredTxns.filter(t => t.category === cat);
       if (catItems.length === 0) return;
 
       // Category header row
