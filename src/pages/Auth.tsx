@@ -39,7 +39,16 @@ export default function Auth() {
     confirmCnic: '',
     date_of_birth: '',
     address: '',
+    province: '',
+    city: '',
   });
+  const [citySearch, setCitySearch] = useState("");
+
+  const availableCities = useMemo(() => {
+    const cities = getCitiesForProvince(signupData.province);
+    if (!citySearch.trim()) return cities;
+    return cities.filter(c => c.toLowerCase().includes(citySearch.toLowerCase()));
+  }, [signupData.province, citySearch]);
 
   // Auth cleanup function to resolve authentication conflicts
   const cleanupAuthState = () => {
