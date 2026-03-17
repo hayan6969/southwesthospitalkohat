@@ -393,8 +393,37 @@ export function XrayDialog({ open, onOpenChange, onSuccess }: XrayDialogProps) {
             {/* X-ray Tests Selection */}
             <div className="space-y-2">
               <Label>Available X-ray Tests *</Label>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                <Input
+                  placeholder="Search X-ray tests..."
+                  value={testSearchTerm}
+                  onChange={(e) => setTestSearchTerm(e.target.value)}
+                  className="pl-10 pr-10"
+                />
+                {testSearchTerm && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setTestSearchTerm("")}
+                    className="absolute right-1 top-1/2 transform -translate-y-1/2 h-6 w-6 p-0"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                )}
+              </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-64 overflow-y-auto border rounded-lg p-4">
-                {xrayTests?.map((test) => (
+                {xrayTests
+                  ?.filter(test => {
+                    if (!testSearchTerm) return true;
+                    const term = testSearchTerm.toLowerCase();
+                    return (
+                      test.name.toLowerCase().includes(term) ||
+                      test.category?.toLowerCase().includes(term) ||
+                      test.description?.toLowerCase().includes(term)
+                    );
+                  })
+                  .map((test) => (
                   <div key={test.id} className="flex items-start space-x-3 p-3 border rounded-lg hover:bg-muted/50">
                     <Checkbox
                       id={`test-${test.id}`}
@@ -408,6 +437,9 @@ export function XrayDialog({ open, onOpenChange, onSuccess }: XrayDialogProps) {
                       >
                         {test.name}
                       </label>
+                      {test.category && (
+                        <Badge variant="secondary" className="text-xs">{test.category}</Badge>
+                      )}
                       {test.description && (
                         <p className="text-xs text-muted-foreground">{test.description}</p>
                       )}
@@ -415,6 +447,15 @@ export function XrayDialog({ open, onOpenChange, onSuccess }: XrayDialogProps) {
                     </div>
                   </div>
                 ))}
+                {xrayTests?.filter(test => {
+                  if (!testSearchTerm) return true;
+                  const term = testSearchTerm.toLowerCase();
+                  return test.name.toLowerCase().includes(term) || test.category?.toLowerCase().includes(term) || test.description?.toLowerCase().includes(term);
+                }).length === 0 && (
+                  <div className="col-span-2 text-center py-4 text-muted-foreground">
+                    No X-ray tests found matching "{testSearchTerm}"
+                  </div>
+                )}
               </div>
             </div>
 
