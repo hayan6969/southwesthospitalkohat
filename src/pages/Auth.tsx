@@ -203,7 +203,10 @@ export default function Auth() {
           confirmCnic: '',
           date_of_birth: '',
           address: '',
+          province: '',
+          city: '',
         });
+        setCitySearch("");
       }
     } catch (error) {
       toast({
