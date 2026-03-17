@@ -937,7 +937,8 @@ export const generateDailyClosingPDF = async (data: {
   totalExpenses: number;
   totalRefunds: number;
   netProfit: number;
-  transactionsData?: any; // Optional - if provided, use this instead of re-querying
+  transactionsData?: any;
+  categoryFilter?: string; // 'all' or specific category like 'Lab', 'OPD', etc.
 }) => {
   const doc = new jsPDF({
     orientation: 'portrait',
@@ -1179,11 +1180,17 @@ export const generateDailyClosingPDF = async (data: {
   // ===========================================
   // DETAILED OPD-STYLE TRANSACTION REPORT
   // ===========================================
-  drawSectionHeader('DETAILED TRANSACTION REPORT');
+  const filterLabel = data.categoryFilter && data.categoryFilter !== 'all' ? data.categoryFilter : null;
+  drawSectionHeader(filterLabel ? `DETAILED REPORT — ${filterLabel.toUpperCase()}` : 'DETAILED TRANSACTION REPORT');
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(8);
   doc.setTextColor(110, 110, 110);
-  doc.text('Grouped by service category and shift (Night: 12am–8am, Morning: 8am–2pm, Evening: 2pm–12am)', pageWidth / 2, yPosition, { align: 'center' });
+  doc.text(
+    filterLabel 
+      ? `Showing ${filterLabel} transactions only`
+      : 'Grouped by service category and shift (Night: 12am–8am, Morning: 8am–2pm, Evening: 2pm–12am)',
+    pageWidth / 2, yPosition, { align: 'center' }
+  );
   yPosition += 10;
 
   // Helper: determine shift from timestamp
@@ -1380,8 +1387,12 @@ export const generateDailyClosingPDF = async (data: {
     });
   });
 
+  // Apply category filter if specified
+  const activeCategoryFilter = data.categoryFilter && data.categoryFilter !== 'all' ? data.categoryFilter : null;
+  const filteredTxns = activeCategoryFilter ? allTxns.filter(t => t.category === activeCategoryFilter) : allTxns;
+
   // Group by category then shift
-  const categoryOrder = ['OPD', 'Emergency', 'Lab', 'X-Ray', 'OT', 'Miscellaneous'];
+  const categoryOrder = activeCategoryFilter ? [activeCategoryFilter] : ['OPD', 'Emergency', 'Lab', 'X-Ray', 'OT', 'Miscellaneous'];
   const shiftOrder = ['Night', 'Morning', 'Evening'];
 
   // Table column widths for detailed report
@@ -1390,7 +1401,7 @@ export const generateDailyClosingPDF = async (data: {
   const totalTableWidth = detailColWidths.reduce((a, b) => a + b, 0);
   const detailStartX = (pageWidth - totalTableWidth) / 2;
 
-  if (allTxns.length === 0) {
+  if (filteredTxns.length === 0) {
     doc.setFont('helvetica', 'italic');
     doc.setFontSize(10);
     doc.setTextColor(150, 150, 150);
@@ -1418,7 +1429,7 @@ export const generateDailyClosingPDF = async (data: {
     drawDetailHeader();
 
     categoryOrder.forEach(cat => {
-      const catItems = allTxns.filter(t => t.category === cat);
+      const catItems = filteredTxns.filter(t => t.category === cat);
       if (catItems.length === 0) return;
 
       // Category header row
@@ -1544,6 +1555,8 @@ export const generateDailyClosingPDF = async (data: {
     yPosition += 15;
   }
 
+  // Only show additional sections when not filtering by category
+  if (!activeCategoryFilter) {
   // ===========================================
   // DOCTOR SUMMARY SECTION
   // ===========================================
@@ -1937,6 +1950,8 @@ export const generateDailyClosingPDF = async (data: {
       console.error('Error updating closing balance:', error);
     }
   }
+
+  } // end if (!activeCategoryFilter)
 
   // Footer
   yPosition += 15;
