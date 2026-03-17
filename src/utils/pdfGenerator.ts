@@ -937,7 +937,8 @@ export const generateDailyClosingPDF = async (data: {
   totalExpenses: number;
   totalRefunds: number;
   netProfit: number;
-  transactionsData?: any; // Optional - if provided, use this instead of re-querying
+  transactionsData?: any;
+  categoryFilter?: string; // 'all' or specific category like 'Lab', 'OPD', etc.
 }) => {
   const doc = new jsPDF({
     orientation: 'portrait',
