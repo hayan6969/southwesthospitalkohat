@@ -39,6 +39,9 @@ export default function FinanceRefunds() {
     doctorId: ""
   });
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  const [proofFile, setProofFile] = useState<File | null>(null);
+  const [uploadingProof, setUploadingProof] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   
   // Filtering and pagination state
   const [filteredRefunds, setFilteredRefunds] = useState<any[]>([]);
