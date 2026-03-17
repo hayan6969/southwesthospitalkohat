@@ -43,6 +43,8 @@ export default function FinanceAnalytics() {
   const pharmacySales = financialData?.pharmacySales || 0;
   const pharmacyProfit = financialData?.pharmacyProfit || 0;
   const hospitalRevenue = financialData?.hospitalRevenue || 0;
+  const doctorsRevenue = financialData?.doctorsRevenue || 0;
+  const totalRevenue = hospitalRevenue + doctorsRevenue;
   const hospitalProfitWithoutPharmacy = financialData?.hospitalProfitWithoutPharmacy || 0;
   const hospitalProfitWithPharmacy = financialData?.hospitalProfitWithPharmacy || 0;
   const operationsRevenue = financialData?.operationsRevenue || 0;
