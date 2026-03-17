@@ -263,6 +263,7 @@ export function DetailedDailyReport({
   });
 
   // Group by category, then by shift
+  const categories = ['OPD', 'Emergency', 'Lab', 'X-Ray', 'OT', 'Miscellaneous'];
   // Apply category filter
   const filteredCategories = categoryFilter === 'all' ? categories : [categoryFilter];
   
