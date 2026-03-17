@@ -65,6 +65,7 @@ export function XrayDialog({ open, onOpenChange, onSuccess }: XrayDialogProps) {
   const [doctorName, setDoctorName] = useState("");
   
   const [selectedTests, setSelectedTests] = useState<string[]>([]);
+  const [testSearchTerm, setTestSearchTerm] = useState("");
   const [xrayDate, setXrayDate] = useState<Date>();
   const [notes, setNotes] = useState("");
   const [showConfirmation, setShowConfirmation] = useState(false);
