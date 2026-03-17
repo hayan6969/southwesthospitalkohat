@@ -211,6 +211,11 @@ const App = () => (
                 <AdminSettings />
               </ProtectedRoute>
             } />
+            <Route path="/dashboard/admin/regions" element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <AdminRegions />
+              </ProtectedRoute>
+            } />
 
             {/* Pharmacy dashboard routes */}
             <Route path="/dashboard/pharmacy" element={
