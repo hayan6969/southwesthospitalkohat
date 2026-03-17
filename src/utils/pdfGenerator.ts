@@ -1180,11 +1180,17 @@ export const generateDailyClosingPDF = async (data: {
   // ===========================================
   // DETAILED OPD-STYLE TRANSACTION REPORT
   // ===========================================
-  drawSectionHeader('DETAILED TRANSACTION REPORT');
+  const filterLabel = data.categoryFilter && data.categoryFilter !== 'all' ? data.categoryFilter : null;
+  drawSectionHeader(filterLabel ? `DETAILED REPORT — ${filterLabel.toUpperCase()}` : 'DETAILED TRANSACTION REPORT');
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(8);
   doc.setTextColor(110, 110, 110);
-  doc.text('Grouped by service category and shift (Night: 12am–8am, Morning: 8am–2pm, Evening: 2pm–12am)', pageWidth / 2, yPosition, { align: 'center' });
+  doc.text(
+    filterLabel 
+      ? `Showing ${filterLabel} transactions only`
+      : 'Grouped by service category and shift (Night: 12am–8am, Morning: 8am–2pm, Evening: 2pm–12am)',
+    pageWidth / 2, yPosition, { align: 'center' }
+  );
   yPosition += 10;
 
   // Helper: determine shift from timestamp
