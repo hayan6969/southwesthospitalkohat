@@ -263,6 +263,8 @@ export function PreviousClosingsDialog() {
                     miscellaneousIncome={selectedClosing.transactions_data.miscellaneousIncome || []}
                     staffProfiles={staffProfiles || []}
                     reportDate={format(new Date(selectedClosing.closing_date), 'EEEE, MMMM d, yyyy')}
+                    initialCategoryFilter={categoryFilter}
+                    initialViewMode={viewMode}
                   />
                 ) : (
                   <Card>
