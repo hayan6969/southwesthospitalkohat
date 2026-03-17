@@ -1555,6 +1555,8 @@ export const generateDailyClosingPDF = async (data: {
     yPosition += 15;
   }
 
+  // Only show additional sections when not filtering by category
+  if (!activeCategoryFilter) {
   // ===========================================
   // DOCTOR SUMMARY SECTION
   // ===========================================
