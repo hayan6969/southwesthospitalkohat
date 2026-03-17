@@ -123,15 +123,44 @@ export const useSearchPatientsWithNames = (searchTerm: string) => {
       }
       
       try {
-        // Search patients by patient_number (Patient ID)
-        const { data: patients, error: patientsError } = await supabase
+        // Search patients by patient_number, phone, or CNIC
+        const { data: patientsByNumber, error: patientsError } = await supabase
           .from('patients')
           .select('*')
-          .ilike('patient_number', `%${searchTerm}%`)
+          .or(`patient_number.ilike.%${searchTerm}%,emergency_contact_phone.ilike.%${searchTerm}%,cnic.ilike.%${searchTerm}%`)
           .limit(10);
 
         if (patientsError) throw patientsError;
-        if (!patients || patients.length === 0) return [];
+
+        // Also search by name in profiles
+        const { data: profileMatches } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('role', 'patient')
+          .or(`first_name.ilike.%${searchTerm}%,last_name.ilike.%${searchTerm}%,phone.ilike.%${searchTerm}%`)
+          .limit(10);
+
+        // Get patient records for profile matches
+        let patientsByProfile: any[] = [];
+        if (profileMatches && profileMatches.length > 0) {
+          const profileIds = profileMatches.map(p => p.id);
+          const { data } = await supabase
+            .from('patients')
+            .select('*')
+            .in('id', profileIds);
+          patientsByProfile = data || [];
+        }
+
+        // Merge and deduplicate
+        const allPatients = [...(patientsByNumber || [])];
+        patientsByProfile.forEach(p => {
+          if (!allPatients.find(existing => existing.id === p.id)) {
+            allPatients.push(p);
+          }
+        });
+
+        const patients = allPatients.slice(0, 10);
+        if (patients.length === 0) return [];
 
         // Then get profile data for these patients
         const patientIds = patients.map(p => p.id);
