@@ -1953,6 +1953,124 @@ export const generateDailyClosingPDF = async (data: {
 
   } // end if (!activeCategoryFilter)
 
+  // ===========================================
+  // PROOF ATTACHMENTS SECTION
+  // ===========================================
+  const proofItems: { label: string; description: string; amount: number; proofUrl: string }[] = [];
+
+  // Collect expense proofs
+  (transactionsData?.expenses || []).forEach((exp: any) => {
+    if (exp.proof_url) {
+      proofItems.push({
+        label: 'Expense',
+        description: exp.description || exp.category || 'Expense',
+        amount: exp.amount || 0,
+        proofUrl: exp.proof_url,
+      });
+    }
+  });
+
+  // Collect refund proofs
+  (transactionsData?.refunds || []).forEach((ref: any) => {
+    if (ref.proof_url) {
+      proofItems.push({
+        label: 'Refund',
+        description: ref.description || ref.refund_type || 'Refund',
+        amount: ref.amount || 0,
+        proofUrl: ref.proof_url,
+      });
+    }
+  });
+
+  if (proofItems.length > 0) {
+    doc.addPage();
+    yPosition = 20;
+
+    // Section header
+    doc.setFillColor(240, 240, 240);
+    doc.rect(15, yPosition - 2, pageWidth - 30, 12, 'F');
+    doc.setDrawColor(200, 200, 200);
+    doc.rect(15, yPosition - 2, pageWidth - 30, 12);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(12);
+    doc.setTextColor(40, 40, 40);
+    doc.text(`PROOF ATTACHMENTS (${proofItems.length})`, pageWidth / 2, yPosition + 6, { align: 'center' });
+    yPosition += 18;
+
+    for (let pi = 0; pi < proofItems.length; pi++) {
+      const proof = proofItems[pi];
+
+      // Check if we need a new page (need ~100mm for label + image)
+      if (yPosition + 100 > pageHeight - 20) {
+        doc.addPage();
+        yPosition = 20;
+      }
+
+      // Proof label
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(9);
+      doc.setTextColor(40, 40, 40);
+      doc.text(`${pi + 1}. [${proof.label}] ${proof.description} — ${formatPkrAmount(proof.amount)}`, 20, yPosition);
+      yPosition += 6;
+
+      // Try to load and embed the proof image
+      try {
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+
+        const loaded = await new Promise<boolean>((resolve) => {
+          img.onload = () => resolve(true);
+          img.onerror = () => resolve(false);
+          setTimeout(() => resolve(false), 8000);
+          img.src = proof.proofUrl;
+        });
+
+        if (loaded && img.width > 0 && img.height > 0) {
+          // Scale image to fit within page width (max 160mm wide, max 80mm tall)
+          const maxW = 160;
+          const maxH = 80;
+          let imgW = img.width;
+          let imgH = img.height;
+          const scaleW = maxW / imgW;
+          const scaleH = maxH / imgH;
+          const scale = Math.min(scaleW, scaleH, 1);
+          imgW = imgW * scale;
+          imgH = imgH * scale;
+
+          // Convert to mm (approximate 3.78 px/mm at 96dpi)
+          const mmW = Math.min(imgW, maxW);
+          const mmH = Math.min(imgH, maxH);
+
+          if (yPosition + mmH + 10 > pageHeight - 20) {
+            doc.addPage();
+            yPosition = 20;
+          }
+
+          // Draw border around image
+          doc.setDrawColor(180, 180, 180);
+          doc.setLineWidth(0.3);
+          doc.rect(19, yPosition - 1, mmW + 2, mmH + 2);
+
+          doc.addImage(img, 'JPEG', 20, yPosition, mmW, mmH);
+          yPosition += mmH + 8;
+        } else {
+          doc.setFont('helvetica', 'italic');
+          doc.setFontSize(8);
+          doc.setTextColor(150, 150, 150);
+          doc.text('(Proof image could not be loaded)', 25, yPosition);
+          yPosition += 8;
+        }
+      } catch (error) {
+        console.error('Error loading proof image for PDF:', error);
+        doc.setFont('helvetica', 'italic');
+        doc.setFontSize(8);
+        doc.setTextColor(150, 150, 150);
+        doc.text('(Proof image could not be loaded)', 25, yPosition);
+        yPosition += 8;
+      }
+    }
+  }
+
   // Footer
   yPosition += 15;
   doc.setFont('helvetica', 'normal');
