@@ -11,6 +11,16 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { Plus } from "lucide-react";
 
+const PAKISTAN_CITIES = [
+  "Karachi", "Lahore", "Islamabad", "Rawalpindi", "Faisalabad",
+  "Multan", "Peshawar", "Quetta", "Sialkot", "Gujranwala",
+  "Hyderabad", "Bahawalpur", "Sargodha", "Abbottabad", "Mardan",
+  "Sukkur", "Larkana", "Sahiwal", "Jhang", "Rahim Yar Khan",
+  "Sheikhupura", "Gujrat", "Kasur", "Dera Ghazi Khan", "Muzaffarabad",
+  "Mirpur", "Chitral", "Swat", "Mansehra", "Jhelum",
+  "Other"
+];
+
 export function PatientDialog() {
   const [open, setOpen] = useState(false);
   const [firstName, setFirstName] = useState("");
