@@ -1128,7 +1128,6 @@ export type Database = {
         Row: {
           address: string | null
           allergies: string | null
-          area: string | null
           blood_type: string | null
           city: string | null
           cnic: string | null
@@ -1137,11 +1136,11 @@ export type Database = {
           emergency_contact_phone: string | null
           id: string
           patient_number: string | null
+          province: string | null
         }
         Insert: {
           address?: string | null
           allergies?: string | null
-          area?: string | null
           blood_type?: string | null
           city?: string | null
           cnic?: string | null
@@ -1150,11 +1149,11 @@ export type Database = {
           emergency_contact_phone?: string | null
           id: string
           patient_number?: string | null
+          province?: string | null
         }
         Update: {
           address?: string | null
           allergies?: string | null
-          area?: string | null
           blood_type?: string | null
           city?: string | null
           cnic?: string | null
@@ -1163,6 +1162,7 @@ export type Database = {
           emergency_contact_phone?: string | null
           id?: string
           patient_number?: string | null
+          province?: string | null
         }
         Relationships: [
           {
