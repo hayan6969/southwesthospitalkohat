@@ -79,6 +79,8 @@ export function PatientDialog() {
       setLastName("");
       setPhone("");
       setCnic("");
+      setCity("");
+      setArea("");
     } catch (error: any) {
       console.error("Error creating patient:", error);
       console.error("Error details:", {
