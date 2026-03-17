@@ -190,8 +190,8 @@ export const useFinancialAnalytics = (selectedMonth?: Date, filterParams?: Filte
       // Helper function to recalculate hospital services revenue from transactions_data
       const computeServicesRevenue = (td?: any): number => {
         if (!td) return 0;
-        const lab = (td.labReports || []).reduce((s: number, r: any) => s + (Number(r.price) || 0), 0);
-        const xray = (td.xrayReports || []).reduce((s: number, r: any) => s + (Number(r.price) || 0), 0);
+        const lab = (td.labReports || []).reduce((s: number, r: any) => s + (Number(r.price) || Number(r.amount) || 0), 0);
+        const xray = (td.xrayReports || []).reduce((s: number, r: any) => s + (Number(r.price) || Number(r.amount) || 0), 0);
         const ot = (td.otSchedules || []).reduce((s: number, ot: any) => 
           s + ((Number(ot.total_cost) || 0) - (Number(ot.doctor_expense) || 0)), 0);
         const emergencyAppointments = (td.emergencyAppointments || []).reduce((s: number, e: any) => 
@@ -257,9 +257,9 @@ export const useFinancialAnalytics = (selectedMonth?: Date, filterParams?: Filte
         
         if (td) {
           totalLabRevenue += (td.labReports || []).reduce((s: number, r: any) => 
-            s + (Number(r.price) || 0), 0);
+            s + (Number(r.price) || Number(r.amount) || 0), 0);
           totalXrayRevenue += (td.xrayReports || []).reduce((s: number, r: any) => 
-            s + (Number(r.price) || 0), 0);
+            s + (Number(r.price) || Number(r.amount) || 0), 0);
           totalOperationsRevenue += (td.otSchedules || []).reduce((s: number, ot: any) => 
             s + ((Number(ot.total_cost) || 0) - (Number(ot.doctor_expense) || 0)), 0);
           
