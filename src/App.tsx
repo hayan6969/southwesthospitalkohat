@@ -47,6 +47,7 @@ import AdminStaff from "./pages/dashboard/admin/AdminStaff";
 import AdminDoctors from "./pages/dashboard/admin/AdminDoctors";
 import AdminAuditLogs from "./pages/dashboard/admin/AdminAuditLogs";
 import AdminSettings from "./pages/dashboard/admin/AdminSettings";
+import AdminRegions from "./pages/dashboard/admin/AdminRegions";
 
 // Pharmacy pages
 import PharmacyMedicines from "./pages/dashboard/pharmacy/PharmacyMedicines";
