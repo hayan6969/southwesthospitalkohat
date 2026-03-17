@@ -6,7 +6,8 @@ import {
   Pill, 
   UserCog, 
   Calendar,
-  Building2
+  Building2,
+  MapPin
 } from "lucide-react";
 
 const dashboards = [
