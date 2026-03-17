@@ -107,6 +107,8 @@ export function PreviousClosingsDialog() {
     setStartDate(undefined);
     setEndDate(undefined);
     setSearchTerm("");
+    setCategoryFilter("all");
+    setViewMode("detailed");
   };
 
   // Pagination
