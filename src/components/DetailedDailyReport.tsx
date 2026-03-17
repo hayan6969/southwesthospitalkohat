@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { formatPkrAmount } from "@/utils/currency";
 import { formatInPakistanTime } from "@/utils/timezone";
-import { Receipt, TrendingDown, AlertTriangle, FlaskConical, Scan, Syringe, Stethoscope, Activity, Pill } from "lucide-react";
+import { Receipt, TrendingDown, AlertTriangle, FlaskConical, Scan, Syringe, Stethoscope, Activity, Pill, Users, Image as ImageIcon } from "lucide-react";
 
 interface TransactionItem {
   id: string;
