@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useCreatePatientWithProfile } from "@/hooks/useDatabase";
 import { useAuditLogger } from "@/hooks/useAuditLogger";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -7,19 +7,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { Plus } from "lucide-react";
-
-const PAKISTAN_CITIES = [
-  "Karachi", "Lahore", "Islamabad", "Rawalpindi", "Faisalabad",
-  "Multan", "Peshawar", "Quetta", "Sialkot", "Gujranwala",
-  "Hyderabad", "Bahawalpur", "Sargodha", "Abbottabad", "Mardan",
-  "Sukkur", "Larkana", "Sahiwal", "Jhang", "Rahim Yar Khan",
-  "Sheikhupura", "Gujrat", "Kasur", "Dera Ghazi Khan", "Muzaffarabad",
-  "Mirpur", "Chitral", "Swat", "Mansehra", "Jhelum",
-  "Other"
-];
+import { Plus, Search } from "lucide-react";
+import { ALL_PROVINCES, getCitiesForProvince } from "@/utils/pakistanCities";
 
 export function PatientDialog() {
   const [open, setOpen] = useState(false);
@@ -27,11 +17,24 @@ export function PatientDialog() {
   const [lastName, setLastName] = useState("");
   const [phone, setPhone] = useState("");
   const [cnic, setCnic] = useState("");
+  const [province, setProvince] = useState("");
   const [city, setCity] = useState("");
-  const [area, setArea] = useState("");
+  const [citySearch, setCitySearch] = useState("");
 
   const createPatientWithProfile = useCreatePatientWithProfile();
   const { logAction } = useAuditLogger();
+
+  const availableCities = useMemo(() => {
+    const cities = getCitiesForProvince(province);
+    if (!citySearch.trim()) return cities;
+    return cities.filter(c => c.toLowerCase().includes(citySearch.toLowerCase()));
+  }, [province, citySearch]);
+
+  const handleProvinceChange = (value: string) => {
+    setProvince(value);
+    setCity("");
+    setCitySearch("");
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -47,26 +50,17 @@ export function PatientDialog() {
         last_name: lastName.trim(),
         phone: phone.trim(),
         cnic: cnic.trim(),
+        province: province || undefined,
         city: city || undefined,
-        area: area.trim() || undefined,
       };
-      
-      console.log('Attempting to register patient:', { 
-        name: `${firstName} ${lastName}`, 
-        phone: phone.trim() 
-      });
       
       const result = await createPatientWithProfile.mutateAsync(patientData);
       
-      console.log('Patient registration successful:', result);
-      
-      // Log the audit event
       await logAction(
         "Registered new patient",
         `Patient: ${firstName} ${lastName} (Phone: ${phone}, CNIC: ${cnic})`
       );
       
-      // Show success message with patient details
       const successMessage = result.patientNumber 
         ? `Patient registered successfully!\nPatient ID: ${result.patientNumber}\nPhone: ${phone}\nThey can now login with their phone number and CNIC.`
         : `Patient registered successfully!\nPhone: ${phone}\nThey can now login with their phone number and CNIC.`;
@@ -74,25 +68,20 @@ export function PatientDialog() {
       toast.success(successMessage, { duration: 6000 });
       setOpen(false);
       
-      // Reset form
       setFirstName("");
       setLastName("");
       setPhone("");
       setCnic("");
+      setProvince("");
       setCity("");
-      setArea("");
+      setCitySearch("");
     } catch (error: any) {
       console.error("Error creating patient:", error);
-      console.error("Error details:", {
-        message: error.message,
-        code: error.code,
-        details: error.details
-      });
       
       if (error.message === 'DUPLICATE_PHONE') {
         toast.error(`This phone number (${phone}) is already registered. Each patient must have a unique phone number.`, { duration: 5000 });
       } else if (error.message.includes('USER_CREATION_FAILED') && error.message.includes('already exists')) {
-        toast.error(`This phone number (${phone}) is already registered. Each patient must have a unique phone number.`, { duration: 5000 });
+        toast.error(`This phone number (${phone}) is already registered.`, { duration: 5000 });
       } else if (error.message.includes('USER_CREATION_FAILED')) {
         toast.error(`Failed to create user account: ${error.message.replace('USER_CREATION_FAILED: ', '')}`);
       } else if (error.message.includes('PATIENT_CREATION_FAILED')) {
@@ -129,7 +118,6 @@ export function PatientDialog() {
                 required
               />
             </div>
-
             <div className="space-y-2">
               <Label htmlFor="lastName">Last Name *</Label>
               <Input
@@ -167,26 +155,47 @@ export function PatientDialog() {
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="city">City</Label>
-              <Select value={city} onValueChange={setCity}>
+              <Label>Province</Label>
+              <Select value={province} onValueChange={handleProvinceChange}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Select city" />
+                  <SelectValue placeholder="Select province" />
                 </SelectTrigger>
-                <SelectContent>
-                  {PAKISTAN_CITIES.map(c => (
-                    <SelectItem key={c} value={c}>{c}</SelectItem>
+                <SelectContent portal={false} className="z-[9999]">
+                  {ALL_PROVINCES.map(p => (
+                    <SelectItem key={p} value={p}>{p}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="area">Area / Locality</Label>
-              <Input
-                id="area"
-                value={area}
-                onChange={(e) => setArea(e.target.value)}
-                placeholder="e.g. Gulberg, DHA"
-              />
+              <Label>City</Label>
+              <Select value={city} onValueChange={setCity} disabled={!province}>
+                <SelectTrigger>
+                  <SelectValue placeholder={province ? "Select city" : "Select province first"} />
+                </SelectTrigger>
+                <SelectContent portal={false} className="z-[9999] max-h-[200px]">
+                  <div className="px-2 pb-2 sticky top-0 bg-popover">
+                    <div className="relative">
+                      <Search className="absolute left-2 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
+                      <Input
+                        placeholder="Search city..."
+                        value={citySearch}
+                        onChange={(e) => setCitySearch(e.target.value)}
+                        className="h-8 pl-7 text-sm"
+                        onClick={(e) => e.stopPropagation()}
+                        onKeyDown={(e) => e.stopPropagation()}
+                      />
+                    </div>
+                  </div>
+                  {availableCities.length === 0 ? (
+                    <div className="text-sm text-muted-foreground text-center py-2">No cities found</div>
+                  ) : (
+                    availableCities.map(c => (
+                      <SelectItem key={c} value={c}>{c}</SelectItem>
+                    ))
+                  )}
+                </SelectContent>
+              </Select>
             </div>
           </div>
           
