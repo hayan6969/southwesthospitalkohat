@@ -1008,8 +1008,8 @@ export const useCreatePatientWithProfile = () => {
           .insert({
             id: userId,
             cnic: patientData.cnic,
+            province: patientData.province || null,
             city: patientData.city || null,
-            area: patientData.area || null,
           })
           .select()
           .single();

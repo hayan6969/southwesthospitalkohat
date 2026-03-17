@@ -16,7 +16,7 @@ export function RegionWiseReport() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("patients")
-        .select("city, area");
+        .select("city, province");
 
       if (error) throw error;
 
