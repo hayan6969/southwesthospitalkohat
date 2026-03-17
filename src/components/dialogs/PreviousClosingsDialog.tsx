@@ -284,7 +284,7 @@ export function PreviousClosingsDialog() {
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="pt-0">
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
                       <div>
                         <Label className="text-xs">Start Date</Label>
                         <Popover>
@@ -301,7 +301,7 @@ export function PreviousClosingsDialog() {
                             </Button>
                           </PopoverTrigger>
                           <PopoverContent className="w-auto p-0">
-                            <Calendar mode="single" selected={startDate} onSelect={setStartDate} initialFocus />
+                            <Calendar mode="single" selected={startDate} onSelect={setStartDate} initialFocus className="p-3 pointer-events-auto" />
                           </PopoverContent>
                         </Popover>
                       </div>
@@ -322,9 +322,40 @@ export function PreviousClosingsDialog() {
                             </Button>
                           </PopoverTrigger>
                           <PopoverContent className="w-auto p-0">
-                            <Calendar mode="single" selected={endDate} onSelect={setEndDate} initialFocus />
+                            <Calendar mode="single" selected={endDate} onSelect={setEndDate} initialFocus className="p-3 pointer-events-auto" />
                           </PopoverContent>
                         </Popover>
+                      </div>
+
+                      <div>
+                        <Label className="text-xs">View Mode</Label>
+                        <Select value={viewMode} onValueChange={setViewMode}>
+                          <SelectTrigger className="w-full mt-1 h-9 text-sm">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="detailed">Detailed Report</SelectItem>
+                            <SelectItem value="summary">Summary Report</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div>
+                        <Label className="text-xs">Category Filter</Label>
+                        <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+                          <SelectTrigger className="w-full mt-1 h-9 text-sm">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">All Categories</SelectItem>
+                            <SelectItem value="OPD">OPD Consultations</SelectItem>
+                            <SelectItem value="Emergency">Emergency</SelectItem>
+                            <SelectItem value="Lab">Lab Services</SelectItem>
+                            <SelectItem value="X-Ray">X-Ray Services</SelectItem>
+                            <SelectItem value="OT">OT / Surgery</SelectItem>
+                            <SelectItem value="Miscellaneous">Miscellaneous</SelectItem>
+                          </SelectContent>
+                        </Select>
                       </div>
 
                       <div>
