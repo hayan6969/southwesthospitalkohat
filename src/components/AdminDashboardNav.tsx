@@ -6,12 +6,14 @@ import {
   Pill, 
   UserCog, 
   Calendar,
-  Building2
+  Building2,
+  MapPin
 } from "lucide-react";
 
 const dashboards = [
   { path: "/dashboard/admin", label: "Admin", icon: Settings },
   { path: "/dashboard/admin/departments", label: "Departments", icon: Building2 },
+  { path: "/dashboard/admin/regions", label: "Regions", icon: MapPin },
   { path: "/dashboard/finance", label: "Finance", icon: DollarSign },
   { path: "/dashboard/pharmacy", label: "Pharmacy", icon: Pill },
   { path: "/dashboard/staff", label: "Staff", icon: UserCog },
