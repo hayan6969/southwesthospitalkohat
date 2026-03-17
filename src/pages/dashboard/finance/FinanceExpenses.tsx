@@ -308,7 +308,7 @@ export default function FinanceExpenses() {
                   Add Expense
                 </Button>
               </DialogTrigger>
-            <DialogContent>
+            <DialogContent className="max-h-[90vh] overflow-y-auto z-[9999]">
               <DialogHeader>
                 <DialogTitle>Add New Expense</DialogTitle>
               </DialogHeader>
@@ -319,7 +319,7 @@ export default function FinanceExpenses() {
                     <SelectTrigger>
                       <SelectValue placeholder="Select category" />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="z-[10000]">
                       <SelectItem value="Medical Supplies">Medical Supplies</SelectItem>
                       <SelectItem value="Staff Salaries">Staff Salaries</SelectItem>
                       <SelectItem value="Utilities">Utilities</SelectItem>
