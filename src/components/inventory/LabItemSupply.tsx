@@ -22,14 +22,38 @@ export function LabItemSupply() {
   const [form, setForm] = useState({ item_name: "", quantity: 1, reason: "", location: "" });
   const [stockSearch, setStockSearch] = useState("");
 
-  // Fetch lab inventory items (read-only stock view)
-  const { data: labItems, isLoading } = useQuery({
+  // Fetch lab inventory items for the request dropdown
+  const { data: labItems } = useQuery({
     queryKey: ["lab-inventory-items"],
     queryFn: async () => {
       const { data, error } = await supabase.from("lab_inventory_items").select("*").order("name");
       if (error) throw error;
       return data;
     },
+  });
+
+  // Fetch lab's own stock (aggregated from provided requests)
+  const { data: labStock, isLoading } = useQuery({
+    queryKey: ["lab-own-stock", user?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("inventory_requests")
+        .select("*")
+        .eq("item_type", "lab")
+        .eq("status", "provided")
+        .eq("requested_by", user?.id);
+      if (error) throw error;
+      // Aggregate by item_name
+      const stockMap: Record<string, { item_name: string; total_qty: number }> = {};
+      (data || []).forEach((req: any) => {
+        if (!stockMap[req.item_name]) {
+          stockMap[req.item_name] = { item_name: req.item_name, total_qty: 0 };
+        }
+        stockMap[req.item_name].total_qty += req.quantity;
+      });
+      return Object.values(stockMap).sort((a, b) => a.item_name.localeCompare(b.item_name));
+    },
+    enabled: !!user?.id,
   });
 
   // Fetch departments for location suggestion
