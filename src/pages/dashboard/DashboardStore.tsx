@@ -7,10 +7,14 @@ import { InventoryRequestsManager } from "@/components/inventory/InventoryReques
 import { StoreRequestsView } from "@/components/inventory/StoreRequestsView";
 import { LowStockAlerts } from "@/components/inventory/LowStockAlerts";
 import { useAuth } from "@/hooks/useAuth";
+import { useSearchParams } from "react-router-dom";
 
 const DashboardStore = () => {
   const { profile } = useAuth();
+  const [searchParams] = useSearchParams();
   const isManager = profile?.role === 'inventory_manager' || profile?.role === 'admin';
+  const tabParam = searchParams.get("tab");
+  const defaultTab = tabParam === "provide" ? "provide" : (isManager ? "requests" : "provide");
 
   return (
     <AppLayout sidebarRole="store">
@@ -28,7 +32,7 @@ const DashboardStore = () => {
 
         {isManager && <LowStockAlerts />}
 
-        <Tabs defaultValue={isManager ? "requests" : "provide"} className="w-full">
+        <Tabs defaultValue={defaultTab} className="w-full">
           <TabsList className={`grid w-full ${isManager ? 'grid-cols-4' : 'grid-cols-1'}`}>
             {isManager && <TabsTrigger value="requests">Supply Requests</TabsTrigger>}
             {isManager && <TabsTrigger value="general">General Inventory</TabsTrigger>}
