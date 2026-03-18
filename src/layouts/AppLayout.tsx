@@ -5,6 +5,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { LogOut, User } from "lucide-react";
 import { AdminDashboardNav } from "@/components/AdminDashboardNav";
+import { RequestSuppliesDialog } from "@/components/inventory/RequestSuppliesDialog";
 
 interface AppLayoutProps {
   children: ReactNode;
