@@ -136,8 +136,8 @@ export function LabInventoryManager() {
               <div><Label>Category</Label><Input value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} placeholder="consumable, reagent, equipment" /></div>
               <div><Label>Unit</Label><Input value={form.unit} onChange={(e) => setForm({ ...form, unit: e.target.value })} /></div>
               <div className="grid grid-cols-2 gap-3">
-                <div><Label>Stock Qty</Label><Input type="number" value={form.stock_quantity} onChange={(e) => setForm({ ...form, stock_quantity: +e.target.value })} /></div>
-                <div><Label>Min Stock Level</Label><Input type="number" value={form.minimum_stock_level} onChange={(e) => setForm({ ...form, minimum_stock_level: +e.target.value })} /></div>
+                <div><Label>Stock Qty</Label><Input type="number" value={form.stock_quantity === 0 && document.activeElement?.getAttribute('data-field') === 'stock_quantity' ? '' : form.stock_quantity} min="0" data-field="stock_quantity" onChange={(e) => setForm({ ...form, stock_quantity: e.target.value === '' ? 0 : parseInt(e.target.value) || 0 })} onFocus={(e) => { if (form.stock_quantity === 0) e.target.value = ''; }} onBlur={(e) => { if (e.target.value === '') setForm(f => ({ ...f, stock_quantity: 0 })); }} /></div>
+                <div><Label>Min Stock Level</Label><Input type="number" value={form.minimum_stock_level === 0 && document.activeElement?.getAttribute('data-field') === 'min_stock' ? '' : form.minimum_stock_level} min="0" data-field="min_stock" onChange={(e) => setForm({ ...form, minimum_stock_level: e.target.value === '' ? 0 : parseInt(e.target.value) || 0 })} onFocus={(e) => { if (form.minimum_stock_level === 0) e.target.value = ''; }} onBlur={(e) => { if (e.target.value === '') setForm(f => ({ ...f, minimum_stock_level: 0 })); }} /></div>
               </div>
               <div><Label>Description</Label><Input value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} /></div>
               <Button className="w-full" onClick={() => saveMutation.mutate(form)} disabled={!form.name || saveMutation.isPending}>
