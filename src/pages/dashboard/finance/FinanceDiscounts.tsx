@@ -171,7 +171,7 @@ export default function FinanceDiscounts() {
           <DialogTrigger asChild>
             <Button><Plus className="w-4 h-4 mr-2" />Assign Discount</Button>
           </DialogTrigger>
-          <DialogContent className="z-[9999]">
+          <DialogContent className="z-[9999] max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Assign Patient Discount</DialogTitle>
             </DialogHeader>
