@@ -1,0 +1,2 @@
+ALTER TABLE public.patient_discounts DROP CONSTRAINT IF EXISTS patient_discounts_patient_id_key;
+CREATE UNIQUE INDEX patient_discounts_patient_service_unique ON public.patient_discounts (patient_id, service_type) WHERE is_active = true AND used_at IS NULL;
