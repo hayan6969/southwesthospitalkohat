@@ -626,7 +626,7 @@ export function DetailedDailyReport({
                                     <TableCell className="text-center text-xs font-medium">{srNo}</TableCell>
                                     <TableCell className="text-sm font-medium">{item.patientName}</TableCell>
                                     <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
-                                      {item.time ? formatInPakistanTime(new Date(item.time), 'h:mm a') : '—'}
+                                      {item.time ? formatInPakistanTime(item.time, 'h:mm a') : '—'}
                                     </TableCell>
                                     <TableCell className="text-sm max-w-[200px] truncate">{item.procedureName}</TableCell>
                                     <TableCell className="text-sm">{item.consultant}</TableCell>
