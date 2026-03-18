@@ -369,9 +369,10 @@ export function StaffCounter() {
         
         try {
           const discountResult = await applyPatientDiscount(appointment.patient_id, consultationFee, 'consultation');
-          if (discountResult.discountApplied) {
-            finalAmount = discountResult.finalAmount;
-            discountNote = ` (${discountResult.discountValue}${discountResult.discountType === 'percentage' ? '%' : ' Rs.'} discount, Original: Rs. ${consultationFee})`;
+          if (discountResult.discountApplied > 0) {
+            finalAmount = discountResult.discountedAmount;
+            const discountInfo = discountResult.discountLabel || 'discount';
+            discountNote = ` (${discountInfo}, Original: Rs. ${consultationFee})`;
           }
         } catch (discountError) {
           console.error('Error applying discount:', discountError);
