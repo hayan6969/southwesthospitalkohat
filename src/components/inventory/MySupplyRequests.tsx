@@ -42,7 +42,11 @@ export function MySupplyRequests({ filterType }: MySupplyRequestsProps = {}) {
     },
   });
 
-  const allItems = [...(generalItems || []), ...(labItems || [])];
+  const allItems = filterType === "lab" 
+    ? [...(labItems || [])] 
+    : filterType === "general" 
+      ? [...(generalItems || [])] 
+      : [...(generalItems || []), ...(labItems || [])];
 
   const { data: departments } = useQuery({
     queryKey: ["departments-list"],
