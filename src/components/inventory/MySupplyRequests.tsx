@@ -16,10 +16,21 @@ import { toast } from "sonner";
 import { format, startOfMonth } from "date-fns";
 
 export function MySupplyRequests() {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const queryClient = useQueryClient();
-  const [form, setForm] = useState({ item_name: "", item_type: "general", quantity: 1, reason: "" });
+  const [form, setForm] = useState({ item_name: "", item_type: "general", quantity: 1, reason: "", location: "" });
   const [showForm, setShowForm] = useState(false);
+
+  const { data: departments } = useQuery({
+    queryKey: ["departments-list"],
+    queryFn: async () => {
+      const { data } = await supabase.from("departments").select("id, name").order("name");
+      return data || [];
+    },
+  });
+
+  // Get user's department name
+  const userDeptName = departments?.find((d: any) => d.id === profile?.department_id)?.name;
 
   const { data: myRequests } = useQuery({
     queryKey: ["my-inventory-requests", user?.id],
@@ -65,7 +76,7 @@ export function MySupplyRequests() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["my-inventory-requests"] });
       toast.success("Supply request submitted");
-      setForm({ item_name: "", item_type: "general", quantity: 1, reason: "" });
+      setForm({ item_name: "", item_type: "general", quantity: 1, reason: "", location: "" });
       setShowForm(false);
     },
     onError: (e: any) => toast.error(e.message),
@@ -143,11 +154,19 @@ export function MySupplyRequests() {
                 <Input type="number" min={1} value={form.quantity} onChange={(e) => setForm({ ...form, quantity: +e.target.value })} />
               </div>
               <div className="col-span-2">
+                <Label>Delivery Location / Department</Label>
+                <Input 
+                  value={form.location} 
+                  onChange={(e) => setForm({ ...form, location: e.target.value })} 
+                  placeholder={userDeptName ? `e.g. ${userDeptName}, Room 201` : "e.g. OPD, Lab, Room 201"}
+                />
+              </div>
+              <div className="col-span-2">
                 <Label>Reason (optional)</Label>
                 <Textarea value={form.reason} onChange={(e) => setForm({ ...form, reason: e.target.value })} placeholder="Why do you need this?" rows={2} />
               </div>
               <div className="col-span-2">
-                <Button className="w-full" onClick={() => createMutation.mutate(form)} disabled={!form.item_name || createMutation.isPending}>
+                <Button className="w-full" onClick={() => createMutation.mutate(form)} disabled={!form.item_name || !form.location || createMutation.isPending}>
                   Submit Request
                 </Button>
               </div>
@@ -169,13 +188,14 @@ export function MySupplyRequests() {
                 <TableHead>Item</TableHead>
                 <TableHead>Type</TableHead>
                 <TableHead>Qty</TableHead>
+                <TableHead>Location</TableHead>
                 <TableHead>Status</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {!myRequests || myRequests.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center text-muted-foreground">No requests yet</TableCell>
+                  <TableCell colSpan={6} className="text-center text-muted-foreground">No requests yet</TableCell>
                 </TableRow>
               ) : myRequests.map((req: any) => (
                 <TableRow key={req.id}>
@@ -183,6 +203,7 @@ export function MySupplyRequests() {
                   <TableCell className="font-medium">{req.item_name}</TableCell>
                   <TableCell><Badge variant="outline">{req.item_type}</Badge></TableCell>
                   <TableCell>{req.quantity}</TableCell>
+                  <TableCell className="text-sm">{(req as any).location || "-"}</TableCell>
                   <TableCell><Badge variant={statusColor(req.status) as any}>{req.status}</Badge></TableCell>
                 </TableRow>
               ))}

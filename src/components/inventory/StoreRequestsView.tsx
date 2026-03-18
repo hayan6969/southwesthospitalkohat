@@ -10,7 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { Package, Receipt } from "lucide-react";
+import { Package, Receipt, MapPin, User } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { formatPkrAmount } from "@/utils/currency";
@@ -35,19 +35,35 @@ export function StoreRequestsView() {
     },
   });
 
-  const [profileMap, setProfileMap] = useState<Record<string, string>>({});
+  // Resolve requester profiles + departments
+  const [profileMap, setProfileMap] = useState<Record<string, { name: string; role: string; department: string }>>({});
+  const [departments, setDepartments] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    supabase.from("departments").select("id, name").then(({ data }) => {
+      const map: Record<string, string> = {};
+      data?.forEach((d: any) => { map[d.id] = d.name; });
+      setDepartments(map);
+    });
+  }, []);
+
   useEffect(() => {
     const ids = [...new Set(requests?.map((r: any) => r.requested_by) || [])];
     if (ids.length === 0) return;
-    supabase.from("profiles").select("id, first_name, last_name, role").in("id", ids).then(({ data }) => {
-      const map: Record<string, string> = {};
-      data?.forEach((p: any) => { map[p.id] = `${p.first_name} ${p.last_name} (${p.role})`; });
+    supabase.from("profiles").select("id, first_name, last_name, role, department_id").in("id", ids).then(({ data }) => {
+      const map: Record<string, { name: string; role: string; department: string }> = {};
+      data?.forEach((p: any) => {
+        map[p.id] = {
+          name: `${p.first_name} ${p.last_name}`,
+          role: p.role,
+          department: departments[p.department_id] || "-",
+        };
+      });
       setProfileMap(map);
     });
-  }, [requests]);
+  }, [requests, departments]);
 
   const deductStock = async (req: any) => {
-    // Auto-deduct from inventory based on item_type
     const table = req.item_type === "lab" ? "lab_inventory_items" : "inventory_items";
     const { data: items } = await supabase
       .from(table)
@@ -77,10 +93,8 @@ export function StoreRequestsView() {
       const { error } = await supabase.from("inventory_requests").update(updateData).eq("id", id);
       if (error) throw error;
 
-      // Auto-deduct stock
       if (req) await deductStock(req);
 
-      // If expense, also add to finance expenses
       if (expense_amount && expense_amount > 0) {
         await supabase.from("expenses").insert({
           amount: expense_amount,
@@ -120,9 +134,11 @@ export function StoreRequestsView() {
               <TableRow>
                 <TableHead>Date</TableHead>
                 <TableHead>Requested By</TableHead>
+                <TableHead>Department</TableHead>
                 <TableHead>Item</TableHead>
                 <TableHead>Type</TableHead>
                 <TableHead>Qty</TableHead>
+                <TableHead>Location</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Expense</TableHead>
                 <TableHead>Actions</TableHead>
@@ -130,32 +146,49 @@ export function StoreRequestsView() {
             </TableHeader>
             <TableBody>
               {isLoading ? (
-                <TableRow><TableCell colSpan={8} className="text-center">Loading...</TableCell></TableRow>
+                <TableRow><TableCell colSpan={10} className="text-center">Loading...</TableCell></TableRow>
               ) : requests?.length === 0 ? (
-                <TableRow><TableCell colSpan={8} className="text-center text-muted-foreground">No requests</TableCell></TableRow>
-              ) : requests?.map((req: any) => (
-                <TableRow key={req.id}>
-                  <TableCell className="text-sm">{format(new Date(req.created_at), "dd MMM yyyy")}</TableCell>
-                  <TableCell className="text-sm">{profileMap[req.requested_by] || "..."}</TableCell>
-                  <TableCell className="font-medium">{req.item_name}</TableCell>
-                  <TableCell><Badge variant="outline">{req.item_type}</Badge></TableCell>
-                  <TableCell>{req.quantity}</TableCell>
-                  <TableCell><Badge variant={req.status === "provided" ? "outline" : "default"}>{req.status}</Badge></TableCell>
-                  <TableCell>{req.expense_amount ? formatPkrAmount(req.expense_amount) : "-"}</TableCell>
-                  <TableCell>
-                    {req.status === "approved" && (
-                      <div className="flex gap-1">
-                        <Button size="sm" variant="outline" onClick={() => provideMutation.mutate({ id: req.id })}>
-                          <Package className="w-3 h-3 mr-1" /> Provide
-                        </Button>
-                        <Button size="sm" variant="secondary" onClick={() => { setExpenseDialog(req); setExpenseForm({ amount: 0, bill_number: "", description: "" }); }}>
-                          <Receipt className="w-3 h-3 mr-1" /> + Expense
-                        </Button>
+                <TableRow><TableCell colSpan={10} className="text-center text-muted-foreground">No requests</TableCell></TableRow>
+              ) : requests?.map((req: any) => {
+                const prof = profileMap[req.requested_by];
+                return (
+                  <TableRow key={req.id}>
+                    <TableCell className="text-sm">{format(new Date(req.created_at), "dd MMM yyyy")}</TableCell>
+                    <TableCell className="text-sm">
+                      <div className="flex items-center gap-1">
+                        <User className="w-3 h-3 text-muted-foreground" />
+                        {prof?.name || "..."}
                       </div>
-                    )}
-                  </TableCell>
-                </TableRow>
-              ))}
+                      <div className="text-xs text-muted-foreground">{prof?.role || ""}</div>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className="text-xs">{prof?.department || "-"}</Badge>
+                    </TableCell>
+                    <TableCell className="font-medium">{req.item_name}</TableCell>
+                    <TableCell><Badge variant="outline">{req.item_type}</Badge></TableCell>
+                    <TableCell>{req.quantity}</TableCell>
+                    <TableCell className="text-sm">
+                      {req.location ? (
+                        <span className="flex items-center gap-1"><MapPin className="w-3 h-3 text-muted-foreground" />{req.location}</span>
+                      ) : "-"}
+                    </TableCell>
+                    <TableCell><Badge variant={req.status === "provided" ? "outline" : "default"}>{req.status}</Badge></TableCell>
+                    <TableCell>{req.expense_amount ? formatPkrAmount(req.expense_amount) : "-"}</TableCell>
+                    <TableCell>
+                      {req.status === "approved" && (
+                        <div className="flex gap-1">
+                          <Button size="sm" variant="outline" onClick={() => provideMutation.mutate({ id: req.id })}>
+                            <Package className="w-3 h-3 mr-1" /> Provide
+                          </Button>
+                          <Button size="sm" variant="secondary" onClick={() => { setExpenseDialog(req); setExpenseForm({ amount: 0, bill_number: "", description: "" }); }}>
+                            <Receipt className="w-3 h-3 mr-1" /> + Expense
+                          </Button>
+                        </div>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
             </TableBody>
           </Table>
         </CardContent>
