@@ -221,12 +221,24 @@ export function StaffInvoices() {
   // Filter and paginate invoices
   const filteredInvoices = useMemo(() => {
     return allInvoices.filter(invoice => {
-      // Enhanced search to handle complete invoice numbers like "INV-1754340531651", "LAB-1754320936111"
       const searchLower = searchTerm.toLowerCase().trim();
+      
+      // Get patient number for matching
+      const patientData = allPatients?.find(p => p.id === invoice.patient_id);
+      const patientNumber = patientData?.patient_number?.toLowerCase() || '';
+      
+      // Get phone from patientNames
+      const patientProfile = patientNames?.find((p: any) => p.id === invoice.patient_id);
+      const phone = patientProfile?.phone || '';
+      const emailPhone = patientProfile?.email?.match(/^(\d+)@patient\.local$/)?.[1] || '';
+      
       const matchesSearch = !searchTerm || 
         invoice.patient_name?.toLowerCase().includes(searchLower) ||
         invoice.invoice_number?.toLowerCase().includes(searchLower) ||
-        invoice.description?.toLowerCase().includes(searchLower);
+        invoice.description?.toLowerCase().includes(searchLower) ||
+        patientNumber.includes(searchLower) ||
+        phone.includes(searchLower) ||
+        emailPhone.includes(searchLower);
 
       const matchesType = filterType === "all" || invoice.type === filterType;
 

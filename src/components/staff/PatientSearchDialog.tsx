@@ -18,16 +18,16 @@ interface Patient {
 
 export function PatientSearchDialog() {
   const [open, setOpen] = useState(false);
-  const [searchPhone, setSearchPhone] = useState("");
+  const [searchTerm, setSearchTerm] = useState("");
   const [patient, setPatient] = useState<Patient | null>(null);
   const [isSearching, setIsSearching] = useState(false);
   const { toast } = useToast();
 
   const searchPatient = async () => {
-    if (!searchPhone.trim()) {
+    if (!searchTerm.trim()) {
       toast({
         title: "Error",
-        description: "Please enter a phone number",
+        description: "Please enter a patient number, phone number, or name",
         variant: "destructive",
       });
       return;
@@ -35,50 +35,115 @@ export function PatientSearchDialog() {
 
     setIsSearching(true);
     try {
-      // Search by email pattern since patients are stored as {phone}@patient.local
-      const patientEmail = `${searchPhone}@patient.local`;
-      
-      const { data, error } = await supabase
-        .from("profiles")
-        .select(`
-          id,
-          email,
-          first_name,
-          last_name,
-          patients!inner(patient_number, date_of_birth, cnic)
-        `)
-        .eq("email", patientEmail)
-        .eq("role", "patient")
+      const term = searchTerm.trim();
+      let foundProfile: any = null;
+      let foundPatient: any = null;
+
+      // 1) Search by patient_number
+      const { data: byNumber } = await supabase
+        .from("patients")
+        .select("id, patient_number, date_of_birth, cnic")
+        .ilike("patient_number", `%${term}%`)
+        .limit(1)
         .maybeSingle();
 
-      if (error) {
-        console.error("Search error:", error);
-        toast({
-          title: "Error",
-          description: "Failed to search for patient",
-          variant: "destructive",
-        });
-        return;
+      if (byNumber) {
+        foundPatient = byNumber;
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("first_name, last_name, email, phone")
+          .eq("id", byNumber.id)
+          .maybeSingle();
+        foundProfile = profile;
       }
 
-      if (!data) {
+      // 2) If not found, search by phone via email pattern
+      if (!foundPatient) {
+        const { data: byPhone } = await supabase
+          .from("profiles")
+          .select("id, first_name, last_name, email, phone")
+          .eq("role", "patient")
+          .eq("email", `${term}@patient.local`)
+          .maybeSingle();
+
+        if (byPhone) {
+          foundProfile = byPhone;
+          const { data: patData } = await supabase
+            .from("patients")
+            .select("id, patient_number, date_of_birth, cnic")
+            .eq("id", byPhone.id)
+            .maybeSingle();
+          foundPatient = patData;
+        }
+      }
+
+      // 3) If not found, search by phone field in profiles
+      if (!foundPatient) {
+        const { data: byProfilePhone } = await supabase
+          .from("profiles")
+          .select("id, first_name, last_name, email, phone")
+          .eq("role", "patient")
+          .ilike("phone", `%${term}%`)
+          .limit(1)
+          .maybeSingle();
+
+        if (byProfilePhone) {
+          foundProfile = byProfilePhone;
+          const { data: patData } = await supabase
+            .from("patients")
+            .select("id, patient_number, date_of_birth, cnic")
+            .eq("id", byProfilePhone.id)
+            .maybeSingle();
+          foundPatient = patData;
+        }
+      }
+
+      // 4) If not found, search by name
+      if (!foundPatient) {
+        const { data: byName } = await supabase
+          .from("profiles")
+          .select("id, first_name, last_name, email, phone")
+          .eq("role", "patient")
+          .or(`first_name.ilike.%${term}%,last_name.ilike.%${term}%`)
+          .limit(1)
+          .maybeSingle();
+
+        if (byName) {
+          foundProfile = byName;
+          const { data: patData } = await supabase
+            .from("patients")
+            .select("id, patient_number, date_of_birth, cnic")
+            .eq("id", byName.id)
+            .maybeSingle();
+          foundPatient = patData;
+        }
+      }
+
+      if (!foundPatient || !foundProfile) {
         toast({
           title: "Not Found",
-          description: "No patient found with this phone number",
+          description: "No patient found. Try patient number (P-XXXXX), phone, or name.",
           variant: "destructive",
         });
         setPatient(null);
         return;
       }
 
-      const patientData = {
-        id: data.id,
-        phone: searchPhone, // Use the searched phone number
-        first_name: data.first_name,
-        last_name: data.last_name,
-        patient_number: (data.patients as any)?.patient_number || "",
-        date_of_birth: (data.patients as any)?.date_of_birth || "",
-        cnic: (data.patients as any)?.cnic || "",
+      // Extract phone from email pattern if no phone field
+      let phone = foundProfile.phone || '';
+      if (!phone && foundProfile.email) {
+        const match = foundProfile.email.match(/^(\d+)@patient\.local$/);
+        if (match) phone = match[1];
+      }
+
+      const patientData: Patient = {
+        id: foundPatient.id,
+        phone,
+        first_name: foundProfile.first_name,
+        last_name: foundProfile.last_name,
+        patient_number: foundPatient.patient_number || "",
+        date_of_birth: foundPatient.date_of_birth || "",
+        cnic: foundPatient.cnic || "",
       };
 
       setPatient(patientData);
@@ -105,7 +170,7 @@ export function PatientSearchDialog() {
   };
 
   const resetSearch = () => {
-    setSearchPhone("");
+    setSearchTerm("");
     setPatient(null);
   };
 
@@ -119,19 +184,19 @@ export function PatientSearchDialog() {
       <DialogTrigger asChild>
         <Button variant="outline" className="flex items-center gap-2">
           <Search className="w-4 h-4" />
-          Search Patient by Phone
+          Search Patient
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Search Patient by Phone Number</DialogTitle>
+          <DialogTitle>Search Patient</DialogTitle>
         </DialogHeader>
         <div className="space-y-4">
           <div className="flex gap-2">
             <Input
-              placeholder="Enter phone number..."
-              value={searchPhone}
-              onChange={(e) => setSearchPhone(e.target.value)}
+              placeholder="Patient number, phone, or name..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
               onKeyPress={handleKeyPress}
               className="flex-1"
             />
@@ -144,6 +209,9 @@ export function PatientSearchDialog() {
               {isSearching ? "Searching..." : "Search"}
             </Button>
           </div>
+          <p className="text-xs text-muted-foreground">
+            Search by patient number (P-XXXXX), phone number, or name
+          </p>
 
           {patient && (
             <div className="border rounded-lg p-4 bg-muted/30 space-y-3">
@@ -170,7 +238,7 @@ export function PatientSearchDialog() {
                 <div className="flex items-center gap-2">
                   <Phone className="w-3 h-3 text-muted-foreground" />
                   <span className="font-medium">Phone:</span>
-                  <span>{patient.phone}</span>
+                  <span>{patient.phone || 'Not provided'}</span>
                 </div>
                 
                 {patient.date_of_birth && (
