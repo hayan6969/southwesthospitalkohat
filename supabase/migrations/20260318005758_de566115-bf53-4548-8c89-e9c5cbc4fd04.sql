@@ -1,0 +1,2 @@
+ALTER TABLE public.profiles DROP CONSTRAINT IF EXISTS profiles_role_check;
+ALTER TABLE public.profiles ADD CONSTRAINT profiles_role_check CHECK (role IN ('admin', 'doctor', 'staff', 'patient', 'finance', 'pharmacy', 'ota', 'nursing', 'inventory_manager', 'store', 'head_pharmacist', 'assistant_pharmacist', 'salesman_pharmacist'));
