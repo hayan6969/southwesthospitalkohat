@@ -198,15 +198,7 @@ export function MySupplyRequests() {
               </div>
               <div>
                 <Label>Type</Label>
-                <Select value={form.item_type} onValueChange={(v) => setForm({ ...form, item_type: v })}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="general">General</SelectItem>
-                    <SelectItem value="lab">Lab</SelectItem>
-                    <SelectItem value="office">Office</SelectItem>
-                    <SelectItem value="medical">Medical</SelectItem>
-                  </SelectContent>
-                </Select>
+                <Input value={form.item_type} readOnly className="bg-muted capitalize" />
               </div>
               <div>
                 <Label>Quantity</Label>
