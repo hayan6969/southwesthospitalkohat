@@ -613,6 +613,99 @@ export type Database = {
         }
         Relationships: []
       }
+      inventory_items: {
+        Row: {
+          category: string
+          created_at: string | null
+          description: string | null
+          id: string
+          minimum_stock_level: number
+          name: string
+          stock_quantity: number
+          unit: string
+          updated_at: string | null
+        }
+        Insert: {
+          category?: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          minimum_stock_level?: number
+          name: string
+          stock_quantity?: number
+          unit?: string
+          updated_at?: string | null
+        }
+        Update: {
+          category?: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          minimum_stock_level?: number
+          name?: string
+          stock_quantity?: number
+          unit?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      inventory_requests: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          created_at: string | null
+          expense_amount: number | null
+          expense_bill_number: string | null
+          id: string
+          item_name: string
+          item_type: string
+          provided_at: string | null
+          provided_by: string | null
+          quantity: number
+          reason: string | null
+          rejection_reason: string | null
+          requested_by: string
+          status: string
+          updated_at: string | null
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string | null
+          expense_amount?: number | null
+          expense_bill_number?: string | null
+          id?: string
+          item_name: string
+          item_type?: string
+          provided_at?: string | null
+          provided_by?: string | null
+          quantity?: number
+          reason?: string | null
+          rejection_reason?: string | null
+          requested_by: string
+          status?: string
+          updated_at?: string | null
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string | null
+          expense_amount?: number | null
+          expense_bill_number?: string | null
+          id?: string
+          item_name?: string
+          item_type?: string
+          provided_at?: string | null
+          provided_by?: string | null
+          quantity?: number
+          reason?: string | null
+          rejection_reason?: string | null
+          requested_by?: string
+          status?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       invoices: {
         Row: {
           amount: number
@@ -665,6 +758,42 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      lab_inventory_items: {
+        Row: {
+          category: string
+          created_at: string | null
+          description: string | null
+          id: string
+          minimum_stock_level: number
+          name: string
+          stock_quantity: number
+          unit: string
+          updated_at: string | null
+        }
+        Insert: {
+          category?: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          minimum_stock_level?: number
+          name: string
+          stock_quantity?: number
+          unit?: string
+          updated_at?: string | null
+        }
+        Update: {
+          category?: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          minimum_stock_level?: number
+          name?: string
+          stock_quantity?: number
+          unit?: string
+          updated_at?: string | null
+        }
+        Relationships: []
       }
       lab_reports: {
         Row: {
