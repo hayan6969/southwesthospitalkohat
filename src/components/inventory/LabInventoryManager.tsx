@@ -66,7 +66,7 @@ export function LabInventoryManager() {
   });
 
   const resetForm = () => {
-    setForm({ name: "", category: "consumable", description: "", stock_quantity: 0, minimum_stock_level: 10, unit: "pieces" });
+    setForm({ name: "", category: "consumable", description: "", stock_quantity: 0, minimum_stock_level: 10, unit: "pieces", manufacturing_date: "", expiry_date: "" });
     setNameSearch("");
     setEditing(null);
     setOpen(false);
