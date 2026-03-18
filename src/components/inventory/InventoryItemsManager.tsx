@@ -57,7 +57,7 @@ export function InventoryItemsManager() {
   });
 
   const resetForm = () => {
-    setForm({ name: "", category: "general", description: "", stock_quantity: 0, minimum_stock_level: 5, unit: "pieces" });
+    setForm({ name: "", category: "general", description: "", stock_quantity: 0, minimum_stock_level: 5, unit: "pieces", manufacturing_date: "", expiry_date: "" });
     setEditing(null);
     setOpen(false);
   };
