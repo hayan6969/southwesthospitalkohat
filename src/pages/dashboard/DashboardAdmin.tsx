@@ -17,7 +17,7 @@ import { useRealStatsData } from "@/hooks/useRealStatsData";
 import { useRecentActivity } from "@/hooks/useRecentActivity";
 import { useFinancialAnalytics } from "@/hooks/useFinancialAnalytics";
 import { useAuth } from "@/hooks/useAuth";
-import { Users, UserCheck, Calendar, Banknote, Shield, Activity, Filter, User, LogOut, TrendingUp, CreditCard } from "lucide-react";
+import { Users, UserCheck, Calendar, Banknote, Shield, Activity, Filter, User, LogOut, TrendingUp, CreditCard, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
