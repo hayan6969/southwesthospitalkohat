@@ -45,6 +45,7 @@ export default function FinanceLayout({ children }: FinanceLayoutProps) {
       case "pharmacy": navigate("/dashboard/finance/pharmacy"); break;
       case "refunds": navigate("/dashboard/finance/refunds"); break;
       case "invoices": navigate("/dashboard/finance/invoices"); break;
+      case "discounts": navigate("/dashboard/finance/discounts"); break;
     }
   };
 
