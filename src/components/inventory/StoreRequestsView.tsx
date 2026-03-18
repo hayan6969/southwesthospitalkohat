@@ -107,8 +107,6 @@ export function StoreRequestsView() {
       queryClient.invalidateQueries({ queryKey: ["low-stock-general"] });
       queryClient.invalidateQueries({ queryKey: ["low-stock-lab"] });
       toast.success("Marked as provided & stock updated");
-      setExpenseDialog(null);
-      setExpenseForm({ amount: 0, bill_number: "", description: "" });
     },
     onError: (e: any) => toast.error(e.message),
   });
