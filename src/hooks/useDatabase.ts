@@ -830,15 +830,17 @@ export const useCreateLabOrderWithInvoice = () => {
         };
       }
 
-      // Create invoice first
+      // Apply patient discount for lab orders
+      const labDiscount = await applyPatientDiscount(labOrderData.patient_id, labOrderData.totalAmount);
+
       const { data: invoice, error: invoiceError } = await supabase
         .from('invoices')
         .insert([{
           patient_id: labOrderData.patient_id,
-          amount: labOrderData.totalAmount,
-          description: labOrderData.invoiceDescription,
+          amount: labDiscount.discountedAmount,
+          description: `${labOrderData.invoiceDescription}${labDiscount.discountLabel ? ` (${labDiscount.discountLabel}, Original: Rs. ${labDiscount.originalAmount})` : ''}`,
           invoice_number: labOrderData.invoiceNumber,
-          status: 'paid', // Staff lab orders are paid at counter
+          status: 'paid',
           paid_at: new Date().toISOString()
         }])
         .select()
