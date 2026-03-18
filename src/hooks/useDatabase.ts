@@ -733,15 +733,18 @@ export const useCreateAppointmentWithInvoice = () => {
       // Get current user for created_by
       const { data: { user: currentUser } } = await supabase.auth.getUser();
 
+      // Apply patient discount
+      const discountResult = await applyPatientDiscount(appointmentData.appointment.patient_id, appointmentData.consultationFee);
+
       const { data: invoice, error: invoiceError } = await supabase
         .from('invoices')
         .insert([{
           patient_id: appointmentData.appointment.patient_id,
           doctor_id: appointmentData.appointment.doctor_id,
-          amount: appointmentData.consultationFee,
-          description: `Consultation with Dr. ${appointmentData.doctorName} - Patient: ${patientInfo?.patient_number || 'N/A'}`,
+          amount: discountResult.discountedAmount,
+          description: `Consultation with Dr. ${appointmentData.doctorName} - Patient: ${patientInfo?.patient_number || 'N/A'}${discountResult.discountLabel ? ` (${discountResult.discountLabel}, Original: Rs. ${discountResult.originalAmount})` : ''}`,
           invoice_number: `INV-${Date.now()}`,
-          status: 'paid', // Staff appointments are paid at counter
+          status: 'paid',
           paid_at: new Date().toISOString(),
           created_by: currentUser?.id || null
         }])
