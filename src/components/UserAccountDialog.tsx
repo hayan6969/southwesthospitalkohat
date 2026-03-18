@@ -150,6 +150,7 @@ export default function UserAccountDialog() {
                 <SelectItem value="staff">Staff</SelectItem>
                 <SelectItem value="pharmacy">Pharmacy</SelectItem>
                 <SelectItem value="finance">Finance</SelectItem>
+                <SelectItem value="lab">Lab</SelectItem>
               </SelectContent>
             </Select>
           </div>

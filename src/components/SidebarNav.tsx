@@ -116,7 +116,7 @@ export function SidebarNav({ role }: SidebarNavProps) {
       return location.pathname === itemPath && location.search.includes(itemSearch);
     }
     // For dashboard root links, exact match
-    if (item.to === `/dashboard/${role}` || item.to === "/dashboard/pharmacy" || item.to === "/dashboard/finance" || item.to === "/dashboard/store") {
+    if (item.to === `/dashboard/${role}` || item.to === "/dashboard/pharmacy" || item.to === "/dashboard/finance" || item.to === "/dashboard/store" || item.to === "/dashboard/lab") {
       return location.pathname === itemPath && !location.search;
     }
     return location.pathname.startsWith(itemPath);
