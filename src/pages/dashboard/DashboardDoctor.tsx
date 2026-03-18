@@ -408,6 +408,10 @@ export default function DashboardDoctor() {
             <TabsContent value="analytics">
               <DoctorAnalytics />
             </TabsContent>
+
+            <TabsContent value="supplies">
+              <MySupplyRequests />
+            </TabsContent>
           </Tabs>
         </div>
       </div>

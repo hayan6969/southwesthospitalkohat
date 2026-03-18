@@ -753,8 +753,12 @@ export default function DashboardOTA() {
         />
               </TabsContent>
 
-              <TabsContent value="lab-reports" className="mt-6">
+               <TabsContent value="lab-reports" className="mt-6">
                 <StaffLabReports />
+              </TabsContent>
+
+              <TabsContent value="supplies" className="mt-6">
+                <MySupplyRequests />
               </TabsContent>
             </Tabs>
           </div>
