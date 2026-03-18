@@ -5,7 +5,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { StaffLab } from "@/components/staff/StaffLab";
 import { StaffLabReports } from "@/components/staff/StaffLabReports";
 import { MySupplyRequests } from "@/components/inventory/MySupplyRequests";
-import { LabInventoryManager } from "@/components/inventory/LabInventoryManager";
+import { LabItemSupply } from "@/components/inventory/LabItemSupply";
 import { TestTube, FileText, ShoppingCart, FlaskConical } from "lucide-react";
 import AppLayout from "@/layouts/AppLayout";
 
@@ -40,7 +40,7 @@ export default function DashboardLab() {
           </TabsTrigger>
           <TabsTrigger value="inventory" className="flex items-center gap-1.5 text-xs sm:text-sm">
             <FlaskConical className="w-3.5 h-3.5" />
-            <span>Lab Inventory</span>
+            <span>Lab Item Supply</span>
           </TabsTrigger>
           <TabsTrigger value="supplies" className="flex items-center gap-1.5 text-xs sm:text-sm">
             <ShoppingCart className="w-3.5 h-3.5" />
@@ -57,7 +57,7 @@ export default function DashboardLab() {
         </TabsContent>
 
         <TabsContent value="inventory">
-          <LabInventoryManager />
+          <LabItemSupply />
         </TabsContent>
 
         <TabsContent value="supplies">
