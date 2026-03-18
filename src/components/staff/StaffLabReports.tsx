@@ -303,7 +303,7 @@ export function StaffLabReports() {
         <CardContent className="space-y-4">
           <div className="flex gap-2">
             <Input
-              placeholder="Enter Patient ID or Patient Number (e.g., P-0001)"
+              placeholder="Enter Patient Number (P-XXXXX) or Phone Number..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               onKeyPress={handleKeyPress}
@@ -316,7 +316,7 @@ export function StaffLabReports() {
           </div>
           
           <p className="text-sm text-muted-foreground">
-            Search for lab reports by entering a patient ID or patient number (e.g., P-000X)
+            Search by patient number (e.g., P-00001) or phone number
           </p>
         </CardContent>
       </Card>
