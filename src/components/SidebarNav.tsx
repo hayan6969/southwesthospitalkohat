@@ -1,6 +1,6 @@
 
 import { NavLink } from "react-router-dom";
-import { User, Users, Calendar, FileText, Inbox, Info, Activity, Building2, Shield, Pill, Clock, TestTube, CreditCard, Calculator, Receipt, Settings, ChartBar, UserPlus, Stethoscope, Upload, CheckCircle, RotateCcw, FlaskConical, Menu, X } from "lucide-react";
+import { User, Users, Calendar, FileText, Inbox, Info, Activity, Building2, Shield, Pill, Clock, TestTube, CreditCard, Calculator, Receipt, Settings, ChartBar, UserPlus, Stethoscope, Upload, CheckCircle, RotateCcw, FlaskConical, Menu, X, Package, Warehouse } from "lucide-react";
 import { useState } from "react";
 import { useIsMobile } from "@/hooks/use-mobile";
 
@@ -79,6 +79,16 @@ const navsByRole: Record<string, { label: string; to: string; icon: React.Elemen
     { label: "Analytics", to: "/dashboard/finance/analytics", icon: ChartBar },
     { label: "Expenses", to: "/dashboard/finance/expenses", icon: Receipt },
     { label: "Payroll", to: "/dashboard/finance/payroll", icon: Users },
+  ],
+  inventory_manager: [
+    { label: "Dashboard", to: "/dashboard/inventory_manager", icon: Info },
+    { label: "General Inventory", to: "/dashboard/inventory_manager/general", icon: Package },
+    { label: "Lab Inventory", to: "/dashboard/inventory_manager/lab", icon: FlaskConical },
+    { label: "Supply Requests", to: "/dashboard/inventory_manager/requests", icon: Inbox },
+  ],
+  store: [
+    { label: "Dashboard", to: "/dashboard/store", icon: Info },
+    { label: "Approved Requests", to: "/dashboard/store/requests", icon: Warehouse },
   ],
 };
 

@@ -23,6 +23,8 @@ import DashboardAdmin from "./pages/dashboard/DashboardAdmin";
 import DashboardPharmacy from "./pages/dashboard/DashboardPharmacy";
 import DashboardFinance from "./pages/dashboard/DashboardFinance";
 import DashboardOTA from "./pages/dashboard/DashboardOTA";
+import DashboardInventoryManager from "./pages/dashboard/DashboardInventoryManager";
+import DashboardStore from "./pages/dashboard/DashboardStore";
 
 // Doctor pages
 import DoctorSchedule from "./pages/dashboard/doctor/DoctorSchedule";
@@ -275,6 +277,30 @@ const App = () => (
             <Route path="/dashboard/finance/*" element={
               <ProtectedRoute allowedRoles={['finance', 'admin']}>
                 <FinanceRoutes />
+              </ProtectedRoute>
+            } />
+
+            {/* Inventory Manager dashboard routes */}
+            <Route path="/dashboard/inventory_manager" element={
+              <ProtectedRoute allowedRoles={['inventory_manager', 'admin']}>
+                <DashboardInventoryManager />
+              </ProtectedRoute>
+            } />
+            <Route path="/dashboard/inventory_manager/*" element={
+              <ProtectedRoute allowedRoles={['inventory_manager', 'admin']}>
+                <DashboardInventoryManager />
+              </ProtectedRoute>
+            } />
+
+            {/* Store dashboard routes */}
+            <Route path="/dashboard/store" element={
+              <ProtectedRoute allowedRoles={['store', 'admin']}>
+                <DashboardStore />
+              </ProtectedRoute>
+            } />
+            <Route path="/dashboard/store/*" element={
+              <ProtectedRoute allowedRoles={['store', 'admin']}>
+                <DashboardStore />
               </ProtectedRoute>
             } />
             

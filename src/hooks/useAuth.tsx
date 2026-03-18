@@ -10,7 +10,7 @@ type UserProfile = {
   first_name: string;
   last_name: string;
   phone?: string;
-  role: 'admin' | 'doctor' | 'staff' | 'ota' | 'head_pharmacist' | 'assistant_pharmacist' | 'salesman_pharmacist' | 'patient' | 'finance' | 'nursing';
+  role: 'admin' | 'doctor' | 'staff' | 'ota' | 'head_pharmacist' | 'assistant_pharmacist' | 'salesman_pharmacist' | 'patient' | 'finance' | 'nursing' | 'inventory_manager' | 'store';
   department_id?: string;
   is_active: boolean;
   created_at: string;
@@ -62,7 +62,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         // Cast the role to the proper type
         const profile: UserProfile = {
           ...data,
-          role: data.role as 'admin' | 'doctor' | 'staff' | 'ota' | 'head_pharmacist' | 'assistant_pharmacist' | 'salesman_pharmacist' | 'patient' | 'finance' | 'nursing'
+          role: data.role as 'admin' | 'doctor' | 'staff' | 'ota' | 'head_pharmacist' | 'assistant_pharmacist' | 'salesman_pharmacist' | 'patient' | 'finance' | 'nursing' | 'inventory_manager' | 'store'
         };
         
         return profile;
