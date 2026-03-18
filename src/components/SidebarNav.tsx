@@ -94,6 +94,12 @@ const navsByRole: Record<string, { label: string; to: string; icon: React.Elemen
     { label: "Lab Inventory", to: "/dashboard/store?tab=lab", icon: FlaskConical },
     { label: "Store / Provide", to: "/dashboard/store?tab=provide", icon: Warehouse },
   ],
+  lab: [
+    { label: "Dashboard", to: "/dashboard/lab", icon: Info },
+    { label: "Lab Orders", to: "/dashboard/lab?tab=lab", icon: TestTube },
+    { label: "Lab Reports", to: "/dashboard/lab?tab=reports", icon: FileText },
+    { label: "Supplies", to: "/dashboard/lab?tab=supplies", icon: Package },
+  ],
 };
 
 export function SidebarNav({ role }: SidebarNavProps) {
@@ -110,7 +116,7 @@ export function SidebarNav({ role }: SidebarNavProps) {
       return location.pathname === itemPath && location.search.includes(itemSearch);
     }
     // For dashboard root links, exact match
-    if (item.to === `/dashboard/${role}` || item.to === "/dashboard/pharmacy" || item.to === "/dashboard/finance" || item.to === "/dashboard/store") {
+    if (item.to === `/dashboard/${role}` || item.to === "/dashboard/pharmacy" || item.to === "/dashboard/finance" || item.to === "/dashboard/store" || item.to === "/dashboard/lab") {
       return location.pathname === itemPath && !location.search;
     }
     return location.pathname.startsWith(itemPath);

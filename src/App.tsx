@@ -24,6 +24,7 @@ import DashboardPharmacy from "./pages/dashboard/DashboardPharmacy";
 import DashboardFinance from "./pages/dashboard/DashboardFinance";
 import DashboardOTA from "./pages/dashboard/DashboardOTA";
 import DashboardStore from "./pages/dashboard/DashboardStore";
+import DashboardLab from "./pages/dashboard/DashboardLab";
 
 // Doctor pages
 import DoctorSchedule from "./pages/dashboard/doctor/DoctorSchedule";
@@ -292,6 +293,13 @@ const App = () => (
             <Route path="/dashboard/store/*" element={
               <ProtectedRoute allowedRoles={['store', 'inventory_manager', 'admin']}>
                 <DashboardStore />
+              </ProtectedRoute>
+            } />
+
+            {/* Lab dashboard routes */}
+            <Route path="/dashboard/lab" element={
+              <ProtectedRoute allowedRoles={['lab', 'admin']}>
+                <DashboardLab />
               </ProtectedRoute>
             } />
             
