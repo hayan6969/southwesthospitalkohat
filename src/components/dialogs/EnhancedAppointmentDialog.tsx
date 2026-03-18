@@ -504,6 +504,10 @@ export function EnhancedAppointmentDialog() {
                 <div>
                   <strong>Consultation Fee:</strong> <span className="text-green-600 font-medium">{formatCurrency(consultationFee)}</span>
                 </div>
+                <PatientDiscountBadge 
+                  patientId={selectedPatient?.id || null} 
+                  originalAmount={consultationFee} 
+                />
                 <div className="text-sm text-gray-600">
                   An invoice will be generated and opened in a new tab for printing/download.
                 </div>

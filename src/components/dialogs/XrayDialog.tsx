@@ -531,6 +531,10 @@ export function XrayDialog({ open, onOpenChange, onSuccess }: XrayDialogProps) {
                     <span>Total Amount:</span>
                     <span>{formatPkrAmount(totalAmount)}</span>
                   </div>
+                  <PatientDiscountBadge 
+                    patientId={selectedPatient?.id || null} 
+                    originalAmount={totalAmount} 
+                  />
                 </CardContent>
               </Card>
             )}
