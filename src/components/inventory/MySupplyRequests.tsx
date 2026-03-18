@@ -169,7 +169,7 @@ export function MySupplyRequests({ filterType }: MySupplyRequestsProps = {}) {
                     setForm({ 
                       ...form, 
                       item_name: v, 
-                      item_type: selected?.source || "general" 
+                      item_type: selected?.source || filterType || "general" 
                     });
                   }}
                 >
@@ -177,6 +177,12 @@ export function MySupplyRequests({ filterType }: MySupplyRequestsProps = {}) {
                   <SelectContent>
                     {allItems.length === 0 ? (
                       <SelectItem value="__none" disabled>No items available</SelectItem>
+                    ) : filterType ? (
+                      allItems.map((item: any) => (
+                        <SelectItem key={item.id} value={item.name}>
+                          {item.name} — {item.stock_quantity} {item.unit} in stock
+                        </SelectItem>
+                      ))
                     ) : (
                       <>
                         {(generalItems || []).length > 0 && (
