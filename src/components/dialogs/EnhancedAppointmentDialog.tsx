@@ -505,11 +505,12 @@ export function EnhancedAppointmentDialog() {
                   <strong>Consultation Fee:</strong> <span className="text-green-600 font-medium">{formatCurrency(consultationFee)}</span>
                 </div>
                 <PatientDiscountBadge 
-                  patientId={selectedPatient?.id || null} 
+                  patientId={selectedPatient?.id || (activeTab === "register" ? null : null)} 
                   originalAmount={consultationFee} 
                 />
-                <div className="text-sm text-gray-600">
+                <div className="text-sm text-muted-foreground">
                   An invoice will be generated and opened in a new tab for printing/download.
+                  {selectedPatient?.id && " Discount (if any) will be applied automatically."}
                 </div>
               </CardContent>
             </Card>
