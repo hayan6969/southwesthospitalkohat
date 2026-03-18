@@ -253,6 +253,9 @@ export default function DashboardAdmin() {
       case 'salesman_pharmacist': return 'bg-orange-200 text-orange-800';
       case 'finance': return 'bg-teal-100 text-teal-700';
       case 'patient': return 'bg-gray-100 text-gray-700';
+      case 'inventory_manager': return 'bg-amber-100 text-amber-700';
+      case 'store': return 'bg-stone-100 text-stone-700';
+      case 'lab': return 'bg-cyan-100 text-cyan-700';
       default: return 'bg-gray-100 text-gray-700';
     }
   };
@@ -618,6 +621,9 @@ export default function DashboardAdmin() {
                          <SelectItem value="salesman_pharmacist">Salesman Pharmacist</SelectItem>
                          <SelectItem value="finance">Finance</SelectItem>
                          <SelectItem value="patient">Patient</SelectItem>
+                         <SelectItem value="inventory_manager">Inventory Manager</SelectItem>
+                         <SelectItem value="store">Store</SelectItem>
+                         <SelectItem value="lab">Lab</SelectItem>
                        </SelectContent>
                     </Select>
                   </div>

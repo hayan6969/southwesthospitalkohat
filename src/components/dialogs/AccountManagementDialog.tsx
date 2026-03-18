@@ -139,6 +139,7 @@ export function AccountManagementDialog() {
                 <SelectItem value="finance">Finance</SelectItem>
                 <SelectItem value="inventory_manager">Inventory Manager</SelectItem>
                 <SelectItem value="store">Store</SelectItem>
+                <SelectItem value="lab">Lab</SelectItem>
               </SelectContent>
             </Select>
           </div>
