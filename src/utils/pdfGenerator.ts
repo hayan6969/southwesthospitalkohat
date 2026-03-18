@@ -274,16 +274,22 @@ export const generateInvoicePDF = async (invoice: any) => {
   doc.setFontSize(11);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(40, 40, 40);
+
+  // Consistent column positions
+  const leftLabel = 20;
+  const leftValue = 75;
+  const rightLabel = 120;
+  const rightValue = 155;
   
   // First row
-  doc.text('Invoice Number:', 20, yPosition + 5);
+  doc.text('Invoice Number:', leftLabel, yPosition + 5);
   doc.setFont('helvetica', 'normal');
-  doc.text(invoice.invoice_number, 70, yPosition + 5);
+  doc.text(invoice.invoice_number, leftValue, yPosition + 5);
   
   doc.setFont('helvetica', 'bold');
-  doc.text('Date:', 120, yPosition + 5);
+  doc.text('Date:', rightLabel, yPosition + 5);
   doc.setFont('helvetica', 'normal');
-  doc.text(new Date(invoice.created_at).toLocaleDateString(), 135, yPosition + 5);
+  doc.text(new Date(invoice.created_at).toLocaleDateString(), rightValue, yPosition + 5);
   
   yPosition += 10;
   
@@ -317,44 +323,44 @@ export const generateInvoicePDF = async (invoice: any) => {
   }
   
   doc.setFont('helvetica', 'bold');
-  doc.text('Patient Name:', 20, yPosition + 5);
+  doc.text('Patient Name:', leftLabel, yPosition + 5);
   doc.setFont('helvetica', 'normal');
-  doc.text(invoicePatientName, 70, yPosition + 5);
+  doc.text(invoicePatientName, leftValue, yPosition + 5);
   
   doc.setFont('helvetica', 'bold');
-  doc.text('Patient ID:', 120, yPosition + 5);
+  doc.text('Patient ID:', rightLabel, yPosition + 5);
   doc.setFont('helvetica', 'normal');
-  doc.text(invoice.patient?.patient_number || 'N/A', 160, yPosition + 5);
+  doc.text(invoice.patient?.patient_number || 'N/A', rightValue, yPosition + 5);
   
   // Third row - Get contact information
   yPosition += 10;
   
   doc.setFont('helvetica', 'bold');
-  doc.text('Contact:', 20, yPosition + 5);
+  doc.text('Contact:', leftLabel, yPosition + 5);
   doc.setFont('helvetica', 'normal');
-  doc.text(patientPhone || 'N/A', 60, yPosition + 5);
+  doc.text(patientPhone || 'N/A', leftValue, yPosition + 5);
   
   doc.setFont('helvetica', 'bold');
-  doc.text('Status:', 120, yPosition + 5);
+  doc.text('Status:', rightLabel, yPosition + 5);
   doc.setFont('helvetica', 'normal');
-  doc.text(invoice.status, 155, yPosition + 5);
+  doc.text(invoice.status, rightValue, yPosition + 5);
   
   // Fourth row - Add CNIC if available (for emergency consultations)
   if (patientCnic) {
     yPosition += 10;
     doc.setFont('helvetica', 'bold');
-    doc.text('CNIC:', 20, yPosition + 5);
+    doc.text('CNIC:', leftLabel, yPosition + 5);
     doc.setFont('helvetica', 'normal');
-    doc.text(patientCnic, 50, yPosition + 5);
+    doc.text(patientCnic, leftValue, yPosition + 5);
   }
   
   // Fifth row (if due date exists) - adjusted for CNIC addition
   if (invoice.due_date) {
     yPosition += 10;
     doc.setFont('helvetica', 'bold');
-    doc.text('Due Date:', 20, yPosition + 5);
+    doc.text('Due Date:', leftLabel, yPosition + 5);
     doc.setFont('helvetica', 'normal');
-    doc.text(new Date(invoice.due_date).toLocaleDateString(), 65, yPosition + 5);
+    doc.text(new Date(invoice.due_date).toLocaleDateString(), leftValue, yPosition + 5);
   }
 
   // Move to just below the info box
