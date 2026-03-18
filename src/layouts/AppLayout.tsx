@@ -4,7 +4,7 @@ import { SidebarNav } from "@/components/SidebarNav";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { LogOut, User } from "lucide-react";
-import { AdminDashboardNav } from "@/components/AdminDashboardNav";
+
 
 
 interface AppLayoutProps {
@@ -35,11 +35,6 @@ const AppLayout = ({ children, sidebarRole, hideSidebar }: AppLayoutProps) => {
                 <span className="inline-block w-2 h-6 sm:h-8 bg-blue-500 rounded-full" />
                 HIMS
               </h1>
-              {profile.role === 'admin' && (
-                <div className="hidden lg:block">
-                  <AdminDashboardNav />
-                </div>
-              )}
             </div>
             <div className="flex items-center gap-2 sm:gap-4">
               
@@ -56,12 +51,6 @@ const AppLayout = ({ children, sidebarRole, hideSidebar }: AppLayoutProps) => {
               </Button>
             </div>
           </div>
-          {/* Mobile admin nav */}
-          {profile.role === 'admin' && (
-            <div className="lg:hidden mt-3 overflow-x-auto -mx-4 px-4">
-              <AdminDashboardNav />
-            </div>
-          )}
         </header>
         <main className="flex-1 p-3 sm:p-6 overflow-auto">
           {children}

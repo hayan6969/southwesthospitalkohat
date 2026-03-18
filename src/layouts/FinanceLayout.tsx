@@ -5,7 +5,7 @@ import { Calculator, ChartBar, Receipt, Users, Info, User, LogOut, Stethoscope, 
 import { useHospitalSettings } from "@/hooks/useHospitalSettings";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
-import { AdminDashboardNav } from "@/components/AdminDashboardNav";
+
 
 interface FinanceLayoutProps {
   children: ReactNode;
@@ -67,11 +67,6 @@ export default function FinanceLayout({ children }: FinanceLayoutProps) {
                 <span className="truncate">{hospitalSettings?.hospital_name || "HIMS"}</span>
               </h1>
             </div>
-            {profile?.role === 'admin' && (
-              <div className="hidden lg:block">
-                <AdminDashboardNav />
-              </div>
-            )}
           </div>
           {profile && (
             <div className="flex items-center gap-2 sm:gap-4">
@@ -89,11 +84,6 @@ export default function FinanceLayout({ children }: FinanceLayoutProps) {
             </div>
           )}
         </div>
-        {profile?.role === 'admin' && (
-          <div className="lg:hidden mt-3 overflow-x-auto -mx-4 px-4">
-            <AdminDashboardNav />
-          </div>
-        )}
       </header>
 
       {/* Main Content */}
