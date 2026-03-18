@@ -360,12 +360,12 @@ export function EnhancedLabDialog() {
                   ) : (
                     <>
                       <div className="space-y-2">
-                        <Label htmlFor="search">Search by Patient ID</Label>
+                        <Label htmlFor="search">Search Patient</Label>
                         <Input
                           id="search"
                           value={searchTerm}
                           onChange={(e) => setSearchTerm(e.target.value)}
-                          placeholder="Enter Patient ID (e.g. P-0001)..."
+                          placeholder="Patient ID, Phone Number, Name, or CNIC..."
                         />
                       </div>
                       
