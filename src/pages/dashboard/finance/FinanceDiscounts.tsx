@@ -149,6 +149,7 @@ export default function FinanceDiscounts() {
     setPatientSearch("");
     setDiscountType("percentage");
     setDiscountValue(0);
+    setServiceType("consultation");
     setNotes("");
   };
 
