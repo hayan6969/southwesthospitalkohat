@@ -103,7 +103,7 @@ export function MySupplyRequests({ filterType }: MySupplyRequestsProps = {}) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["my-inventory-requests"] });
       toast.success("Supply request submitted");
-      setForm({ item_name: "", item_type: "general", quantity: 1, reason: "", location: "" });
+      setForm({ item_name: "", item_type: filterType || "general", quantity: 1, reason: "", location: "" });
       setShowForm(false);
     },
     onError: (e: any) => toast.error(e.message),
