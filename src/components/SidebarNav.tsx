@@ -1,5 +1,5 @@
 
-import { NavLink } from "react-router-dom";
+import { NavLink, useLocation } from "react-router-dom";
 import { User, Users, Calendar, FileText, Inbox, Info, Activity, Building2, Shield, Pill, Clock, TestTube, CreditCard, Calculator, Receipt, Settings, ChartBar, UserPlus, Stethoscope, Upload, CheckCircle, RotateCcw, FlaskConical, Menu, X, Package, Warehouse } from "lucide-react";
 import { useState } from "react";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -82,9 +82,16 @@ const navsByRole: Record<string, { label: string; to: string; icon: React.Elemen
   ],
   inventory_manager: [
     { label: "Dashboard", to: "/dashboard/store", icon: Info },
+    { label: "Supply Requests", to: "/dashboard/store?tab=requests", icon: Inbox },
+    { label: "General Inventory", to: "/dashboard/store?tab=general", icon: Package },
+    { label: "Lab Inventory", to: "/dashboard/store?tab=lab", icon: FlaskConical },
+    { label: "Store / Provide", to: "/dashboard/store?tab=provide", icon: Warehouse },
   ],
   store: [
     { label: "Dashboard", to: "/dashboard/store", icon: Info },
+    { label: "General Inventory", to: "/dashboard/store?tab=general", icon: Package },
+    { label: "Lab Inventory", to: "/dashboard/store?tab=lab", icon: FlaskConical },
+    { label: "Store / Provide", to: "/dashboard/store?tab=provide", icon: Warehouse },
   ],
 };
 
@@ -92,6 +99,21 @@ export function SidebarNav({ role }: SidebarNavProps) {
   const items = navsByRole[role] ?? [];
   const isMobile = useIsMobile();
   const [open, setOpen] = useState(false);
+
+  const location = useLocation();
+
+  const isItemActive = (item: { to: string }) => {
+    const [itemPath, itemSearch] = item.to.split("?");
+    if (itemSearch) {
+      // Query-param based: match path + query param
+      return location.pathname === itemPath && location.search.includes(itemSearch);
+    }
+    // For dashboard root links, exact match
+    if (item.to === `/dashboard/${role}` || item.to === "/dashboard/pharmacy" || item.to === "/dashboard/finance" || item.to === "/dashboard/store") {
+      return location.pathname === itemPath && !location.search;
+    }
+    return location.pathname.startsWith(itemPath);
+  };
 
   const sidebarContent = (
     <>
@@ -104,24 +126,27 @@ export function SidebarNav({ role }: SidebarNavProps) {
         )}
       </div>
       <nav className="flex-1 flex flex-col gap-1 px-4">
-        {items.map((item) => (
-          <NavLink
-            key={item.to}
-            to={item.to}
-            end={item.to === `/dashboard/${role}` || item.to === "/dashboard/pharmacy" || item.to === "/dashboard/finance"}
-            onClick={() => isMobile && setOpen(false)}
-            className={({ isActive }) =>
-              `flex items-center px-4 py-3 gap-3 rounded-lg font-medium transition-all
-               ${isActive 
-                 ? "bg-blue-600 text-white shadow-lg" 
-                 : "text-slate-300 hover:bg-slate-800 hover:text-white"
-               }`
-            }
-          >
-            <item.icon size={18} className="opacity-80" />
-            {item.label}
-          </NavLink>
-        ))}
+        {items.map((item) => {
+          const active = isItemActive(item);
+          return (
+            <NavLink
+              key={item.to}
+              to={item.to}
+              end
+              onClick={() => isMobile && setOpen(false)}
+              className={
+                `flex items-center px-4 py-3 gap-3 rounded-lg font-medium transition-all
+                 ${active
+                   ? "bg-blue-600 text-white shadow-lg" 
+                   : "text-slate-300 hover:bg-slate-800 hover:text-white"
+                 }`
+              }
+            >
+              <item.icon size={18} className="opacity-80" />
+              {item.label}
+            </NavLink>
+          );
+        })}
       </nav>
       <div className="mt-auto px-6 pt-4 text-xs text-slate-400 border-t border-slate-700">
         <div className="mb-2">Hospital System</div>

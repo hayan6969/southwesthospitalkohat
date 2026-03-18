@@ -11,14 +11,18 @@ import { useSearchParams } from "react-router-dom";
 
 const DashboardStore = () => {
   const { profile } = useAuth();
-  const [searchParams] = useSearchParams();
-  const isManagerOrStore = profile?.role === 'inventory_manager' || profile?.role === 'admin' || profile?.role === 'store';
+  const [searchParams, setSearchParams] = useSearchParams();
   const isManager = profile?.role === 'inventory_manager' || profile?.role === 'admin';
+  const isManagerOrStore = isManager || profile?.role === 'store';
   const tabParam = searchParams.get("tab");
-  const defaultTab = tabParam === "provide" ? "provide" : (isManager ? "requests" : "provide");
+  const activeTab = tabParam || (isManager ? "requests" : "provide");
+
+  const handleTabChange = (value: string) => {
+    setSearchParams({ tab: value }, { replace: true });
+  };
 
   return (
-    <AppLayout sidebarRole="store">
+    <AppLayout sidebarRole={profile?.role === 'inventory_manager' ? 'inventory_manager' : 'store'}>
       <div className="space-y-6">
         <div>
           <h1 className="text-2xl font-bold text-foreground">
@@ -33,7 +37,7 @@ const DashboardStore = () => {
 
         {isManagerOrStore && <LowStockAlerts />}
 
-        <Tabs defaultValue={defaultTab} className="w-full">
+        <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
           <TabsList className={`grid w-full ${isManager ? 'grid-cols-4' : 'grid-cols-3'}`}>
             {isManager && <TabsTrigger value="requests">Supply Requests</TabsTrigger>}
             <TabsTrigger value="general">General Inventory</TabsTrigger>
