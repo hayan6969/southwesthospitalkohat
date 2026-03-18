@@ -42,7 +42,7 @@ const AppLayout = ({ children, sidebarRole, hideSidebar }: AppLayoutProps) => {
               )}
             </div>
             <div className="flex items-center gap-2 sm:gap-4">
-              <RequestSuppliesDialog />
+              
               <div className="hidden sm:flex items-center gap-2 text-sm text-gray-600">
                 <User className="w-4 h-4" />
                 <span>{profile.first_name} {profile.last_name}</span>
