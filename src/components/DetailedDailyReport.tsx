@@ -626,7 +626,7 @@ export function DetailedDailyReport({
                                     <TableCell className="text-center text-xs font-medium">{srNo}</TableCell>
                                     <TableCell className="text-sm font-medium">{item.patientName}</TableCell>
                                     <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
-                                      {item.time ? formatInPakistanTime(new Date(item.time), 'h:mm a') : '—'}
+                                      {item.time ? formatInPakistanTime(item.time, 'h:mm a') : '—'}
                                     </TableCell>
                                     <TableCell className="text-sm max-w-[200px] truncate">{item.procedureName}</TableCell>
                                     <TableCell className="text-sm">{item.consultant}</TableCell>
@@ -719,7 +719,7 @@ export function DetailedDailyReport({
                       </TableCell>
                       <TableCell className="text-sm">{exp.description}</TableCell>
                       <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
-                        {exp.time ? formatInPakistanTime(new Date(exp.time), 'MMM d, h:mm a') : exp.date}
+                        {exp.time ? formatInPakistanTime(exp.time, 'MMM d, h:mm a') : exp.date}
                       </TableCell>
                       <TableCell className="text-right font-medium text-red-600">{formatPkrAmount(exp.amount)}</TableCell>
                     </TableRow>
@@ -767,7 +767,7 @@ export function DetailedDailyReport({
                       </TableCell>
                       <TableCell className="text-sm">{ref.description}</TableCell>
                       <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
-                        {ref.time ? formatInPakistanTime(new Date(ref.time), 'MMM d, h:mm a') : '—'}
+                        {ref.time ? formatInPakistanTime(ref.time, 'MMM d, h:mm a') : '—'}
                       </TableCell>
                       <TableCell className="text-right font-medium text-red-600">{formatPkrAmount(ref.amount)}</TableCell>
                     </TableRow>
