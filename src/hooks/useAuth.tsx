@@ -62,7 +62,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         // Cast the role to the proper type
         const profile: UserProfile = {
           ...data,
-          role: data.role as 'admin' | 'doctor' | 'staff' | 'ota' | 'head_pharmacist' | 'assistant_pharmacist' | 'salesman_pharmacist' | 'patient' | 'finance' | 'nursing'
+          role: data.role as 'admin' | 'doctor' | 'staff' | 'ota' | 'head_pharmacist' | 'assistant_pharmacist' | 'salesman_pharmacist' | 'patient' | 'finance' | 'nursing' | 'inventory_manager' | 'store'
         };
         
         return profile;
