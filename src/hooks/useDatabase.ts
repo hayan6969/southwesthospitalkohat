@@ -733,8 +733,8 @@ export const useCreateAppointmentWithInvoice = () => {
       // Get current user for created_by
       const { data: { user: currentUser } } = await supabase.auth.getUser();
 
-      // Apply patient discount
-      const discountResult = await applyPatientDiscount(appointmentData.appointment.patient_id, appointmentData.consultationFee);
+      // Apply patient discount for consultation
+      const discountResult = await applyPatientDiscount(appointmentData.appointment.patient_id, appointmentData.consultationFee, 'consultation');
 
       const { data: invoice, error: invoiceError } = await supabase
         .from('invoices')
