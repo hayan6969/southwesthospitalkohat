@@ -291,6 +291,7 @@ export default function FinanceDiscounts() {
                   <TableRow>
                     <TableHead>Patient</TableHead>
                     <TableHead>Patient #</TableHead>
+                    <TableHead>Service</TableHead>
                     <TableHead>Discount</TableHead>
                     <TableHead>Expires</TableHead>
                     <TableHead>Status</TableHead>
