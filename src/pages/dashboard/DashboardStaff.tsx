@@ -4,6 +4,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { LogOut, User, Menu } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { MySupplyRequests } from "@/components/inventory/MySupplyRequests";
 import { StaffCounter } from "@/components/staff/StaffCounter";
 import { StaffLab } from "@/components/staff/StaffLab";
 import { StaffOT } from "@/components/staff/StaffOT";
