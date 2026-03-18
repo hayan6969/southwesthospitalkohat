@@ -167,9 +167,9 @@ export function LabInventoryManager() {
           </TableHeader>
           <TableBody>
             {isLoading ? (
-              <TableRow><TableCell colSpan={6} className="text-center">Loading...</TableCell></TableRow>
+              <TableRow><TableCell colSpan={8} className="text-center">Loading...</TableCell></TableRow>
             ) : items?.length === 0 ? (
-              <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground">No lab items yet</TableCell></TableRow>
+              <TableRow><TableCell colSpan={8} className="text-center text-muted-foreground">No lab items yet</TableCell></TableRow>
             ) : items?.map((item: any) => (
               <TableRow key={item.id} className={item.stock_quantity <= item.minimum_stock_level ? "bg-destructive/10" : ""}>
                 <TableCell className="font-medium">{item.name}</TableCell>
