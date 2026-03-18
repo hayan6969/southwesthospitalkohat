@@ -175,15 +175,10 @@ export function StoreRequestsView() {
                     <TableCell><Badge variant={req.status === "provided" ? "outline" : "default"}>{req.status}</Badge></TableCell>
                     <TableCell>{req.expense_amount ? formatPkrAmount(req.expense_amount) : "-"}</TableCell>
                     <TableCell>
-                      {req.status === "approved" && (
-                        <div className="flex gap-1">
-                          <Button size="sm" variant="outline" onClick={() => provideMutation.mutate({ id: req.id })}>
-                            <Package className="w-3 h-3 mr-1" /> Provide
-                          </Button>
-                          <Button size="sm" variant="secondary" onClick={() => { setExpenseDialog(req); setExpenseForm({ amount: 0, bill_number: "", description: "" }); }}>
-                            <Receipt className="w-3 h-3 mr-1" /> + Expense
-                          </Button>
-                        </div>
+                    {req.status === "approved" && (
+                        <Button size="sm" variant="outline" onClick={() => provideMutation.mutate({ id: req.id })}>
+                          <Package className="w-3 h-3 mr-1" /> Provide
+                        </Button>
                       )}
                     </TableCell>
                   </TableRow>
