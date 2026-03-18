@@ -94,20 +94,7 @@ export const useFinancialAnalytics = (selectedMonth?: Date, filterParams?: Filte
       }
 
       // Batch all independent queries with Promise.all
-      const [
-        closingsRes,
-        pharmacyInvoicesCountRes,
-        pharmacyInvoicesRes,
-        pharmacyExpensesCountRes,
-        pharmacyExpensesRes,
-        hospitalInvoicesCountRes,
-        hospitalInvoicesRes,
-        refundsRes,
-        doctorPaymentsCountRes,
-        doctorPaymentsRes,
-        ...(payPeriodFormat ? [
-        ] : [])
-      ] = await Promise.all([
+      const results = await Promise.all([
         supabase.from('daily_closings').select('*').gte('closing_date', monthStartDate).lte('closing_date', monthEndDate).order('closing_date', { ascending: true }),
         supabase.from('pharmacy_invoices').select('*', { count: 'exact', head: true }).gte('created_at', monthStartISO).lte('created_at', monthEndISO).eq('status', 'completed'),
         supabase.from('pharmacy_invoices').select('final_amount').gte('created_at', monthStartISO).lte('created_at', monthEndISO).eq('status', 'completed'),
@@ -119,6 +106,8 @@ export const useFinancialAnalytics = (selectedMonth?: Date, filterParams?: Filte
         supabase.from('doctor_payments').select('*', { count: 'exact', head: true }).gte('period_start', monthStartDate).lte('period_end', monthEndDate),
         supabase.from('doctor_payments').select('total_earnings').gte('period_start', monthStartDate).lte('period_end', monthEndDate),
       ]);
+
+      const [closingsRes, pharmacyInvoicesCountRes, pharmacyInvoicesRes, pharmacyExpensesCountRes, pharmacyExpensesRes, hospitalInvoicesCountRes, hospitalInvoicesRes, refundsRes, doctorPaymentsCountRes, doctorPaymentsRes] = results;
 
       const dailyClosings = closingsRes.data;
       if (closingsRes.error) throw closingsRes.error;
