@@ -280,26 +280,18 @@ const App = () => (
               </ProtectedRoute>
             } />
 
-            {/* Inventory Manager dashboard routes */}
-            <Route path="/dashboard/inventory_manager" element={
-              <ProtectedRoute allowedRoles={['inventory_manager', 'admin']}>
-                <DashboardInventoryManager />
-              </ProtectedRoute>
-            } />
-            <Route path="/dashboard/inventory_manager/*" element={
-              <ProtectedRoute allowedRoles={['inventory_manager', 'admin']}>
-                <DashboardInventoryManager />
-              </ProtectedRoute>
-            } />
+            {/* Inventory Manager redirect to store */}
+            <Route path="/dashboard/inventory_manager" element={<Navigate to="/dashboard/store" replace />} />
+            <Route path="/dashboard/inventory_manager/*" element={<Navigate to="/dashboard/store" replace />} />
 
-            {/* Store dashboard routes */}
+            {/* Store & Inventory Manager dashboard */}
             <Route path="/dashboard/store" element={
-              <ProtectedRoute allowedRoles={['store', 'admin']}>
+              <ProtectedRoute allowedRoles={['store', 'inventory_manager', 'admin']}>
                 <DashboardStore />
               </ProtectedRoute>
             } />
             <Route path="/dashboard/store/*" element={
-              <ProtectedRoute allowedRoles={['store', 'admin']}>
+              <ProtectedRoute allowedRoles={['store', 'inventory_manager', 'admin']}>
                 <DashboardStore />
               </ProtectedRoute>
             } />
