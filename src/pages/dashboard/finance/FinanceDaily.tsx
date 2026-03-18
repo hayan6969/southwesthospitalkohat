@@ -203,33 +203,20 @@ export default function FinanceDaily() {
   } = useQuery({
     queryKey: ['daily-detailed', targetDate, dailyData?.cutoffTime],
     queryFn: async () => {
-      const cutoffTime = dailyData?.cutoffTime;
-      const lastClosing = dailyData?.lastClosing;
-      if (!cutoffTime) {
-        // Fallback if dailyData not ready
+      let effectiveCutoff = dailyData?.cutoffTime;
+      let lastClosing = dailyData?.lastClosing;
+      
+      if (!effectiveCutoff) {
         const { data: lastClosingData } = await supabase.rpc('get_last_daily_closing');
-        const lc = lastClosingData?.[0];
-        var fallbackCutoff: string;
-        if (lc) {
-          fallbackCutoff = lc.closing_time;
+        lastClosing = lastClosingData?.[0];
+        if (lastClosing) {
+          effectiveCutoff = lastClosing.closing_time;
         } else {
-          fallbackCutoff = toPakistanTime(new Date(`${targetDate}T00:00:00`)).toISOString();
+          effectiveCutoff = toPakistanTime(new Date(`${targetDate}T00:00:00`)).toISOString();
         }
       }
 
-      // Determine the time cutoff for filtering detailed data
-      let cutoffTime: string;
-      if (lastClosing && lastClosing.closing_date !== targetDate) {
-        // If there's a previous closing for a different date, use activities after that closing time
-        cutoffTime = lastClosing.closing_time;
-      } else if (lastClosing && lastClosing.closing_date === targetDate) {
-        // If there's already a closing for the same date, use that closing time as cutoff
-        cutoffTime = lastClosing.closing_time;
-      } else {
-        // If no previous closing, include activities from the beginning of the selected date in Pakistan time
-        const selectedDatePakTime = toPakistanTime(new Date(`${targetDate}T00:00:00`));
-        cutoffTime = selectedDatePakTime.toISOString();
-      }
+      const cutoffTime = effectiveCutoff;
 
       // Current time for upper bound (only for today's date) in Pakistani timezone
       const currentPakTime = getCurrentPakistanTime();
