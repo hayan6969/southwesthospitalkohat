@@ -1,7 +1,7 @@
 import { ReactNode } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useLocation, useNavigate } from "react-router-dom";
-import { Calculator, ChartBar, Receipt, Users, Info, User, LogOut, Stethoscope, Pill, RotateCcw, Calendar, FileText } from "lucide-react";
+import { Calculator, ChartBar, Receipt, Users, Info, User, LogOut, Stethoscope, Pill, RotateCcw, Calendar, FileText, Tag } from "lucide-react";
 import { useHospitalSettings } from "@/hooks/useHospitalSettings";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
@@ -29,6 +29,7 @@ export default function FinanceLayout({ children }: FinanceLayoutProps) {
     if (path === "/dashboard/finance/pharmacy") return "pharmacy";
     if (path === "/dashboard/finance/refunds") return "refunds";
     if (path === "/dashboard/finance/invoices") return "invoices";
+    if (path === "/dashboard/finance/discounts") return "discounts";
     return "dashboard";
   };
 
@@ -44,6 +45,7 @@ export default function FinanceLayout({ children }: FinanceLayoutProps) {
       case "pharmacy": navigate("/dashboard/finance/pharmacy"); break;
       case "refunds": navigate("/dashboard/finance/refunds"); break;
       case "invoices": navigate("/dashboard/finance/invoices"); break;
+      case "discounts": navigate("/dashboard/finance/discounts"); break;
     }
   };
 
@@ -104,7 +106,7 @@ export default function FinanceLayout({ children }: FinanceLayoutProps) {
 
         <Tabs value={getCurrentTab()} onValueChange={handleTabChange} className="w-full">
           <div className="overflow-x-auto -mx-3 px-3 sm:mx-0 sm:px-0 mb-4 sm:mb-8">
-            <TabsList className="inline-flex w-auto min-w-full sm:grid sm:w-full sm:grid-cols-5 lg:grid-cols-10">
+            <TabsList className="inline-flex w-auto min-w-full sm:grid sm:w-full sm:grid-cols-5 lg:grid-cols-11">
               <TabsTrigger value="dashboard" className="flex items-center gap-1.5 text-xs sm:text-sm whitespace-nowrap">
                 <Info className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                 Dashboard
@@ -144,6 +146,10 @@ export default function FinanceLayout({ children }: FinanceLayoutProps) {
               <TabsTrigger value="invoices" className="flex items-center gap-1.5 text-xs sm:text-sm whitespace-nowrap">
                 <FileText className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                 Invoices
+              </TabsTrigger>
+              <TabsTrigger value="discounts" className="flex items-center gap-1.5 text-xs sm:text-sm whitespace-nowrap">
+                <Tag className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                Discounts
               </TabsTrigger>
             </TabsList>
           </div>

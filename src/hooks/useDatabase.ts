@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { getCurrentPakistanDate, formatInPakistanTime } from '@/utils/timezone';
+import { applyPatientDiscount } from '@/utils/discountUtils';
 
 export const useStats = () => {
   return useQuery({
@@ -732,15 +733,18 @@ export const useCreateAppointmentWithInvoice = () => {
       // Get current user for created_by
       const { data: { user: currentUser } } = await supabase.auth.getUser();
 
+      // Apply patient discount
+      const discountResult = await applyPatientDiscount(appointmentData.appointment.patient_id, appointmentData.consultationFee);
+
       const { data: invoice, error: invoiceError } = await supabase
         .from('invoices')
         .insert([{
           patient_id: appointmentData.appointment.patient_id,
           doctor_id: appointmentData.appointment.doctor_id,
-          amount: appointmentData.consultationFee,
-          description: `Consultation with Dr. ${appointmentData.doctorName} - Patient: ${patientInfo?.patient_number || 'N/A'}`,
+          amount: discountResult.discountedAmount,
+          description: `Consultation with Dr. ${appointmentData.doctorName} - Patient: ${patientInfo?.patient_number || 'N/A'}${discountResult.discountLabel ? ` (${discountResult.discountLabel}, Original: Rs. ${discountResult.originalAmount})` : ''}`,
           invoice_number: `INV-${Date.now()}`,
-          status: 'paid', // Staff appointments are paid at counter
+          status: 'paid',
           paid_at: new Date().toISOString(),
           created_by: currentUser?.id || null
         }])
@@ -826,15 +830,17 @@ export const useCreateLabOrderWithInvoice = () => {
         };
       }
 
-      // Create invoice first
+      // Apply patient discount for lab orders
+      const labDiscount = await applyPatientDiscount(labOrderData.patient_id, labOrderData.totalAmount);
+
       const { data: invoice, error: invoiceError } = await supabase
         .from('invoices')
         .insert([{
           patient_id: labOrderData.patient_id,
-          amount: labOrderData.totalAmount,
-          description: labOrderData.invoiceDescription,
+          amount: labDiscount.discountedAmount,
+          description: `${labOrderData.invoiceDescription}${labDiscount.discountLabel ? ` (${labDiscount.discountLabel}, Original: Rs. ${labDiscount.originalAmount})` : ''}`,
           invoice_number: labOrderData.invoiceNumber,
-          status: 'paid', // Staff lab orders are paid at counter
+          status: 'paid',
           paid_at: new Date().toISOString()
         }])
         .select()
