@@ -23,6 +23,8 @@ import DashboardAdmin from "./pages/dashboard/DashboardAdmin";
 import DashboardPharmacy from "./pages/dashboard/DashboardPharmacy";
 import DashboardFinance from "./pages/dashboard/DashboardFinance";
 import DashboardOTA from "./pages/dashboard/DashboardOTA";
+import DashboardInventoryManager from "./pages/dashboard/DashboardInventoryManager";
+import DashboardStore from "./pages/dashboard/DashboardStore";
 
 // Doctor pages
 import DoctorSchedule from "./pages/dashboard/doctor/DoctorSchedule";
