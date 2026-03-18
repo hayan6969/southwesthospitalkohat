@@ -872,6 +872,10 @@ export function OTScheduleDialog() {
                       <span>Total Amount:</span>
                       <span className="text-green-600">{formatPkrAmount(totalCost)}</span>
                     </div>
+                    <PatientDiscountBadge 
+                      patientId={selectedPatient?.id || null} 
+                      originalAmount={totalCost} 
+                    />
                   </CardContent>
                 </Card>
               )}
