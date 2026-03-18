@@ -312,6 +312,11 @@ export default function FinanceDiscounts() {
                         </TableCell>
                         <TableCell>{d.patient?.patient_number || 'N/A'}</TableCell>
                         <TableCell>
+                          <Badge variant="outline" className="capitalize">
+                            {d.service_type === 'ot' ? 'OT' : d.service_type || 'Consultation'}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
                           <Badge variant="secondary" className="gap-1">
                             {d.discount_type === 'percentage' ? (
                               <><Percent className="w-3 h-3" />{d.discount_value}%</>
