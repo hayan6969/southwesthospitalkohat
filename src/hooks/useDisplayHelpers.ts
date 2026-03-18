@@ -132,12 +132,13 @@ export const useSearchPatientsWithNames = (searchTerm: string) => {
 
         if (patientsError) throw patientsError;
 
-        // Also search by name in profiles
+        // Also search by name, phone, or email-based phone in profiles
+        const emailPhonePattern = `${searchTerm.replace(/[^0-9]/g, '')}@patient.local`;
         const { data: profileMatches } = await supabase
           .from('profiles')
           .select('id')
           .eq('role', 'patient')
-          .or(`first_name.ilike.%${searchTerm}%,last_name.ilike.%${searchTerm}%,phone.ilike.%${searchTerm}%`)
+          .or(`first_name.ilike.%${searchTerm}%,last_name.ilike.%${searchTerm}%,phone.ilike.%${searchTerm}%,email.ilike.%${searchTerm}%${searchTerm.match(/\d/) ? `,email.eq.${emailPhonePattern}` : ''}`)
           .limit(10);
 
         // Get patient records for profile matches
