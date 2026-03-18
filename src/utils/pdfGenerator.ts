@@ -1031,7 +1031,7 @@ export const generateDailyClosingPDF = async (data: {
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(11);
   doc.setTextColor(100, 100, 100);
-  doc.text(`Closing Time: ${new Date(data.closingTime).toLocaleString()}`, pageWidth / 2, yPosition, { align: 'center' });
+  doc.text(`Closing Time: ${formatInPakistanTime(data.closingTime, 'PPP p')}`, pageWidth / 2, yPosition, { align: 'center' });
   yPosition += 25;
 
   // Helper function to check if new page is needed
