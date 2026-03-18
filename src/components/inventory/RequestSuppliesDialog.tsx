@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -12,7 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { ShoppingCart, PackageCheck } from "lucide-react";
+import { ShoppingCart, PackageCheck, Search } from "lucide-react";
 import { toast } from "sonner";
 import { format, startOfMonth } from "date-fns";
 
@@ -21,6 +21,29 @@ export function RequestSuppliesDialog() {
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({ item_name: "", item_type: "general", quantity: 1, reason: "" });
+  const [itemSearch, setItemSearch] = useState("");
+  const [showSuggestions, setShowSuggestions] = useState(false);
+
+  const { data: inventoryItems } = useQuery({
+    queryKey: ["all-inventory-for-search"],
+    queryFn: async () => {
+      const [general, lab] = await Promise.all([
+        supabase.from("inventory_items").select("name, category, stock_quantity").order("name"),
+        supabase.from("lab_inventory_items").select("name, category, stock_quantity").order("name"),
+      ]);
+      return [
+        ...(general.data || []).map((i: any) => ({ ...i, type: "general" })),
+        ...(lab.data || []).map((i: any) => ({ ...i, type: "lab" })),
+      ];
+    },
+    enabled: open,
+  });
+
+  const filteredItems = useMemo(() => {
+    if (!itemSearch.trim() || !inventoryItems) return [];
+    const q = itemSearch.toLowerCase();
+    return inventoryItems.filter((i: any) => i.name.toLowerCase().includes(q)).slice(0, 8);
+  }, [itemSearch, inventoryItems]);
 
   const { data: myRequests } = useQuery({
     queryKey: ["my-inventory-requests", user?.id],
@@ -67,6 +90,7 @@ export function RequestSuppliesDialog() {
       queryClient.invalidateQueries({ queryKey: ["my-inventory-requests"] });
       toast.success("Supply request submitted");
       setForm({ item_name: "", item_type: "general", quantity: 1, reason: "" });
+      setItemSearch("");
     },
     onError: (e: any) => toast.error(e.message),
   });
@@ -81,6 +105,12 @@ export function RequestSuppliesDialog() {
     }
   };
 
+  const selectItem = (item: any) => {
+    setForm({ ...form, item_name: item.name, item_type: item.type });
+    setItemSearch(item.name);
+    setShowSuggestions(false);
+  };
+
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
@@ -93,9 +123,42 @@ export function RequestSuppliesDialog() {
         
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-3">
-            <div className="col-span-2">
+            <div className="col-span-2 relative">
               <Label>Item Name</Label>
-              <Input value={form.item_name} onChange={(e) => setForm({ ...form, item_name: e.target.value })} placeholder="e.g. Whiteboard Marker, A4 Paper" />
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  className="pl-9"
+                  value={itemSearch}
+                  onChange={(e) => {
+                    setItemSearch(e.target.value);
+                    setForm({ ...form, item_name: e.target.value });
+                    setShowSuggestions(true);
+                  }}
+                  onFocus={() => setShowSuggestions(true)}
+                  onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
+                  placeholder="Search inventory items..."
+                />
+              </div>
+              {showSuggestions && filteredItems.length > 0 && (
+                <div className="absolute z-50 w-full mt-1 bg-background border border-border rounded-md shadow-lg max-h-48 overflow-y-auto">
+                  {filteredItems.map((item: any, idx: number) => (
+                    <button
+                      key={idx}
+                      className="w-full px-3 py-2 text-left hover:bg-accent flex items-center justify-between text-sm"
+                      onMouseDown={() => selectItem(item)}
+                    >
+                      <span className="font-medium">{item.name}</span>
+                      <span className="flex items-center gap-2">
+                        <Badge variant="outline" className="text-xs">{item.type}</Badge>
+                        <span className={`text-xs ${item.stock_quantity <= 0 ? 'text-destructive' : 'text-muted-foreground'}`}>
+                          Stock: {item.stock_quantity}
+                        </span>
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
             <div>
               <Label>Type</Label>
