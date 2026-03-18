@@ -680,7 +680,28 @@ export function StaffInvoices() {
 
         await generateOTPDF(otInvoiceData);
       } else {
-        await generateInvoicePDF(invoice);
+        // For consultation/appointment invoices, fetch proper patient data
+        const [patientRes, patientProfileRes] = await Promise.all([
+          supabase.from('patients').select('patient_number, cnic').eq('id', invoice.patient_id).single(),
+          supabase.from('profiles').select('first_name, last_name, phone, email').eq('id', invoice.patient_id).single()
+        ]);
+
+        const properInvoice = {
+          ...invoice,
+          amount: typeof invoice.amount === 'number' ? invoice.amount : 0,
+          patient: {
+            patient_number: patientRes.data?.patient_number || 'N/A',
+            cnic: patientRes.data?.cnic || null,
+            users: {
+              first_name: patientProfileRes.data?.first_name || '',
+              last_name: patientProfileRes.data?.last_name || '',
+              email: patientProfileRes.data?.email || '',
+              phone: patientProfileRes.data?.phone || ''
+            }
+          }
+        };
+
+        await generateInvoicePDF(properInvoice);
       }
     } catch (error) {
       console.error('Error generating PDF:', error);
