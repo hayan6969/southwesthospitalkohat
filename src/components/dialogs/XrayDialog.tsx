@@ -534,6 +534,7 @@ export function XrayDialog({ open, onOpenChange, onSuccess }: XrayDialogProps) {
                   <PatientDiscountBadge 
                     patientId={selectedPatient?.id || null} 
                     originalAmount={totalAmount} 
+                    serviceType="xray"
                   />
                 </CardContent>
               </Card>

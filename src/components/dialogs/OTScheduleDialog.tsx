@@ -879,6 +879,7 @@ export function OTScheduleDialog() {
                     <PatientDiscountBadge 
                       patientId={selectedPatient?.id || null} 
                       originalAmount={totalCost} 
+                      serviceType="ot"
                     />
                   </CardContent>
                 </Card>

@@ -584,6 +584,7 @@ export function EnhancedLabDialog() {
                   <PatientDiscountBadge 
                     patientId={selectedPatient?.id || null} 
                     originalAmount={getTotalAmount()} 
+                    serviceType="lab"
                   />
                 </div>
               )}
