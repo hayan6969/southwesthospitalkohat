@@ -10,12 +10,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { SearchablePatientSelect } from "@/components/SearchablePatientSelect";
 import { toast } from "sonner";
-import { Plus, Check, ChevronsUpDown } from "lucide-react";
+import { Plus } from "lucide-react";
 import { getCurrentPakistanDate, getCurrentPakistanTimeString, formatDateForDisplay, formatTimeForDisplay } from "@/utils/timezone";
-import { cn } from "@/lib/utils";
 
 const appointmentTypes = [
   "Consultation",
@@ -132,18 +130,13 @@ export function AppointmentDialog() {
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="patient">Patient</Label>
-            <Select value={patientId} onValueChange={setPatientId} required>
-              <SelectTrigger>
-                <SelectValue placeholder="Select a patient" />
-              </SelectTrigger>
-              <SelectContent>
-                {patients?.map((patient) => (
-                  <SelectItem key={patient.id} value={patient.id}>
-                    {getPatientName(patient.id, patientNames || [])}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <SearchablePatientSelect
+              patients={patients}
+              patientNames={patientNames}
+              value={patientId}
+              onValueChange={setPatientId}
+              placeholder="Search by patient ID or name..."
+            />
           </div>
 
           <div className="space-y-2">
