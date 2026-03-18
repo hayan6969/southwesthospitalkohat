@@ -189,18 +189,6 @@ export function StoreRequestsView() {
         </CardContent>
       </Card>
 
-      <Dialog open={!!expenseDialog} onOpenChange={(v) => { if (!v) setExpenseDialog(null); }}>
-        <DialogContent>
-          <DialogHeader><DialogTitle>Provide with Expense - {expenseDialog?.item_name}</DialogTitle></DialogHeader>
-          <div className="space-y-3">
-            <div><Label>Expense Amount (PKR)</Label><Input type="number" value={expenseForm.amount} onChange={(e) => setExpenseForm({ ...expenseForm, amount: +e.target.value })} /></div>
-            <div><Label>Bill Number</Label><Input value={expenseForm.bill_number} onChange={(e) => setExpenseForm({ ...expenseForm, bill_number: e.target.value })} /></div>
-            <Button className="w-full" onClick={() => provideMutation.mutate({ id: expenseDialog.id, expense_amount: expenseForm.amount, expense_bill_number: expenseForm.bill_number })} disabled={expenseForm.amount <= 0 || provideMutation.isPending}>
-              Mark as Provided & Add Expense
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
     </>
   );
 }
