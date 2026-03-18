@@ -1,17 +1,16 @@
 
 import { useState } from "react";
-import { useCreateInvoice, usePatients } from "@/hooks/useDatabase";
-import { usePatientNames, getPatientName } from "@/hooks/useDisplayHelpers";
+import { useCreateInvoice } from "@/hooks/useDatabase";
+import { useSearchPatientsWithNames, usePatientNames, getPatientName } from "@/hooks/useDisplayHelpers";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { Plus } from "lucide-react";
+import { Plus, X, User } from "lucide-react";
 import { convertUsdToPkr } from "@/utils/currency";
 import { generateInvoicePDF } from "@/utils/pdfGenerator";
-import { SearchablePatientSelect } from "@/components/SearchablePatientSelect";
 import { supabase } from "@/integrations/supabase/client";
 
 export function InvoiceDialog() {
@@ -20,14 +19,28 @@ export function InvoiceDialog() {
   const [amount, setAmount] = useState("");
   const [description, setDescription] = useState("");
   const [dueDate, setDueDate] = useState("");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedPatient, setSelectedPatient] = useState<any>(null);
 
   const createInvoice = useCreateInvoice();
-  const { data: patients } = usePatients();
   const { data: patientNames } = usePatientNames();
+  const { data: searchResults } = useSearchPatientsWithNames(searchTerm);
 
   const generateInvoiceNumber = () => {
     const timestamp = Date.now().toString().slice(-6);
     return `INV-${timestamp}`;
+  };
+
+  const handleSelectPatient = (patient: any) => {
+    setPatientId(patient.id);
+    setSelectedPatient(patient);
+    setSearchTerm("");
+  };
+
+  const handleUnselectPatient = () => {
+    setPatientId("");
+    setSelectedPatient(null);
+    setSearchTerm("");
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -45,11 +58,10 @@ export function InvoiceDialog() {
     }
 
     try {
-      // Convert PKR to USD for storage
       const usdAmount = amountNumber / convertUsdToPkr(1);
       const invoiceNumber = generateInvoiceNumber();
       
-      const newInvoice = await createInvoice.mutateAsync({
+      await createInvoice.mutateAsync({
         patient_id: patientId,
         invoice_number: invoiceNumber,
         amount: usdAmount,
@@ -60,7 +72,6 @@ export function InvoiceDialog() {
       
       toast.success("Invoice created successfully");
       
-      // Get complete patient data with patient_number for PDF
       const { data: patientData } = await supabase
         .from('patients')
         .select(`
@@ -78,7 +89,7 @@ export function InvoiceDialog() {
       const invoiceData = {
         invoice_number: invoiceNumber,
         created_at: new Date().toISOString(),
-        amount: amountNumber, // Use original PKR amount for display
+        amount: amountNumber,
         description: description.trim(),
         due_date: dueDate,
         status: 'pending',
@@ -96,12 +107,12 @@ export function InvoiceDialog() {
       await generateInvoicePDF(invoiceData);
       
       setOpen(false);
-      
-      // Reset form
       setPatientId("");
+      setSelectedPatient(null);
       setAmount("");
       setDescription("");
       setDueDate("");
+      setSearchTerm("");
     } catch (error) {
       toast.error("Failed to create invoice");
       console.error("Error creating invoice:", error);
@@ -122,14 +133,62 @@ export function InvoiceDialog() {
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="patient">Patient</Label>
-            <SearchablePatientSelect
-              patients={patients}
-              patientNames={patientNames}
-              value={patientId}
-              onValueChange={setPatientId}
-              placeholder="Search patient by ID or name..."
-            />
+            <Label>Patient</Label>
+            {selectedPatient ? (
+              <div className="flex items-center gap-2 p-2 border rounded-md bg-muted/50">
+                <User className="w-4 h-4 text-muted-foreground" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium truncate">
+                    {selectedPatient.profile
+                      ? `${selectedPatient.profile.first_name} ${selectedPatient.profile.last_name}`
+                      : getPatientName(selectedPatient.id, patientNames || [])}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {selectedPatient.patient_number || 'N/A'}
+                    {selectedPatient.profile?.phone ? ` • ${selectedPatient.profile.phone}` : ''}
+                  </p>
+                </div>
+                <Button type="button" variant="ghost" size="sm" onClick={handleUnselectPatient}>
+                  <X className="w-4 h-4" />
+                </Button>
+              </div>
+            ) : (
+              <div className="relative">
+                <Input
+                  placeholder="Search by name, patient ID, phone, CNIC..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  autoComplete="off"
+                />
+                {searchTerm.length >= 1 && searchResults && searchResults.length > 0 && (
+                  <div className="absolute top-full left-0 right-0 mt-1 border rounded-md bg-popover shadow-md z-[10000] max-h-[150px] overflow-y-auto">
+                    {searchResults.map((patient: any) => (
+                      <button
+                        key={patient.id}
+                        type="button"
+                        className="w-full text-left px-3 py-2 hover:bg-accent text-sm border-b last:border-b-0"
+                        onClick={() => handleSelectPatient(patient)}
+                      >
+                        <span className="font-medium">
+                          {patient.profile
+                            ? `${patient.profile.first_name} ${patient.profile.last_name}`
+                            : 'Unknown'}
+                        </span>
+                        <span className="text-muted-foreground ml-2 text-xs">
+                          {patient.patient_number || 'N/A'}
+                          {patient.profile?.phone ? ` • ${patient.profile.phone}` : ''}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+                {searchTerm.length >= 1 && searchResults && searchResults.length === 0 && (
+                  <div className="absolute top-full left-0 right-0 mt-1 border rounded-md bg-popover shadow-md z-[10000] p-3 text-sm text-muted-foreground">
+                    No patient found.
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           <div className="space-y-2">
