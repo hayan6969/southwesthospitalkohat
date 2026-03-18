@@ -1175,6 +1175,10 @@ export default function DashboardAdmin() {
                   </div>
                 </div>
               </TabsContent>
+
+              <TabsContent value="supplies">
+                <MySupplyRequests />
+              </TabsContent>
             </Tabs>
 
             <EditUserDialog 

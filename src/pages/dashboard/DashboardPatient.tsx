@@ -367,6 +367,10 @@ export default function DashboardPatient() {
         <TabsContent value="settings" className="space-y-4">
           {renderSettingsTab()}
         </TabsContent>
+
+        <TabsContent value="supplies" className="space-y-4">
+          <MySupplyRequests />
+        </TabsContent>
       </Tabs>
     </PatientLayout>
   );
