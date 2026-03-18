@@ -165,7 +165,7 @@ export default function DashboardDoctor() {
           </div>
 
           <Tabs defaultValue="overview" className="w-full">
-            <TabsList className="grid w-full grid-cols-8 h-auto p-1">
+            <TabsList className="grid w-full grid-cols-9 h-auto p-1">
               <TabsTrigger value="overview" className="text-xs sm:text-sm">Overview</TabsTrigger>
               <TabsTrigger value="appointments" className="text-xs sm:text-sm">Appointments</TabsTrigger>
               <TabsTrigger value="patients" className="text-xs sm:text-sm">Patient History</TabsTrigger>
@@ -174,6 +174,7 @@ export default function DashboardDoctor() {
               <TabsTrigger value="notes" className="text-xs sm:text-sm">Patient Notes</TabsTrigger>
               <TabsTrigger value="settings" className="text-xs sm:text-sm">Settings</TabsTrigger>
               <TabsTrigger value="analytics" className="text-xs sm:text-sm">Analytics</TabsTrigger>
+              <TabsTrigger value="supplies" className="text-xs sm:text-sm">Supplies</TabsTrigger>
             </TabsList>
 
             <TabsContent value="overview" className="mt-6 space-y-6">
