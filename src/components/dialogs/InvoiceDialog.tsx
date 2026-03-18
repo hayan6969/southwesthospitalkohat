@@ -116,7 +116,7 @@ export function InvoiceDialog() {
           Create Invoice
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto z-[9999]">
         <DialogHeader>
           <DialogTitle>Create New Invoice</DialogTitle>
         </DialogHeader>
