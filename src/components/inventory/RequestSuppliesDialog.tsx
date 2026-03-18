@@ -10,10 +10,11 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { ShoppingCart } from "lucide-react";
+import { ShoppingCart, PackageCheck } from "lucide-react";
 import { toast } from "sonner";
-import { format } from "date-fns";
+import { format, startOfMonth } from "date-fns";
 
 export function RequestSuppliesDialog() {
   const { user } = useAuth();
@@ -33,7 +34,25 @@ export function RequestSuppliesDialog() {
       if (error) throw error;
       return data;
     },
-    enabled: !!user?.id,
+    enabled: !!user?.id && open,
+  });
+
+  const monthStart = startOfMonth(new Date()).toISOString();
+  
+  const { data: receivedThisMonth } = useQuery({
+    queryKey: ["my-received-items", user?.id, monthStart],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("inventory_requests")
+        .select("*")
+        .eq("requested_by", user?.id)
+        .eq("status", "provided")
+        .gte("provided_at", monthStart)
+        .order("provided_at", { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user?.id && open,
   });
 
   const createMutation = useMutation({
@@ -103,31 +122,70 @@ export function RequestSuppliesDialog() {
             Submit Request
           </Button>
 
-          {myRequests && myRequests.length > 0 && (
-            <div className="mt-4">
-              <h4 className="font-semibold mb-2 text-sm">My Recent Requests</h4>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Date</TableHead>
-                    <TableHead>Item</TableHead>
-                    <TableHead>Qty</TableHead>
-                    <TableHead>Status</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {myRequests.map((req: any) => (
-                    <TableRow key={req.id}>
-                      <TableCell className="text-sm">{format(new Date(req.created_at), "dd MMM")}</TableCell>
-                      <TableCell>{req.item_name}</TableCell>
-                      <TableCell>{req.quantity}</TableCell>
-                      <TableCell><Badge variant={statusColor(req.status) as any}>{req.status}</Badge></TableCell>
+          <Tabs defaultValue="requests" className="mt-4">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="requests">My Requests</TabsTrigger>
+              <TabsTrigger value="received" className="flex items-center gap-1">
+                <PackageCheck className="w-3.5 h-3.5" />
+                Received This Month
+                {receivedThisMonth && receivedThisMonth.length > 0 && (
+                  <Badge variant="secondary" className="ml-1 text-xs px-1.5 py-0">{receivedThisMonth.length}</Badge>
+                )}
+              </TabsTrigger>
+            </TabsList>
+            <TabsContent value="requests">
+              {myRequests && myRequests.length > 0 ? (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Date</TableHead>
+                      <TableHead>Item</TableHead>
+                      <TableHead>Qty</TableHead>
+                      <TableHead>Status</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          )}
+                  </TableHeader>
+                  <TableBody>
+                    {myRequests.map((req: any) => (
+                      <TableRow key={req.id}>
+                        <TableCell className="text-sm">{format(new Date(req.created_at), "dd MMM")}</TableCell>
+                        <TableCell>{req.item_name}</TableCell>
+                        <TableCell>{req.quantity}</TableCell>
+                        <TableCell><Badge variant={statusColor(req.status) as any}>{req.status}</Badge></TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              ) : (
+                <p className="text-sm text-muted-foreground text-center py-4">No requests yet</p>
+              )}
+            </TabsContent>
+            <TabsContent value="received">
+              {receivedThisMonth && receivedThisMonth.length > 0 ? (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Received On</TableHead>
+                      <TableHead>Item</TableHead>
+                      <TableHead>Type</TableHead>
+                      <TableHead>Qty</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {receivedThisMonth.map((req: any) => (
+                      <TableRow key={req.id}>
+                        <TableCell className="text-sm">{format(new Date(req.provided_at), "dd MMM yyyy")}</TableCell>
+                        <TableCell className="font-medium">{req.item_name}</TableCell>
+                        <TableCell><Badge variant="outline">{req.item_type}</Badge></TableCell>
+                        <TableCell>{req.quantity}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              ) : (
+                <p className="text-sm text-muted-foreground text-center py-4">No items received this month</p>
+              )}
+            </TabsContent>
+          </Tabs>
         </div>
       </DialogContent>
     </Dialog>
