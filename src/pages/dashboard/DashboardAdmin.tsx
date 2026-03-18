@@ -264,53 +264,52 @@ export default function DashboardAdmin() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header with Profile - Compact */}
-      <header className="bg-white shadow-sm border-b border-gray-200 px-4 py-3">
+      <header className="bg-white shadow-sm border-b border-gray-200 px-3 sm:px-4 py-2 sm:py-3">
         <div className="flex justify-between items-center">
-          <div>
-            <h1 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+          <div className="min-w-0">
+            <h1 className="text-lg sm:text-xl font-bold text-gray-900 flex items-center gap-2">
               {hospitalSettings?.logo_url ? (
                 <img 
                   src={hospitalSettings.logo_url} 
                   alt="Hospital Logo" 
-                  className="w-6 h-6 object-contain"
+                  className="w-5 h-5 sm:w-6 sm:h-6 object-contain shrink-0"
                 />
               ) : (
-                <span className="inline-block w-2 h-6 bg-blue-500 rounded-full" />
+                <span className="inline-block w-2 h-5 sm:h-6 bg-blue-500 rounded-full shrink-0" />
               )}
-              {hospitalSettings?.hospital_name || "HIMS"}
+              <span className="truncate">{hospitalSettings?.hospital_name || "HIMS"}</span>
             </h1>
-            <p className="text-gray-500 text-xs mt-0.5">Hospital Information Management System</p>
+            <p className="text-gray-500 text-xs mt-0.5 hidden sm:block">Hospital Information Management System</p>
           </div>
           
-          {/* Profile Section - Compact */}
-          <div className="flex items-center gap-4 bg-gray-50 rounded-lg p-3 border border-gray-200">
-            <div className="flex items-center gap-3">
-              <Avatar className="w-8 h-8 border border-purple-200">
-                <AvatarFallback className="bg-purple-100 text-purple-700 text-sm font-bold">
+          {/* Profile Section - Responsive */}
+          <div className="flex items-center gap-2 sm:gap-4 bg-gray-50 rounded-lg p-2 sm:p-3 border border-gray-200 shrink-0">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <Avatar className="w-7 h-7 sm:w-8 sm:h-8 border border-purple-200">
+                <AvatarFallback className="bg-purple-100 text-purple-700 text-xs sm:text-sm font-bold">
                   {profile?.first_name?.[0]}{profile?.last_name?.[0]}
                 </AvatarFallback>
               </Avatar>
-              <div className="flex flex-col">
+              <div className="hidden sm:flex flex-col">
                 <span className="text-sm font-semibold text-gray-900">
                   {profile?.first_name} {profile?.last_name}
                 </span>
                 <span className="text-xs text-gray-600">{profile?.email}</span>
               </div>
-              <div className="flex flex-col items-center gap-1">
-                <span className="px-3 py-1 bg-purple-500 text-white rounded-full text-xs font-bold uppercase tracking-wide shadow-sm">
-                  Administrator
+              <div className="hidden md:flex flex-col items-center gap-1">
+                <span className="px-2 sm:px-3 py-1 bg-purple-500 text-white rounded-full text-xs font-bold uppercase tracking-wide shadow-sm">
+                  Admin
                 </span>
-                <span className="text-xs text-gray-500">System Admin</span>
               </div>
             </div>
             <Button 
               variant="outline" 
               size="sm" 
               onClick={signOut} 
-              className="flex items-center gap-2 border-red-200 hover:border-red-300 hover:bg-red-50 text-red-600 text-xs"
+              className="flex items-center gap-1.5 border-red-200 hover:border-red-300 hover:bg-red-50 text-red-600 text-xs h-7 sm:h-8 px-2 sm:px-3"
             >
-              <LogOut className="w-4 h-4" />
-              Sign Out
+              <LogOut className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+              <span className="hidden sm:inline">Sign Out</span>
             </Button>
           </div>
         </div>
