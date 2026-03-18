@@ -5,7 +5,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Calendar, User, Building2, Clock, FileText, Edit, Search, Filter, LogOut, ClipboardList, TrendingUp, ClipboardCheck, TestTube } from "lucide-react";
+import { MySupplyRequests } from "@/components/inventory/MySupplyRequests";
+import { Calendar, User, Building2, Clock, FileText, Edit, Search, Filter, LogOut, ClipboardList, TrendingUp, ClipboardCheck, TestTube, ShoppingCart } from "lucide-react";
 import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -297,16 +298,20 @@ export default function DashboardOTA() {
 
            {/* Main Tab Navigation */}
            <Tabs value={activeMainTab} onValueChange={setActiveMainTab} className="w-full">
-             <TabsList className="grid w-full grid-cols-2">
-               <TabsTrigger value="ot-operations" className="flex items-center gap-2">
-                 <Building2 className="w-4 h-4" />
-                 OT Operations
-               </TabsTrigger>
-               <TabsTrigger value="lab-reports" className="flex items-center gap-2">
-                 <TestTube className="w-4 h-4" />
-                 Lab Reports
-               </TabsTrigger>
-             </TabsList>
+              <TabsList className="grid w-full grid-cols-3">
+                <TabsTrigger value="ot-operations" className="flex items-center gap-2">
+                  <Building2 className="w-4 h-4" />
+                  OT Operations
+                </TabsTrigger>
+                <TabsTrigger value="lab-reports" className="flex items-center gap-2">
+                  <TestTube className="w-4 h-4" />
+                  Lab Reports
+                </TabsTrigger>
+                <TabsTrigger value="supplies" className="flex items-center gap-2">
+                  <ShoppingCart className="w-4 h-4" />
+                  Supplies
+                </TabsTrigger>
+              </TabsList>
 
              <TabsContent value="ot-operations" className="mt-6 space-y-6">{/* Wrap the existing OT content */}
 
@@ -748,8 +753,12 @@ export default function DashboardOTA() {
         />
               </TabsContent>
 
-              <TabsContent value="lab-reports" className="mt-6">
+               <TabsContent value="lab-reports" className="mt-6">
                 <StaffLabReports />
+              </TabsContent>
+
+              <TabsContent value="supplies" className="mt-6">
+                <MySupplyRequests />
               </TabsContent>
             </Tabs>
           </div>

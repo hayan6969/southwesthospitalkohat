@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import AppLayout from "@/layouts/AppLayout";
 import { StatsCard } from "@/components/StatsCard";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { MySupplyRequests } from "@/components/inventory/MySupplyRequests";
 import { Button } from "@/components/ui/button";
 import { usePharmacyStats, useExpiringMedicines, usePharmacyInvoices } from "@/hooks/useDatabase";
 import { Pill, ShoppingCart, Banknote, AlertTriangle, TrendingUp, FileText, WifiOff } from "lucide-react";
@@ -143,6 +144,7 @@ export default function DashboardPharmacy() {
           <TabsList>
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="invoices">Recent Invoices</TabsTrigger>
+            <TabsTrigger value="supplies">Supplies</TabsTrigger>
           </TabsList>
 
           <TabsContent value="overview" className="space-y-6">
@@ -283,6 +285,9 @@ export default function DashboardPharmacy() {
                 )}
               </CardContent>
             </Card>
+          </TabsContent>
+          <TabsContent value="supplies" className="space-y-6">
+            <MySupplyRequests />
           </TabsContent>
         </Tabs>
 

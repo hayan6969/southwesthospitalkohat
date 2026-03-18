@@ -12,6 +12,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Calendar, Users, Clock, CheckCircle, Plus, User, LogOut, Stethoscope, FileText, CalendarDays, ClipboardList, Banknote, Building2, Pill } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { MySupplyRequests } from "@/components/inventory/MySupplyRequests";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { format } from "date-fns";
 import { formatTimeForDisplay } from "@/utils/timezone";
@@ -164,7 +165,7 @@ export default function DashboardDoctor() {
           </div>
 
           <Tabs defaultValue="overview" className="w-full">
-            <TabsList className="grid w-full grid-cols-8 h-auto p-1">
+            <TabsList className="grid w-full grid-cols-9 h-auto p-1">
               <TabsTrigger value="overview" className="text-xs sm:text-sm">Overview</TabsTrigger>
               <TabsTrigger value="appointments" className="text-xs sm:text-sm">Appointments</TabsTrigger>
               <TabsTrigger value="patients" className="text-xs sm:text-sm">Patient History</TabsTrigger>
@@ -173,6 +174,7 @@ export default function DashboardDoctor() {
               <TabsTrigger value="notes" className="text-xs sm:text-sm">Patient Notes</TabsTrigger>
               <TabsTrigger value="settings" className="text-xs sm:text-sm">Settings</TabsTrigger>
               <TabsTrigger value="analytics" className="text-xs sm:text-sm">Analytics</TabsTrigger>
+              <TabsTrigger value="supplies" className="text-xs sm:text-sm">Supplies</TabsTrigger>
             </TabsList>
 
             <TabsContent value="overview" className="mt-6 space-y-6">
@@ -405,6 +407,10 @@ export default function DashboardDoctor() {
 
             <TabsContent value="analytics">
               <DoctorAnalytics />
+            </TabsContent>
+
+            <TabsContent value="supplies">
+              <MySupplyRequests />
             </TabsContent>
           </Tabs>
         </div>

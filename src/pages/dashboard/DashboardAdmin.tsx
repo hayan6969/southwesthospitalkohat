@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { MySupplyRequests } from "@/components/inventory/MySupplyRequests";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { StatsCard } from "@/components/StatsCard";
@@ -331,6 +332,7 @@ export default function DashboardAdmin() {
                 <TabsTrigger value="emergency" className="whitespace-nowrap px-4 py-2 text-sm flex-1">Emergency</TabsTrigger>
                 <TabsTrigger value="logs" className="whitespace-nowrap px-4 py-2 text-sm flex-1">System Logs</TabsTrigger>
                 <TabsTrigger value="settings" className="whitespace-nowrap px-4 py-2 text-sm flex-1">Settings</TabsTrigger>
+                <TabsTrigger value="supplies" className="whitespace-nowrap px-4 py-2 text-sm flex-1">Supplies</TabsTrigger>
               </TabsList>
             </div>
 
@@ -1172,6 +1174,10 @@ export default function DashboardAdmin() {
                     </div>
                   </div>
                 </div>
+              </TabsContent>
+
+              <TabsContent value="supplies">
+                <MySupplyRequests />
               </TabsContent>
             </Tabs>
 

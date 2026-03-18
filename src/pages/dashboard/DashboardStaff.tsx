@@ -4,6 +4,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { LogOut, User, Menu } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { MySupplyRequests } from "@/components/inventory/MySupplyRequests";
 import { StaffCounter } from "@/components/staff/StaffCounter";
 import { StaffLab } from "@/components/staff/StaffLab";
 import { StaffOT } from "@/components/staff/StaffOT";
@@ -12,7 +13,7 @@ import { StaffLabReports } from "@/components/staff/StaffLabReports";
 import { StaffXray } from "@/components/staff/StaffXray";
 import { StaffRevenueBreakdown } from "@/components/staff/StaffRevenueBreakdown";
 import { PatientSearchDialog } from "@/components/staff/PatientSearchDialog";
-import { Receipt, TestTube, Building2, FileText, Image, Search } from "lucide-react";
+import { Receipt, TestTube, Building2, FileText, Image, Search, ShoppingCart } from "lucide-react";
 import { useHospitalSettings } from "@/hooks/useHospitalSettings";
 import { AdminDashboardNav } from "@/components/AdminDashboardNav";
 
@@ -88,7 +89,7 @@ export default function DashboardStaff() {
 
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <div className="overflow-x-auto -mx-3 px-3 sm:mx-0 sm:px-0">
-              <TabsList className="inline-flex w-auto min-w-full sm:grid sm:w-full sm:grid-cols-6">
+              <TabsList className="inline-flex w-auto min-w-full sm:grid sm:w-full sm:grid-cols-7">
                 <TabsTrigger value="counter" className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm whitespace-nowrap">
                   <Receipt className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                   Counter
@@ -113,6 +114,10 @@ export default function DashboardStaff() {
                   <FileText className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                   Invoices
                 </TabsTrigger>
+                <TabsTrigger value="supplies" className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm whitespace-nowrap">
+                  <ShoppingCart className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                  Supplies
+                </TabsTrigger>
               </TabsList>
             </div>
 
@@ -134,6 +139,9 @@ export default function DashboardStaff() {
             </TabsContent>
             <TabsContent value="invoices" className="mt-4 sm:mt-6">
               <StaffInvoices />
+            </TabsContent>
+            <TabsContent value="supplies" className="mt-4 sm:mt-6">
+              <MySupplyRequests />
             </TabsContent>
           </Tabs>
         </div>
