@@ -5,7 +5,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { StaffLab } from "@/components/staff/StaffLab";
 import { StaffLabReports } from "@/components/staff/StaffLabReports";
 import { MySupplyRequests } from "@/components/inventory/MySupplyRequests";
-import { LabInventoryManager } from "@/components/inventory/LabInventoryManager";
+import { LabItemSupply } from "@/components/inventory/LabItemSupply";
 import { TestTube, FileText, ShoppingCart, FlaskConical } from "lucide-react";
 import AppLayout from "@/layouts/AppLayout";
 
