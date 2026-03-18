@@ -17,6 +17,7 @@ import { Calendar, Search, X, CalendarIcon } from "lucide-react";
 import { formatPkrAmount } from "@/utils/currency";
 import { generateXrayInvoicePDF } from "@/utils/pdfGenerator";
 import { XrayOrderConfirmationDialog } from "./XrayOrderConfirmationDialog";
+import { PatientDiscountBadge } from "@/components/PatientDiscountBadge";
 
 import { useSearchPatientsWithNames } from "@/hooks/useDisplayHelpers";
 import { useAuditLogger } from "@/hooks/useAuditLogger";
