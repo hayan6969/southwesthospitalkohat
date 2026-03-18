@@ -17,6 +17,7 @@ import { toast } from "sonner";
 import { PatientDiscountBadge } from "@/components/PatientDiscountBadge";
 import { Plus, Search, UserPlus, Check, ChevronsUpDown, Building2, Banknote, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { applyPatientDiscount } from "@/utils/discountUtils";
 import { formatPkrAmount } from "@/utils/currency";
 import { cn } from "@/lib/utils";
 
