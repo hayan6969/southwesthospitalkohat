@@ -7,7 +7,9 @@ import {
   UserCog, 
   Calendar,
   Building2,
-  MapPin
+  MapPin,
+  Package,
+  Warehouse
 } from "lucide-react";
 
 const dashboards = [
@@ -18,6 +20,8 @@ const dashboards = [
   { path: "/dashboard/pharmacy", label: "Pharmacy", icon: Pill },
   { path: "/dashboard/staff", label: "Staff", icon: UserCog },
   { path: "/dashboard/ota", label: "OT", icon: Calendar },
+  { path: "/dashboard/inventory_manager", label: "Inventory", icon: Package },
+  { path: "/dashboard/store", label: "Store", icon: Warehouse },
 ];
 
 export function AdminDashboardNav() {
