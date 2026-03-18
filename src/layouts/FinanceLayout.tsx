@@ -147,6 +147,10 @@ export default function FinanceLayout({ children }: FinanceLayoutProps) {
                 <FileText className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                 Invoices
               </TabsTrigger>
+              <TabsTrigger value="discounts" className="flex items-center gap-1.5 text-xs sm:text-sm whitespace-nowrap">
+                <Tag className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                Discounts
+              </TabsTrigger>
             </TabsList>
           </div>
 
