@@ -81,14 +81,10 @@ const navsByRole: Record<string, { label: string; to: string; icon: React.Elemen
     { label: "Payroll", to: "/dashboard/finance/payroll", icon: Users },
   ],
   inventory_manager: [
-    { label: "Dashboard", to: "/dashboard/inventory_manager", icon: Info },
-    { label: "General Inventory", to: "/dashboard/inventory_manager/general", icon: Package },
-    { label: "Lab Inventory", to: "/dashboard/inventory_manager/lab", icon: FlaskConical },
-    { label: "Supply Requests", to: "/dashboard/inventory_manager/requests", icon: Inbox },
+    { label: "Dashboard", to: "/dashboard/store", icon: Info },
   ],
   store: [
     { label: "Dashboard", to: "/dashboard/store", icon: Info },
-    { label: "Approved Requests", to: "/dashboard/store/requests", icon: Warehouse },
   ],
 };
 
