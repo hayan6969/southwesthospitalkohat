@@ -154,7 +154,7 @@ export function CheckFreeDialog({ children }: CheckFreeDialogProps) {
         {children || (
           <Button variant="outline">
             <Search className="w-4 h-4 mr-2" />
-            Check Free
+            Check Fee
           </Button>
         )}
       </DialogTrigger>
