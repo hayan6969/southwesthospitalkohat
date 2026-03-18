@@ -321,43 +321,74 @@ export function StaffCounter() {
         console.error('Error fetching patient data:', patientError);
       }
 
-      // First, check if invoice already exists
-      const { data: existingInvoice } = await supabase
-        .from('invoices')
-        .select('*')
-        .eq('patient_id', appointment.patient_id)
-        .eq('description', `Consultation with ${getDoctorName(appointment.doctor_id, doctorNames || [])}`)
-        .single();
-
+      // First, check if invoice already exists for this appointment
+      // Use invoice_generated_at on the appointment to detect duplicates
       let invoiceData;
-      
-      if (existingInvoice) {
-        // Update existing invoice to paid
-        const { data, error } = await supabase
+
+      if (appointment.invoice_generated_at) {
+        // Invoice already exists - find it and just regenerate the PDF
+        const { data: existingInvoice } = await supabase
           .from('invoices')
-          .update({ 
-            status: 'paid',
-            paid_at: new Date().toISOString()
-          })
-          .eq('id', existingInvoice.id)
-          .select()
-          .single();
-        
-        if (error) throw error;
-        invoiceData = data;
+          .select('*')
+          .eq('patient_id', appointment.patient_id)
+          .eq('doctor_id', appointment.doctor_id)
+          .eq('status', 'paid')
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (existingInvoice) {
+          invoiceData = existingInvoice;
+        } else {
+          // Fallback: create new if somehow not found
+          const { data: { user: currentUser } } = await supabase.auth.getUser();
+          const { data, error } = await supabase
+            .from('invoices')
+            .insert({
+              patient_id: appointment.patient_id,
+              doctor_id: appointment.doctor_id,
+              amount: consultationFee,
+              status: 'paid',
+              paid_at: new Date().toISOString(),
+              invoice_number: `INV-${Date.now()}`,
+              description: `Consultation with ${getDoctorName(appointment.doctor_id, doctorNames || [])} - Patient: ${patientData?.patient_number || 'N/A'}`,
+              due_date: new Date().toISOString().split('T')[0],
+              created_by: currentUser?.id || null
+            })
+            .select()
+            .single();
+          
+          if (error) throw error;
+          invoiceData = data;
+        }
       } else {
-        // Create new invoice
+        // First time generating - apply discount and create invoice
+        const { applyPatientDiscount } = await import('@/utils/discountUtils');
+        let finalAmount = consultationFee;
+        let discountNote = '';
+        
+        try {
+          const discountResult = await applyPatientDiscount(appointment.patient_id, consultationFee, 'consultation');
+          if (discountResult.discountApplied > 0) {
+            finalAmount = discountResult.discountedAmount;
+            const discountInfo = discountResult.discountLabel || 'discount';
+            discountNote = ` (${discountInfo}, Original: Rs. ${consultationFee})`;
+          }
+        } catch (discountError) {
+          console.error('Error applying discount:', discountError);
+        }
+
         const { data: { user: currentUser } } = await supabase.auth.getUser();
         const { data, error } = await supabase
           .from('invoices')
           .insert({
             patient_id: appointment.patient_id,
             doctor_id: appointment.doctor_id,
-            amount: consultationFee,
+            amount: finalAmount,
             status: 'paid',
             paid_at: new Date().toISOString(),
             invoice_number: `INV-${Date.now()}`,
-            description: `Consultation with ${getDoctorName(appointment.doctor_id, doctorNames || [])} - Patient: ${patientData?.patient_number || 'N/A'}`,
+            description: `Consultation with ${getDoctorName(appointment.doctor_id, doctorNames || [])} - Patient: ${patientData?.patient_number || 'N/A'}${discountNote}`,
             due_date: new Date().toISOString().split('T')[0],
             created_by: currentUser?.id || null
           })
