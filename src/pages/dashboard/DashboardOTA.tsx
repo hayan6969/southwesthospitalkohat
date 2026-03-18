@@ -298,16 +298,20 @@ export default function DashboardOTA() {
 
            {/* Main Tab Navigation */}
            <Tabs value={activeMainTab} onValueChange={setActiveMainTab} className="w-full">
-             <TabsList className="grid w-full grid-cols-2">
-               <TabsTrigger value="ot-operations" className="flex items-center gap-2">
-                 <Building2 className="w-4 h-4" />
-                 OT Operations
-               </TabsTrigger>
-               <TabsTrigger value="lab-reports" className="flex items-center gap-2">
-                 <TestTube className="w-4 h-4" />
-                 Lab Reports
-               </TabsTrigger>
-             </TabsList>
+              <TabsList className="grid w-full grid-cols-3">
+                <TabsTrigger value="ot-operations" className="flex items-center gap-2">
+                  <Building2 className="w-4 h-4" />
+                  OT Operations
+                </TabsTrigger>
+                <TabsTrigger value="lab-reports" className="flex items-center gap-2">
+                  <TestTube className="w-4 h-4" />
+                  Lab Reports
+                </TabsTrigger>
+                <TabsTrigger value="supplies" className="flex items-center gap-2">
+                  <ShoppingCart className="w-4 h-4" />
+                  Supplies
+                </TabsTrigger>
+              </TabsList>
 
              <TabsContent value="ot-operations" className="mt-6 space-y-6">{/* Wrap the existing OT content */}
 
