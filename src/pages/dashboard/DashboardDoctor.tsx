@@ -12,6 +12,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Calendar, Users, Clock, CheckCircle, Plus, User, LogOut, Stethoscope, FileText, CalendarDays, ClipboardList, Banknote, Building2, Pill } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { MySupplyRequests } from "@/components/inventory/MySupplyRequests";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { format } from "date-fns";
 import { formatTimeForDisplay } from "@/utils/timezone";
