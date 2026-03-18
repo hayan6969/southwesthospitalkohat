@@ -58,9 +58,8 @@ interface DetailedReportProps {
 
 // Determine shift based on hour (Pakistan time)
 function getShift(dateStr: string): 'Night' | 'Morning' | 'Evening' {
-  const hour = new Date(dateStr).getHours();
-  // Adjust for Pakistan time (+5 hours)
-  const pkHour = (hour + 5) % 24;
+  const pkTime = formatInPakistanTime(dateStr, 'HH');
+  const pkHour = parseInt(pkTime, 10);
   if (pkHour >= 0 && pkHour < 8) return 'Night';
   if (pkHour >= 8 && pkHour < 14) return 'Morning';
   return 'Evening';
