@@ -131,8 +131,8 @@ export function LabItemSupply() {
     }
   };
 
-  const filteredStock = labItems?.filter((item: any) =>
-    !stockSearch.trim() || item.name.toLowerCase().includes(stockSearch.toLowerCase())
+  const filteredStock = labStock?.filter((item: any) =>
+    !stockSearch.trim() || item.item_name.toLowerCase().includes(stockSearch.toLowerCase())
   );
 
   return (
