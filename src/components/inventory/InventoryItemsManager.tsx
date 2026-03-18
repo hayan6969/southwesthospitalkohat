@@ -107,6 +107,8 @@ export function InventoryItemsManager() {
               <TableHead>Stock</TableHead>
               <TableHead>Min Level</TableHead>
               <TableHead>Unit</TableHead>
+              <TableHead>Mfg Date</TableHead>
+              <TableHead>Expiry</TableHead>
               <TableHead>Actions</TableHead>
             </TableRow>
           </TableHeader>
