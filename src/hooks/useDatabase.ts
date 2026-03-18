@@ -758,6 +758,7 @@ export const useCreateAppointmentWithInvoice = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['appointments'] });
       queryClient.invalidateQueries({ queryKey: ['invoices'] });
+      queryClient.invalidateQueries({ queryKey: ['patient-discount-preview'] });
     },
   });
 };
