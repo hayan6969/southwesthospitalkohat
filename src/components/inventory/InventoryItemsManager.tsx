@@ -124,6 +124,8 @@ export function InventoryItemsManager() {
                 <TableCell>{item.stock_quantity}</TableCell>
                 <TableCell>{item.minimum_stock_level}</TableCell>
                 <TableCell>{item.unit}</TableCell>
+                <TableCell>{item.manufacturing_date || '—'}</TableCell>
+                <TableCell className={item.expiry_date && new Date(item.expiry_date) < new Date() ? 'text-destructive font-medium' : ''}>{item.expiry_date || '—'}</TableCell>
                 <TableCell className="flex gap-1">
                   <Button variant="ghost" size="icon" onClick={() => openEdit(item)}><Pencil className="w-4 h-4" /></Button>
                   <Button variant="ghost" size="icon" onClick={() => deleteMutation.mutate(item.id)}><Trash2 className="w-4 h-4 text-destructive" /></Button>
