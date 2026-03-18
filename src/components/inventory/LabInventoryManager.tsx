@@ -17,6 +17,14 @@ export function LabInventoryManager() {
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<any>(null);
   const [form, setForm] = useState({ name: "", category: "consumable", description: "", stock_quantity: 0, minimum_stock_level: 10, unit: "pieces" });
+  const [nameSearch, setNameSearch] = useState("");
+  const [showSuggestions, setShowSuggestions] = useState(false);
+
+  const filteredSuggestions = useMemo(() => {
+    if (!nameSearch.trim() || !items) return [];
+    const q = nameSearch.toLowerCase();
+    return items.filter((i: any) => i.name.toLowerCase().includes(q) && i.name !== form.name).slice(0, 8);
+  }, [nameSearch, items, form.name]);
 
   const { data: items, isLoading } = useQuery({
     queryKey: ["lab-inventory-items"],
