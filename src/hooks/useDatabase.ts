@@ -832,7 +832,7 @@ export const useCreateLabOrderWithInvoice = () => {
       }
 
       // Apply patient discount for lab orders
-      const labDiscount = await applyPatientDiscount(labOrderData.patient_id, labOrderData.totalAmount);
+      const labDiscount = await applyPatientDiscount(labOrderData.patient_id, labOrderData.totalAmount, 'lab');
 
       const { data: invoice, error: invoiceError } = await supabase
         .from('invoices')

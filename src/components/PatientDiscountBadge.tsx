@@ -3,15 +3,17 @@ import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { Tag } from "lucide-react";
 import { formatPkrAmount } from "@/utils/currency";
+import type { ServiceType } from "@/utils/discountUtils";
 
 interface Props {
   patientId: string | null | undefined;
   originalAmount: number;
+  serviceType: ServiceType;
 }
 
-export function PatientDiscountBadge({ patientId, originalAmount }: Props) {
+export function PatientDiscountBadge({ patientId, originalAmount, serviceType }: Props) {
   const { data: discount } = useQuery({
-    queryKey: ['patient-discount-preview', patientId],
+    queryKey: ['patient-discount-preview', patientId, serviceType],
     queryFn: async () => {
       if (!patientId) return null;
       const { data, error } = await supabase
@@ -19,6 +21,7 @@ export function PatientDiscountBadge({ patientId, originalAmount }: Props) {
         .select('discount_type, discount_value, expires_at, used_at')
         .eq('patient_id', patientId)
         .eq('is_active', true)
+        .eq('service_type', serviceType)
         .maybeSingle();
       if (error || !data) return null;
       if (data.used_at) return null;
