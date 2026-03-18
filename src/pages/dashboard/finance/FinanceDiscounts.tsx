@@ -215,8 +215,8 @@ export default function FinanceDiscounts() {
                     type="number"
                     min="0"
                     max={discountType === 'percentage' ? 100 : undefined}
-                    value={discountValue}
-                    onChange={(e) => setDiscountValue(Number(e.target.value))}
+                    value={discountValue || ''}
+                    onChange={(e) => setDiscountValue(e.target.value === '' ? 0 : Number(e.target.value))}
                     placeholder={discountType === 'percentage' ? "e.g. 10" : "e.g. 500"}
                   />
                 </div>
