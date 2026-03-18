@@ -22,14 +22,38 @@ export function LabItemSupply() {
   const [form, setForm] = useState({ item_name: "", quantity: 1, reason: "", location: "" });
   const [stockSearch, setStockSearch] = useState("");
 
-  // Fetch lab inventory items (read-only stock view)
-  const { data: labItems, isLoading } = useQuery({
+  // Fetch lab inventory items for the request dropdown
+  const { data: labItems } = useQuery({
     queryKey: ["lab-inventory-items"],
     queryFn: async () => {
       const { data, error } = await supabase.from("lab_inventory_items").select("*").order("name");
       if (error) throw error;
       return data;
     },
+  });
+
+  // Fetch lab's own stock (aggregated from provided requests)
+  const { data: labStock, isLoading } = useQuery({
+    queryKey: ["lab-own-stock", user?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("inventory_requests")
+        .select("*")
+        .eq("item_type", "lab")
+        .eq("status", "provided")
+        .eq("requested_by", user?.id);
+      if (error) throw error;
+      // Aggregate by item_name
+      const stockMap: Record<string, { item_name: string; total_qty: number }> = {};
+      (data || []).forEach((req: any) => {
+        if (!stockMap[req.item_name]) {
+          stockMap[req.item_name] = { item_name: req.item_name, total_qty: 0 };
+        }
+        stockMap[req.item_name].total_qty += req.quantity;
+      });
+      return Object.values(stockMap).sort((a, b) => a.item_name.localeCompare(b.item_name));
+    },
+    enabled: !!user?.id,
   });
 
   // Fetch departments for location suggestion
@@ -107,8 +131,8 @@ export function LabItemSupply() {
     }
   };
 
-  const filteredStock = labItems?.filter((item: any) =>
-    !stockSearch.trim() || item.name.toLowerCase().includes(stockSearch.toLowerCase())
+  const filteredStock = labStock?.filter((item: any) =>
+    !stockSearch.trim() || item.item_name.toLowerCase().includes(stockSearch.toLowerCase())
   );
 
   return (
@@ -141,50 +165,42 @@ export function LabItemSupply() {
       {/* Lab Stock Overview (Read-Only) */}
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle className="text-base flex items-center gap-2">
-            <FlaskConical className="w-5 h-5" />
-            Lab Stock Overview
-          </CardTitle>
-          <div className="relative w-48">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input
-              className="pl-9 h-8 text-sm"
-              placeholder="Search items..."
-              value={stockSearch}
-              onChange={(e) => setStockSearch(e.target.value)}
-            />
-          </div>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Category</TableHead>
-                <TableHead>Stock</TableHead>
-                <TableHead>Min Level</TableHead>
-                <TableHead>Unit</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {isLoading ? (
-                <TableRow><TableCell colSpan={5} className="text-center">Loading...</TableCell></TableRow>
-              ) : !filteredStock || filteredStock.length === 0 ? (
-                <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground">No lab items found</TableCell></TableRow>
-              ) : filteredStock.map((item: any) => (
-                <TableRow key={item.id} className={item.stock_quantity <= item.minimum_stock_level ? "bg-destructive/10" : ""}>
-                  <TableCell className="font-medium">{item.name}</TableCell>
-                  <TableCell><Badge variant="outline">{item.category}</Badge></TableCell>
-                  <TableCell className={item.stock_quantity <= item.minimum_stock_level ? "text-destructive font-semibold" : ""}>
-                    {item.stock_quantity}
-                  </TableCell>
-                  <TableCell>{item.minimum_stock_level}</TableCell>
-                  <TableCell>{item.unit}</TableCell>
+            <CardTitle className="text-base flex items-center gap-2">
+              <FlaskConical className="w-5 h-5" />
+              My Lab Stock
+            </CardTitle>
+            <div className="relative w-48">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
+                className="pl-9 h-8 text-sm"
+                placeholder="Search items..."
+                value={stockSearch}
+                onChange={(e) => setStockSearch(e.target.value)}
+              />
+            </div>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Item Name</TableHead>
+                  <TableHead>Total Received</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </CardContent>
+              </TableHeader>
+              <TableBody>
+                {isLoading ? (
+                  <TableRow><TableCell colSpan={2} className="text-center">Loading...</TableCell></TableRow>
+                ) : !filteredStock || filteredStock.length === 0 ? (
+                  <TableRow><TableCell colSpan={2} className="text-center text-muted-foreground">No lab items received yet</TableCell></TableRow>
+                ) : filteredStock.map((item: any) => (
+                  <TableRow key={item.item_name}>
+                    <TableCell className="font-medium">{item.item_name}</TableCell>
+                    <TableCell>{item.total_qty}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </CardContent>
       </Card>
 
       {/* Request Lab Supply */}
