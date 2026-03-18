@@ -68,39 +68,35 @@ export function StoreRequestsView() {
       .limit(1);
     
     if (items && items.length > 0) {
-      const newQty = Math.max(0, items[0].stock_quantity - req.quantity);
+      const currentStock = items[0].stock_quantity;
+      const deductQty = Number(req.quantity) || 0;
+      const newQty = Math.max(0, currentStock - deductQty);
       await supabase.from(table).update({ stock_quantity: newQty }).eq("id", items[0].id);
     }
   };
 
+  const [providingIds, setProvidingIds] = useState<Set<string>>(new Set());
+
   const provideMutation = useMutation({
-    mutationFn: async ({ id, expense_amount, expense_bill_number }: { id: string; expense_amount?: number; expense_bill_number?: string }) => {
+    mutationFn: async ({ id }: { id: string }) => {
       const req = requests?.find((r: any) => r.id === id);
       
+      // Deduct stock FIRST before marking as provided
+      if (req) await deductStock(req);
+
       const updateData: any = {
         status: "provided",
         provided_by: user?.id,
         provided_at: new Date().toISOString(),
       };
-      if (expense_amount) {
-        updateData.expense_amount = expense_amount;
-        updateData.expense_bill_number = expense_bill_number;
-      }
       const { error } = await supabase.from("inventory_requests").update(updateData).eq("id", id);
       if (error) throw error;
-
-      if (req) await deductStock(req);
-
-      if (expense_amount && expense_amount > 0) {
-        await supabase.from("expenses").insert({
-          amount: expense_amount,
-          category: "Store / Inventory",
-          description: `Store expense for: ${req?.item_name || 'item'} (Bill: ${expense_bill_number || 'N/A'})`,
-          created_by: user?.id,
-        });
-      }
     },
-    onSuccess: () => {
+    onMutate: ({ id }) => {
+      setProvidingIds(prev => new Set(prev).add(id));
+    },
+    onSuccess: (_, { id }) => {
+      setProvidingIds(prev => { const s = new Set(prev); s.delete(id); return s; });
       queryClient.invalidateQueries({ queryKey: ["store-requests"] });
       queryClient.invalidateQueries({ queryKey: ["inventory-items"] });
       queryClient.invalidateQueries({ queryKey: ["lab-inventory-items"] });
@@ -108,7 +104,10 @@ export function StoreRequestsView() {
       queryClient.invalidateQueries({ queryKey: ["low-stock-lab"] });
       toast.success("Marked as provided & stock updated");
     },
-    onError: (e: any) => toast.error(e.message),
+    onError: (e: any, { id }) => {
+      setProvidingIds(prev => { const s = new Set(prev); s.delete(id); return s; });
+      toast.error(e.message);
+    },
   });
 
   return (
@@ -170,8 +169,8 @@ export function StoreRequestsView() {
                     <TableCell>{req.expense_amount ? formatPkrAmount(req.expense_amount) : "-"}</TableCell>
                     <TableCell>
                     {req.status === "approved" && (
-                        <Button size="sm" variant="outline" onClick={() => provideMutation.mutate({ id: req.id })}>
-                          <Package className="w-3 h-3 mr-1" /> Provide
+                        <Button size="sm" variant="outline" disabled={providingIds.has(req.id)} onClick={() => provideMutation.mutate({ id: req.id })}>
+                          <Package className="w-3 h-3 mr-1" /> {providingIds.has(req.id) ? "Providing..." : "Provide"}
                         </Button>
                       )}
                     </TableCell>
