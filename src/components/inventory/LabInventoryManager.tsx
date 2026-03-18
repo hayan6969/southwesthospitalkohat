@@ -67,14 +67,22 @@ export function LabInventoryManager() {
 
   const resetForm = () => {
     setForm({ name: "", category: "consumable", description: "", stock_quantity: 0, minimum_stock_level: 10, unit: "pieces" });
+    setNameSearch("");
     setEditing(null);
     setOpen(false);
   };
 
   const openEdit = (item: any) => {
     setForm({ name: item.name, category: item.category, description: item.description || "", stock_quantity: item.stock_quantity, minimum_stock_level: item.minimum_stock_level, unit: item.unit });
+    setNameSearch(item.name);
     setEditing(item);
     setOpen(true);
+  };
+
+  const selectSuggestion = (item: any) => {
+    setForm({ ...form, name: item.name, category: item.category, unit: item.unit });
+    setNameSearch(item.name);
+    setShowSuggestions(false);
   };
 
   return (
@@ -88,7 +96,43 @@ export function LabInventoryManager() {
           <DialogContent>
             <DialogHeader><DialogTitle>{editing ? "Edit Lab Item" : "Add Lab Item"}</DialogTitle></DialogHeader>
             <div className="space-y-3">
-              <div><Label>Name</Label><Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="e.g. Blood collection tube" /></div>
+              <div className="relative">
+                <Label>Name</Label>
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Input
+                    className="pl-9"
+                    value={nameSearch}
+                    onChange={(e) => {
+                      setNameSearch(e.target.value);
+                      setForm({ ...form, name: e.target.value });
+                      setShowSuggestions(true);
+                    }}
+                    onFocus={() => setShowSuggestions(true)}
+                    onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
+                    placeholder="Search or type item name..."
+                  />
+                </div>
+                {showSuggestions && filteredSuggestions.length > 0 && (
+                  <div className="absolute z-50 w-full mt-1 bg-background border border-border rounded-md shadow-lg max-h-48 overflow-y-auto">
+                    {filteredSuggestions.map((item: any, idx: number) => (
+                      <button
+                        key={idx}
+                        className="w-full px-3 py-2 text-left hover:bg-accent flex items-center justify-between text-sm"
+                        onMouseDown={() => selectSuggestion(item)}
+                      >
+                        <span className="font-medium">{item.name}</span>
+                        <span className="flex items-center gap-2">
+                          <Badge variant="outline" className="text-xs">{item.category}</Badge>
+                          <span className={`text-xs ${item.stock_quantity <= item.minimum_stock_level ? 'text-destructive' : 'text-muted-foreground'}`}>
+                            Stock: {item.stock_quantity}
+                          </span>
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
               <div><Label>Category</Label><Input value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} placeholder="consumable, reagent, equipment" /></div>
               <div><Label>Unit</Label><Input value={form.unit} onChange={(e) => setForm({ ...form, unit: e.target.value })} /></div>
               <div className="grid grid-cols-2 gap-3">
