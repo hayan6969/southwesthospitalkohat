@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import AppLayout from "@/layouts/AppLayout";
 import { StatsCard } from "@/components/StatsCard";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { MySupplyRequests } from "@/components/inventory/MySupplyRequests";
 import { Button } from "@/components/ui/button";
 import { usePharmacyStats, useExpiringMedicines, usePharmacyInvoices } from "@/hooks/useDatabase";
 import { Pill, ShoppingCart, Banknote, AlertTriangle, TrendingUp, FileText, WifiOff } from "lucide-react";
