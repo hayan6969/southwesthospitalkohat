@@ -288,15 +288,18 @@ export function OTScheduleDialog() {
       // Generate invoice number for OT scheduling
       const invoiceNumber = `OT-${Date.now()}`;
 
+      // Apply patient discount
+      const otDiscount = await applyPatientDiscount(patientId, totalCost);
+
       // Create invoice record in the database for finance tracking
       const { error: invoiceError } = await supabase
         .from('invoices')
         .insert({
           invoice_number: invoiceNumber,
           patient_id: patientId,
-          amount: totalCost,
+          amount: otDiscount.discountedAmount,
           status: 'paid',
-          description: `OT Procedure: ${getSelectedOperationsDetails().map(op => op.operation_name).join(', ')}`,
+          description: `OT Procedure: ${getSelectedOperationsDetails().map(op => op.operation_name).join(', ')}${otDiscount.discountLabel ? ` (${otDiscount.discountLabel}, Original: Rs. ${otDiscount.originalAmount})` : ''}`,
           paid_at: new Date().toISOString()
         });
 
