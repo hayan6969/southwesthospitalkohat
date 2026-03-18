@@ -1252,6 +1252,7 @@ export type Database = {
           is_active: boolean
           notes: string | null
           patient_id: string
+          service_type: string
           updated_at: string | null
           used_at: string | null
         }
@@ -1265,6 +1266,7 @@ export type Database = {
           is_active?: boolean
           notes?: string | null
           patient_id: string
+          service_type?: string
           updated_at?: string | null
           used_at?: string | null
         }
@@ -1278,6 +1280,7 @@ export type Database = {
           is_active?: boolean
           notes?: string | null
           patient_id?: string
+          service_type?: string
           updated_at?: string | null
           used_at?: string | null
         }
@@ -1292,7 +1295,7 @@ export type Database = {
           {
             foreignKeyName: "patient_discounts_patient_id_fkey"
             columns: ["patient_id"]
-            isOneToOne: true
+            isOneToOne: false
             referencedRelation: "patients"
             referencedColumns: ["id"]
           },

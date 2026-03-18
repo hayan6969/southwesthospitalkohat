@@ -288,8 +288,8 @@ export function OTScheduleDialog() {
       // Generate invoice number for OT scheduling
       const invoiceNumber = `OT-${Date.now()}`;
 
-      // Apply patient discount
-      const otDiscount = await applyPatientDiscount(patientId, totalCost);
+      // Apply patient discount for OT
+      const otDiscount = await applyPatientDiscount(patientId, totalCost, 'ot');
 
       // Create invoice record in the database for finance tracking
       const { error: invoiceError } = await supabase
@@ -879,6 +879,7 @@ export function OTScheduleDialog() {
                     <PatientDiscountBadge 
                       patientId={selectedPatient?.id || null} 
                       originalAmount={totalCost} 
+                      serviceType="ot"
                     />
                   </CardContent>
                 </Card>

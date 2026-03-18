@@ -1,0 +1,1 @@
+ALTER TABLE public.patient_discounts ADD COLUMN service_type text NOT NULL DEFAULT 'consultation';

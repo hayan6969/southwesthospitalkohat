@@ -25,6 +25,7 @@ export default function FinanceDiscounts() {
   const [selectedPatientId, setSelectedPatientId] = useState("");
   const [discountType, setDiscountType] = useState<string>("percentage");
   const [discountValue, setDiscountValue] = useState<number>(0);
+  const [serviceType, setServiceType] = useState<string>("consultation");
   const [notes, setNotes] = useState("");
 
   // Fetch existing discounts with patient info
@@ -34,7 +35,8 @@ export default function FinanceDiscounts() {
       const { data, error } = await supabase
         .from('patient_discounts')
         .select('*')
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+        .limit(200);
       if (error) throw error;
 
       // Fetch patient profiles for each discount
@@ -95,16 +97,17 @@ export default function FinanceDiscounts() {
 
       const expiresAt = new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString();
 
-      const { error } = await supabase.from('patient_discounts').upsert({
+      const { error } = await supabase.from('patient_discounts').insert({
         patient_id: selectedPatientId,
         discount_type: discountType,
         discount_value: discountValue,
+        service_type: serviceType,
         notes,
         is_active: true,
         created_by: profile?.id,
         expires_at: expiresAt,
         used_at: null,
-      }, { onConflict: 'patient_id' });
+      });
 
       if (error) throw error;
     },
@@ -146,6 +149,7 @@ export default function FinanceDiscounts() {
     setPatientSearch("");
     setDiscountType("percentage");
     setDiscountValue(0);
+    setServiceType("consultation");
     setNotes("");
   };
 
@@ -196,6 +200,19 @@ export default function FinanceDiscounts() {
                     ))}
                   </div>
                 )}
+              </div>
+
+              <div className="space-y-2">
+                <Label>Service Type</Label>
+                <Select value={serviceType} onValueChange={setServiceType}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="consultation">Consultation</SelectItem>
+                    <SelectItem value="lab">Lab Test</SelectItem>
+                    <SelectItem value="xray">X-ray</SelectItem>
+                    <SelectItem value="ot">OT / Surgery</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
@@ -274,6 +291,7 @@ export default function FinanceDiscounts() {
                   <TableRow>
                     <TableHead>Patient</TableHead>
                     <TableHead>Patient #</TableHead>
+                    <TableHead>Service</TableHead>
                     <TableHead>Discount</TableHead>
                     <TableHead>Expires</TableHead>
                     <TableHead>Status</TableHead>
@@ -293,6 +311,11 @@ export default function FinanceDiscounts() {
                           {d.profile?.first_name} {d.profile?.last_name}
                         </TableCell>
                         <TableCell>{d.patient?.patient_number || 'N/A'}</TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className="capitalize">
+                            {d.service_type === 'ot' ? 'OT' : d.service_type || 'Consultation'}
+                          </Badge>
+                        </TableCell>
                         <TableCell>
                           <Badge variant="secondary" className="gap-1">
                             {d.discount_type === 'percentage' ? (

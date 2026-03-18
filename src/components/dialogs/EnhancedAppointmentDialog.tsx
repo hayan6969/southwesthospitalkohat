@@ -507,6 +507,7 @@ export function EnhancedAppointmentDialog() {
                 <PatientDiscountBadge 
                   patientId={selectedPatient?.id || (activeTab === "register" ? null : null)} 
                   originalAmount={consultationFee} 
+                  serviceType="consultation"
                 />
                 <div className="text-sm text-muted-foreground">
                   An invoice will be generated and opened in a new tab for printing/download.
