@@ -93,49 +93,45 @@ export const useFinancialAnalytics = (selectedMonth?: Date, filterParams?: Filte
         payPeriodFormat = format(targetDate, 'MMMM yyyy');
       }
 
-      console.log('📅 Fetching closings for:', mode, monthStartDate, 'to', monthEndDate);
-      
-      // Fetch daily closings
-      const { data: dailyClosings, error: closingsError } = await supabase
-        .from('daily_closings')
-        .select('*')
-        .gte('closing_date', monthStartDate)
-        .lte('closing_date', monthEndDate)
-        .order('closing_date', { ascending: true });
+      // Batch all independent queries with Promise.all
+      const [
+        closingsRes,
+        pharmacyInvoicesCountRes,
+        pharmacyInvoicesRes,
+        pharmacyExpensesCountRes,
+        pharmacyExpensesRes,
+        hospitalInvoicesCountRes,
+        hospitalInvoicesRes,
+        refundsRes,
+        doctorPaymentsCountRes,
+        doctorPaymentsRes,
+        ...(payPeriodFormat ? [
+        ] : [])
+      ] = await Promise.all([
+        supabase.from('daily_closings').select('*').gte('closing_date', monthStartDate).lte('closing_date', monthEndDate).order('closing_date', { ascending: true }),
+        supabase.from('pharmacy_invoices').select('*', { count: 'exact', head: true }).gte('created_at', monthStartISO).lte('created_at', monthEndISO).eq('status', 'completed'),
+        supabase.from('pharmacy_invoices').select('final_amount').gte('created_at', monthStartISO).lte('created_at', monthEndISO).eq('status', 'completed'),
+        supabase.from('pharmacy_expenses').select('*', { count: 'exact', head: true }).gte('expense_date', monthStartDate).lte('expense_date', monthEndDate),
+        supabase.from('pharmacy_expenses').select('amount').gte('expense_date', monthStartDate).lte('expense_date', monthEndDate),
+        supabase.from('invoices').select('*', { count: 'exact', head: true }).gte('created_at', monthStartISO).lte('created_at', monthEndISO).eq('status', 'paid'),
+        supabase.from('invoices').select('amount').gte('created_at', monthStartISO).lte('created_at', monthEndISO).eq('status', 'paid'),
+        supabase.from('refunds').select('amount').gte('created_at', monthStartISO).lte('created_at', monthEndISO),
+        supabase.from('doctor_payments').select('*', { count: 'exact', head: true }).gte('period_start', monthStartDate).lte('period_end', monthEndDate),
+        supabase.from('doctor_payments').select('total_earnings').gte('period_start', monthStartDate).lte('period_end', monthEndDate),
+      ]);
 
-      if (closingsError) {
-        console.error('Error fetching daily closings:', closingsError);
-        throw closingsError;
-      }
+      const dailyClosings = closingsRes.data;
+      if (closingsRes.error) throw closingsRes.error;
 
-      console.log('📊 Found', dailyClosings?.length || 0, 'daily closings');
-
-      // Count pharmacy invoices
-      const { count: pharmacyInvoicesCount } = await supabase
-        .from('pharmacy_invoices')
-        .select('*', { count: 'exact', head: true })
-        .gte('created_at', monthStartISO)
-        .lte('created_at', monthEndISO)
-        .eq('status', 'completed');
-
-      const { data: pharmacyInvoices } = await supabase
-        .from('pharmacy_invoices')
-        .select('final_amount')
-        .gte('created_at', monthStartISO)
-        .lte('created_at', monthEndISO)
-        .eq('status', 'completed');
-
-      const { count: pharmacyExpensesCount } = await supabase
-        .from('pharmacy_expenses')
-        .select('*', { count: 'exact', head: true })
-        .gte('expense_date', monthStartDate)
-        .lte('expense_date', monthEndDate);
-
-      const { data: pharmacyExpenses } = await supabase
-        .from('pharmacy_expenses')
-        .select('amount')
-        .gte('expense_date', monthStartDate)
-        .lte('expense_date', monthEndDate);
+      const pharmacyInvoicesCount = pharmacyInvoicesCountRes.count;
+      const pharmacyInvoices = pharmacyInvoicesRes.data;
+      const pharmacyExpensesCount = pharmacyExpensesCountRes.count;
+      const pharmacyExpenses = pharmacyExpensesRes.data;
+      const hospitalInvoicesCount = hospitalInvoicesCountRes.count;
+      const hospitalInvoices = hospitalInvoicesRes.data;
+      const refunds = refundsRes.data;
+      const doctorPaymentsCount = doctorPaymentsCountRes.count;
+      const doctorPayments = doctorPaymentsRes.data;
 
       // For monthly mode, use pay_period; for other modes, use date range
       let payrollsCount = 0;
