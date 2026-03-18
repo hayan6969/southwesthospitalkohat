@@ -6,6 +6,7 @@ import { LabInventoryManager } from "@/components/inventory/LabInventoryManager"
 import { InventoryRequestsManager } from "@/components/inventory/InventoryRequestsManager";
 import { StoreRequestsView } from "@/components/inventory/StoreRequestsView";
 import { LowStockAlerts } from "@/components/inventory/LowStockAlerts";
+import { ManagerDistributionReport } from "@/components/inventory/ManagerDistributionReport";
 import { useAuth } from "@/hooks/useAuth";
 import { useSearchParams } from "react-router-dom";
 
@@ -30,7 +31,7 @@ const DashboardStore = () => {
           </h1>
           <p className="text-muted-foreground">
             {isManager 
-              ? "Manage inventory, approve requests, and provide supplies" 
+              ? "Manage inventory, approve requests, and track distribution" 
               : "Manage inventory and provide approved supplies"}
           </p>
         </div>
@@ -38,13 +39,14 @@ const DashboardStore = () => {
         {isManagerOrStore && <LowStockAlerts />}
 
         <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
-          <TabsList className={`grid w-full ${isManager ? 'grid-cols-4' : 'grid-cols-3'}`}>
-            {isManager && <TabsTrigger value="requests">Supply Requests</TabsTrigger>}
-            <TabsTrigger value="general">General Inventory</TabsTrigger>
-            <TabsTrigger value="lab">Lab Inventory</TabsTrigger>
+          <TabsList className={`grid w-full ${isManager ? 'grid-cols-5' : 'grid-cols-3'}`}>
+            {isManager && <TabsTrigger value="requests">Applications</TabsTrigger>}
+            <TabsTrigger value="general">General Stock</TabsTrigger>
+            <TabsTrigger value="lab">Lab Stock</TabsTrigger>
             <TabsTrigger value="provide">
               {isManager ? "Store / Provide" : "Approved Requests"}
             </TabsTrigger>
+            {isManager && <TabsTrigger value="distribution">Distribution</TabsTrigger>}
           </TabsList>
           {isManager && (
             <TabsContent value="requests">
@@ -60,6 +62,11 @@ const DashboardStore = () => {
           <TabsContent value="provide">
             <StoreRequestsView />
           </TabsContent>
+          {isManager && (
+            <TabsContent value="distribution">
+              <ManagerDistributionReport />
+            </TabsContent>
+          )}
         </Tabs>
       </div>
     </AppLayout>
