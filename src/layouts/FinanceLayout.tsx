@@ -67,11 +67,6 @@ export default function FinanceLayout({ children }: FinanceLayoutProps) {
                 <span className="truncate">{hospitalSettings?.hospital_name || "HIMS"}</span>
               </h1>
             </div>
-            {profile?.role === 'admin' && (
-              <div className="hidden lg:block">
-                <AdminDashboardNav />
-              </div>
-            )}
           </div>
           {profile && (
             <div className="flex items-center gap-2 sm:gap-4">
