@@ -21,6 +21,25 @@ export function MySupplyRequests() {
   const [form, setForm] = useState({ item_name: "", item_type: "general", quantity: 1, reason: "", location: "" });
   const [showForm, setShowForm] = useState(false);
 
+  // Fetch all inventory items for dropdown
+  const { data: generalItems } = useQuery({
+    queryKey: ["inventory-items-list"],
+    queryFn: async () => {
+      const { data } = await supabase.from("inventory_items").select("id, name, stock_quantity, unit").order("name");
+      return (data || []).map((i: any) => ({ ...i, source: "general" }));
+    },
+  });
+
+  const { data: labItems } = useQuery({
+    queryKey: ["lab-inventory-items-list"],
+    queryFn: async () => {
+      const { data } = await supabase.from("lab_inventory_items").select("id, name, stock_quantity, unit").order("name");
+      return (data || []).map((i: any) => ({ ...i, source: "lab" }));
+    },
+  });
+
+  const allItems = [...(generalItems || []), ...(labItems || [])];
+
   const { data: departments } = useQuery({
     queryKey: ["departments-list"],
     queryFn: async () => {
