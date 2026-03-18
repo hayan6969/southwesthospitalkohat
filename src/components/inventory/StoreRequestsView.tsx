@@ -8,9 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
-import { Package, Receipt, MapPin, User } from "lucide-react";
+import { Package, MapPin, User } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { formatPkrAmount } from "@/utils/currency";
@@ -19,8 +17,6 @@ export function StoreRequestsView() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [filter, setFilter] = useState<string>("approved");
-  const [expenseDialog, setExpenseDialog] = useState<any>(null);
-  const [expenseForm, setExpenseForm] = useState({ amount: 0, bill_number: "", description: "" });
 
   const { data: requests, isLoading } = useQuery({
     queryKey: ["store-requests", filter],
@@ -111,8 +107,6 @@ export function StoreRequestsView() {
       queryClient.invalidateQueries({ queryKey: ["low-stock-general"] });
       queryClient.invalidateQueries({ queryKey: ["low-stock-lab"] });
       toast.success("Marked as provided & stock updated");
-      setExpenseDialog(null);
-      setExpenseForm({ amount: 0, bill_number: "", description: "" });
     },
     onError: (e: any) => toast.error(e.message),
   });
@@ -175,15 +169,10 @@ export function StoreRequestsView() {
                     <TableCell><Badge variant={req.status === "provided" ? "outline" : "default"}>{req.status}</Badge></TableCell>
                     <TableCell>{req.expense_amount ? formatPkrAmount(req.expense_amount) : "-"}</TableCell>
                     <TableCell>
-                      {req.status === "approved" && (
-                        <div className="flex gap-1">
-                          <Button size="sm" variant="outline" onClick={() => provideMutation.mutate({ id: req.id })}>
-                            <Package className="w-3 h-3 mr-1" /> Provide
-                          </Button>
-                          <Button size="sm" variant="secondary" onClick={() => { setExpenseDialog(req); setExpenseForm({ amount: 0, bill_number: "", description: "" }); }}>
-                            <Receipt className="w-3 h-3 mr-1" /> + Expense
-                          </Button>
-                        </div>
+                    {req.status === "approved" && (
+                        <Button size="sm" variant="outline" onClick={() => provideMutation.mutate({ id: req.id })}>
+                          <Package className="w-3 h-3 mr-1" /> Provide
+                        </Button>
                       )}
                     </TableCell>
                   </TableRow>
@@ -194,18 +183,6 @@ export function StoreRequestsView() {
         </CardContent>
       </Card>
 
-      <Dialog open={!!expenseDialog} onOpenChange={(v) => { if (!v) setExpenseDialog(null); }}>
-        <DialogContent>
-          <DialogHeader><DialogTitle>Provide with Expense - {expenseDialog?.item_name}</DialogTitle></DialogHeader>
-          <div className="space-y-3">
-            <div><Label>Expense Amount (PKR)</Label><Input type="number" value={expenseForm.amount} onChange={(e) => setExpenseForm({ ...expenseForm, amount: +e.target.value })} /></div>
-            <div><Label>Bill Number</Label><Input value={expenseForm.bill_number} onChange={(e) => setExpenseForm({ ...expenseForm, bill_number: e.target.value })} /></div>
-            <Button className="w-full" onClick={() => provideMutation.mutate({ id: expenseDialog.id, expense_amount: expenseForm.amount, expense_bill_number: expenseForm.bill_number })} disabled={expenseForm.amount <= 0 || provideMutation.isPending}>
-              Mark as Provided & Add Expense
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
     </>
   );
 }
