@@ -2255,7 +2255,7 @@ export const generateDailyClosingSummaryPDF = async (data: {
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(11);
   doc.setTextColor(100, 100, 100);
-  doc.text(`Closing Time: ${new Date(data.closingTime).toLocaleString()}`, pageWidth / 2, yPosition, { align: 'center' });
+  doc.text(`Closing Time: ${formatInPakistanTime(data.closingTime, 'PPP p')}`, pageWidth / 2, yPosition, { align: 'center' });
   yPosition += 20;
 
   // ========== COMPUTE DATA ==========
