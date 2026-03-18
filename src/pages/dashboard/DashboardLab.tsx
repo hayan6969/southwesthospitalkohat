@@ -57,7 +57,7 @@ export default function DashboardLab() {
         </TabsContent>
 
         <TabsContent value="inventory">
-          <LabInventoryManager />
+          <LabItemSupply />
         </TabsContent>
 
         <TabsContent value="supplies">
