@@ -144,6 +144,7 @@ export default function DashboardPharmacy() {
           <TabsList>
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="invoices">Recent Invoices</TabsTrigger>
+            <TabsTrigger value="supplies">Supplies</TabsTrigger>
           </TabsList>
 
           <TabsContent value="overview" className="space-y-6">
