@@ -410,8 +410,8 @@ export const generateInvoicePDF = async (invoice: any) => {
   xPosition += colWidths[0];
   doc.text(formatPkrAmount(invoice.amount), xPosition, yPosition);
   
-  // Update yPosition based on the text height with slight padding
-  yPosition += Math.max(textHeight, 8) + 2;
+  // Update yPosition based on the text height with padding for taller row
+  yPosition += Math.max(textHeight, 8) + 8;
   
   // Draw table border
   doc.setDrawColor(0, 0, 0);
