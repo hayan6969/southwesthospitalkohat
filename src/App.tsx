@@ -295,6 +295,13 @@ const App = () => (
                 <DashboardStore />
               </ProtectedRoute>
             } />
+
+            {/* Lab dashboard routes */}
+            <Route path="/dashboard/lab" element={
+              <ProtectedRoute allowedRoles={['lab', 'admin']}>
+                <DashboardLab />
+              </ProtectedRoute>
+            } />
             
             {/* Redirect for unknown dashboard routes */}
             <Route path="/dashboard" element={<Navigate to="/" replace />} />
