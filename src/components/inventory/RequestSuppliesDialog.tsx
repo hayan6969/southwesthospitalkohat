@@ -174,7 +174,7 @@ export function RequestSuppliesDialog() {
             </div>
             <div>
               <Label>Quantity</Label>
-              <Input type="number" min={1} value={form.quantity} onChange={(e) => setForm({ ...form, quantity: +e.target.value })} />
+              <Input type="number" min={1} value={form.quantity || ''} onChange={(e) => setForm({ ...form, quantity: e.target.value === '' ? 0 : parseInt(e.target.value) || 0 })} onFocus={(e) => { if (form.quantity === 0) e.target.value = ''; }} onBlur={(e) => { if (e.target.value === '') setForm(f => ({ ...f, quantity: 1 })); }} />
             </div>
             <div className="col-span-2">
               <Label>Reason (optional)</Label>
