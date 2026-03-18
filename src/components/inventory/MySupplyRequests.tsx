@@ -154,7 +154,47 @@ export function MySupplyRequests() {
             <div className="grid grid-cols-2 gap-3">
               <div className="col-span-2">
                 <Label>Item Name</Label>
-                <Input value={form.item_name} onChange={(e) => setForm({ ...form, item_name: e.target.value })} placeholder="e.g. Whiteboard Marker, A4 Paper" />
+                <Select 
+                  value={form.item_name} 
+                  onValueChange={(v) => {
+                    const selected = allItems.find((i: any) => i.name === v);
+                    setForm({ 
+                      ...form, 
+                      item_name: v, 
+                      item_type: selected?.source || "general" 
+                    });
+                  }}
+                >
+                  <SelectTrigger><SelectValue placeholder="Select an item..." /></SelectTrigger>
+                  <SelectContent>
+                    {allItems.length === 0 ? (
+                      <SelectItem value="__none" disabled>No items available</SelectItem>
+                    ) : (
+                      <>
+                        {(generalItems || []).length > 0 && (
+                          <>
+                            <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">General Inventory</div>
+                            {(generalItems || []).map((item: any) => (
+                              <SelectItem key={`g-${item.id}`} value={item.name}>
+                                {item.name} — {item.stock_quantity} {item.unit} in stock
+                              </SelectItem>
+                            ))}
+                          </>
+                        )}
+                        {(labItems || []).length > 0 && (
+                          <>
+                            <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">Lab Inventory</div>
+                            {(labItems || []).map((item: any) => (
+                              <SelectItem key={`l-${item.id}`} value={item.name}>
+                                {item.name} — {item.stock_quantity} {item.unit} in stock
+                              </SelectItem>
+                            ))}
+                          </>
+                        )}
+                      </>
+                    )}
+                  </SelectContent>
+                </Select>
               </div>
               <div>
                 <Label>Type</Label>
