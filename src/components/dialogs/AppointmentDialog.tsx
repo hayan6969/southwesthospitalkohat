@@ -14,7 +14,6 @@ import { SearchablePatientSelect } from "@/components/SearchablePatientSelect";
 import { toast } from "sonner";
 import { Plus } from "lucide-react";
 import { getCurrentPakistanDate, getCurrentPakistanTimeString, formatDateForDisplay, formatTimeForDisplay } from "@/utils/timezone";
-import { cn } from "@/lib/utils";
 
 const appointmentTypes = [
   "Consultation",
