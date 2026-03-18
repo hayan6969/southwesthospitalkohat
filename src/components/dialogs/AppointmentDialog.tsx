@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { SearchablePatientSelect } from "@/components/SearchablePatientSelect";
 import { toast } from "sonner";
-import { Plus, Check, ChevronsUpDown } from "lucide-react";
+import { Plus } from "lucide-react";
 import { getCurrentPakistanDate, getCurrentPakistanTimeString, formatDateForDisplay, formatTimeForDisplay } from "@/utils/timezone";
 import { cn } from "@/lib/utils";
 
