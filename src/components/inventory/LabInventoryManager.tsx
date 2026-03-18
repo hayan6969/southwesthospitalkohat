@@ -20,12 +20,6 @@ export function LabInventoryManager() {
   const [nameSearch, setNameSearch] = useState("");
   const [showSuggestions, setShowSuggestions] = useState(false);
 
-  const filteredSuggestions = useMemo(() => {
-    if (!nameSearch.trim() || !items) return [];
-    const q = nameSearch.toLowerCase();
-    return items.filter((i: any) => i.name.toLowerCase().includes(q) && i.name !== form.name).slice(0, 8);
-  }, [nameSearch, items, form.name]);
-
   const { data: items, isLoading } = useQuery({
     queryKey: ["lab-inventory-items"],
     queryFn: async () => {
@@ -34,6 +28,12 @@ export function LabInventoryManager() {
       return data;
     },
   });
+
+  const filteredSuggestions = useMemo(() => {
+    if (!nameSearch.trim() || !items) return [];
+    const q = nameSearch.toLowerCase();
+    return items.filter((i: any) => i.name.toLowerCase().includes(q) && i.name !== form.name).slice(0, 8);
+  }, [nameSearch, items, form.name]);
 
   const saveMutation = useMutation({
     mutationFn: async (data: any) => {
