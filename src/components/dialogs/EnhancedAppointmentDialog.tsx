@@ -13,6 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { PatientDiscountBadge } from "@/components/PatientDiscountBadge";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { toast } from "sonner";
 import { Plus, Search, UserPlus, Check, ChevronsUpDown, X } from "lucide-react";
@@ -503,6 +504,10 @@ export function EnhancedAppointmentDialog() {
                 <div>
                   <strong>Consultation Fee:</strong> <span className="text-green-600 font-medium">{formatCurrency(consultationFee)}</span>
                 </div>
+                <PatientDiscountBadge 
+                  patientId={selectedPatient?.id || null} 
+                  originalAmount={consultationFee} 
+                />
                 <div className="text-sm text-gray-600">
                   An invoice will be generated and opened in a new tab for printing/download.
                 </div>

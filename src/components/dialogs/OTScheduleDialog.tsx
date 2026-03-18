@@ -14,8 +14,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { toast } from "sonner";
+import { PatientDiscountBadge } from "@/components/PatientDiscountBadge";
 import { Plus, Search, UserPlus, Check, ChevronsUpDown, Building2, Banknote, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { applyPatientDiscount } from "@/utils/discountUtils";
 import { formatPkrAmount } from "@/utils/currency";
 import { cn } from "@/lib/utils";
 
@@ -286,15 +288,18 @@ export function OTScheduleDialog() {
       // Generate invoice number for OT scheduling
       const invoiceNumber = `OT-${Date.now()}`;
 
+      // Apply patient discount
+      const otDiscount = await applyPatientDiscount(patientId, totalCost);
+
       // Create invoice record in the database for finance tracking
       const { error: invoiceError } = await supabase
         .from('invoices')
         .insert({
           invoice_number: invoiceNumber,
           patient_id: patientId,
-          amount: totalCost,
+          amount: otDiscount.discountedAmount,
           status: 'paid',
-          description: `OT Procedure: ${getSelectedOperationsDetails().map(op => op.operation_name).join(', ')}`,
+          description: `OT Procedure: ${getSelectedOperationsDetails().map(op => op.operation_name).join(', ')}${otDiscount.discountLabel ? ` (${otDiscount.discountLabel}, Original: Rs. ${otDiscount.originalAmount})` : ''}`,
           paid_at: new Date().toISOString()
         });
 
@@ -871,6 +876,10 @@ export function OTScheduleDialog() {
                       <span>Total Amount:</span>
                       <span className="text-green-600">{formatPkrAmount(totalCost)}</span>
                     </div>
+                    <PatientDiscountBadge 
+                      patientId={selectedPatient?.id || null} 
+                      originalAmount={totalCost} 
+                    />
                   </CardContent>
                 </Card>
               )}

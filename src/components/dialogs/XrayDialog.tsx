@@ -17,6 +17,7 @@ import { Calendar, Search, X, CalendarIcon } from "lucide-react";
 import { formatPkrAmount } from "@/utils/currency";
 import { generateXrayInvoicePDF } from "@/utils/pdfGenerator";
 import { XrayOrderConfirmationDialog } from "./XrayOrderConfirmationDialog";
+import { PatientDiscountBadge } from "@/components/PatientDiscountBadge";
 
 import { useSearchPatientsWithNames } from "@/hooks/useDisplayHelpers";
 import { useAuditLogger } from "@/hooks/useAuditLogger";
@@ -530,6 +531,10 @@ export function XrayDialog({ open, onOpenChange, onSuccess }: XrayDialogProps) {
                     <span>Total Amount:</span>
                     <span>{formatPkrAmount(totalAmount)}</span>
                   </div>
+                  <PatientDiscountBadge 
+                    patientId={selectedPatient?.id || null} 
+                    originalAmount={totalAmount} 
+                  />
                 </CardContent>
               </Card>
             )}

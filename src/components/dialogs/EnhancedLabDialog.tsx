@@ -10,6 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Plus, Search, UserPlus, Check, ChevronsUpDown, X } from "lucide-react";
+import { PatientDiscountBadge } from "@/components/PatientDiscountBadge";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -569,15 +570,21 @@ export function EnhancedLabDialog() {
               </div>
               
               {selectedTests.length > 0 && (
-                <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                  <div className="flex justify-between items-center">
-                    <span className="font-medium">
-                      Selected Tests: {selectedTests.length}
-                    </span>
-                    <span className="font-bold text-blue-600">
-                      Total: {formatPkrAmount(getTotalAmount())}
-                    </span>
+                <div className="space-y-2">
+                  <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                    <div className="flex justify-between items-center">
+                      <span className="font-medium">
+                        Selected Tests: {selectedTests.length}
+                      </span>
+                      <span className="font-bold text-blue-600">
+                        Total: {formatPkrAmount(getTotalAmount())}
+                      </span>
+                    </div>
                   </div>
+                  <PatientDiscountBadge 
+                    patientId={selectedPatient?.id || null} 
+                    originalAmount={getTotalAmount()} 
+                  />
                 </div>
               )}
             </CardContent>
