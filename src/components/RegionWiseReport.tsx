@@ -4,47 +4,43 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from "recharts";
 import { MapPin } from "lucide-react";
 
-const COLORS = [
-  "#3b82f6", "#ef4444", "#10b981", "#f59e0b", "#8b5cf6",
-  "#ec4899", "#06b6d4", "#f97316", "#14b8a6", "#6366f1",
-  "#84cc16", "#e11d48", "#0ea5e9", "#a855f7", "#d946ef"
-];
+const PROVINCE_COLORS: Record<string, string> = {
+  "Punjab": "#3b82f6",
+  "Sindh": "#ef4444",
+  "Khyber Pakhtunkhwa": "#10b981",
+  "Balochistan": "#f59e0b",
+  "Islamabad Capital Territory": "#8b5cf6",
+  "Azad Jammu & Kashmir": "#ec4899",
+  "Gilgit-Baltistan": "#06b6d4",
+  "Unknown": "#9ca3af",
+};
 
 export function RegionWiseReport() {
   const { data: regionData, isLoading } = useQuery({
-    queryKey: ["patient-regions"],
+    queryKey: ["patient-regions-overview"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("patients")
-        .select("city, province");
+        .select("province");
 
       if (error) throw error;
 
-      // Count by city
-      const cityMap: Record<string, number> = {};
-      let noCity = 0;
+      const provinceMap: Record<string, number> = {};
       (data || []).forEach((p: any) => {
-        if (p.city) {
-          cityMap[p.city] = (cityMap[p.city] || 0) + 1;
-        } else {
-          noCity++;
-        }
+        const prov = p.province || "Unknown";
+        provinceMap[prov] = (provinceMap[prov] || 0) + 1;
       });
 
-      const cityData = Object.entries(cityMap)
+      const provinceData = Object.entries(provinceMap)
         .map(([name, value]) => ({ name, value }))
         .sort((a, b) => b.value - a.value);
 
-      if (noCity > 0) {
-        cityData.push({ name: "Unknown", value: noCity });
-      }
-
-      return { cityData, total: data?.length || 0 };
+      return { provinceData, total: data?.length || 0 };
     },
     refetchInterval: 30000,
   });
 
-  const cityData = regionData?.cityData || [];
+  const provinceData = regionData?.provinceData || [];
   const total = regionData?.total || 0;
 
   if (isLoading) {
@@ -52,8 +48,8 @@ export function RegionWiseReport() {
       <Card>
         <CardHeader className="pb-2">
           <CardTitle className="text-base flex items-center gap-2">
-            <MapPin className="w-4 h-4 text-blue-600" />
-            Patient Regions
+            <MapPin className="w-4 h-4 text-primary" />
+            Patient Provinces
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -65,20 +61,20 @@ export function RegionWiseReport() {
     );
   }
 
-  if (cityData.length === 0 || (cityData.length === 1 && cityData[0].name === "Unknown")) {
+  if (provinceData.length === 0 || (provinceData.length === 1 && provinceData[0].name === "Unknown")) {
     return (
       <Card>
         <CardHeader className="pb-2">
           <CardTitle className="text-base flex items-center gap-2">
-            <MapPin className="w-4 h-4 text-blue-600" />
-            Patient Regions
+            <MapPin className="w-4 h-4 text-primary" />
+            Patient Provinces
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="h-[280px] flex flex-col items-center justify-center text-muted-foreground text-sm gap-2">
             <MapPin className="w-8 h-8 opacity-30" />
-            <p>No region data yet.</p>
-            <p className="text-xs">City info is captured during patient registration.</p>
+            <p>No province data yet.</p>
+            <p className="text-xs">Province is captured during patient registration.</p>
           </div>
         </CardContent>
       </Card>
@@ -89,8 +85,8 @@ export function RegionWiseReport() {
     <Card>
       <CardHeader className="pb-2">
         <CardTitle className="text-base flex items-center gap-2">
-          <MapPin className="w-4 h-4 text-blue-600" />
-          Patient Regions
+          <MapPin className="w-4 h-4 text-primary" />
+          Patient Provinces
           <span className="ml-auto text-xs font-normal text-muted-foreground">
             {total} total patients
           </span>
@@ -101,28 +97,24 @@ export function RegionWiseReport() {
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
               <Pie
-                data={cityData}
+                data={provinceData}
                 cx="50%"
                 cy="45%"
                 innerRadius={50}
                 outerRadius={90}
                 paddingAngle={2}
                 dataKey="value"
-                label={({ name, percent }) =>
-                  `${name} (${(percent * 100).toFixed(0)}%)`
-                }
-                labelLine={false}
               >
-                {cityData.map((_, index) => (
+                {provinceData.map((entry) => (
                   <Cell
-                    key={`cell-${index}`}
-                    fill={COLORS[index % COLORS.length]}
+                    key={entry.name}
+                    fill={PROVINCE_COLORS[entry.name] || "#9ca3af"}
                   />
                 ))}
               </Pie>
               <Tooltip
                 formatter={(value: number, name: string) => [
-                  `${value} patients`,
+                  `${value} patients (${total > 0 ? ((value / total) * 100).toFixed(1) : 0}%)`,
                   name,
                 ]}
               />
@@ -135,30 +127,27 @@ export function RegionWiseReport() {
             </PieChart>
           </ResponsiveContainer>
         </div>
-        {/* Top cities table */}
+        {/* Province breakdown */}
         <div className="mt-3 space-y-1.5">
-          {cityData.slice(0, 5).map((city, i) => (
-            <div
-              key={city.name}
-              className="flex items-center justify-between text-sm"
-            >
-              <div className="flex items-center gap-2">
-                <div
-                  className="w-2.5 h-2.5 rounded-full"
-                  style={{ backgroundColor: COLORS[i % COLORS.length] }}
-                />
-                <span className="text-foreground font-medium">{city.name}</span>
+          {provinceData.map((prov) => {
+            const pct = total > 0 ? ((prov.value / total) * 100).toFixed(1) : "0";
+            const color = PROVINCE_COLORS[prov.name] || "#9ca3af";
+            return (
+              <div key={prov.name} className="flex items-center justify-between text-sm">
+                <div className="flex items-center gap-2">
+                  <div
+                    className="w-2.5 h-2.5 rounded-full shrink-0"
+                    style={{ backgroundColor: color }}
+                  />
+                  <span className="text-foreground font-medium">{prov.name}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-muted-foreground">{prov.value} patients</span>
+                  <span className="text-xs text-muted-foreground">({pct}%)</span>
+                </div>
               </div>
-              <div className="flex items-center gap-2">
-                <span className="text-muted-foreground">
-                  {city.value} patients
-                </span>
-                <span className="text-xs text-muted-foreground">
-                  ({((city.value / total) * 100).toFixed(1)}%)
-                </span>
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </CardContent>
     </Card>
