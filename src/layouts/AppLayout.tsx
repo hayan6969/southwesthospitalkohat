@@ -51,12 +51,6 @@ const AppLayout = ({ children, sidebarRole, hideSidebar }: AppLayoutProps) => {
               </Button>
             </div>
           </div>
-          {/* Mobile admin nav */}
-          {profile.role === 'admin' && (
-            <div className="lg:hidden mt-3 overflow-x-auto -mx-4 px-4">
-              <AdminDashboardNav />
-            </div>
-          )}
         </header>
         <main className="flex-1 p-3 sm:p-6 overflow-auto">
           {children}

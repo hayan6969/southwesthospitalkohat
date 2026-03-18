@@ -84,11 +84,6 @@ export default function FinanceLayout({ children }: FinanceLayoutProps) {
             </div>
           )}
         </div>
-        {profile?.role === 'admin' && (
-          <div className="lg:hidden mt-3 overflow-x-auto -mx-4 px-4">
-            <AdminDashboardNav />
-          </div>
-        )}
       </header>
 
       {/* Main Content */}
