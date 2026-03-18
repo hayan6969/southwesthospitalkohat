@@ -73,7 +73,7 @@ export function LabInventoryManager() {
   };
 
   const openEdit = (item: any) => {
-    setForm({ name: item.name, category: item.category, description: item.description || "", stock_quantity: item.stock_quantity, minimum_stock_level: item.minimum_stock_level, unit: item.unit });
+    setForm({ name: item.name, category: item.category, description: item.description || "", stock_quantity: item.stock_quantity, minimum_stock_level: item.minimum_stock_level, unit: item.unit, manufacturing_date: item.manufacturing_date || "", expiry_date: item.expiry_date || "" });
     setNameSearch(item.name);
     setEditing(item);
     setOpen(true);
