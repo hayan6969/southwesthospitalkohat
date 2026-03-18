@@ -8,6 +8,7 @@ import {
   Calendar,
   Building2,
   MapPin,
+  Package,
   Warehouse
 } from "lucide-react";
 
@@ -19,7 +20,8 @@ const dashboards = [
   { path: "/dashboard/pharmacy", label: "Pharmacy", icon: Pill },
   { path: "/dashboard/staff", label: "Staff", icon: UserCog },
   { path: "/dashboard/ota", label: "OT", icon: Calendar },
-  { path: "/dashboard/store", label: "Manager", icon: Warehouse },
+  { path: "/dashboard/store", label: "Manager", icon: Package },
+  { path: "/dashboard/store?tab=provide", label: "Store", icon: Warehouse },
 ];
 
 export function AdminDashboardNav() {
@@ -27,9 +29,16 @@ export function AdminDashboardNav() {
   const navigate = useNavigate();
 
   const getCurrentDashboard = () => {
+    const fullPath = location.pathname + location.search;
+    // Check for store with tab param first
+    if (fullPath.includes("/dashboard/store") && fullPath.includes("tab=provide")) {
+      return "/dashboard/store?tab=provide";
+    }
+    if (location.pathname.startsWith("/dashboard/store")) {
+      return "/dashboard/store";
+    }
     const path = location.pathname;
-    // Check more specific paths first (departments before admin)
-    const sorted = [...dashboards].sort((a, b) => b.path.length - a.path.length);
+    const sorted = [...dashboards].filter(d => !d.path.includes("?")).sort((a, b) => b.path.length - a.path.length);
     return sorted.find(d => path.startsWith(d.path))?.path || "";
   };
 
@@ -43,7 +52,7 @@ export function AdminDashboardNav() {
         
         return (
           <Button
-            key={dashboard.path}
+            key={dashboard.label}
             variant={isActive ? "default" : "outline"}
             size="sm"
             onClick={() => navigate(dashboard.path)}
