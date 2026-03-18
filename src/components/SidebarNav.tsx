@@ -94,6 +94,12 @@ const navsByRole: Record<string, { label: string; to: string; icon: React.Elemen
     { label: "Lab Inventory", to: "/dashboard/store?tab=lab", icon: FlaskConical },
     { label: "Store / Provide", to: "/dashboard/store?tab=provide", icon: Warehouse },
   ],
+  lab: [
+    { label: "Dashboard", to: "/dashboard/lab", icon: Info },
+    { label: "Lab Orders", to: "/dashboard/lab?tab=lab", icon: TestTube },
+    { label: "Lab Reports", to: "/dashboard/lab?tab=reports", icon: FileText },
+    { label: "Supplies", to: "/dashboard/lab?tab=supplies", icon: Package },
+  ],
 };
 
 export function SidebarNav({ role }: SidebarNavProps) {
