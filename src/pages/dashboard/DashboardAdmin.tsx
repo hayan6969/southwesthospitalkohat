@@ -315,11 +315,13 @@ export default function DashboardAdmin() {
         </div>
       </header>
 
-      <div className="p-6">
+      <div className="p-3 sm:p-6">
         <div className="max-w-7xl mx-auto">
-          <div className="flex items-center justify-between mb-8">
-            <h2 className="text-2xl font-bold">System Overview</h2>
-            <AdminDashboardNav />
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 sm:mb-8">
+            <h2 className="text-xl sm:text-2xl font-bold">System Overview</h2>
+            <div className="overflow-x-auto -mx-3 px-3 sm:mx-0 sm:px-0">
+              <AdminDashboardNav />
+            </div>
           </div>
 
           <Tabs defaultValue="overview" className="space-y-6">
