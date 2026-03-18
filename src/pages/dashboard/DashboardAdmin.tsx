@@ -327,17 +327,18 @@ export default function DashboardAdmin() {
           <Tabs defaultValue="overview" className="space-y-6">
             <div className="overflow-x-auto -mx-3 px-3 sm:mx-0 sm:px-0">
               <TabsList className="inline-flex w-auto min-w-full h-auto p-1 gap-0">
-                <TabsTrigger value="overview" className="whitespace-nowrap px-4 py-2 text-sm flex-1">Overview</TabsTrigger>
-                <TabsTrigger value="analytics" className="whitespace-nowrap px-4 py-2 text-sm flex-1">Analytics</TabsTrigger>
-                <TabsTrigger value="accounts" className="whitespace-nowrap px-4 py-2 text-sm flex-1">Account Management</TabsTrigger>
-                <TabsTrigger value="pharmacy" className="whitespace-nowrap px-4 py-2 text-sm flex-1">Pharmacy</TabsTrigger>
-                <TabsTrigger value="lab" className="whitespace-nowrap px-4 py-2 text-sm flex-1">Lab</TabsTrigger>
-                <TabsTrigger value="xray" className="whitespace-nowrap px-4 py-2 text-sm flex-1">X-ray</TabsTrigger>
-                <TabsTrigger value="ot" className="whitespace-nowrap px-4 py-2 text-sm flex-1">OT</TabsTrigger>
-                <TabsTrigger value="emergency" className="whitespace-nowrap px-4 py-2 text-sm flex-1">Emergency</TabsTrigger>
-                <TabsTrigger value="logs" className="whitespace-nowrap px-4 py-2 text-sm flex-1">System Logs</TabsTrigger>
-                <TabsTrigger value="settings" className="whitespace-nowrap px-4 py-2 text-sm flex-1">Settings</TabsTrigger>
-                <TabsTrigger value="supplies" className="whitespace-nowrap px-4 py-2 text-sm flex-1">Supplies</TabsTrigger>
+                <TabsTrigger value="overview" className="whitespace-nowrap px-2.5 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm flex-1">Overview</TabsTrigger>
+                <TabsTrigger value="analytics" className="whitespace-nowrap px-2.5 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm flex-1">Analytics</TabsTrigger>
+                <TabsTrigger value="accounts" className="whitespace-nowrap px-2.5 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm flex-1">Accounts</TabsTrigger>
+                <TabsTrigger value="regions" className="whitespace-nowrap px-2.5 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm flex-1">Regions</TabsTrigger>
+                <TabsTrigger value="pharmacy" className="whitespace-nowrap px-2.5 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm flex-1">Pharmacy</TabsTrigger>
+                <TabsTrigger value="lab" className="whitespace-nowrap px-2.5 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm flex-1">Lab</TabsTrigger>
+                <TabsTrigger value="xray" className="whitespace-nowrap px-2.5 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm flex-1">X-ray</TabsTrigger>
+                <TabsTrigger value="ot" className="whitespace-nowrap px-2.5 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm flex-1">OT</TabsTrigger>
+                <TabsTrigger value="emergency" className="whitespace-nowrap px-2.5 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm flex-1">Emergency</TabsTrigger>
+                <TabsTrigger value="logs" className="whitespace-nowrap px-2.5 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm flex-1">Logs</TabsTrigger>
+                <TabsTrigger value="settings" className="whitespace-nowrap px-2.5 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm flex-1">Settings</TabsTrigger>
+                <TabsTrigger value="supplies" className="whitespace-nowrap px-2.5 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm flex-1">Supplies</TabsTrigger>
               </TabsList>
             </div>
 
