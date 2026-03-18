@@ -21,6 +21,25 @@ export function MySupplyRequests() {
   const [form, setForm] = useState({ item_name: "", item_type: "general", quantity: 1, reason: "", location: "" });
   const [showForm, setShowForm] = useState(false);
 
+  // Fetch all inventory items for dropdown
+  const { data: generalItems } = useQuery({
+    queryKey: ["inventory-items-list"],
+    queryFn: async () => {
+      const { data } = await supabase.from("inventory_items").select("id, name, stock_quantity, unit").order("name");
+      return (data || []).map((i: any) => ({ ...i, source: "general" }));
+    },
+  });
+
+  const { data: labItems } = useQuery({
+    queryKey: ["lab-inventory-items-list"],
+    queryFn: async () => {
+      const { data } = await supabase.from("lab_inventory_items").select("id, name, stock_quantity, unit").order("name");
+      return (data || []).map((i: any) => ({ ...i, source: "lab" }));
+    },
+  });
+
+  const allItems = [...(generalItems || []), ...(labItems || [])];
+
   const { data: departments } = useQuery({
     queryKey: ["departments-list"],
     queryFn: async () => {
@@ -135,19 +154,51 @@ export function MySupplyRequests() {
             <div className="grid grid-cols-2 gap-3">
               <div className="col-span-2">
                 <Label>Item Name</Label>
-                <Input value={form.item_name} onChange={(e) => setForm({ ...form, item_name: e.target.value })} placeholder="e.g. Whiteboard Marker, A4 Paper" />
+                <Select 
+                  value={form.item_name} 
+                  onValueChange={(v) => {
+                    const selected = allItems.find((i: any) => i.name === v);
+                    setForm({ 
+                      ...form, 
+                      item_name: v, 
+                      item_type: selected?.source || "general" 
+                    });
+                  }}
+                >
+                  <SelectTrigger><SelectValue placeholder="Select an item..." /></SelectTrigger>
+                  <SelectContent>
+                    {allItems.length === 0 ? (
+                      <SelectItem value="__none" disabled>No items available</SelectItem>
+                    ) : (
+                      <>
+                        {(generalItems || []).length > 0 && (
+                          <>
+                            <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">General Inventory</div>
+                            {(generalItems || []).map((item: any) => (
+                              <SelectItem key={`g-${item.id}`} value={item.name}>
+                                {item.name} — {item.stock_quantity} {item.unit} in stock
+                              </SelectItem>
+                            ))}
+                          </>
+                        )}
+                        {(labItems || []).length > 0 && (
+                          <>
+                            <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">Lab Inventory</div>
+                            {(labItems || []).map((item: any) => (
+                              <SelectItem key={`l-${item.id}`} value={item.name}>
+                                {item.name} — {item.stock_quantity} {item.unit} in stock
+                              </SelectItem>
+                            ))}
+                          </>
+                        )}
+                      </>
+                    )}
+                  </SelectContent>
+                </Select>
               </div>
               <div>
                 <Label>Type</Label>
-                <Select value={form.item_type} onValueChange={(v) => setForm({ ...form, item_type: v })}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="general">General</SelectItem>
-                    <SelectItem value="lab">Lab</SelectItem>
-                    <SelectItem value="office">Office</SelectItem>
-                    <SelectItem value="medical">Medical</SelectItem>
-                  </SelectContent>
-                </Select>
+                <Input value={form.item_type} readOnly className="bg-muted capitalize" />
               </div>
               <div>
                 <Label>Quantity</Label>
