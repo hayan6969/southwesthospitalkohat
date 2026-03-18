@@ -3,6 +3,7 @@ import jsPDF from 'jspdf';
 import { formatPkrAmount } from './currency';
 import { supabase } from '@/integrations/supabase/client';
 import { getPatientContactNumber } from './patientUtils';
+import { formatInPakistanTime } from './timezone';
 
 // Get hospital settings for PDF branding
 const getHospitalSettings = async () => {
