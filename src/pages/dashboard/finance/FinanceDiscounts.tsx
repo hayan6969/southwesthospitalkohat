@@ -97,16 +97,17 @@ export default function FinanceDiscounts() {
 
       const expiresAt = new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString();
 
-      const { error } = await supabase.from('patient_discounts').upsert({
+      const { error } = await supabase.from('patient_discounts').insert({
         patient_id: selectedPatientId,
         discount_type: discountType,
         discount_value: discountValue,
+        service_type: serviceType,
         notes,
         is_active: true,
         created_by: profile?.id,
         expires_at: expiresAt,
         used_at: null,
-      }, { onConflict: 'patient_id' });
+      });
 
       if (error) throw error;
     },
