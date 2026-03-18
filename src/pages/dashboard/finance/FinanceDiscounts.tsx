@@ -35,7 +35,8 @@ export default function FinanceDiscounts() {
       const { data, error } = await supabase
         .from('patient_discounts')
         .select('*')
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+        .limit(200);
       if (error) throw error;
 
       // Fetch patient profiles for each discount
