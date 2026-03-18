@@ -27,17 +27,15 @@ export default function FinanceAnalytics() {
 
   const { data: financialData, isLoading, refetch } = useFinancialAnalytics(selectedMonth, filterParams);
 
+  // Use a single realtime channel for all finance-related tables
   useEffect(() => {
-    const channels = [
-      supabase.channel('invoices-changes').on('postgres_changes', { event: '*', schema: 'public', table: 'invoices' }, () => refetch()),
-      supabase.channel('pharmacy-invoices-changes').on('postgres_changes', { event: '*', schema: 'public', table: 'pharmacy_invoices' }, () => refetch()),
-      supabase.channel('lab-reports-changes').on('postgres_changes', { event: '*', schema: 'public', table: 'lab_reports' }, () => refetch()),
-      supabase.channel('ot-schedules-changes').on('postgres_changes', { event: '*', schema: 'public', table: 'ot_schedules' }, () => refetch()),
-      supabase.channel('expenses-changes').on('postgres_changes', { event: '*', schema: 'public', table: 'expenses' }, () => refetch()),
-      supabase.channel('refunds-changes').on('postgres_changes', { event: '*', schema: 'public', table: 'refunds' }, () => refetch())
-    ];
-    channels.forEach(channel => channel.subscribe());
-    return () => { channels.forEach(channel => supabase.removeChannel(channel)); };
+    const channel = supabase
+      .channel('finance-analytics-changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'invoices' }, () => refetch())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'pharmacy_invoices' }, () => refetch())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'expenses' }, () => refetch())
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
   }, [refetch]);
 
   const pharmacySales = financialData?.pharmacySales || 0;
