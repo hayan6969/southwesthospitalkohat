@@ -277,28 +277,38 @@ export function StaffCounter() {
   }, [selectedDate]);
 
   const handleGenerateInvoice = async (appointment: any) => {
+    if (processingInvoice === appointment.id) return;
+
     setProcessingInvoice(appointment.id);
     try {
-      // Get doctor's consultation fee
+      const { data: liveAppointment, error: liveAppointmentError } = await supabase
+        .from('appointments')
+        .select('id, patient_id, doctor_id, payment_status, invoice_generated_at')
+        .eq('id', appointment.id)
+        .maybeSingle();
+
+      if (liveAppointmentError) throw liveAppointmentError;
+
+      const currentAppointment = liveAppointment || appointment;
+
       const { data: doctorData, error: doctorError } = await supabase
         .from('doctors')
         .select('consultation_fee')
-        .eq('id', appointment.doctor_id)
-        .single();
+        .eq('id', currentAppointment.doctor_id)
+        .maybeSingle();
 
       if (doctorError) {
         console.error('Error fetching doctor data:', doctorError);
         toast({
-          title: "Error",
-          description: "Failed to fetch doctor consultation fee",
-          variant: "destructive",
+          title: 'Error',
+          description: 'Failed to fetch doctor consultation fee',
+          variant: 'destructive',
         });
         return;
       }
 
       const consultationFee = doctorData?.consultation_fee || 0;
 
-      // Get complete patient data with patient_number and profile information
       const { data: patientData, error: patientError } = await supabase
         .from('patients')
         .select(`
@@ -312,63 +322,39 @@ export function StaffCounter() {
           emergency_contact_phone,
           profiles!patients_id_fkey(first_name, last_name, email, phone)
         `)
-        .eq('id', appointment.patient_id)
-        .single();
+        .eq('id', currentAppointment.patient_id)
+        .maybeSingle();
 
-      console.log('Patient query result:', { patientData, patientError, patient_id: appointment.patient_id });
-      
+      console.log('Patient query result:', { patientData, patientError, patient_id: currentAppointment.patient_id });
+
       if (patientError) {
         console.error('Error fetching patient data:', patientError);
       }
 
-      // First, check if invoice already exists for this appointment
-      // Use invoice_generated_at on the appointment to detect duplicates
-      let invoiceData;
+      const consultationDescriptionPattern = `Consultation with ${getDoctorName(currentAppointment.doctor_id, doctorNames || [])} - Patient: ${patientData?.patient_number || 'N/A'}`;
 
-      if (appointment.invoice_generated_at) {
-        // Invoice already exists - find it and just regenerate the PDF
-        const { data: existingInvoice } = await supabase
-          .from('invoices')
-          .select('*')
-          .eq('patient_id', appointment.patient_id)
-          .eq('doctor_id', appointment.doctor_id)
-          .eq('status', 'paid')
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .maybeSingle();
+      const { data: existingInvoice, error: existingInvoiceError } = await supabase
+        .from('invoices')
+        .select('*')
+        .eq('patient_id', currentAppointment.patient_id)
+        .eq('doctor_id', currentAppointment.doctor_id)
+        .eq('status', 'paid')
+        .ilike('description', `${consultationDescriptionPattern}%`)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
 
-        if (existingInvoice) {
-          invoiceData = existingInvoice;
-        } else {
-          // Fallback: create new if somehow not found
-          const { data: { user: currentUser } } = await supabase.auth.getUser();
-          const { data, error } = await supabase
-            .from('invoices')
-            .insert({
-              patient_id: appointment.patient_id,
-              doctor_id: appointment.doctor_id,
-              amount: consultationFee,
-              status: 'paid',
-              paid_at: new Date().toISOString(),
-              invoice_number: `INV-${Date.now()}`,
-              description: `Consultation with ${getDoctorName(appointment.doctor_id, doctorNames || [])} - Patient: ${patientData?.patient_number || 'N/A'}`,
-              due_date: new Date().toISOString().split('T')[0],
-              created_by: currentUser?.id || null
-            })
-            .select()
-            .single();
-          
-          if (error) throw error;
-          invoiceData = data;
-        }
-      } else {
-        // First time generating - apply discount and create invoice
+      if (existingInvoiceError) throw existingInvoiceError;
+
+      let invoiceData = existingInvoice;
+
+      if (!invoiceData && !(currentAppointment.invoice_generated_at || appointment.invoice_generated_at || appointment.invoice)) {
         const { applyPatientDiscount } = await import('@/utils/discountUtils');
         let finalAmount = consultationFee;
         let discountNote = '';
-        
+
         try {
-          const discountResult = await applyPatientDiscount(appointment.patient_id, consultationFee, 'consultation');
+          const discountResult = await applyPatientDiscount(currentAppointment.patient_id, consultationFee, 'consultation');
           if (discountResult.discountApplied > 0) {
             finalAmount = discountResult.discountedAmount;
             const discountInfo = discountResult.discountLabel || 'discount';
@@ -382,32 +368,55 @@ export function StaffCounter() {
         const { data, error } = await supabase
           .from('invoices')
           .insert({
-            patient_id: appointment.patient_id,
-            doctor_id: appointment.doctor_id,
+            patient_id: currentAppointment.patient_id,
+            doctor_id: currentAppointment.doctor_id,
             amount: finalAmount,
             status: 'paid',
             paid_at: new Date().toISOString(),
             invoice_number: `INV-${Date.now()}`,
-            description: `Consultation with ${getDoctorName(appointment.doctor_id, doctorNames || [])} - Patient: ${patientData?.patient_number || 'N/A'}${discountNote}`,
+            description: `${consultationDescriptionPattern}${discountNote}`,
             due_date: new Date().toISOString().split('T')[0],
             created_by: currentUser?.id || null
           })
           .select()
           .single();
-        
+
         if (error) throw error;
         invoiceData = data;
       }
 
-      // Update appointment payment status
+      if (!invoiceData) {
+        toast({
+          title: 'Invoice not found',
+          description: 'This appointment is already marked paid, but no invoice record could be found.',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      const invoiceGeneratedAt = currentAppointment.invoice_generated_at || invoiceData.paid_at || invoiceData.created_at || new Date().toISOString();
+
       await supabase
         .from('appointments')
-        .update({ 
+        .update({
           payment_status: 'paid',
-          invoice_generated_at: new Date().toISOString()
+          invoice_generated_at: invoiceGeneratedAt,
         })
-        .eq('id', appointment.id);
+        .eq('id', currentAppointment.id);
 
+      setAppointments((prev) => prev.map((item) =>
+        item.id === currentAppointment.id
+          ? {
+              ...item,
+              payment_status: 'paid',
+              invoice_generated_at: invoiceGeneratedAt,
+              invoice: {
+                amount: invoiceData.amount,
+                description: invoiceData.description,
+              },
+            }
+          : item
+      ));
       // Generate and open PDF
       const patientName = getPatientName(appointment.patient_id, patientNames || []);
       const doctorName = getDoctorName(appointment.doctor_id, doctorNames || []);
