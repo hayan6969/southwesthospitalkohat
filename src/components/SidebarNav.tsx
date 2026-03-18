@@ -82,9 +82,16 @@ const navsByRole: Record<string, { label: string; to: string; icon: React.Elemen
   ],
   inventory_manager: [
     { label: "Dashboard", to: "/dashboard/store", icon: Info },
+    { label: "Supply Requests", to: "/dashboard/store?tab=requests", icon: Inbox },
+    { label: "General Inventory", to: "/dashboard/store?tab=general", icon: Package },
+    { label: "Lab Inventory", to: "/dashboard/store?tab=lab", icon: FlaskConical },
+    { label: "Store / Provide", to: "/dashboard/store?tab=provide", icon: Warehouse },
   ],
   store: [
     { label: "Dashboard", to: "/dashboard/store", icon: Info },
+    { label: "General Inventory", to: "/dashboard/store?tab=general", icon: Package },
+    { label: "Lab Inventory", to: "/dashboard/store?tab=lab", icon: FlaskConical },
+    { label: "Store / Provide", to: "/dashboard/store?tab=provide", icon: Warehouse },
   ],
 };
 
