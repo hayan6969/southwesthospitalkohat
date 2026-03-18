@@ -25,6 +25,7 @@ export default function FinanceDiscounts() {
   const [selectedPatientId, setSelectedPatientId] = useState("");
   const [discountType, setDiscountType] = useState<string>("percentage");
   const [discountValue, setDiscountValue] = useState<number>(0);
+  const [serviceType, setServiceType] = useState<string>("consultation");
   const [notes, setNotes] = useState("");
 
   // Fetch existing discounts with patient info
