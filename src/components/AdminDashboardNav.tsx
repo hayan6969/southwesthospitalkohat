@@ -8,7 +8,6 @@ import {
   Calendar,
   Building2,
   MapPin,
-  Package,
   Warehouse
 } from "lucide-react";
 
