@@ -3,6 +3,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MySupplyRequests } from "@/components/inventory/MySupplyRequests";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from "recharts";
 import { StatsCard } from "@/components/StatsCard";
 import { RealAppointmentChart } from "@/components/RealAppointmentChart";
 import { PopularDoctorsWidget } from "@/components/PopularDoctorsWidget";
@@ -16,7 +17,7 @@ import { useRealStatsData } from "@/hooks/useRealStatsData";
 import { useRecentActivity } from "@/hooks/useRecentActivity";
 import { useFinancialAnalytics } from "@/hooks/useFinancialAnalytics";
 import { useAuth } from "@/hooks/useAuth";
-import { Users, UserCheck, Calendar, Banknote, Shield, Activity, Filter, User, LogOut, TrendingUp, CreditCard } from "lucide-react";
+import { Users, UserCheck, Calendar, Banknote, Shield, Activity, Filter, User, LogOut, TrendingUp, CreditCard, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -28,6 +29,7 @@ import { format } from "date-fns";
 import { formatPkrAmount } from "@/utils/currency";
 import { useHospitalSettings } from "@/hooks/useHospitalSettings";
 import { supabase } from "@/integrations/supabase/client";
+import { useQuery } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { toast } from "sonner";
 import AdminLabs from "./admin/AdminLabs";
@@ -36,6 +38,7 @@ import AdminXrays from "./admin/AdminXrays";
 import { AdminFinanceAnalytics } from "@/components/AdminFinanceAnalytics";
 import { EmergencyExpensesManager } from "@/components/admin/EmergencyExpensesManager";
 import { RegionWiseReport } from "@/components/RegionWiseReport";
+import { RegionsTabContent } from "@/components/admin/RegionsTabContent";
 import { AuditLogDetailDialog } from "@/components/dialogs/AuditLogDetailDialog";
 import { AdminDashboardNav } from "@/components/AdminDashboardNav";
 
@@ -263,79 +266,81 @@ export default function DashboardAdmin() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header with Profile - Compact */}
-      <header className="bg-white shadow-sm border-b border-gray-200 px-4 py-3">
+      <header className="bg-white shadow-sm border-b border-gray-200 px-3 sm:px-4 py-2 sm:py-3">
         <div className="flex justify-between items-center">
-          <div>
-            <h1 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+          <div className="min-w-0">
+            <h1 className="text-lg sm:text-xl font-bold text-gray-900 flex items-center gap-2">
               {hospitalSettings?.logo_url ? (
                 <img 
                   src={hospitalSettings.logo_url} 
                   alt="Hospital Logo" 
-                  className="w-6 h-6 object-contain"
+                  className="w-5 h-5 sm:w-6 sm:h-6 object-contain shrink-0"
                 />
               ) : (
-                <span className="inline-block w-2 h-6 bg-blue-500 rounded-full" />
+                <span className="inline-block w-2 h-5 sm:h-6 bg-blue-500 rounded-full shrink-0" />
               )}
-              {hospitalSettings?.hospital_name || "HIMS"}
+              <span className="truncate">{hospitalSettings?.hospital_name || "HIMS"}</span>
             </h1>
-            <p className="text-gray-500 text-xs mt-0.5">Hospital Information Management System</p>
+            <p className="text-gray-500 text-xs mt-0.5 hidden sm:block">Hospital Information Management System</p>
           </div>
           
-          {/* Profile Section - Compact */}
-          <div className="flex items-center gap-4 bg-gray-50 rounded-lg p-3 border border-gray-200">
-            <div className="flex items-center gap-3">
-              <Avatar className="w-8 h-8 border border-purple-200">
-                <AvatarFallback className="bg-purple-100 text-purple-700 text-sm font-bold">
+          {/* Profile Section - Responsive */}
+          <div className="flex items-center gap-2 sm:gap-4 bg-gray-50 rounded-lg p-2 sm:p-3 border border-gray-200 shrink-0">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <Avatar className="w-7 h-7 sm:w-8 sm:h-8 border border-purple-200">
+                <AvatarFallback className="bg-purple-100 text-purple-700 text-xs sm:text-sm font-bold">
                   {profile?.first_name?.[0]}{profile?.last_name?.[0]}
                 </AvatarFallback>
               </Avatar>
-              <div className="flex flex-col">
+              <div className="hidden sm:flex flex-col">
                 <span className="text-sm font-semibold text-gray-900">
                   {profile?.first_name} {profile?.last_name}
                 </span>
                 <span className="text-xs text-gray-600">{profile?.email}</span>
               </div>
-              <div className="flex flex-col items-center gap-1">
-                <span className="px-3 py-1 bg-purple-500 text-white rounded-full text-xs font-bold uppercase tracking-wide shadow-sm">
-                  Administrator
+              <div className="hidden md:flex flex-col items-center gap-1">
+                <span className="px-2 sm:px-3 py-1 bg-purple-500 text-white rounded-full text-xs font-bold uppercase tracking-wide shadow-sm">
+                  Admin
                 </span>
-                <span className="text-xs text-gray-500">System Admin</span>
               </div>
             </div>
             <Button 
               variant="outline" 
               size="sm" 
               onClick={signOut} 
-              className="flex items-center gap-2 border-red-200 hover:border-red-300 hover:bg-red-50 text-red-600 text-xs"
+              className="flex items-center gap-1.5 border-red-200 hover:border-red-300 hover:bg-red-50 text-red-600 text-xs h-7 sm:h-8 px-2 sm:px-3"
             >
-              <LogOut className="w-4 h-4" />
-              Sign Out
+              <LogOut className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+              <span className="hidden sm:inline">Sign Out</span>
             </Button>
           </div>
         </div>
       </header>
 
-      <div className="p-6">
+      <div className="p-3 sm:p-6">
         <div className="max-w-7xl mx-auto">
-          <div className="flex items-center justify-between mb-8">
-            <h2 className="text-2xl font-bold">System Overview</h2>
-            <AdminDashboardNav />
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 sm:mb-8">
+            <h2 className="text-xl sm:text-2xl font-bold">System Overview</h2>
+            <div className="overflow-x-auto -mx-3 px-3 sm:mx-0 sm:px-0">
+              <AdminDashboardNav />
+            </div>
           </div>
 
           <Tabs defaultValue="overview" className="space-y-6">
             <div className="overflow-x-auto -mx-3 px-3 sm:mx-0 sm:px-0">
               <TabsList className="inline-flex w-auto min-w-full h-auto p-1 gap-0">
-                <TabsTrigger value="overview" className="whitespace-nowrap px-4 py-2 text-sm flex-1">Overview</TabsTrigger>
-                <TabsTrigger value="analytics" className="whitespace-nowrap px-4 py-2 text-sm flex-1">Analytics</TabsTrigger>
-                <TabsTrigger value="accounts" className="whitespace-nowrap px-4 py-2 text-sm flex-1">Account Management</TabsTrigger>
-                <TabsTrigger value="pharmacy" className="whitespace-nowrap px-4 py-2 text-sm flex-1">Pharmacy</TabsTrigger>
-                <TabsTrigger value="lab" className="whitespace-nowrap px-4 py-2 text-sm flex-1">Lab</TabsTrigger>
-                <TabsTrigger value="xray" className="whitespace-nowrap px-4 py-2 text-sm flex-1">X-ray</TabsTrigger>
-                <TabsTrigger value="ot" className="whitespace-nowrap px-4 py-2 text-sm flex-1">OT</TabsTrigger>
-                <TabsTrigger value="emergency" className="whitespace-nowrap px-4 py-2 text-sm flex-1">Emergency</TabsTrigger>
-                <TabsTrigger value="logs" className="whitespace-nowrap px-4 py-2 text-sm flex-1">System Logs</TabsTrigger>
-                <TabsTrigger value="settings" className="whitespace-nowrap px-4 py-2 text-sm flex-1">Settings</TabsTrigger>
-                <TabsTrigger value="supplies" className="whitespace-nowrap px-4 py-2 text-sm flex-1">Supplies</TabsTrigger>
+                <TabsTrigger value="overview" className="whitespace-nowrap px-2.5 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm flex-1">Overview</TabsTrigger>
+                <TabsTrigger value="analytics" className="whitespace-nowrap px-2.5 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm flex-1">Analytics</TabsTrigger>
+                <TabsTrigger value="accounts" className="whitespace-nowrap px-2.5 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm flex-1">Accounts</TabsTrigger>
+                <TabsTrigger value="regions" className="whitespace-nowrap px-2.5 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm flex-1">Regions</TabsTrigger>
+                <TabsTrigger value="pharmacy" className="whitespace-nowrap px-2.5 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm flex-1">Pharmacy</TabsTrigger>
+                <TabsTrigger value="lab" className="whitespace-nowrap px-2.5 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm flex-1">Lab</TabsTrigger>
+                <TabsTrigger value="xray" className="whitespace-nowrap px-2.5 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm flex-1">X-ray</TabsTrigger>
+                <TabsTrigger value="ot" className="whitespace-nowrap px-2.5 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm flex-1">OT</TabsTrigger>
+                <TabsTrigger value="emergency" className="whitespace-nowrap px-2.5 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm flex-1">Emergency</TabsTrigger>
+                <TabsTrigger value="logs" className="whitespace-nowrap px-2.5 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm flex-1">Logs</TabsTrigger>
+                <TabsTrigger value="settings" className="whitespace-nowrap px-2.5 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm flex-1">Settings</TabsTrigger>
+                <TabsTrigger value="supplies" className="whitespace-nowrap px-2.5 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm flex-1">Supplies</TabsTrigger>
               </TabsList>
             </div>
 
@@ -1184,6 +1189,10 @@ export default function DashboardAdmin() {
 
               <TabsContent value="supplies">
                 <MySupplyRequests />
+              </TabsContent>
+
+              <TabsContent value="regions">
+                <RegionsTabContent />
               </TabsContent>
             </Tabs>
 
