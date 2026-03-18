@@ -197,16 +197,25 @@ export default function FinanceDaily() {
     staleTime: 30000,
   });
 
-  // Fetch detailed transactions for closing
+  // Fetch detailed transactions for closing - reuse cutoff from dailyData
   const {
     data: detailedData
   } = useQuery({
-    queryKey: ['daily-detailed', targetDate],
+    queryKey: ['daily-detailed', targetDate, dailyData?.cutoffTime],
     queryFn: async () => {
-      const {
-        data: lastClosingData
-      } = await supabase.rpc('get_last_daily_closing');
-      const lastClosing = lastClosingData?.[0];
+      const cutoffTime = dailyData?.cutoffTime;
+      const lastClosing = dailyData?.lastClosing;
+      if (!cutoffTime) {
+        // Fallback if dailyData not ready
+        const { data: lastClosingData } = await supabase.rpc('get_last_daily_closing');
+        const lc = lastClosingData?.[0];
+        var fallbackCutoff: string;
+        if (lc) {
+          fallbackCutoff = lc.closing_time;
+        } else {
+          fallbackCutoff = toPakistanTime(new Date(`${targetDate}T00:00:00`)).toISOString();
+        }
+      }
 
       // Determine the time cutoff for filtering detailed data
       let cutoffTime: string;
