@@ -15,10 +15,14 @@ import { ShoppingCart, PackageCheck, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { format, startOfMonth } from "date-fns";
 
-export function MySupplyRequests() {
+interface MySupplyRequestsProps {
+  filterType?: "general" | "lab";
+}
+
+export function MySupplyRequests({ filterType }: MySupplyRequestsProps = {}) {
   const { user, profile } = useAuth();
   const queryClient = useQueryClient();
-  const [form, setForm] = useState({ item_name: "", item_type: "general", quantity: 1, reason: "", location: "" });
+  const [form, setForm] = useState({ item_name: "", item_type: filterType || "general", quantity: 1, reason: "", location: "" });
   const [showForm, setShowForm] = useState(false);
 
   // Fetch all inventory items for dropdown
