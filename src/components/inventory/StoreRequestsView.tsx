@@ -169,8 +169,8 @@ export function StoreRequestsView() {
                     <TableCell>{req.expense_amount ? formatPkrAmount(req.expense_amount) : "-"}</TableCell>
                     <TableCell>
                     {req.status === "approved" && (
-                        <Button size="sm" variant="outline" onClick={() => provideMutation.mutate({ id: req.id })}>
-                          <Package className="w-3 h-3 mr-1" /> Provide
+                        <Button size="sm" variant="outline" disabled={providingIds.has(req.id)} onClick={() => provideMutation.mutate({ id: req.id })}>
+                          <Package className="w-3 h-3 mr-1" /> {providingIds.has(req.id) ? "Providing..." : "Provide"}
                         </Button>
                       )}
                     </TableCell>
