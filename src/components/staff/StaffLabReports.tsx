@@ -56,37 +56,51 @@ export function StaffLabReports() {
     setSearchPerformed(true);
 
     try {
-      // First, try to find the patient by patient_number or patient_id
-      let patientQuery = supabase
-        .from("patients")
-        .select("id, patient_number, profile:profiles!patients_id_fkey(first_name, last_name)");
+      const term = searchTerm.trim();
+      let patients: any[] | null = null;
 
-      // Check if search term looks like a UUID (patient_id) or patient number
-      if (searchTerm.includes("-") && searchTerm.length > 30) {
-        // Looks like a UUID - use case-insensitive search
-        patientQuery = patientQuery.ilike("id", searchTerm);
-      } else {
-        // Search by patient number - use case-insensitive search
-        patientQuery = patientQuery.ilike("patient_number", searchTerm);
+      // 1) Try by patient_number (e.g. P-00001 or partial like 00001)
+      const { data: byNumber } = await supabase
+        .from("patients")
+        .select("id, patient_number, profile:profiles!patients_id_fkey(first_name, last_name, email)")
+        .ilike("patient_number", `%${term}%`);
+
+      if (byNumber && byNumber.length > 0) {
+        patients = byNumber;
       }
 
-      const { data: patients, error: patientError } = await patientQuery;
+      // 2) If not found, try by phone number via profile email pattern {phone}@patient.local
+      if (!patients || patients.length === 0) {
+        const { data: byPhone } = await supabase
+          .from("patients")
+          .select("id, patient_number, profile:profiles!patients_id_fkey(first_name, last_name, email)")
+          .eq("profile.email", `${term}@patient.local`);
 
-      if (patientError) {
-        console.error("Error searching patients:", patientError);
-        toast({
-          title: "Search Error",
-          description: "Failed to search for patient",
-          variant: "destructive",
-        });
-        return;
+        // Filter out rows where profile didn't match (postgrest returns nulls)
+        const matched = byPhone?.filter((p: any) => p.profile !== null) || [];
+        if (matched.length > 0) {
+          patients = matched;
+        }
+      }
+
+      // 3) If still not found, try by UUID
+      if (!patients || patients.length === 0) {
+        if (term.includes("-") && term.length > 30) {
+          const { data: byId } = await supabase
+            .from("patients")
+            .select("id, patient_number, profile:profiles!patients_id_fkey(first_name, last_name, email)")
+            .eq("id", term);
+          if (byId && byId.length > 0) {
+            patients = byId;
+          }
+        }
       }
 
       if (!patients || patients.length === 0) {
         setLabReports([]);
         toast({
           title: "No Patient Found",
-          description: "No patient found with the provided ID or patient number",
+          description: "No patient found. Try searching by patient number (P-XXXXX) or phone number.",
           variant: "destructive",
         });
         return;
