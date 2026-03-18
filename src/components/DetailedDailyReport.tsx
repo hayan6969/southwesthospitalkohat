@@ -719,7 +719,7 @@ export function DetailedDailyReport({
                       </TableCell>
                       <TableCell className="text-sm">{exp.description}</TableCell>
                       <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
-                        {exp.time ? formatInPakistanTime(new Date(exp.time), 'MMM d, h:mm a') : exp.date}
+                        {exp.time ? formatInPakistanTime(exp.time, 'MMM d, h:mm a') : exp.date}
                       </TableCell>
                       <TableCell className="text-right font-medium text-red-600">{formatPkrAmount(exp.amount)}</TableCell>
                     </TableRow>
