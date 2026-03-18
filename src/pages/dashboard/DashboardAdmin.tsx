@@ -29,6 +29,7 @@ import { format } from "date-fns";
 import { formatPkrAmount } from "@/utils/currency";
 import { useHospitalSettings } from "@/hooks/useHospitalSettings";
 import { supabase } from "@/integrations/supabase/client";
+import { useQuery } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { toast } from "sonner";
 import AdminLabs from "./admin/AdminLabs";
