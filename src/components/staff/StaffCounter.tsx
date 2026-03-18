@@ -746,7 +746,11 @@ export function StaffCounter() {
                               className="bg-green-600 hover:bg-green-700"
                             >
                               <Receipt className="w-3 h-3 mr-1" />
-                              {processingInvoice === appointment.id ? 'Processing...' : 'Generate Invoice'}
+                              {processingInvoice === appointment.id
+                                ? 'Processing...'
+                                : (appointment.invoice_generated_at || appointment.invoice)
+                                  ? 'Reprint Invoice'
+                                  : 'Generate Invoice'}
                             </Button>
                           </TableCell>
                         </TableRow>
