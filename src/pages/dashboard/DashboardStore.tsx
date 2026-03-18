@@ -12,6 +12,7 @@ import { useSearchParams } from "react-router-dom";
 const DashboardStore = () => {
   const { profile } = useAuth();
   const [searchParams] = useSearchParams();
+  const isManagerOrStore = profile?.role === 'inventory_manager' || profile?.role === 'admin' || profile?.role === 'store';
   const isManager = profile?.role === 'inventory_manager' || profile?.role === 'admin';
   const tabParam = searchParams.get("tab");
   const defaultTab = tabParam === "provide" ? "provide" : (isManager ? "requests" : "provide");
@@ -26,34 +27,32 @@ const DashboardStore = () => {
           <p className="text-muted-foreground">
             {isManager 
               ? "Manage inventory, approve requests, and provide supplies" 
-              : "View approved requests and mark items as provided"}
+              : "Manage inventory and provide approved supplies"}
           </p>
         </div>
 
-        {isManager && <LowStockAlerts />}
+        {isManagerOrStore && <LowStockAlerts />}
 
         <Tabs defaultValue={defaultTab} className="w-full">
-          <TabsList className={`grid w-full ${isManager ? 'grid-cols-4' : 'grid-cols-1'}`}>
+          <TabsList className={`grid w-full ${isManager ? 'grid-cols-4' : 'grid-cols-3'}`}>
             {isManager && <TabsTrigger value="requests">Supply Requests</TabsTrigger>}
-            {isManager && <TabsTrigger value="general">General Inventory</TabsTrigger>}
-            {isManager && <TabsTrigger value="lab">Lab Inventory</TabsTrigger>}
+            <TabsTrigger value="general">General Inventory</TabsTrigger>
+            <TabsTrigger value="lab">Lab Inventory</TabsTrigger>
             <TabsTrigger value="provide">
               {isManager ? "Store / Provide" : "Approved Requests"}
             </TabsTrigger>
           </TabsList>
           {isManager && (
-            <>
-              <TabsContent value="requests">
-                <InventoryRequestsManager />
-              </TabsContent>
-              <TabsContent value="general">
-                <InventoryItemsManager />
-              </TabsContent>
-              <TabsContent value="lab">
-                <LabInventoryManager />
-              </TabsContent>
-            </>
+            <TabsContent value="requests">
+              <InventoryRequestsManager />
+            </TabsContent>
           )}
+          <TabsContent value="general">
+            <InventoryItemsManager />
+          </TabsContent>
+          <TabsContent value="lab">
+            <LabInventoryManager />
+          </TabsContent>
           <TabsContent value="provide">
             <StoreRequestsView />
           </TabsContent>

@@ -46,8 +46,25 @@ export function StoreRequestsView() {
     });
   }, [requests]);
 
+  const deductStock = async (req: any) => {
+    // Auto-deduct from inventory based on item_type
+    const table = req.item_type === "lab" ? "lab_inventory_items" : "inventory_items";
+    const { data: items } = await supabase
+      .from(table)
+      .select("id, stock_quantity")
+      .ilike("name", `%${req.item_name}%`)
+      .limit(1);
+    
+    if (items && items.length > 0) {
+      const newQty = Math.max(0, items[0].stock_quantity - req.quantity);
+      await supabase.from(table).update({ stock_quantity: newQty }).eq("id", items[0].id);
+    }
+  };
+
   const provideMutation = useMutation({
     mutationFn: async ({ id, expense_amount, expense_bill_number }: { id: string; expense_amount?: number; expense_bill_number?: string }) => {
+      const req = requests?.find((r: any) => r.id === id);
+      
       const updateData: any = {
         status: "provided",
         provided_by: user?.id,
@@ -60,19 +77,26 @@ export function StoreRequestsView() {
       const { error } = await supabase.from("inventory_requests").update(updateData).eq("id", id);
       if (error) throw error;
 
+      // Auto-deduct stock
+      if (req) await deductStock(req);
+
       // If expense, also add to finance expenses
       if (expense_amount && expense_amount > 0) {
         await supabase.from("expenses").insert({
           amount: expense_amount,
           category: "Store / Inventory",
-          description: `Store expense for: ${expenseDialog?.item_name} (Bill: ${expense_bill_number || 'N/A'})`,
+          description: `Store expense for: ${req?.item_name || 'item'} (Bill: ${expense_bill_number || 'N/A'})`,
           created_by: user?.id,
         });
       }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["store-requests"] });
-      toast.success("Marked as provided");
+      queryClient.invalidateQueries({ queryKey: ["inventory-items"] });
+      queryClient.invalidateQueries({ queryKey: ["lab-inventory-items"] });
+      queryClient.invalidateQueries({ queryKey: ["low-stock-general"] });
+      queryClient.invalidateQueries({ queryKey: ["low-stock-lab"] });
+      toast.success("Marked as provided & stock updated");
       setExpenseDialog(null);
       setExpenseForm({ amount: 0, bill_number: "", description: "" });
     },
@@ -97,6 +121,7 @@ export function StoreRequestsView() {
                 <TableHead>Date</TableHead>
                 <TableHead>Requested By</TableHead>
                 <TableHead>Item</TableHead>
+                <TableHead>Type</TableHead>
                 <TableHead>Qty</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Expense</TableHead>
@@ -105,14 +130,15 @@ export function StoreRequestsView() {
             </TableHeader>
             <TableBody>
               {isLoading ? (
-                <TableRow><TableCell colSpan={7} className="text-center">Loading...</TableCell></TableRow>
+                <TableRow><TableCell colSpan={8} className="text-center">Loading...</TableCell></TableRow>
               ) : requests?.length === 0 ? (
-                <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground">No requests</TableCell></TableRow>
+                <TableRow><TableCell colSpan={8} className="text-center text-muted-foreground">No requests</TableCell></TableRow>
               ) : requests?.map((req: any) => (
                 <TableRow key={req.id}>
                   <TableCell className="text-sm">{format(new Date(req.created_at), "dd MMM yyyy")}</TableCell>
                   <TableCell className="text-sm">{profileMap[req.requested_by] || "..."}</TableCell>
                   <TableCell className="font-medium">{req.item_name}</TableCell>
+                  <TableCell><Badge variant="outline">{req.item_type}</Badge></TableCell>
                   <TableCell>{req.quantity}</TableCell>
                   <TableCell><Badge variant={req.status === "provided" ? "outline" : "default"}>{req.status}</Badge></TableCell>
                   <TableCell>{req.expense_amount ? formatPkrAmount(req.expense_amount) : "-"}</TableCell>
