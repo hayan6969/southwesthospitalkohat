@@ -61,7 +61,7 @@ export default function DashboardLab() {
         </TabsContent>
 
         <TabsContent value="supplies">
-          <MySupplyRequests />
+          <MySupplyRequests filterType="lab" />
         </TabsContent>
       </Tabs>
     </AppLayout>
