@@ -659,6 +659,7 @@ export type Database = {
           id: string
           item_name: string
           item_type: string
+          location: string | null
           provided_at: string | null
           provided_by: string | null
           quantity: number
@@ -677,6 +678,7 @@ export type Database = {
           id?: string
           item_name: string
           item_type?: string
+          location?: string | null
           provided_at?: string | null
           provided_by?: string | null
           quantity?: number
@@ -695,6 +697,7 @@ export type Database = {
           id?: string
           item_name?: string
           item_type?: string
+          location?: string | null
           provided_at?: string | null
           provided_by?: string | null
           quantity?: number

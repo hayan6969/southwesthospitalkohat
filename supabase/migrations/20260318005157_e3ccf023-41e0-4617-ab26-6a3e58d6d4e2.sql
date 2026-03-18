@@ -1,0 +1,1 @@
+ALTER TABLE public.inventory_requests ADD COLUMN IF NOT EXISTS location text DEFAULT NULL;
