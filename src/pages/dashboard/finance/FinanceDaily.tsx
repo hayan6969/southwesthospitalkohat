@@ -205,7 +205,8 @@ export default function FinanceDaily() {
         cutoffTime: cutoffTime
       };
     },
-    refetchInterval: 30000 // Refresh every 30 seconds
+    refetchInterval: 60000, // Refresh every 60 seconds
+    staleTime: 30000,
   });
 
   // Fetch detailed transactions for closing
