@@ -140,37 +140,6 @@ export const useFinancialAnalytics = (selectedMonth?: Date, filterParams?: Filte
         payrollsData = data || [];
       }
 
-      const { count: hospitalInvoicesCount } = await supabase
-        .from('invoices')
-        .select('*', { count: 'exact', head: true })
-        .gte('created_at', monthStartISO)
-        .lte('created_at', monthEndISO)
-        .eq('status', 'paid');
-
-      const { data: hospitalInvoices } = await supabase
-        .from('invoices')
-        .select('amount')
-        .gte('created_at', monthStartISO)
-        .lte('created_at', monthEndISO)
-        .eq('status', 'paid');
-
-      const { data: refunds } = await supabase
-        .from('refunds')
-        .select('amount')
-        .gte('created_at', monthStartISO)
-        .lte('created_at', monthEndISO);
-
-      const { count: doctorPaymentsCount } = await supabase
-        .from('doctor_payments')
-        .select('*', { count: 'exact', head: true })
-        .gte('period_start', monthStartDate)
-        .lte('period_end', monthEndDate);
-
-      const { data: doctorPayments } = await supabase
-        .from('doctor_payments')
-        .select('total_earnings')
-        .gte('period_start', monthStartDate)
-        .lte('period_end', monthEndDate);
 
       // Helper function to recalculate hospital services revenue from transactions_data
       const computeServicesRevenue = (td?: any): number => {
