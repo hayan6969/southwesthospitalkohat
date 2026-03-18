@@ -35,11 +35,6 @@ const AppLayout = ({ children, sidebarRole, hideSidebar }: AppLayoutProps) => {
                 <span className="inline-block w-2 h-6 sm:h-8 bg-blue-500 rounded-full" />
                 HIMS
               </h1>
-              {profile.role === 'admin' && (
-                <div className="hidden lg:block">
-                  <AdminDashboardNav />
-                </div>
-              )}
             </div>
             <div className="flex items-center gap-2 sm:gap-4">
               
