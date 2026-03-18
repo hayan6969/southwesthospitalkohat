@@ -130,18 +130,13 @@ export function AppointmentDialog() {
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="patient">Patient</Label>
-            <Select value={patientId} onValueChange={setPatientId} required>
-              <SelectTrigger>
-                <SelectValue placeholder="Select a patient" />
-              </SelectTrigger>
-              <SelectContent>
-                {patients?.map((patient) => (
-                  <SelectItem key={patient.id} value={patient.id}>
-                    {getPatientName(patient.id, patientNames || [])}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <SearchablePatientSelect
+              patients={patients}
+              patientNames={patientNames}
+              value={patientId}
+              onValueChange={setPatientId}
+              placeholder="Search by patient ID or name..."
+            />
           </div>
 
           <div className="space-y-2">
