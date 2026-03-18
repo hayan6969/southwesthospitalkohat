@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { getCurrentPakistanDate, formatInPakistanTime } from '@/utils/timezone';
+import { applyPatientDiscount } from '@/utils/discountUtils';
 
 export const useStats = () => {
   return useQuery({
