@@ -279,6 +279,30 @@ const App = () => (
                 <FinanceRoutes />
               </ProtectedRoute>
             } />
+
+            {/* Inventory Manager dashboard routes */}
+            <Route path="/dashboard/inventory_manager" element={
+              <ProtectedRoute allowedRoles={['inventory_manager', 'admin']}>
+                <DashboardInventoryManager />
+              </ProtectedRoute>
+            } />
+            <Route path="/dashboard/inventory_manager/*" element={
+              <ProtectedRoute allowedRoles={['inventory_manager', 'admin']}>
+                <DashboardInventoryManager />
+              </ProtectedRoute>
+            } />
+
+            {/* Store dashboard routes */}
+            <Route path="/dashboard/store" element={
+              <ProtectedRoute allowedRoles={['store', 'admin']}>
+                <DashboardStore />
+              </ProtectedRoute>
+            } />
+            <Route path="/dashboard/store/*" element={
+              <ProtectedRoute allowedRoles={['store', 'admin']}>
+                <DashboardStore />
+              </ProtectedRoute>
+            } />
             
             {/* Redirect for unknown dashboard routes */}
             <Route path="/dashboard" element={<Navigate to="/" replace />} />
