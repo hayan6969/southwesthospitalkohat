@@ -1247,33 +1247,39 @@ export type Database = {
           created_by: string | null
           discount_type: string
           discount_value: number
+          expires_at: string | null
           id: string
           is_active: boolean
           notes: string | null
           patient_id: string
           updated_at: string | null
+          used_at: string | null
         }
         Insert: {
           created_at?: string | null
           created_by?: string | null
           discount_type?: string
           discount_value?: number
+          expires_at?: string | null
           id?: string
           is_active?: boolean
           notes?: string | null
           patient_id: string
           updated_at?: string | null
+          used_at?: string | null
         }
         Update: {
           created_at?: string | null
           created_by?: string | null
           discount_type?: string
           discount_value?: number
+          expires_at?: string | null
           id?: string
           is_active?: boolean
           notes?: string | null
           patient_id?: string
           updated_at?: string | null
+          used_at?: string | null
         }
         Relationships: [
           {
