@@ -40,7 +40,7 @@ export default function DashboardLab() {
           </TabsTrigger>
           <TabsTrigger value="inventory" className="flex items-center gap-1.5 text-xs sm:text-sm">
             <FlaskConical className="w-3.5 h-3.5" />
-            <span>Lab Inventory</span>
+            <span>Lab Item Supply</span>
           </TabsTrigger>
           <TabsTrigger value="supplies" className="flex items-center gap-1.5 text-xs sm:text-sm">
             <ShoppingCart className="w-3.5 h-3.5" />
