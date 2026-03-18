@@ -11,9 +11,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { FlaskConical, PackageCheck, Plus, ShoppingCart, Search } from "lucide-react";
+import { FlaskConical, PackageCheck, Plus, ShoppingCart, Search, Minus } from "lucide-react";
 import { toast } from "sonner";
 import { format, startOfMonth } from "date-fns";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 
 export function LabItemSupply() {
   const { user, profile } = useAuth();
@@ -21,6 +22,9 @@ export function LabItemSupply() {
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ item_name: "", quantity: 1, reason: "", location: "" });
   const [stockSearch, setStockSearch] = useState("");
+  const [useDialog, setUseDialog] = useState<{ item_name: string; max: number } | null>(null);
+  const [useQty, setUseQty] = useState(1);
+  const [useNotes, setUseNotes] = useState("");
 
   // Fetch lab inventory items for the request dropdown
   const { data: labItems } = useQuery({
@@ -32,29 +36,55 @@ export function LabItemSupply() {
     },
   });
 
-  // Fetch lab's own stock (aggregated from provided requests)
-  const { data: labStock, isLoading } = useQuery({
-    queryKey: ["lab-own-stock", user?.id],
+  // Fetch total received per item (from provided requests)
+  const { data: receivedMap } = useQuery({
+    queryKey: ["lab-received-totals", user?.id],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("inventory_requests")
-        .select("*")
+        .select("item_name, quantity")
         .eq("item_type", "lab")
         .eq("status", "provided")
         .eq("requested_by", user?.id);
       if (error) throw error;
-      // Aggregate by item_name
-      const stockMap: Record<string, { item_name: string; total_qty: number }> = {};
-      (data || []).forEach((req: any) => {
-        if (!stockMap[req.item_name]) {
-          stockMap[req.item_name] = { item_name: req.item_name, total_qty: 0 };
-        }
-        stockMap[req.item_name].total_qty += req.quantity;
+      const map: Record<string, number> = {};
+      (data || []).forEach((r: any) => {
+        map[r.item_name] = (map[r.item_name] || 0) + r.quantity;
       });
-      return Object.values(stockMap).sort((a, b) => a.item_name.localeCompare(b.item_name));
+      return map;
     },
     enabled: !!user?.id,
   });
+
+  // Fetch total used per item
+  const { data: usedMap } = useQuery({
+    queryKey: ["lab-used-totals", user?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("lab_stock_usage")
+        .select("item_name, quantity_used")
+        .eq("used_by", user?.id);
+      if (error) throw error;
+      const map: Record<string, number> = {};
+      (data || []).forEach((r: any) => {
+        map[r.item_name] = (map[r.item_name] || 0) + r.quantity_used;
+      });
+      return map;
+    },
+    enabled: !!user?.id,
+  });
+
+  // Calculate current stock: received - used
+  const labStock = receivedMap
+    ? Object.entries(receivedMap).map(([item_name, received]) => ({
+        item_name,
+        received,
+        used: usedMap?.[item_name] || 0,
+        current: received - (usedMap?.[item_name] || 0),
+      })).sort((a, b) => a.item_name.localeCompare(b.item_name))
+    : [];
+
+  const isLoading = !receivedMap;
 
   // Fetch departments for location suggestion
   const { data: departments } = useQuery({
@@ -121,6 +151,26 @@ export function LabItemSupply() {
     onError: (e: any) => toast.error(e.message),
   });
 
+  const useMutation2 = useMutation({
+    mutationFn: async ({ item_name, qty, notes }: { item_name: string; qty: number; notes: string }) => {
+      const { error } = await supabase.from("lab_stock_usage").insert({
+        item_name,
+        quantity_used: qty,
+        used_by: user?.id,
+        notes: notes || null,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["lab-used-totals"] });
+      toast.success("Usage recorded, stock updated");
+      setUseDialog(null);
+      setUseQty(1);
+      setUseNotes("");
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
   const statusColor = (s: string) => {
     switch (s) {
       case "pending": return "secondary";
@@ -131,7 +181,7 @@ export function LabItemSupply() {
     }
   };
 
-  const filteredStock = labStock?.filter((item: any) =>
+  const filteredStock = labStock.filter((item) =>
     !stockSearch.trim() || item.item_name.toLowerCase().includes(stockSearch.toLowerCase())
   );
 
@@ -150,7 +200,7 @@ export function LabItemSupply() {
           <CardContent>
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
               {receivedThisMonth.map((req: any) => (
-                <div key={req.id} className="flex items-center gap-2 p-2 rounded-lg bg-white border">
+                <div key={req.id} className="flex items-center gap-2 p-2 rounded-lg bg-background border">
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-medium truncate">{req.item_name}</p>
                     <p className="text-xs text-muted-foreground">Qty: {req.quantity} · {format(new Date(req.provided_at), "dd MMM")}</p>
@@ -162,46 +212,106 @@ export function LabItemSupply() {
         </Card>
       )}
 
-      {/* Lab Stock Overview (Read-Only) */}
+      {/* My Lab Stock */}
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle className="text-base flex items-center gap-2">
-              <FlaskConical className="w-5 h-5" />
-              My Lab Stock
-            </CardTitle>
-            <div className="relative w-48">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <CardTitle className="text-base flex items-center gap-2">
+            <FlaskConical className="w-5 h-5" />
+            My Lab Stock
+          </CardTitle>
+          <div className="relative w-48">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input
+              className="pl-9 h-8 text-sm"
+              placeholder="Search items..."
+              value={stockSearch}
+              onChange={(e) => setStockSearch(e.target.value)}
+            />
+          </div>
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Item Name</TableHead>
+                <TableHead>Received</TableHead>
+                <TableHead>Used</TableHead>
+                <TableHead>Current Stock</TableHead>
+                <TableHead className="text-right">Action</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {isLoading ? (
+                <TableRow><TableCell colSpan={5} className="text-center">Loading...</TableCell></TableRow>
+              ) : filteredStock.length === 0 ? (
+                <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground">No lab items received yet</TableCell></TableRow>
+              ) : filteredStock.map((item) => (
+                <TableRow key={item.item_name} className={item.current <= 0 ? "bg-destructive/10" : ""}>
+                  <TableCell className="font-medium">{item.item_name}</TableCell>
+                  <TableCell>{item.received}</TableCell>
+                  <TableCell>{item.used}</TableCell>
+                  <TableCell className={item.current <= 0 ? "text-destructive font-semibold" : "font-semibold"}>
+                    {item.current}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled={item.current <= 0}
+                      onClick={() => {
+                        setUseDialog({ item_name: item.item_name, max: item.current });
+                        setUseQty(1);
+                        setUseNotes("");
+                      }}
+                    >
+                      <Minus className="w-3.5 h-3.5 mr-1" /> Use
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+
+      {/* Use Item Dialog */}
+      <Dialog open={!!useDialog} onOpenChange={(open) => !open && setUseDialog(null)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Record Usage — {useDialog?.item_name}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div>
+              <Label>Quantity to Use (max: {useDialog?.max})</Label>
               <Input
-                className="pl-9 h-8 text-sm"
-                placeholder="Search items..."
-                value={stockSearch}
-                onChange={(e) => setStockSearch(e.target.value)}
+                type="number"
+                min={1}
+                max={useDialog?.max || 1}
+                value={useQty}
+                onChange={(e) => setUseQty(Math.min(parseInt(e.target.value) || 1, useDialog?.max || 1))}
               />
             </div>
-          </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Item Name</TableHead>
-                  <TableHead>Total Received</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {isLoading ? (
-                  <TableRow><TableCell colSpan={2} className="text-center">Loading...</TableCell></TableRow>
-                ) : !filteredStock || filteredStock.length === 0 ? (
-                  <TableRow><TableCell colSpan={2} className="text-center text-muted-foreground">No lab items received yet</TableCell></TableRow>
-                ) : filteredStock.map((item: any) => (
-                  <TableRow key={item.item_name}>
-                    <TableCell className="font-medium">{item.item_name}</TableCell>
-                    <TableCell>{item.total_qty}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </CardContent>
-      </Card>
+            <div>
+              <Label>Notes (optional)</Label>
+              <Textarea
+                value={useNotes}
+                onChange={(e) => setUseNotes(e.target.value)}
+                placeholder="e.g. Used for patient tests"
+                rows={2}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setUseDialog(null)}>Cancel</Button>
+            <Button
+              onClick={() => useDialog && useMutation2.mutate({ item_name: useDialog.item_name, qty: useQty, notes: useNotes })}
+              disabled={useMutation2.isPending || useQty < 1}
+            >
+              Confirm Usage
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Request Lab Supply */}
       <Card>

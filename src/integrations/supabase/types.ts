@@ -871,6 +871,33 @@ export type Database = {
           },
         ]
       }
+      lab_stock_usage: {
+        Row: {
+          created_at: string | null
+          id: string
+          item_name: string
+          notes: string | null
+          quantity_used: number
+          used_by: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          item_name: string
+          notes?: string | null
+          quantity_used?: number
+          used_by: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          item_name?: string
+          notes?: string | null
+          quantity_used?: number
+          used_by?: string
+        }
+        Relationships: []
+      }
       lab_tests: {
         Row: {
           category: string | null
