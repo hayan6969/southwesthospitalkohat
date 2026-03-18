@@ -154,13 +154,13 @@ export function CheckFreeDialog({ children }: CheckFreeDialogProps) {
         {children || (
           <Button variant="outline">
             <Search className="w-4 h-4 mr-2" />
-            Check Free
+            Check Fee
           </Button>
         )}
       </DialogTrigger>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Check Free Appointment</DialogTitle>
+          <DialogTitle>Check Fee Appointment</DialogTitle>
         </DialogHeader>
         
         <div className="space-y-4">
