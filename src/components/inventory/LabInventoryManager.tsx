@@ -93,7 +93,7 @@ export function LabInventoryManager() {
           <DialogTrigger asChild>
             <Button size="sm"><Plus className="w-4 h-4 mr-1" /> Add Lab Item</Button>
           </DialogTrigger>
-          <DialogContent>
+          <DialogContent className="z-[9999] max-h-[85vh] overflow-y-auto">
             <DialogHeader><DialogTitle>{editing ? "Edit Lab Item" : "Add Lab Item"}</DialogTitle></DialogHeader>
             <div className="space-y-3">
               <div className="relative">

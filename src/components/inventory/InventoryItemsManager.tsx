@@ -76,7 +76,7 @@ export function InventoryItemsManager() {
           <DialogTrigger asChild>
             <Button size="sm"><Plus className="w-4 h-4 mr-1" /> Add Item</Button>
           </DialogTrigger>
-          <DialogContent>
+          <DialogContent className="z-[9999] max-h-[85vh] overflow-y-auto">
             <DialogHeader><DialogTitle>{editing ? "Edit Item" : "Add New Item"}</DialogTitle></DialogHeader>
             <div className="space-y-3">
               <div><Label>Name</Label><Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></div>
