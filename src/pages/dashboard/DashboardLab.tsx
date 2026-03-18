@@ -1,18 +1,22 @@
 
-import { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
+import { useSearchParams } from "react-router-dom";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { StaffLab } from "@/components/staff/StaffLab";
 import { StaffLabReports } from "@/components/staff/StaffLabReports";
 import { MySupplyRequests } from "@/components/inventory/MySupplyRequests";
-import { TestTube, FileText, ShoppingCart } from "lucide-react";
-import { useHospitalSettings } from "@/hooks/useHospitalSettings";
+import { LabInventoryManager } from "@/components/inventory/LabInventoryManager";
+import { TestTube, FileText, ShoppingCart, FlaskConical } from "lucide-react";
 import AppLayout from "@/layouts/AppLayout";
 
 export default function DashboardLab() {
-  const [activeTab, setActiveTab] = useState("lab");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const activeTab = searchParams.get("tab") || "lab";
   const { profile } = useAuth();
-  const { settings: hospitalSettings } = useHospitalSettings();
+
+  const handleTabChange = (value: string) => {
+    setSearchParams({ tab: value });
+  };
 
   if (!profile) {
     return (
@@ -24,7 +28,7 @@ export default function DashboardLab() {
 
   return (
     <AppLayout sidebarRole="lab">
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+      <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-4">
         <TabsList className="flex flex-wrap gap-1">
           <TabsTrigger value="lab" className="flex items-center gap-1.5 text-xs sm:text-sm">
             <TestTube className="w-3.5 h-3.5" />
@@ -34,9 +38,13 @@ export default function DashboardLab() {
             <FileText className="w-3.5 h-3.5" />
             <span>Lab Reports</span>
           </TabsTrigger>
+          <TabsTrigger value="inventory" className="flex items-center gap-1.5 text-xs sm:text-sm">
+            <FlaskConical className="w-3.5 h-3.5" />
+            <span>Lab Inventory</span>
+          </TabsTrigger>
           <TabsTrigger value="supplies" className="flex items-center gap-1.5 text-xs sm:text-sm">
             <ShoppingCart className="w-3.5 h-3.5" />
-            <span>Supplies</span>
+            <span>Request Supplies</span>
           </TabsTrigger>
         </TabsList>
 
@@ -46,6 +54,10 @@ export default function DashboardLab() {
 
         <TabsContent value="reports">
           <StaffLabReports />
+        </TabsContent>
+
+        <TabsContent value="inventory">
+          <LabInventoryManager />
         </TabsContent>
 
         <TabsContent value="supplies">
