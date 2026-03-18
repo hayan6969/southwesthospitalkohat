@@ -93,6 +93,8 @@ export default function FinanceDiscounts() {
       if (discountValue <= 0) throw new Error("Enter a valid discount value");
       if (discountType === 'percentage' && discountValue > 100) throw new Error("Percentage cannot exceed 100");
 
+      const expiresAt = new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString();
+
       const { error } = await supabase.from('patient_discounts').upsert({
         patient_id: selectedPatientId,
         discount_type: discountType,
@@ -100,6 +102,8 @@ export default function FinanceDiscounts() {
         notes,
         is_active: true,
         created_by: profile?.id,
+        expires_at: expiresAt,
+        used_at: null,
       }, { onConflict: 'patient_id' });
 
       if (error) throw error;
