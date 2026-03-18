@@ -202,6 +202,19 @@ export default function FinanceDiscounts() {
                 )}
               </div>
 
+              <div className="space-y-2">
+                <Label>Service Type</Label>
+                <Select value={serviceType} onValueChange={setServiceType}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="consultation">Consultation</SelectItem>
+                    <SelectItem value="lab">Lab Test</SelectItem>
+                    <SelectItem value="xray">X-ray</SelectItem>
+                    <SelectItem value="ot">OT / Surgery</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Discount Type</Label>
