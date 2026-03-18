@@ -618,7 +618,9 @@ export type Database = {
           category: string
           created_at: string | null
           description: string | null
+          expiry_date: string | null
           id: string
+          manufacturing_date: string | null
           minimum_stock_level: number
           name: string
           stock_quantity: number
@@ -629,7 +631,9 @@ export type Database = {
           category?: string
           created_at?: string | null
           description?: string | null
+          expiry_date?: string | null
           id?: string
+          manufacturing_date?: string | null
           minimum_stock_level?: number
           name: string
           stock_quantity?: number
@@ -640,7 +644,9 @@ export type Database = {
           category?: string
           created_at?: string | null
           description?: string | null
+          expiry_date?: string | null
           id?: string
+          manufacturing_date?: string | null
           minimum_stock_level?: number
           name?: string
           stock_quantity?: number
@@ -767,7 +773,9 @@ export type Database = {
           category: string
           created_at: string | null
           description: string | null
+          expiry_date: string | null
           id: string
+          manufacturing_date: string | null
           minimum_stock_level: number
           name: string
           stock_quantity: number
@@ -778,7 +786,9 @@ export type Database = {
           category?: string
           created_at?: string | null
           description?: string | null
+          expiry_date?: string | null
           id?: string
+          manufacturing_date?: string | null
           minimum_stock_level?: number
           name: string
           stock_quantity?: number
@@ -789,7 +799,9 @@ export type Database = {
           category?: string
           created_at?: string | null
           description?: string | null
+          expiry_date?: string | null
           id?: string
+          manufacturing_date?: string | null
           minimum_stock_level?: number
           name?: string
           stock_quantity?: number

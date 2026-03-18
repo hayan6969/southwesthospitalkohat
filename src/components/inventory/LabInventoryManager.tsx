@@ -16,7 +16,7 @@ export function LabInventoryManager() {
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<any>(null);
-  const [form, setForm] = useState({ name: "", category: "consumable", description: "", stock_quantity: 0, minimum_stock_level: 10, unit: "pieces" });
+  const [form, setForm] = useState({ name: "", category: "consumable", description: "", stock_quantity: 0, minimum_stock_level: 10, unit: "pieces", manufacturing_date: "", expiry_date: "" });
   const [nameSearch, setNameSearch] = useState("");
   const [showSuggestions, setShowSuggestions] = useState(false);
 
@@ -66,14 +66,14 @@ export function LabInventoryManager() {
   });
 
   const resetForm = () => {
-    setForm({ name: "", category: "consumable", description: "", stock_quantity: 0, minimum_stock_level: 10, unit: "pieces" });
+    setForm({ name: "", category: "consumable", description: "", stock_quantity: 0, minimum_stock_level: 10, unit: "pieces", manufacturing_date: "", expiry_date: "" });
     setNameSearch("");
     setEditing(null);
     setOpen(false);
   };
 
   const openEdit = (item: any) => {
-    setForm({ name: item.name, category: item.category, description: item.description || "", stock_quantity: item.stock_quantity, minimum_stock_level: item.minimum_stock_level, unit: item.unit });
+    setForm({ name: item.name, category: item.category, description: item.description || "", stock_quantity: item.stock_quantity, minimum_stock_level: item.minimum_stock_level, unit: item.unit, manufacturing_date: item.manufacturing_date || "", expiry_date: item.expiry_date || "" });
     setNameSearch(item.name);
     setEditing(item);
     setOpen(true);
@@ -139,8 +139,12 @@ export function LabInventoryManager() {
                 <div><Label>Stock Qty</Label><Input type="number" value={form.stock_quantity === 0 && document.activeElement?.getAttribute('data-field') === 'stock_quantity' ? '' : form.stock_quantity} min="0" data-field="stock_quantity" onChange={(e) => setForm({ ...form, stock_quantity: e.target.value === '' ? 0 : parseInt(e.target.value) || 0 })} onFocus={(e) => { if (form.stock_quantity === 0) e.target.value = ''; }} onBlur={(e) => { if (e.target.value === '') setForm(f => ({ ...f, stock_quantity: 0 })); }} /></div>
                 <div><Label>Min Stock Level</Label><Input type="number" value={form.minimum_stock_level === 0 && document.activeElement?.getAttribute('data-field') === 'min_stock' ? '' : form.minimum_stock_level} min="0" data-field="min_stock" onChange={(e) => setForm({ ...form, minimum_stock_level: e.target.value === '' ? 0 : parseInt(e.target.value) || 0 })} onFocus={(e) => { if (form.minimum_stock_level === 0) e.target.value = ''; }} onBlur={(e) => { if (e.target.value === '') setForm(f => ({ ...f, minimum_stock_level: 0 })); }} /></div>
               </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div><Label>Manufacturing Date</Label><Input type="date" value={form.manufacturing_date} onChange={(e) => setForm({ ...form, manufacturing_date: e.target.value })} /></div>
+                <div><Label>Expiry Date</Label><Input type="date" value={form.expiry_date} onChange={(e) => setForm({ ...form, expiry_date: e.target.value })} /></div>
+              </div>
               <div><Label>Description</Label><Input value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} /></div>
-              <Button className="w-full" onClick={() => saveMutation.mutate(form)} disabled={!form.name || saveMutation.isPending}>
+              <Button className="w-full" onClick={() => saveMutation.mutate({ ...form, manufacturing_date: form.manufacturing_date || null, expiry_date: form.expiry_date || null })} disabled={!form.name || saveMutation.isPending}>
                 {editing ? "Update" : "Add"} Lab Item
               </Button>
             </div>
@@ -156,14 +160,16 @@ export function LabInventoryManager() {
               <TableHead>Stock</TableHead>
               <TableHead>Min Level</TableHead>
               <TableHead>Unit</TableHead>
+              <TableHead>Mfg Date</TableHead>
+              <TableHead>Expiry</TableHead>
               <TableHead>Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {isLoading ? (
-              <TableRow><TableCell colSpan={6} className="text-center">Loading...</TableCell></TableRow>
+              <TableRow><TableCell colSpan={8} className="text-center">Loading...</TableCell></TableRow>
             ) : items?.length === 0 ? (
-              <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground">No lab items yet</TableCell></TableRow>
+              <TableRow><TableCell colSpan={8} className="text-center text-muted-foreground">No lab items yet</TableCell></TableRow>
             ) : items?.map((item: any) => (
               <TableRow key={item.id} className={item.stock_quantity <= item.minimum_stock_level ? "bg-destructive/10" : ""}>
                 <TableCell className="font-medium">{item.name}</TableCell>
@@ -171,6 +177,8 @@ export function LabInventoryManager() {
                 <TableCell>{item.stock_quantity}</TableCell>
                 <TableCell>{item.minimum_stock_level}</TableCell>
                 <TableCell>{item.unit}</TableCell>
+                <TableCell>{item.manufacturing_date || '—'}</TableCell>
+                <TableCell className={item.expiry_date && new Date(item.expiry_date) < new Date() ? 'text-destructive font-medium' : ''}>{item.expiry_date || '—'}</TableCell>
                 <TableCell className="flex gap-1">
                   <Button variant="ghost" size="icon" onClick={() => openEdit(item)}><Pencil className="w-4 h-4" /></Button>
                   <Button variant="ghost" size="icon" onClick={() => deleteMutation.mutate(item.id)}><Trash2 className="w-4 h-4 text-destructive" /></Button>
