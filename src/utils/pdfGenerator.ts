@@ -1194,10 +1194,10 @@ export const generateDailyClosingPDF = async (data: {
   );
   yPosition += 10;
 
-  // Helper: determine shift from timestamp
+  // Helper: determine shift from timestamp in Pakistan time
   const getShiftFromTime = (dateStr: string): string => {
-    const hour = new Date(dateStr).getHours();
-    const pkHour = (hour + 5) % 24;
+    const pkHour = Number.parseInt(formatInPakistanTime(dateStr, 'H'), 10);
+    if (Number.isNaN(pkHour)) return 'Morning';
     if (pkHour >= 0 && pkHour < 8) return 'Night';
     if (pkHour >= 8 && pkHour < 14) return 'Morning';
     return 'Evening';
@@ -1205,13 +1205,10 @@ export const generateDailyClosingPDF = async (data: {
 
   const formatTime = (dateStr: string): string => {
     try {
-      const d = new Date(dateStr);
-      const h = (d.getHours() + 5) % 24;
-      const m = d.getMinutes();
-      const ampm = h >= 12 ? 'PM' : 'AM';
-      const hh = h % 12 || 12;
-      return `${hh}:${String(m).padStart(2, '0')} ${ampm}`;
-    } catch { return '—'; }
+      return formatInPakistanTime(dateStr, 'h:mm a');
+    } catch {
+      return '—';
+    }
   };
 
   interface TxnItem {
