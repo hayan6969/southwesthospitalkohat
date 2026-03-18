@@ -56,134 +56,51 @@ export default function FinanceDaily() {
   } = useQuery({
     queryKey: ['daily-finance', targetDate, lastClosingInfo?.closing_time],
     queryFn: async () => {
-      console.log('🔍 Daily Finance Query STARTED for date:', targetDate);
-      console.log('🔍 Last closing info in query key:', lastClosingInfo);
-
       // First, get the last daily closing to determine the cutoff time
-      const {
-        data: lastClosingData
-      } = await supabase.rpc('get_last_daily_closing');
+      const { data: lastClosingData } = await supabase.rpc('get_last_daily_closing');
       const lastClosing = lastClosingData?.[0];
 
-      // Determine the time cutoff for filtering - use the same logic as detailed query
+      // Determine the time cutoff for filtering
       let cutoffTime: string;
       if (lastClosing && lastClosing.closing_date !== targetDate) {
-        // If there's a previous closing for a different date, use activities after that closing time
         cutoffTime = lastClosing.closing_time;
       } else if (lastClosing && lastClosing.closing_date === targetDate) {
-        // If there's already a closing for the same date, use that closing time as cutoff
         cutoffTime = lastClosing.closing_time;
       } else {
-        // If no previous closing, include activities from the beginning of the selected date in Pakistan time
         const selectedDatePakTime = toPakistanTime(new Date(`${targetDate}T00:00:00`));
         cutoffTime = selectedDatePakTime.toISOString();
       }
 
-      // Current time for upper bound (only for today's date) in Pakistani timezone
       const currentPakTime = getCurrentPakistanTime();
       const selectedDatePakTime = toPakistanTime(new Date(`${targetDate}T00:00:00`));
       const isToday = currentPakTime.toDateString() === selectedDatePakTime.toDateString();
       const upperBound = isToday ? currentPakTime.toISOString() : toPakistanTime(new Date(`${targetDate}T23:59:59`)).toISOString();
-      console.log('Filtering activities from:', cutoffTime, 'to:', upperBound);
-      console.log('Last closing details:', lastClosing ? {
-        id: lastClosing.id,
-        closing_date: lastClosing.closing_date,
-        closing_time: lastClosing.closing_time,
-        formattedTime: formatInPakistanTime(new Date(lastClosing.closing_time), 'MMM d, yyyy h:mm a')
-      } : 'No previous closing found');
 
-      // Hospital invoices (consultations) - filter based on cutoff time (AFTER closing, not AT)
-      const {
-        data: hospitalInvoices
-      } = await supabase.from('invoices').select('amount, created_at, description, emergency_patient_data, invoice_number').eq('status', 'paid').gt('created_at', cutoffTime) // Use gt (>) not gte (>=) to exclude boundary
-      .lte('created_at', upperBound);
-      console.log('Hospital invoices found:', hospitalInvoices?.length, hospitalInvoices);
+      // Batch ALL queries in parallel
+      const [
+        hospitalInvoicesRes, pharmacyInvoicesRes, labInvoicesRes, xrayReportsRes,
+        otSchedulesRes, emergencyRes, expensesRes, refundsRes, miscIncomeRes
+      ] = await Promise.all([
+        supabase.from('invoices').select('amount, created_at, description, emergency_patient_data, invoice_number').eq('status', 'paid').gt('created_at', cutoffTime).lte('created_at', upperBound),
+        supabase.from('pharmacy_invoices').select(`*, pharmacy_invoice_items(quantity, unit_price, total_price, medicine_id, medicines(purchase_price, selling_price))`).gt('created_at', cutoffTime).lte('created_at', upperBound),
+        supabase.from('invoices').select('amount, created_at, description, invoice_number, status').eq('status', 'paid').like('invoice_number', 'LAB-%').gt('created_at', cutoffTime).lte('created_at', upperBound),
+        supabase.from('xray_reports').select('price, created_at, test_name, status').not('price', 'is', null).gt('created_at', cutoffTime).lte('created_at', upperBound),
+        supabase.from('ot_schedules').select('total_cost, doctor_expense, created_at, operation_date, status').in('status', ['completed', 'pending']).gt('created_at', cutoffTime).lte('created_at', upperBound),
+        supabase.from('appointments').select('consultation_fee_at_time, type, status, appointment_date').ilike('type', 'emergency').eq('status', 'completed').gte('appointment_date', cutoffTime).lte('appointment_date', upperBound),
+        supabase.from('expenses').select('amount, expense_date, created_at').gt('created_at', cutoffTime).lte('created_at', upperBound),
+        supabase.from('refunds').select('amount, refund_type, description, created_at').gt('created_at', cutoffTime).lte('created_at', upperBound),
+        supabase.from('miscellaneous_income').select('amount, description, created_at').gt('created_at', cutoffTime).lte('created_at', upperBound),
+      ]);
 
-      // Log each hospital invoice to verify time filtering
-      if (hospitalInvoices && hospitalInvoices.length > 0) {
-        console.log('Hospital invoice details:', hospitalInvoices.map(inv => ({
-          amount: inv.amount,
-          created_at: inv.created_at,
-          formatted_time: formatInPakistanTime(new Date(inv.created_at), 'MMM d, yyyy h:mm a')
-        })));
-      }
-
-      // Pharmacy invoices with items for profit calculation - filter based on cutoff time
-      const {
-        data: pharmacyInvoicesWithItems
-      } = await supabase.from('pharmacy_invoices').select(`
-          *,
-          pharmacy_invoice_items(
-            quantity,
-            unit_price,
-            total_price,
-            medicine_id,
-            medicines(purchase_price, selling_price)
-          )
-        `).gt('created_at', cutoffTime) // Use gt (>) not gte (>=) to exclude boundary
-      .lte('created_at', upperBound);
-      console.log('Pharmacy invoices found:', pharmacyInvoicesWithItems?.length, pharmacyInvoicesWithItems);
-
-      // Log each pharmacy invoice to verify time filtering
-      if (pharmacyInvoicesWithItems && pharmacyInvoicesWithItems.length > 0) {
-        console.log('Pharmacy invoice details:', pharmacyInvoicesWithItems.map(inv => ({
-          final_amount: inv.final_amount,
-          created_at: inv.created_at,
-          formatted_time: formatInPakistanTime(new Date(inv.created_at), 'MMM d, yyyy h:mm a')
-        })));
-      }
-
-      // Lab invoices - filter based on cutoff time (use actual invoice amounts for revenue)
-      const {
-        data: labInvoices
-      } = await supabase.from('invoices')
-        .select('amount, created_at, description, invoice_number, status')
-        .eq('status', 'paid')
-        .like('invoice_number', 'LAB-%')
-        .gt('created_at', cutoffTime) // Use gt (>) not gte (>=) to exclude boundary
-        .lte('created_at', upperBound);
-      console.log('Lab invoices found:', labInvoices?.length, labInvoices);
-
-      // X-ray reports - filter based on cutoff time (include both completed and pending with prices)
-      const {
-        data: xrayReports
-      } = await supabase.from('xray_reports').select('price, created_at, test_name, status').not('price', 'is', null).gt('created_at', cutoffTime) // Use gt (>) not gte (>=) to exclude boundary
-      .lte('created_at', upperBound);
-      console.log('X-ray reports found:', xrayReports?.length, xrayReports);
-
-      // OT schedules - filter based on cutoff time and include both completed and scheduled
-      const {
-        data: otSchedules
-      } = await supabase.from('ot_schedules').select('total_cost, doctor_expense, created_at, operation_date, status').in('status', ['completed', 'pending']).gt('created_at', cutoffTime) // Use gt (>) not gte (>=) to exclude boundary
-      .lte('created_at', upperBound);
-      console.log('OT schedules found:', otSchedules?.length, otSchedules);
-
-      // Emergency consultations - filter based on cutoff time
-      const {
-        data: emergencyAppointments
-      } = await supabase.from('appointments').select('consultation_fee_at_time, type, status, appointment_date').ilike('type', 'emergency').eq('status', 'completed').gte('appointment_date', cutoffTime).lte('appointment_date', upperBound);
-      console.log('Emergency appointments found:', emergencyAppointments?.length, emergencyAppointments);
-
-      // Daily expenses - filter based on cutoff time
-      const {
-        data: expenses
-      } = await supabase.from('expenses').select('amount, expense_date, created_at').gt('created_at', cutoffTime) // Use gt (>) not gte (>=) to exclude boundary
-      .lte('created_at', upperBound);
-      console.log('Expenses found:', expenses?.length, expenses);
-
-      // Refunds for the period - filter based on cutoff time
-      const {
-        data: refunds
-      } = await supabase.from('refunds').select('amount, refund_type, description, created_at').gt('created_at', cutoffTime) // Use gt (>) not gte (>=) to exclude boundary
-      .lte('created_at', upperBound);
-      console.log('Refunds found:', refunds?.length, refunds);
-
-      // Miscellaneous income - filter based on cutoff time
-      const {
-        data: miscIncome
-      } = await supabase.from('miscellaneous_income').select('amount, description, created_at').gt('created_at', cutoffTime) // Use gt (>) not gte (>=) to exclude boundary
-      .lte('created_at', upperBound);
-      console.log('Miscellaneous income found:', miscIncome?.length, miscIncome);
+      const hospitalInvoices = hospitalInvoicesRes.data;
+      const pharmacyInvoicesWithItems = pharmacyInvoicesRes.data;
+      const labInvoices = labInvoicesRes.data;
+      const xrayReports = xrayReportsRes.data;
+      const otSchedules = otSchedulesRes.data;
+      const emergencyAppointments = emergencyRes.data;
+      const expenses = expensesRes.data;
+      const refunds = refundsRes.data;
+      const miscIncome = miscIncomeRes.data;
 
       // Calculate totals
       // Hospital revenue includes paid consultation invoices + emergency + lab + x-ray + OT + miscellaneous

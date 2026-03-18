@@ -286,6 +286,7 @@ export const useFinancialAnalytics = (selectedMonth?: Date, filterParams?: Filte
         recentActivity,
       };
     },
-    refetchInterval: 10000,
+    refetchInterval: 60000,
+    staleTime: 30000,
   });
 };
