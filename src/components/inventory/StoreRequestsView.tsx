@@ -64,7 +64,7 @@ export function StoreRequestsView() {
     const { data: items } = await supabase
       .from(table)
       .select("id, stock_quantity")
-      .ilike("name", `%${req.item_name}%`)
+      .eq("name", req.item_name)
       .limit(1);
     
     if (items && items.length > 0) {
