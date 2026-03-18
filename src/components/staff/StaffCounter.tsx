@@ -160,10 +160,18 @@ export function StaffCounter() {
         const patientId = apt.patient_id.toLowerCase();
         const search = searchTerm.toLowerCase();
         
+        // Get phone from patientNames (which includes phone & email)
+        const patientProfile = patientNames?.find(p => p.id === apt.patient_id);
+        const phone = patientProfile?.phone || '';
+        // Extract phone from email pattern {phone}@patient.local
+        const emailPhone = patientProfile?.email?.match(/^(\d+)@patient\.local$/)?.[1] || '';
+        
         return patientName.includes(search) || 
                doctorName.includes(search) || 
                patientNumber.toLowerCase().includes(search) ||
-               patientId.includes(search);
+               patientId.includes(search) ||
+               phone.includes(search) ||
+               emailPhone.includes(search);
       });
     }
     
@@ -195,10 +203,17 @@ export function StaffCounter() {
         const patientId = apt.patient_id.toLowerCase();
         const search = searchTerm.toLowerCase();
         
+        // Get phone from patientNames (which includes phone & email)
+        const patientProfile = patientNames?.find(p => p.id === apt.patient_id);
+        const phone = patientProfile?.phone || '';
+        const emailPhone = patientProfile?.email?.match(/^(\d+)@patient\.local$/)?.[1] || '';
+        
         return patientName.includes(search) || 
                doctorName.includes(search) || 
                patientNumber.toLowerCase().includes(search) ||
-               patientId.includes(search);
+               patientId.includes(search) ||
+               phone.includes(search) ||
+               emailPhone.includes(search);
       });
     }
     

@@ -78,12 +78,17 @@ export function StaffXray() {
     const patientName = patientProfile ? `${patientProfile.first_name || ''} ${patientProfile.last_name || ''}`.toLowerCase() : '';
     const doctorName = doctor ? `${doctor.first_name || ''} ${doctor.last_name || ''}`.toLowerCase() : '';
     const testName = report.test_name.toLowerCase();
+    const search = searchTerm.toLowerCase();
+    
+    // Extract phone from email pattern
+    const email = patientProfile?.phone || '';
     
     return (
-      patientNumber.includes(searchTerm.toLowerCase()) ||
-      patientName.includes(searchTerm.toLowerCase()) ||
-      doctorName.includes(searchTerm.toLowerCase()) ||
-      testName.includes(searchTerm.toLowerCase())
+      patientNumber.toLowerCase().includes(search) ||
+      patientName.includes(search) ||
+      doctorName.includes(search) ||
+      testName.includes(search) ||
+      email.includes(search)
     );
   });
 
