@@ -286,6 +286,9 @@ export default function DashboardPharmacy() {
               </CardContent>
             </Card>
           </TabsContent>
+          <TabsContent value="supplies" className="space-y-6">
+            <MySupplyRequests />
+          </TabsContent>
         </Tabs>
 
         <PharmacyInvoiceDetailsDialog
