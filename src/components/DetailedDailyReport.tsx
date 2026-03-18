@@ -785,54 +785,92 @@ export function DetailedDailyReport({
           </CardContent>
         </Card>
 
-        {/* ========== STAFF COLLECTION SUMMARY ========== */}
+        {/* ========== STAFF COLLECTION DETAIL ========== */}
         {(() => {
-          const staffMap: Record<string, { name: string; count: number; total: number }> = {};
+          const staffMap: Record<string, { name: string; count: number; total: number; categories: Record<string, { count: number; total: number }> }> = {};
           transactions.forEach(t => {
             if (t.operator && t.operator !== '—') {
-              if (!staffMap[t.operator]) staffMap[t.operator] = { name: t.operator, count: 0, total: 0 };
+              if (!staffMap[t.operator]) staffMap[t.operator] = { name: t.operator, count: 0, total: 0, categories: {} };
               staffMap[t.operator].count += 1;
               staffMap[t.operator].total += t.amountPaid;
+              if (!staffMap[t.operator].categories[t.category]) {
+                staffMap[t.operator].categories[t.category] = { count: 0, total: 0 };
+              }
+              staffMap[t.operator].categories[t.category].count += 1;
+              staffMap[t.operator].categories[t.category].total += t.amountPaid;
             }
           });
           const staffEntries = Object.values(staffMap).sort((a, b) => b.total - a.total);
           if (staffEntries.length === 0) return null;
           const staffGrandTotal = staffEntries.reduce((s, e) => s + e.total, 0);
+          const activeCats = categories.filter(cat => transactions.some(t => t.category === cat && t.operator && t.operator !== '—'));
           return (
             <Card className="border-l-4 border-l-emerald-400">
               <CardHeader className="pb-2">
                 <CardTitle className="text-lg flex items-center gap-2">
                   <Users className="w-5 h-5 text-emerald-600" />
-                  Staff Collection Summary
+                  Staff Collection — Detailed Breakdown
                 </CardTitle>
+                <p className="text-xs text-muted-foreground">Per-staff revenue breakdown by service category</p>
               </CardHeader>
               <CardContent className="p-0">
-                <Table>
-                  <TableHeader>
-                    <TableRow className="bg-emerald-50/50">
-                      <TableHead className="w-[50px] font-semibold text-center">Sr #</TableHead>
-                      <TableHead className="font-semibold">Staff Name</TableHead>
-                      <TableHead className="font-semibold text-center">Transactions</TableHead>
-                      <TableHead className="font-semibold text-right">Total Collected</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {staffEntries.map((entry, idx) => (
-                      <TableRow key={entry.name}>
-                        <TableCell className="text-center text-xs">{idx + 1}</TableCell>
-                        <TableCell className="text-sm font-medium">{entry.name}</TableCell>
-                        <TableCell className="text-center text-sm">{entry.count}</TableCell>
-                        <TableCell className="text-right font-medium text-emerald-700">{formatPkrAmount(entry.total)}</TableCell>
+                <div className="overflow-x-auto">
+                  <Table className="min-w-[700px]">
+                    <TableHeader>
+                      <TableRow className="bg-emerald-50/50">
+                        <TableHead className="w-[50px] font-semibold text-center">Sr #</TableHead>
+                        <TableHead className="font-semibold">Staff Member</TableHead>
+                        {activeCats.map(cat => {
+                          const config = categoryConfig[cat];
+                          return (
+                            <TableHead key={cat} className="font-semibold text-right text-xs">
+                              {config?.label?.replace(' Services', '').replace(' Consultations', '') || cat}
+                            </TableHead>
+                          );
+                        })}
+                        <TableHead className="font-semibold text-center">Total Txns</TableHead>
+                        <TableHead className="font-semibold text-right">Total Collected</TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                  <TableFooter>
-                    <TableRow className="bg-emerald-50/80">
-                      <TableCell colSpan={3} className="text-right font-bold">Total Staff Collection :</TableCell>
-                      <TableCell className="text-right font-bold text-emerald-700">{formatPkrAmount(staffGrandTotal)}</TableCell>
-                    </TableRow>
-                  </TableFooter>
-                </Table>
+                    </TableHeader>
+                    <TableBody>
+                      {staffEntries.map((entry, idx) => (
+                        <TableRow key={entry.name}>
+                          <TableCell className="text-center text-xs">{idx + 1}</TableCell>
+                          <TableCell className="text-sm font-medium">{entry.name}</TableCell>
+                          {activeCats.map(cat => (
+                            <TableCell key={cat} className="text-right text-sm">
+                              {entry.categories[cat] ? (
+                                <div>
+                                  <span className="font-medium">{formatPkrAmount(entry.categories[cat].total)}</span>
+                                  <span className="text-xs text-muted-foreground ml-1">({entry.categories[cat].count})</span>
+                                </div>
+                              ) : (
+                                <span className="text-muted-foreground">—</span>
+                              )}
+                            </TableCell>
+                          ))}
+                          <TableCell className="text-center text-sm font-medium">{entry.count}</TableCell>
+                          <TableCell className="text-right font-bold text-emerald-700">{formatPkrAmount(entry.total)}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                    <TableFooter>
+                      <TableRow className="bg-emerald-50/80">
+                        <TableCell colSpan={2} className="text-right font-bold">Totals :</TableCell>
+                        {activeCats.map(cat => {
+                          const catTotal = staffEntries.reduce((s, e) => s + (e.categories[cat]?.total || 0), 0);
+                          return (
+                            <TableCell key={cat} className="text-right font-bold text-sm">
+                              {catTotal > 0 ? formatPkrAmount(catTotal) : '—'}
+                            </TableCell>
+                          );
+                        })}
+                        <TableCell className="text-center font-bold">{staffEntries.reduce((s, e) => s + e.count, 0)}</TableCell>
+                        <TableCell className="text-right font-bold text-emerald-700">{formatPkrAmount(staffGrandTotal)}</TableCell>
+                      </TableRow>
+                    </TableFooter>
+                  </Table>
+                </div>
               </CardContent>
             </Card>
           );
