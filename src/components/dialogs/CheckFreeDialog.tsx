@@ -160,7 +160,7 @@ export function CheckFreeDialog({ children }: CheckFreeDialogProps) {
       </DialogTrigger>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Check Free Appointment</DialogTitle>
+          <DialogTitle>Check Fee Appointment</DialogTitle>
         </DialogHeader>
         
         <div className="space-y-4">
