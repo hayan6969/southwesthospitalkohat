@@ -5,7 +5,7 @@ import { Calculator, ChartBar, Receipt, Users, Info, User, LogOut, Stethoscope, 
 import { useHospitalSettings } from "@/hooks/useHospitalSettings";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
-import { AdminDashboardNav } from "@/components/AdminDashboardNav";
+
 
 interface FinanceLayoutProps {
   children: ReactNode;
