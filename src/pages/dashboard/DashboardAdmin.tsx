@@ -332,6 +332,7 @@ export default function DashboardAdmin() {
                 <TabsTrigger value="emergency" className="whitespace-nowrap px-4 py-2 text-sm flex-1">Emergency</TabsTrigger>
                 <TabsTrigger value="logs" className="whitespace-nowrap px-4 py-2 text-sm flex-1">System Logs</TabsTrigger>
                 <TabsTrigger value="settings" className="whitespace-nowrap px-4 py-2 text-sm flex-1">Settings</TabsTrigger>
+                <TabsTrigger value="supplies" className="whitespace-nowrap px-4 py-2 text-sm flex-1">Supplies</TabsTrigger>
               </TabsList>
             </div>
 
