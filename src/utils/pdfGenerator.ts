@@ -3,6 +3,7 @@ import jsPDF from 'jspdf';
 import { formatPkrAmount } from './currency';
 import { supabase } from '@/integrations/supabase/client';
 import { getPatientContactNumber } from './patientUtils';
+import { formatInPakistanTime } from './timezone';
 
 // Get hospital settings for PDF branding
 const getHospitalSettings = async () => {
@@ -1030,7 +1031,7 @@ export const generateDailyClosingPDF = async (data: {
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(11);
   doc.setTextColor(100, 100, 100);
-  doc.text(`Closing Time: ${new Date(data.closingTime).toLocaleString()}`, pageWidth / 2, yPosition, { align: 'center' });
+  doc.text(`Closing Time: ${formatInPakistanTime(data.closingTime, 'PPP p')}`, pageWidth / 2, yPosition, { align: 'center' });
   yPosition += 25;
 
   // Helper function to check if new page is needed
@@ -1193,10 +1194,10 @@ export const generateDailyClosingPDF = async (data: {
   );
   yPosition += 10;
 
-  // Helper: determine shift from timestamp
+  // Helper: determine shift from timestamp in Pakistan time
   const getShiftFromTime = (dateStr: string): string => {
-    const hour = new Date(dateStr).getHours();
-    const pkHour = (hour + 5) % 24;
+    const pkHour = Number.parseInt(formatInPakistanTime(dateStr, 'H'), 10);
+    if (Number.isNaN(pkHour)) return 'Morning';
     if (pkHour >= 0 && pkHour < 8) return 'Night';
     if (pkHour >= 8 && pkHour < 14) return 'Morning';
     return 'Evening';
@@ -1204,13 +1205,10 @@ export const generateDailyClosingPDF = async (data: {
 
   const formatTime = (dateStr: string): string => {
     try {
-      const d = new Date(dateStr);
-      const h = (d.getHours() + 5) % 24;
-      const m = d.getMinutes();
-      const ampm = h >= 12 ? 'PM' : 'AM';
-      const hh = h % 12 || 12;
-      return `${hh}:${String(m).padStart(2, '0')} ${ampm}`;
-    } catch { return '—'; }
+      return formatInPakistanTime(dateStr, 'h:mm a');
+    } catch {
+      return '—';
+    }
   };
 
   interface TxnItem {
@@ -2257,7 +2255,7 @@ export const generateDailyClosingSummaryPDF = async (data: {
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(11);
   doc.setTextColor(100, 100, 100);
-  doc.text(`Closing Time: ${new Date(data.closingTime).toLocaleString()}`, pageWidth / 2, yPosition, { align: 'center' });
+  doc.text(`Closing Time: ${formatInPakistanTime(data.closingTime, 'PPP p')}`, pageWidth / 2, yPosition, { align: 'center' });
   yPosition += 20;
 
   // ========== COMPUTE DATA ==========
