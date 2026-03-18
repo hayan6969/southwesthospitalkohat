@@ -8,12 +8,13 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { format, formatDistanceToNow } from "date-fns";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { formatPkrAmount } from "@/utils/currency";
 import { toast } from "sonner";
-import { Plus, Percent, Trash2, Search, Tag } from "lucide-react";
+import { Plus, Percent, Trash2, Search, Tag, Clock, CheckCircle2 } from "lucide-react";
 
 export default function FinanceDiscounts() {
   const { profile } = useAuth();
@@ -92,6 +93,8 @@ export default function FinanceDiscounts() {
       if (discountValue <= 0) throw new Error("Enter a valid discount value");
       if (discountType === 'percentage' && discountValue > 100) throw new Error("Percentage cannot exceed 100");
 
+      const expiresAt = new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString();
+
       const { error } = await supabase.from('patient_discounts').upsert({
         patient_id: selectedPatientId,
         discount_type: discountType,
@@ -99,6 +102,8 @@ export default function FinanceDiscounts() {
         notes,
         is_active: true,
         created_by: profile?.id,
+        expires_at: expiresAt,
+        used_at: null,
       }, { onConflict: 'patient_id' });
 
       if (error) throw error;
@@ -270,55 +275,72 @@ export default function FinanceDiscounts() {
                     <TableHead>Patient</TableHead>
                     <TableHead>Patient #</TableHead>
                     <TableHead>Discount</TableHead>
-                    <TableHead>Notes</TableHead>
+                    <TableHead>Expires</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filtered.map((d: any) => (
-                    <TableRow key={d.id}>
-                      <TableCell className="font-medium">
-                        {d.profile?.first_name} {d.profile?.last_name}
-                      </TableCell>
-                      <TableCell>{d.patient?.patient_number || 'N/A'}</TableCell>
-                      <TableCell>
-                        <Badge variant="secondary" className="gap-1">
-                          {d.discount_type === 'percentage' ? (
-                            <><Percent className="w-3 h-3" />{d.discount_value}%</>
-                          ) : (
-                            formatPkrAmount(d.discount_value)
-                          )}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-sm text-muted-foreground max-w-[200px] truncate">
-                        {d.notes || '—'}
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={d.is_active ? "default" : "outline"}>
-                          {d.is_active ? "Active" : "Inactive"}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => toggleDiscount.mutate({ id: d.id, is_active: !d.is_active })}
-                          >
-                            {d.is_active ? "Deactivate" : "Activate"}
-                          </Button>
-                          <Button
-                            variant="destructive"
-                            size="sm"
-                            onClick={() => deleteDiscount.mutate(d.id)}
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                  {filtered.map((d: any) => {
+                    const isExpired = d.expires_at && new Date(d.expires_at) < new Date();
+                    const isUsed = !!d.used_at;
+                    const statusLabel = isUsed ? "Used" : isExpired ? "Expired" : d.is_active ? "Active" : "Inactive";
+                    const statusVariant = isUsed ? "outline" : isExpired ? "destructive" : d.is_active ? "default" : "outline";
+
+                    return (
+                      <TableRow key={d.id} className={isUsed || isExpired ? 'opacity-60' : ''}>
+                        <TableCell className="font-medium">
+                          {d.profile?.first_name} {d.profile?.last_name}
+                        </TableCell>
+                        <TableCell>{d.patient?.patient_number || 'N/A'}</TableCell>
+                        <TableCell>
+                          <Badge variant="secondary" className="gap-1">
+                            {d.discount_type === 'percentage' ? (
+                              <><Percent className="w-3 h-3" />{d.discount_value}%</>
+                            ) : (
+                              formatPkrAmount(d.discount_value)
+                            )}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-sm">
+                          {isUsed ? (
+                            <span className="flex items-center gap-1 text-muted-foreground">
+                              <CheckCircle2 className="w-3.5 h-3.5" />
+                              Used {formatDistanceToNow(new Date(d.used_at), { addSuffix: true })}
+                            </span>
+                          ) : d.expires_at ? (
+                            <span className={`flex items-center gap-1 ${isExpired ? 'text-destructive' : 'text-muted-foreground'}`}>
+                              <Clock className="w-3.5 h-3.5" />
+                              {isExpired ? 'Expired' : formatDistanceToNow(new Date(d.expires_at), { addSuffix: true })}
+                            </span>
+                          ) : '—'}
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={statusVariant as any}>{statusLabel}</Badge>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex justify-end gap-2">
+                            {!isUsed && !isExpired && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => toggleDiscount.mutate({ id: d.id, is_active: !d.is_active })}
+                              >
+                                {d.is_active ? "Deactivate" : "Activate"}
+                              </Button>
+                            )}
+                            <Button
+                              variant="destructive"
+                              size="sm"
+                              onClick={() => deleteDiscount.mutate(d.id)}
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
                 </TableBody>
               </Table>
             </div>
