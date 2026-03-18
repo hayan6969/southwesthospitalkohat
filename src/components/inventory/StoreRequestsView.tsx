@@ -17,8 +17,6 @@ export function StoreRequestsView() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [filter, setFilter] = useState<string>("approved");
-  const [expenseDialog, setExpenseDialog] = useState<any>(null);
-  const [expenseForm, setExpenseForm] = useState({ amount: 0, bill_number: "", description: "" });
 
   const { data: requests, isLoading } = useQuery({
     queryKey: ["store-requests", filter],
