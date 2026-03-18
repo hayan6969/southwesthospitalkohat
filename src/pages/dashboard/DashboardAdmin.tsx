@@ -1189,6 +1189,10 @@ export default function DashboardAdmin() {
               <TabsContent value="supplies">
                 <MySupplyRequests />
               </TabsContent>
+
+              <TabsContent value="regions">
+                <RegionsTabContent />
+              </TabsContent>
             </Tabs>
 
             <EditUserDialog 
