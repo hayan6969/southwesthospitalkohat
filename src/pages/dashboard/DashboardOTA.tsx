@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { MySupplyRequests } from "@/components/inventory/MySupplyRequests";
 import { Calendar, User, Building2, Clock, FileText, Edit, Search, Filter, LogOut, ClipboardList, TrendingUp, ClipboardCheck, TestTube } from "lucide-react";
 import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
