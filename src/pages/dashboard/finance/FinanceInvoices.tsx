@@ -32,10 +32,19 @@ export default function FinanceInvoices() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('invoices')
-        .select('*')
+        .select('*, creator:profiles!invoices_created_by_fkey(first_name, last_name)')
         .neq('status', 'cancelled')
         .order('created_at', { ascending: false });
-      if (error) throw error;
+      if (error) {
+        // Fallback without join if FK doesn't exist
+        const { data: fallback, error: fallbackError } = await supabase
+          .from('invoices')
+          .select('*')
+          .neq('status', 'cancelled')
+          .order('created_at', { ascending: false });
+        if (fallbackError) throw fallbackError;
+        return fallback || [];
+      }
       return data || [];
     }
   });
@@ -631,6 +640,11 @@ export default function FinanceInvoices() {
         typeLabel = 'Emergency Consultation';
       }
       
+      const creatorProfile = (inv as any).creator;
+      const createdByName = creatorProfile
+        ? `${creatorProfile.first_name || ''} ${creatorProfile.last_name || ''}`.trim()
+        : null;
+
       return {
         ...inv,
         type,
@@ -638,7 +652,8 @@ export default function FinanceInvoices() {
         displayAmount: inv.amount,
         displayNumber: inv.invoice_number,
         displayDate: inv.created_at,
-        displayStatus: inv.status
+        displayStatus: inv.status,
+        createdByName,
       };
     }) || []),
     ...(pharmacyInvoices?.map(inv => ({
@@ -825,6 +840,7 @@ export default function FinanceInvoices() {
                 <TableHead>Type</TableHead>
                 <TableHead>Amount</TableHead>
                 <TableHead>Status</TableHead>
+                <TableHead>Created By</TableHead>
                 <TableHead>Date</TableHead>
                 <TableHead>Actions</TableHead>
               </TableRow>
@@ -855,6 +871,9 @@ export default function FinanceInvoices() {
                       {invoice.displayStatus}
                     </Badge>
                   </TableCell>
+                  <TableCell className="text-sm text-muted-foreground">
+                    {invoice.createdByName || '—'}
+                  </TableCell>
                   <TableCell>{format(new Date(invoice.displayDate!), 'MMM dd, yyyy')}</TableCell>
                   <TableCell>
                     <Button 
@@ -871,7 +890,7 @@ export default function FinanceInvoices() {
               ))}
               {paginatedInvoices.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-8 text-gray-500">
+                  <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                     No invoices found with the selected filters
                   </TableCell>
                 </TableRow>
