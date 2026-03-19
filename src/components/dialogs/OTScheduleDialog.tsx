@@ -480,8 +480,7 @@ export function OTScheduleDialog() {
         profile?.id
       );
       
-      const firstQueuePosition = await getNextQueuePosition(roomId, operationDate);
-      toast.success(`${selectedOperations.length} OT operation(s) scheduled successfully! Starting queue position: ${firstQueuePosition}. Invoice generated: ${invoiceNumber}`);
+      toast.success(`${selectedOperations.length} OT operation(s) scheduled successfully! Starting queue position: ${baseQueuePosition}. Invoice generated: ${invoiceNumber}`);
       
       // Trigger a refresh event to update the parent table
       window.dispatchEvent(new CustomEvent('otScheduleUpdate'));
