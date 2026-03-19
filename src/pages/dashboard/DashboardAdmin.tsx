@@ -41,6 +41,9 @@ import { RegionWiseReport } from "@/components/RegionWiseReport";
 import { RegionsTabContent } from "@/components/admin/RegionsTabContent";
 import { AuditLogDetailDialog } from "@/components/dialogs/AuditLogDetailDialog";
 import { AdminDashboardNav } from "@/components/AdminDashboardNav";
+import { useAllShifts, useCreateShift, useUpdateShift, useDeleteShift } from "@/hooks/useShifts";
+import { Badge } from "@/components/ui/badge";
+import { Edit2, Trash2, X, Check, Plus as PlusIcon } from "lucide-react";
 
 
 export default function DashboardAdmin() {
@@ -55,10 +58,23 @@ export default function DashboardAdmin() {
   const { toast: toastHook } = useToast();
   const updateUserStatus = useUpdateUserStatus();
   const deleteUser = useDeleteUser();
+  const { data: shifts, isLoading: shiftsLoading } = useAllShifts();
+  const createShift = useCreateShift();
+  const updateShiftMutation = useUpdateShift();
+  const deleteShiftMutation = useDeleteShift();
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [userToDelete, setUserToDelete] = useState<any>(null);
   const [editingUser, setEditingUser] = useState<any>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
+  
+  // Shift management state
+  const [newShiftName, setNewShiftName] = useState("");
+  const [newShiftStart, setNewShiftStart] = useState("08:00");
+  const [newShiftEnd, setNewShiftEnd] = useState("14:00");
+  const [editingShiftId, setEditingShiftId] = useState<string | null>(null);
+  const [editShiftName, setEditShiftName] = useState("");
+  const [editShiftStart, setEditShiftStart] = useState("");
+  const [editShiftEnd, setEditShiftEnd] = useState("");
   
   // Settings form state
   const [brandingForm, setBrandingForm] = useState({
@@ -1183,6 +1199,107 @@ export default function DashboardAdmin() {
                         </Button>
                       </div>
                     </div>
+                  </div>
+                </div>
+
+                {/* Shift Management */}
+                <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+                  <h4 className="text-lg font-semibold mb-4">Shift Management</h4>
+                  <p className="text-sm text-gray-500 mb-4">Create and manage staff shifts with custom timings</p>
+                  
+                  {/* Add new shift */}
+                  <div className="flex flex-wrap items-end gap-3 p-4 border rounded-lg bg-gray-50 mb-4">
+                    <div className="flex-1 min-w-[150px]">
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Shift Name</label>
+                      <Input value={newShiftName} onChange={(e) => setNewShiftName(e.target.value)} placeholder="e.g. Night" />
+                    </div>
+                    <div className="w-[140px]">
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Start Time</label>
+                      <Input type="time" value={newShiftStart} onChange={(e) => setNewShiftStart(e.target.value)} />
+                    </div>
+                    <div className="w-[140px]">
+                      <label className="block text-sm font-medium text-gray-700 mb-1">End Time</label>
+                      <Input type="time" value={newShiftEnd} onChange={(e) => setNewShiftEnd(e.target.value)} />
+                    </div>
+                    <Button 
+                      onClick={() => {
+                        if (!newShiftName.trim() || !newShiftStart || !newShiftEnd) {
+                          toast.error("Please fill in all shift fields");
+                          return;
+                        }
+                        createShift.mutate({
+                          name: newShiftName.trim(),
+                          start_time: newShiftStart + ":00",
+                          end_time: newShiftEnd + ":00",
+                        }, {
+                          onSuccess: () => {
+                            setNewShiftName("");
+                            setNewShiftStart("08:00");
+                            setNewShiftEnd("14:00");
+                          }
+                        });
+                      }}
+                      disabled={createShift.isPending}
+                      className="flex items-center gap-1"
+                    >
+                      <PlusIcon className="w-4 h-4" />
+                      Add Shift
+                    </Button>
+                  </div>
+
+                  {/* Existing shifts list */}
+                  <div className="space-y-2">
+                    {shiftsLoading ? (
+                      <p className="text-gray-500 text-sm">Loading shifts...</p>
+                    ) : !shifts?.length ? (
+                      <p className="text-gray-500 text-sm">No shifts configured yet. Add one above.</p>
+                    ) : (
+                      shifts.map((shift) => (
+                        <div key={shift.id} className="flex items-center justify-between p-3 border rounded-lg">
+                          {editingShiftId === shift.id ? (
+                            <div className="flex flex-wrap items-center gap-2 flex-1">
+                              <Input className="w-[150px]" value={editShiftName} onChange={(e) => setEditShiftName(e.target.value)} />
+                              <Input className="w-[130px]" type="time" value={editShiftStart} onChange={(e) => setEditShiftStart(e.target.value)} />
+                              <Input className="w-[130px]" type="time" value={editShiftEnd} onChange={(e) => setEditShiftEnd(e.target.value)} />
+                              <Button size="sm" variant="ghost" onClick={() => {
+                                updateShiftMutation.mutate({
+                                  id: editingShiftId,
+                                  name: editShiftName.trim(),
+                                  start_time: editShiftStart + ":00",
+                                  end_time: editShiftEnd + ":00",
+                                }, { onSuccess: () => setEditingShiftId(null) });
+                              }}>
+                                <Check className="w-4 h-4 text-green-600" />
+                              </Button>
+                              <Button size="sm" variant="ghost" onClick={() => setEditingShiftId(null)}>
+                                <X className="w-4 h-4 text-red-500" />
+                              </Button>
+                            </div>
+                          ) : (
+                            <>
+                              <div className="flex items-center gap-3">
+                                <span className="font-medium">{shift.name}</span>
+                                <Badge variant="outline">{shift.start_time.slice(0,5)} - {shift.end_time.slice(0,5)}</Badge>
+                                {!shift.is_active && <Badge variant="secondary">Inactive</Badge>}
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <Button size="sm" variant="ghost" onClick={() => {
+                                  setEditingShiftId(shift.id);
+                                  setEditShiftName(shift.name);
+                                  setEditShiftStart(shift.start_time.slice(0, 5));
+                                  setEditShiftEnd(shift.end_time.slice(0, 5));
+                                }}>
+                                  <Edit2 className="w-4 h-4" />
+                                </Button>
+                                <Button size="sm" variant="ghost" onClick={() => deleteShiftMutation.mutate(shift.id)} disabled={deleteShiftMutation.isPending}>
+                                  <Trash2 className="w-4 h-4 text-red-500" />
+                                </Button>
+                              </div>
+                            </>
+                          )}
+                        </div>
+                      ))
+                    )}
                   </div>
                 </div>
               </TabsContent>
