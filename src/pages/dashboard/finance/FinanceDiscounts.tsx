@@ -265,7 +265,10 @@ export default function FinanceDiscounts() {
             </div>
           </DialogContent>
         </Dialog>
+        </div>
       </div>
+
+      <PreviousBillDiscountDialog open={prevBillDialogOpen} onOpenChange={setPrevBillDialogOpen} />
 
       <Card>
         <CardHeader>
