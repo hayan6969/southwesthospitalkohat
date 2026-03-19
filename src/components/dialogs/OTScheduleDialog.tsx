@@ -246,6 +246,7 @@ export function OTScheduleDialog() {
 
     if (!patientId) {
       toast.error("Please select or register a patient");
+      setSubmitting(false);
       return;
     }
 
