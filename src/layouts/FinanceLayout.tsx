@@ -43,6 +43,7 @@ export default function FinanceLayout({ children }: FinanceLayoutProps) {
       case "expenses": navigate("/dashboard/finance/expenses"); break;
       case "payroll": navigate("/dashboard/finance/payroll"); break;
       case "doctor-payments": navigate("/dashboard/finance/doctor-payments"); break;
+      case "staff-payments": navigate("/dashboard/finance/staff-payments"); break;
       case "pharmacy": navigate("/dashboard/finance/pharmacy"); break;
       case "refunds": navigate("/dashboard/finance/refunds"); break;
       case "invoices": navigate("/dashboard/finance/invoices"); break;
