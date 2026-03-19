@@ -251,14 +251,12 @@ export function OTScheduleDialog() {
     }
 
     try {
-      // Get next queue position
-      const queuePosition = await getNextQueuePosition(roomId, operationDate);
+      const baseQueuePosition = await getNextQueuePosition(roomId, operationDate);
 
-      // Create OT schedules for each selected operation
+      // Create OT schedules for each selected operation with deterministic queue positions
       const schedulePromises = selectedOperations.map(async (operationId, index) => {
         const operation = operations.find(op => op.id === operationId);
         const operationCost = operation?.expenses.reduce((sum, exp) => sum + exp.cost, 0) || 0;
-        const queuePosition = await getNextQueuePosition(roomId, operationDate);
 
         return supabase
           .from("ot_schedules")
@@ -269,11 +267,11 @@ export function OTScheduleDialog() {
               const doctorProfile = doctorNames?.find(d => d.id === doctorId);
               return `Dr. ${doctorProfile?.first_name} ${doctorProfile?.last_name}`;
             })(),
-            doctor_expense: selectedOperations.length > 1 && index > 0 ? 0 : (parseFloat(doctorExpense) || 0), // Only charge doctor fee once
+            doctor_expense: selectedOperations.length > 1 && index > 0 ? 0 : (parseFloat(doctorExpense) || 0),
             operation_id: operationId,
             room_id: roomId,
             operation_date: operationDate,
-            queue_position: queuePosition + index, // Sequential positions
+            queue_position: baseQueuePosition + index,
             notes: notes.trim() || null,
             total_cost: operationCost + (selectedOperations.length > 1 && index > 0 ? 0 : (parseFloat(doctorExpense) || 0)),
             status: 'pending'
