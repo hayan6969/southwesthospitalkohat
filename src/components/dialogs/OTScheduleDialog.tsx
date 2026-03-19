@@ -77,6 +77,7 @@ import { cn } from "@/lib/utils";
       } catch (error) {
         toast.error("Failed to register patient");
         console.error("Error creating patient:", error);
+        submissionLockRef.current = false;
         setSubmitting(false);
         return;
       }
@@ -84,6 +85,7 @@ import { cn } from "@/lib/utils";
 
     if (!patientId) {
       toast.error("Please select or register a patient");
+      submissionLockRef.current = false;
       setSubmitting(false);
       return;
     }
