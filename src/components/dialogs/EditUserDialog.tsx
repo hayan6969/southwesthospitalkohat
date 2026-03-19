@@ -41,6 +41,7 @@ export function EditUserDialog({ user, open, onOpenChange, onUserUpdated }: Edit
   const [loading, setLoading] = useState(false);
 
   const { data: departments } = useDepartments();
+  const { data: shifts } = useShifts();
 
   useEffect(() => {
     if (user && open) {
