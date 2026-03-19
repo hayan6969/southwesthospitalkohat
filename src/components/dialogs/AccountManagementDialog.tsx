@@ -130,7 +130,7 @@ export function AccountManagementDialog() {
               <SelectTrigger>
                 <SelectValue placeholder="Select role" />
               </SelectTrigger>
-              <SelectContent className="bg-white z-[10000]">
+              <SelectContent className="bg-white z-[10000] max-h-[200px]" position="popper" side="bottom" portal={false}>
                 <SelectItem value="doctor">Doctor</SelectItem>
                 <SelectItem value="staff">Staff</SelectItem>
                 <SelectItem value="ota">OTA</SelectItem>
