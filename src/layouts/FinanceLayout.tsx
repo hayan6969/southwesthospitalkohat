@@ -108,7 +108,7 @@ export default function FinanceLayout({ children }: FinanceLayoutProps) {
 
         <Tabs value={getCurrentTab()} onValueChange={handleTabChange} className="w-full">
           <div className="overflow-x-auto -mx-3 px-3 sm:mx-0 sm:px-0 mb-4 sm:mb-8">
-            <TabsList className="inline-flex w-auto min-w-full sm:grid sm:w-full sm:grid-cols-5 lg:grid-cols-11">
+            <TabsList className="inline-flex w-auto min-w-full sm:grid sm:w-full sm:grid-cols-6 lg:grid-cols-12">
               <TabsTrigger value="dashboard" className="flex items-center gap-1.5 text-xs sm:text-sm whitespace-nowrap">
                 <Info className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                 Dashboard
