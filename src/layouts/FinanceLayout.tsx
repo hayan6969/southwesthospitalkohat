@@ -26,6 +26,7 @@ export default function FinanceLayout({ children }: FinanceLayoutProps) {
     if (path === "/dashboard/finance/expenses") return "expenses";
     if (path === "/dashboard/finance/payroll") return "payroll";
     if (path === "/dashboard/finance/doctor-payments") return "doctor-payments";
+    if (path === "/dashboard/finance/staff-payments") return "staff-payments";
     if (path === "/dashboard/finance/pharmacy") return "pharmacy";
     if (path === "/dashboard/finance/refunds") return "refunds";
     if (path === "/dashboard/finance/invoices") return "invoices";
