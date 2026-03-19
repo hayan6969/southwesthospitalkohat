@@ -87,7 +87,7 @@ export function AccountManagementDialog() {
           Create Account
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto z-[9999]">
         <DialogHeader>
           <DialogTitle>Create New Account</DialogTitle>
         </DialogHeader>
