@@ -200,12 +200,15 @@ export function OTScheduleDialog() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSubmitting(true);
+    
+    if (submitting) return; // Prevent double submission
     
     if (!selectedOperations.length || !roomId || !doctorId) {
       toast.error("Please select at least one operation, room, and doctor");
       return;
     }
+
+    setSubmitting(true);
 
     let patientId = selectedPatient?.id;
     
