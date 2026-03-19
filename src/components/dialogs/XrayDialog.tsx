@@ -241,7 +241,8 @@ export function XrayDialog({ open, onOpenChange, onSuccess }: XrayDialogProps) {
           description: `X-ray Tests: ${selectedTests.map(id => xrayTests?.find(t => t.id === id)?.name).filter(Boolean).join(', ')}${xrayDiscount.discountLabel ? ` (${xrayDiscount.discountLabel}, Original: Rs. ${xrayDiscount.originalAmount})` : ''}`,
           invoice_number: invoiceNumber,
           status: 'paid',
-          paid_at: new Date().toISOString()
+          paid_at: new Date().toISOString(),
+          created_by: user?.id || null
         }])
         .select()
         .single();

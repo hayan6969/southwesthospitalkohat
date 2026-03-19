@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useShifts } from "@/hooks/useShifts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,12 +12,13 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { formatPkrAmount } from "@/utils/currency";
-import { format, startOfDay, endOfDay } from "date-fns";
+import { addDays, endOfDay, format, startOfDay, subDays } from "date-fns";
 import { toast } from "sonner";
 import { Clock, CheckCircle, Send, FileText, Timer, AlertTriangle } from "lucide-react";
 
 export function StaffShiftClosing() {
   const { user, profile } = useAuth();
+  const { data: shifts } = useShifts();
   const queryClient = useQueryClient();
   const [overtimeHours, setOvertimeHours] = useState("");
   const [notes, setNotes] = useState("");
@@ -24,52 +26,76 @@ export function StaffShiftClosing() {
 
   const today = new Date();
   const staffShift = (profile as any)?.shift || "morning";
+  const activeShiftConfig = shifts?.find((shift) => shift.name.toLowerCase() === String(staffShift).toLowerCase());
 
-  // Fetch today's invoices created by this staff
+  const getShiftWindow = () => {
+    if (!activeShiftConfig) {
+      return { start: startOfDay(today), end: endOfDay(today) };
+    }
+
+    const [startHours, startMinutes = 0, startSeconds = 0] = activeShiftConfig.start_time.split(":").map(Number);
+    const [endHours, endMinutes = 0, endSeconds = 0] = activeShiftConfig.end_time.split(":").map(Number);
+
+    let start = new Date(today);
+    start.setHours(startHours, startMinutes, startSeconds, 0);
+
+    let end = new Date(today);
+    end.setHours(endHours, endMinutes, endSeconds, 0);
+
+    if (end <= start) {
+      const endToday = new Date(today);
+      endToday.setHours(endHours, endMinutes, endSeconds, 0);
+      if (today <= endToday) {
+        start = subDays(start, 1);
+      } else {
+        end = addDays(end, 1);
+      }
+    }
+
+    return { start, end };
+  };
+
+  const shiftWindow = getShiftWindow();
+
   const { data: todayRevenue, isLoading: revenueLoading } = useQuery({
-    queryKey: ['staff-shift-revenue', user?.id, format(today, 'yyyy-MM-dd')],
+    queryKey: ['staff-shift-revenue', user?.id, staffShift, shiftWindow.start.toISOString(), shiftWindow.end.toISOString()],
     queryFn: async () => {
       if (!user?.id) return null;
 
-      const dayStart = startOfDay(today).toISOString();
-      const dayEnd = endOfDay(today).toISOString();
-
       const { data: invoices, error } = await supabase
         .from('invoices')
-        .select('amount, description, invoice_number, created_at, status')
+        .select('amount, description, invoice_number, created_at, paid_at, status, created_by')
         .eq('created_by', user.id)
         .eq('status', 'paid')
-        .gte('created_at', dayStart)
-        .lte('created_at', dayEnd);
+        .gte('paid_at', shiftWindow.start.toISOString())
+        .lte('paid_at', shiftWindow.end.toISOString());
 
       if (error) throw error;
 
       let opd = 0, lab = 0, xray = 0, ot = 0, emergency = 0, misc = 0;
-      
-      for (const inv of (invoices || [])) {
+
+      for (const inv of invoices || []) {
         const desc = (inv.description || '').toLowerCase();
         const num = (inv.invoice_number || '').toLowerCase();
         const amount = Number(inv.amount) || 0;
 
-        if (num.startsWith('xray-') || desc.includes('x-ray') || desc.includes('xray')) {
+        if (num.startsWith('xr-') || num.startsWith('xray-') || desc.includes('x-ray') || desc.includes('xray')) {
           xray += amount;
         } else if (num.startsWith('lab-') || desc.includes('lab')) {
           lab += amount;
-        } else if (num.startsWith('ot-') || desc.includes('operation') || desc.includes('surgery')) {
+        } else if (num.startsWith('ot-') || desc.includes('ot procedure') || desc.includes('operation') || desc.includes('surgery')) {
           ot += amount;
         } else if (desc.includes('emergency')) {
           emergency += amount;
-        } else if (num.startsWith('opd-') || desc.includes('consultation') || desc.includes('opd')) {
+        } else if (num.startsWith('inv-') || num.startsWith('opd-') || desc.includes('consultation') || desc.includes('opd')) {
           opd += amount;
         } else {
           misc += amount;
         }
       }
 
-      const total = opd + lab + xray + ot + emergency + misc;
-
       return {
-        total,
+        total: opd + lab + xray + ot + emergency + misc,
         opd,
         lab,
         xray,
@@ -77,75 +103,62 @@ export function StaffShiftClosing() {
         emergency,
         misc,
         invoiceCount: invoices?.length || 0,
-        invoices: invoices || []
+        invoices: invoices || [],
       };
     },
     enabled: !!user?.id,
   });
 
-  // Fetch previous closings
   const { data: previousClosings } = useQuery({
     queryKey: ['staff-shift-closings', user?.id],
     queryFn: async () => {
       if (!user?.id) return [];
-      const { data, error } = await supabase
-        .from('staff_shift_closings')
-        .select('*')
-        .eq('staff_id', user.id)
-        .order('created_at', { ascending: false })
-        .limit(10);
-
+      const { data, error } = await supabase.from('staff_shift_closings').select('*').eq('staff_id', user.id).order('created_at', { ascending: false }).limit(10);
       if (error) throw error;
       return data || [];
     },
     enabled: !!user?.id,
   });
 
-  // Check if already closed today
-  const todayAlreadyClosed = previousClosings?.some(
-    c => c.closing_date === format(today, 'yyyy-MM-dd') && c.shift === staffShift
-  );
+  const todayAlreadyClosed = previousClosings?.some((c) => c.closing_date === format(today, 'yyyy-MM-dd') && c.shift === staffShift);
 
   const submitClosing = useMutation({
     mutationFn: async () => {
-      if (!user?.id || !todayRevenue) throw new Error("Missing data");
-
+      if (!user?.id || !todayRevenue) throw new Error('Missing data');
       const overtime = parseFloat(overtimeHours) || 0;
 
-      const { error } = await supabase
-        .from('staff_shift_closings')
-        .insert({
-          staff_id: user.id,
-          shift: staffShift,
-          closing_date: format(today, 'yyyy-MM-dd'),
-          shift_start_time: new Date().toISOString(),
-          shift_end_time: new Date().toISOString(),
-          total_revenue: todayRevenue.total,
-          opd_revenue: todayRevenue.opd,
-          lab_revenue: todayRevenue.lab,
-          xray_revenue: todayRevenue.xray,
-          ot_revenue: todayRevenue.ot,
-          emergency_revenue: todayRevenue.emergency,
-          misc_revenue: todayRevenue.misc,
-          total_invoices: todayRevenue.invoiceCount,
-          overtime_hours: overtime,
-          overtime_amount: 0,
-          status: 'pending',
-          notes: notes.trim() || null,
-          summary_data: { invoices: todayRevenue.invoices } as any,
-        });
+      const { error } = await supabase.from('staff_shift_closings').insert({
+        staff_id: user.id,
+        shift: staffShift,
+        closing_date: format(today, 'yyyy-MM-dd'),
+        shift_start_time: shiftWindow.start.toISOString(),
+        shift_end_time: shiftWindow.end.toISOString(),
+        total_revenue: todayRevenue.total,
+        opd_revenue: todayRevenue.opd,
+        lab_revenue: todayRevenue.lab,
+        xray_revenue: todayRevenue.xray,
+        ot_revenue: todayRevenue.ot,
+        emergency_revenue: todayRevenue.emergency,
+        misc_revenue: todayRevenue.misc,
+        total_invoices: todayRevenue.invoiceCount,
+        overtime_hours: overtime,
+        overtime_amount: 0,
+        status: 'pending',
+        notes: notes.trim() || null,
+        summary_data: { invoices: todayRevenue.invoices } as any,
+      });
 
       if (error) throw error;
     },
     onSuccess: () => {
-      toast.success("Shift closing submitted to finance for approval");
+      toast.success('Shift closing submitted to finance for approval');
       queryClient.invalidateQueries({ queryKey: ['staff-shift-closings'] });
-      setOvertimeHours("");
-      setNotes("");
+      setOvertimeHours('');
+      setNotes('');
     },
     onError: (err: any) => {
-      toast.error("Failed to submit shift closing: " + err.message);
-    }
+      toast.error('Failed to submit shift closing: ' + err.message);
+    },
   });
 
   const revenueBreakdown = [

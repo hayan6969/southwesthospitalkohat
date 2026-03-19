@@ -833,6 +833,7 @@ export const useCreateLabOrderWithInvoice = () => {
 
       // Apply patient discount for lab orders
       const labDiscount = await applyPatientDiscount(labOrderData.patient_id, labOrderData.totalAmount, 'lab');
+      const { data: { user: currentUser } } = await supabase.auth.getUser();
 
       const { data: invoice, error: invoiceError } = await supabase
         .from('invoices')
@@ -842,7 +843,8 @@ export const useCreateLabOrderWithInvoice = () => {
           description: `${labOrderData.invoiceDescription}${labDiscount.discountLabel ? ` (${labDiscount.discountLabel}, Original: Rs. ${labDiscount.originalAmount})` : ''}`,
           invoice_number: labOrderData.invoiceNumber,
           status: 'paid',
-          paid_at: new Date().toISOString()
+          paid_at: new Date().toISOString(),
+          created_by: currentUser?.id || null
         }])
         .select()
         .single();
