@@ -231,6 +231,21 @@ export function EditUserDialog({ user, open, onOpenChange, onUserUpdated }: Edit
             </Select>
           </div>
 
+          {role === 'staff' && (
+            <div className="space-y-2">
+              <Label htmlFor="shift">Shift</Label>
+              <Select value={shift} onValueChange={setShift}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select shift" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="morning">Morning Shift</SelectItem>
+                  <SelectItem value="evening">Evening Shift</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
           <div className="flex justify-end space-x-2 pt-4">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancel

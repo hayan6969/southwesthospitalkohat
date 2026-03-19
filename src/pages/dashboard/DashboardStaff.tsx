@@ -145,6 +145,9 @@ export default function DashboardStaff() {
             <TabsContent value="invoices" className="mt-4 sm:mt-6">
               <StaffInvoices />
             </TabsContent>
+            <TabsContent value="shift-closing" className="mt-4 sm:mt-6">
+              <StaffShiftClosing />
+            </TabsContent>
             <TabsContent value="supplies" className="mt-4 sm:mt-6">
               <MySupplyRequests />
             </TabsContent>
