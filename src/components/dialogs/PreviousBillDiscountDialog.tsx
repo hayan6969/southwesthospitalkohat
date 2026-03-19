@@ -131,17 +131,28 @@ export function PreviousBillDiscountDialog({ open, onOpenChange }: Props) {
         ? `${profile.first_name} ${profile.last_name}`
         : "N/A";
 
-      // Create refund entry
-      const { error: refundError } = await supabase.from("refunds").insert({
-        amount: discountAmount,
-        refund_type: "discount_adjustment",
-        description: `Discount on previous bill ${selectedInvoice.invoice_number} - ${discountLabel}. Patient: ${patientName}. Reason: ${reason || "N/A"}`,
-        patient_id: selectedInvoice.patient_id,
-        related_record_id: selectedInvoice.id,
-        processed_by: profile?.id,
-      });
+      // Create refund entry and update invoice amount in parallel
+      const newInvoiceAmount = selectedInvoice.amount - discountAmount;
+      const [refundResult, invoiceUpdateResult] = await Promise.all([
+        supabase.from("refunds").insert({
+          amount: discountAmount,
+          refund_type: "discount_adjustment",
+          description: `Discount on previous bill ${selectedInvoice.invoice_number} - ${discountLabel}. Patient: ${patientName}. Billed by: ${billedByStaff}. Reason: ${reason || "N/A"}`,
+          patient_id: selectedInvoice.patient_id,
+          related_record_id: selectedInvoice.id,
+          processed_by: profile?.id,
+        }),
+        // Reduce the invoice amount so revenue stats reflect the actual collected amount
+        supabase.from("invoices").update({
+          amount: newInvoiceAmount,
+          description: `${selectedInvoice.description || ''} [Adjusted: ${discountLabel}, Refund: ${formatPkrAmount(discountAmount)}]`,
+        }).eq("id", selectedInvoice.id),
+      ]);
 
-      if (refundError) throw refundError;
+      if (refundResult.error) throw refundResult.error;
+      if (invoiceUpdateResult.error) {
+        console.error("Failed to update invoice amount:", invoiceUpdateResult.error);
+      }
 
       // Generate refund receipt PDF
       await generateRefundReceiptPDF({
