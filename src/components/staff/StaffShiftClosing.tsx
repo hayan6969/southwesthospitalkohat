@@ -20,6 +20,7 @@ export function StaffShiftClosing() {
   const queryClient = useQueryClient();
   const [overtimeHours, setOvertimeHours] = useState("");
   const [notes, setNotes] = useState("");
+  const [confirmOpen, setConfirmOpen] = useState(false);
 
   const today = new Date();
   const staffShift = (profile as any)?.shift || "morning";
