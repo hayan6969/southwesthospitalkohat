@@ -60,6 +60,7 @@ export function AccountManagementDialog() {
         setPhone("");
         setRole("");
         setDepartmentId("");
+        setShift("");
       }
     } catch (error) {
       toast.error("Failed to create account");
