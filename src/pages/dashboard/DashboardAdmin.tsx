@@ -58,10 +58,23 @@ export default function DashboardAdmin() {
   const { toast: toastHook } = useToast();
   const updateUserStatus = useUpdateUserStatus();
   const deleteUser = useDeleteUser();
+  const { data: shifts, isLoading: shiftsLoading } = useAllShifts();
+  const createShift = useCreateShift();
+  const updateShiftMutation = useUpdateShift();
+  const deleteShiftMutation = useDeleteShift();
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [userToDelete, setUserToDelete] = useState<any>(null);
   const [editingUser, setEditingUser] = useState<any>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
+  
+  // Shift management state
+  const [newShiftName, setNewShiftName] = useState("");
+  const [newShiftStart, setNewShiftStart] = useState("08:00");
+  const [newShiftEnd, setNewShiftEnd] = useState("14:00");
+  const [editingShiftId, setEditingShiftId] = useState<string | null>(null);
+  const [editShiftName, setEditShiftName] = useState("");
+  const [editShiftStart, setEditShiftStart] = useState("");
+  const [editShiftEnd, setEditShiftEnd] = useState("");
   
   // Settings form state
   const [brandingForm, setBrandingForm] = useState({
