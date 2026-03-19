@@ -75,8 +75,9 @@ export function EditUserDialog({ user, open, onOpenChange, onUserUpdated }: Edit
           phone: phone.trim() || null,
           role: role,
           department_id: departmentId || null,
+          shift: shift || null,
           updated_at: new Date().toISOString()
-        })
+        } as any)
         .eq('id', user.id);
 
       if (profileError) throw profileError;
