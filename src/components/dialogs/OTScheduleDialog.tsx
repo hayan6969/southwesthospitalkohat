@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useCreatePatientWithProfile, useDoctors } from "@/hooks/useDatabase";
 import { useSearchPatientsWithNames, useDoctorNames } from "@/hooks/useDisplayHelpers";
 import { useAuditLogger } from "@/hooks/useAuditLogger";
@@ -20,59 +20,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { applyPatientDiscount } from "@/utils/discountUtils";
 import { formatPkrAmount } from "@/utils/currency";
 import { cn } from "@/lib/utils";
-
-interface OTOperation {
-  id: string;
-  operation_name: string;
-  expenses: {
-    id: string;
-    expense_name: string;
-    cost: number;
-  }[];
-}
-
-interface OTRoom {
-  id: string;
-  room_name: string;
-  is_available: boolean;
-}
-
-export function OTScheduleDialog() {
-  const [open, setOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState("search");
-  // doctorOpen state removed - using Select instead of Popover+Command
-  const [operationOpen, setOperationOpen] = useState(false);
-  
-  
-  // Search existing patient
-  const [searchTerm, setSearchTerm] = useState("");
-  const [selectedPatient, setSelectedPatient] = useState<any>(null);
-  
-  // New patient registration
-  const [newPatient, setNewPatient] = useState({
-    first_name: "",
-    last_name: "",
-    phone: "",
-    cnic: "",
-    date_of_birth: "",
-    address: "",
-    blood_type: "",
-    allergies: ""
-  });
-  
-  // OT Schedule details
-  const [doctorId, setDoctorId] = useState("");
-  const [doctorExpense, setDoctorExpense] = useState<string>("");
-  const [operationDate, setOperationDate] = useState(new Date().toISOString().split('T')[0]);
-  const [selectedOperations, setSelectedOperations] = useState<string[]>([]);
-  const [operationSearchQuery, setOperationSearchQuery] = useState("");
-  const [roomId, setRoomId] = useState("");
-  const [notes, setNotes] = useState("");
-  
+...
   // Data
   const [operations, setOperations] = useState<OTOperation[]>([]);
   const [rooms, setRooms] = useState<OTRoom[]>([]);
   const [submitting, setSubmitting] = useState(false);
+  const submissionLockRef = useRef(false);
   
   const createPatientWithProfile = useCreatePatientWithProfile();
   const { data: doctors } = useDoctors();
@@ -80,134 +33,18 @@ export function OTScheduleDialog() {
   const { data: searchResults } = useSearchPatientsWithNames(searchTerm);
   const { logAction } = useAuditLogger();
   const { profile } = useAuth();
-
-  useEffect(() => {
-    fetchOperations();
-    fetchRooms();
-  }, []);
-
-  const fetchOperations = async () => {
-    try {
-      const { data, error } = await supabase
-        .from("ot_operations")
-        .select(`
-          id,
-          operation_name,
-          ot_expenses (
-            id,
-            expense_name,
-            cost
-          )
-        `);
-
-      if (error) throw error;
-      
-      const formattedOperations = data?.map(op => ({
-        ...op,
-        expenses: op.ot_expenses || []
-      })) || [];
-
-      setOperations(formattedOperations);
-    } catch (error) {
-      console.error("Error fetching operations:", error);
-    }
-  };
-
-  const fetchRooms = async () => {
-    try {
-      const { data, error } = await supabase
-        .from("ot_rooms")
-        .select("*")
-        .eq("is_available", true)
-        .order("room_name", { ascending: true });
-
-      if (error) throw error;
-      setRooms(data || []);
-    } catch (error) {
-      console.error("Error fetching rooms:", error);
-    }
-  };
-
-  // Filter operations based on search
-  const filteredOperations = operations.filter(op =>
-    op.operation_name.toLowerCase().includes(operationSearchQuery.toLowerCase())
-  );
-
-  const getSelectedOperationsDetails = () => {
-    return operations.filter(op => selectedOperations.includes(op.id));
-  };
-
-  const getTotalOperationCost = () => {
-    return getSelectedOperationsDetails().reduce((total, op) => {
-      return total + op.expenses.reduce((sum, exp) => sum + exp.cost, 0);
-    }, 0);
-  };
-
-  const totalCost = getTotalOperationCost() + (parseFloat(doctorExpense) || 0);
-
-  const resetForm = () => {
-    setSearchTerm("");
-    setSelectedPatient(null);
-    setNewPatient({
-      first_name: "",
-      last_name: "",
-      phone: "",
-      cnic: "",
-      date_of_birth: "",
-      address: "",
-      blood_type: "",
-      allergies: ""
-    });
-    setDoctorId("");
-    setDoctorExpense("");
-    setOperationDate(new Date().toISOString().split('T')[0]);
-    setSelectedOperations([]);
-    setOperationSearchQuery("");
-    setRoomId("");
-    setNotes("");
-    setActiveTab("search");
-  };
-
-  const toggleOperationSelection = (operationId: string) => {
-    setSelectedOperations(prev => 
-      prev.includes(operationId) 
-        ? prev.filter(id => id !== operationId)
-        : [...prev, operationId]
-    );
-  };
-
-  const handleDoctorChange = (selectedDoctorId: string) => {
-    setDoctorId(selectedDoctorId);
-    // Doctor expense should be manually entered for OT operations
-    // Not automatically set from consultation fee
-  };
-
-  const getNextQueuePosition = async (roomUuid: string, opDate: string) => {
-    try {
-      const { data, error } = await supabase.rpc('get_next_ot_queue_position', {
-        room_uuid: roomUuid,
-        operation_date_param: opDate
-      });
-      
-      if (error) throw error;
-      return data || 1;
-    } catch (error) {
-      console.error("Error getting queue position:", error);
-      return 1;
-    }
-  };
-
-
+...
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (submitting) return; // Prevent double submission
+    if (submissionLockRef.current || submitting) return;
     
     if (!selectedOperations.length || !roomId || !doctorId) {
       toast.error("Please select at least one operation, room, and doctor");
       return;
     }
 
+    submissionLockRef.current = true;
     setSubmitting(true);
 
     let patientId = selectedPatient?.id;
@@ -216,6 +53,7 @@ export function OTScheduleDialog() {
     if (activeTab === "register") {
       if (!newPatient.first_name.trim() || !newPatient.last_name.trim() || !newPatient.phone.trim() || !newPatient.cnic.trim()) {
         toast.error("Please fill in all required patient fields");
+        submissionLockRef.current = false;
         setSubmitting(false);
         return;
       }
