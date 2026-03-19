@@ -890,7 +890,7 @@ export default function FinanceInvoices() {
               ))}
               {paginatedInvoices.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-8 text-gray-500">
+                  <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                     No invoices found with the selected filters
                   </TableCell>
                 </TableRow>
