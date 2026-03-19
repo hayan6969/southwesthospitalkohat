@@ -21,6 +21,7 @@ export default function FinanceDiscounts() {
   const { profile } = useAuth();
   const queryClient = useQueryClient();
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [prevBillDialogOpen, setPrevBillDialogOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [patientSearch, setPatientSearch] = useState("");
   const [selectedPatientId, setSelectedPatientId] = useState("");
