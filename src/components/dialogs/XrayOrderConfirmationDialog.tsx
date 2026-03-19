@@ -181,7 +181,7 @@ export function XrayOrderConfirmationDialog({
               disabled={isProcessing}
               className="min-w-[140px]"
             >
-              {isProcessing ? "Processing..." : "Confirm & Create Order"}
+              {isProcessing ? "Processing..." : `Confirm & Create Order (${formatPkrAmount(confirmationData.discountedAmount ?? confirmationData.totalAmount)})`}
             </Button>
           </div>
         </div>
