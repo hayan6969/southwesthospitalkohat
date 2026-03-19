@@ -25,6 +25,7 @@ export function AccountManagementDialog() {
 
   const { createUserAccount } = useAuth();
   const { data: departments } = useDepartments();
+  const { data: shifts } = useShifts();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
