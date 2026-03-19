@@ -19,6 +19,7 @@ export function AccountManagementDialog() {
   const [phone, setPhone] = useState("");
   const [role, setRole] = useState("");
   const [departmentId, setDepartmentId] = useState("");
+  const [shift, setShift] = useState("");
   const [loading, setLoading] = useState(false);
 
   const { createUserAccount } = useAuth();
