@@ -175,7 +175,7 @@ export function LabOrderConfirmationDialog({
                   Processing...
                 </>
               ) : (
-                `Confirm & Create Order (${formatPkrAmount(confirmationData.totalAmount)})`
+                `Confirm & Create Order (${formatPkrAmount(confirmationData.discountedAmount ?? confirmationData.totalAmount)})`
               )}
             </Button>
           </div>
