@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useDepartments } from "@/hooks/useDatabase";
+import { useShifts } from "@/hooks/useShifts";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,6 +25,7 @@ export function AccountManagementDialog() {
 
   const { createUserAccount } = useAuth();
   const { data: departments } = useDepartments();
+  const { data: shifts } = useShifts();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -197,8 +199,11 @@ export function AccountManagementDialog() {
                       <SelectValue placeholder="Select shift" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="morning">Morning Shift</SelectItem>
-                      <SelectItem value="evening">Evening Shift</SelectItem>
+                      {shifts?.map((s) => (
+                        <SelectItem key={s.id} value={s.name.toLowerCase()}>
+                          {s.name} ({s.start_time.slice(0,5)} - {s.end_time.slice(0,5)})
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>

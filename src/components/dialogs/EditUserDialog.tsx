@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useDepartments } from "@/hooks/useDatabase";
+import { useShifts } from "@/hooks/useShifts";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -40,6 +41,7 @@ export function EditUserDialog({ user, open, onOpenChange, onUserUpdated }: Edit
   const [loading, setLoading] = useState(false);
 
   const { data: departments } = useDepartments();
+  const { data: shifts } = useShifts();
 
   useEffect(() => {
     if (user && open) {
@@ -239,8 +241,11 @@ export function EditUserDialog({ user, open, onOpenChange, onUserUpdated }: Edit
                   <SelectValue placeholder="Select shift" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="morning">Morning Shift</SelectItem>
-                  <SelectItem value="evening">Evening Shift</SelectItem>
+                  {shifts?.map((s) => (
+                    <SelectItem key={s.id} value={s.name.toLowerCase()}>
+                      {s.name} ({s.start_time.slice(0,5)} - {s.end_time.slice(0,5)})
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
