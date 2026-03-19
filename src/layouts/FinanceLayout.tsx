@@ -137,6 +137,10 @@ export default function FinanceLayout({ children }: FinanceLayoutProps) {
                 <Stethoscope className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                 Dr. Payments
               </TabsTrigger>
+              <TabsTrigger value="staff-payments" className="flex items-center gap-1.5 text-xs sm:text-sm whitespace-nowrap">
+                <Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                Staff Shifts
+              </TabsTrigger>
               <TabsTrigger value="pharmacy" className="flex items-center gap-1.5 text-xs sm:text-sm whitespace-nowrap">
                 <Pill className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                 Pharmacy
