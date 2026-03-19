@@ -111,6 +111,12 @@ export const generateLabInvoicePDF = async (data: {
   }>;
   totalAmount: number;
   issueDate: string;
+  discount?: {
+    originalAmount: number;
+    discountedAmount: number;
+    discountApplied: number;
+    discountLabel: string | null;
+  };
 }) => {
   const doc = new jsPDF();
   const pageWidth = doc.internal.pageSize.width;
