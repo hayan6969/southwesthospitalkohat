@@ -87,7 +87,7 @@ export function AccountManagementDialog() {
           Create Account
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto z-[9999]">
         <DialogHeader>
           <DialogTitle>Create New Account</DialogTitle>
         </DialogHeader>
@@ -130,7 +130,7 @@ export function AccountManagementDialog() {
               <SelectTrigger>
                 <SelectValue placeholder="Select role" />
               </SelectTrigger>
-              <SelectContent className="bg-white z-50">
+              <SelectContent className="bg-white z-[10000]">
                 <SelectItem value="doctor">Doctor</SelectItem>
                 <SelectItem value="staff">Staff</SelectItem>
                 <SelectItem value="ota">OTA</SelectItem>

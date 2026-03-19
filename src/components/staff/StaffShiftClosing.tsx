@@ -9,16 +9,18 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { formatPkrAmount } from "@/utils/currency";
 import { format, startOfDay, endOfDay } from "date-fns";
 import { toast } from "sonner";
-import { Clock, CheckCircle, Send, FileText, Timer } from "lucide-react";
+import { Clock, CheckCircle, Send, FileText, Timer, AlertTriangle } from "lucide-react";
 
 export function StaffShiftClosing() {
   const { user, profile } = useAuth();
   const queryClient = useQueryClient();
   const [overtimeHours, setOvertimeHours] = useState("");
   const [notes, setNotes] = useState("");
+  const [confirmOpen, setConfirmOpen] = useState(false);
 
   const today = new Date();
   const staffShift = (profile as any)?.shift || "morning";
@@ -239,12 +241,12 @@ export function StaffShiftClosing() {
                 </div>
               ) : (
                 <Button
-                  onClick={() => submitClosing.mutate()}
+                  onClick={() => setConfirmOpen(true)}
                   disabled={submitClosing.isPending || !todayRevenue}
                   className="w-full bg-blue-600 hover:bg-blue-700"
                 >
                   <Send className="w-4 h-4 mr-2" />
-                  {submitClosing.isPending ? "Submitting..." : "Close Shift & Submit to Finance"}
+                  Close Shift & Submit to Finance
                 </Button>
               )}
             </>
@@ -310,6 +312,69 @@ export function StaffShiftClosing() {
           )}
         </CardContent>
       </Card>
+      {/* Confirmation Dialog */}
+      <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+        <DialogContent className="max-w-md z-[9999]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="w-5 h-5 text-amber-500" />
+              Confirm Shift Closing
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <p className="text-sm text-muted-foreground">
+              Are you sure you want to close your <strong>{staffShift}</strong> shift? This will submit the following summary to finance for approval:
+            </p>
+            <div className="p-3 rounded-lg bg-muted space-y-1">
+              <div className="flex justify-between text-sm">
+                <span>Total Revenue</span>
+                <span className="font-bold">{formatPkrAmount(todayRevenue?.total || 0)}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span>Invoices</span>
+                <span className="font-semibold">{todayRevenue?.invoiceCount || 0}</span>
+              </div>
+              {parseFloat(overtimeHours) > 0 && (
+                <div className="flex justify-between text-sm">
+                  <span>Overtime Hours</span>
+                  <span className="font-semibold">{overtimeHours}h</span>
+                </div>
+              )}
+            </div>
+            <div className="grid grid-cols-3 gap-2 text-xs">
+              {[
+                { label: 'OPD', val: todayRevenue?.opd },
+                { label: 'Lab', val: todayRevenue?.lab },
+                { label: 'X-Ray', val: todayRevenue?.xray },
+                { label: 'OT', val: todayRevenue?.ot },
+                { label: 'Emergency', val: todayRevenue?.emergency },
+                { label: 'Misc', val: todayRevenue?.misc },
+              ].map(i => (
+                <div key={i.label} className="p-2 rounded border text-center">
+                  <p className="text-muted-foreground">{i.label}</p>
+                  <p className="font-semibold">{formatPkrAmount(Number(i.val) || 0)}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setConfirmOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={() => {
+                setConfirmOpen(false);
+                submitClosing.mutate();
+              }}
+              disabled={submitClosing.isPending}
+              className="bg-blue-600 hover:bg-blue-700"
+            >
+              <CheckCircle className="w-4 h-4 mr-2" />
+              {submitClosing.isPending ? "Submitting..." : "Confirm & Submit"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
