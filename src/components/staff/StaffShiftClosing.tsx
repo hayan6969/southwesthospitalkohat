@@ -9,10 +9,11 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { formatPkrAmount } from "@/utils/currency";
 import { format, startOfDay, endOfDay } from "date-fns";
 import { toast } from "sonner";
-import { Clock, CheckCircle, Send, FileText, Timer } from "lucide-react";
+import { Clock, CheckCircle, Send, FileText, Timer, AlertTriangle } from "lucide-react";
 
 export function StaffShiftClosing() {
   const { user, profile } = useAuth();
