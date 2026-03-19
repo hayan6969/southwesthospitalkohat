@@ -199,8 +199,11 @@ export function AccountManagementDialog() {
                       <SelectValue placeholder="Select shift" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="morning">Morning Shift</SelectItem>
-                      <SelectItem value="evening">Evening Shift</SelectItem>
+                      {shifts?.map((s) => (
+                        <SelectItem key={s.id} value={s.name.toLowerCase()}>
+                          {s.name} ({s.start_time.slice(0,5)} - {s.end_time.slice(0,5)})
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
