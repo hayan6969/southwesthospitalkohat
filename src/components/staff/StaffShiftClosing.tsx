@@ -62,13 +62,36 @@ export function StaffShiftClosing() {
     queryFn: async () => {
       if (!user?.id) return null;
 
-      const { data: invoices, error } = await supabase
+      // Query invoices created by this staff member within the shift window
+      // Use paid_at for timing, fall back to created_at for invoices without paid_at
+      const { data: byPaidAt, error: err1 } = await supabase
         .from('invoices')
         .select('amount, description, invoice_number, created_at, paid_at, status, created_by')
         .eq('created_by', user.id)
         .eq('status', 'paid')
         .gte('paid_at', shiftWindow.start.toISOString())
         .lte('paid_at', shiftWindow.end.toISOString());
+
+      // Also get invoices by this user that have no paid_at but were created in the window
+      const { data: byCreatedAt, error: err2 } = await supabase
+        .from('invoices')
+        .select('amount, description, invoice_number, created_at, paid_at, status, created_by')
+        .eq('created_by', user.id)
+        .eq('status', 'paid')
+        .is('paid_at', null)
+        .gte('created_at', shiftWindow.start.toISOString())
+        .lte('created_at', shiftWindow.end.toISOString());
+
+      const error = err1 || err2;
+      // Merge and deduplicate
+      const allInvoices = [...(byPaidAt || []), ...(byCreatedAt || [])];
+      const seen = new Set<string>();
+      const invoices = allInvoices.filter(inv => {
+        const key = (inv as any).id || `${inv.invoice_number}-${inv.created_at}`;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
 
       if (error) throw error;
 
