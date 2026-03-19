@@ -20,6 +20,9 @@ interface ConfirmationData {
   totalAmount: number;
   notes?: string;
   isNewPatient: boolean;
+  discountApplied?: number;
+  discountLabel?: string | null;
+  discountedAmount?: number;
 }
 
 interface LabOrderConfirmationDialogProps {
@@ -121,9 +124,25 @@ export function LabOrderConfirmationDialog({
               
               <div className="border-t pt-3 mt-3">
                 <div className="flex justify-between items-center text-lg font-bold">
-                  <span>Total Amount:</span>
+                  <span>Subtotal:</span>
                   <span className="text-green-600">{formatPkrAmount(confirmationData.totalAmount)}</span>
                 </div>
+                {confirmationData.discountApplied && confirmationData.discountApplied > 0 ? (
+                  <>
+                    <div className="p-2 mt-2 bg-green-50 border border-green-200 rounded-lg text-sm space-y-1">
+                      <div className="flex items-center gap-1.5 text-green-700 font-medium">
+                        Patient Discount: {confirmationData.discountLabel}
+                      </div>
+                      <div className="flex justify-between text-green-800">
+                        <span>Discount: -{formatPkrAmount(confirmationData.discountApplied)}</span>
+                      </div>
+                    </div>
+                    <div className="flex justify-between items-center text-lg font-bold mt-2">
+                      <span>Total After Discount:</span>
+                      <span className="text-green-600">{formatPkrAmount(confirmationData.discountedAmount ?? confirmationData.totalAmount)}</span>
+                    </div>
+                  </>
+                ) : null}
               </div>
             </CardContent>
           </Card>
@@ -156,7 +175,7 @@ export function LabOrderConfirmationDialog({
                   Processing...
                 </>
               ) : (
-                `Confirm & Create Order (${formatPkrAmount(confirmationData.totalAmount)})`
+                `Confirm & Create Order (${formatPkrAmount(confirmationData.discountedAmount ?? confirmationData.totalAmount)})`
               )}
             </Button>
           </div>

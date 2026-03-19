@@ -23,6 +23,9 @@ interface ConfirmationData {
   totalAmount: number;
   notes: string;
   xrayDate: string;
+  discountApplied?: number;
+  discountLabel?: string | null;
+  discountedAmount?: number;
 }
 
 interface XrayOrderConfirmationDialogProps {
@@ -136,6 +139,17 @@ export function XrayOrderConfirmationDialog({
                 {formatPkrAmount(confirmationData.totalAmount)}
               </span>
             </div>
+            {confirmationData.discountApplied && confirmationData.discountApplied > 0 ? (
+              <div className="p-2 bg-green-50 border border-green-200 rounded-lg text-sm space-y-1">
+                <div className="text-green-700 font-medium">
+                  Patient Discount: {confirmationData.discountLabel}
+                </div>
+                <div className="flex justify-between text-green-800">
+                  <span>Discount: -{formatPkrAmount(confirmationData.discountApplied)}</span>
+                  <span className="font-semibold">After Discount: {formatPkrAmount(confirmationData.discountedAmount ?? confirmationData.totalAmount)}</span>
+                </div>
+              </div>
+            ) : null}
           </div>
 
           {/* Notes */}
@@ -167,7 +181,7 @@ export function XrayOrderConfirmationDialog({
               disabled={isProcessing}
               className="min-w-[140px]"
             >
-              {isProcessing ? "Processing..." : "Confirm & Create Order"}
+              {isProcessing ? "Processing..." : `Confirm & Create Order (${formatPkrAmount(confirmationData.discountedAmount ?? confirmationData.totalAmount)})`}
             </Button>
           </div>
         </div>
