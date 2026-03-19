@@ -184,7 +184,7 @@ export default function AdminStaff() {
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={8} className="text-center text-gray-500 py-12">
+                    <TableCell colSpan={9} className="text-center text-gray-500 py-12">
                       No staff members found
                     </TableCell>
                   </TableRow>
