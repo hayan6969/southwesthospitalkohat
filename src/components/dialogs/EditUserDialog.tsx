@@ -34,6 +34,7 @@ export function EditUserDialog({ user, open, onOpenChange, onUserUpdated }: Edit
   const [phone, setPhone] = useState("");
   const [role, setRole] = useState("");
   const [departmentId, setDepartmentId] = useState("");
+  const [shift, setShift] = useState("");
   const [password, setPassword] = useState("");
   
   const [loading, setLoading] = useState(false);
