@@ -241,12 +241,12 @@ export function StaffShiftClosing() {
                 </div>
               ) : (
                 <Button
-                  onClick={() => submitClosing.mutate()}
+                  onClick={() => setConfirmOpen(true)}
                   disabled={submitClosing.isPending || !todayRevenue}
                   className="w-full bg-blue-600 hover:bg-blue-700"
                 >
                   <Send className="w-4 h-4 mr-2" />
-                  {submitClosing.isPending ? "Submitting..." : "Close Shift & Submit to Finance"}
+                  Close Shift & Submit to Finance
                 </Button>
               )}
             </>
