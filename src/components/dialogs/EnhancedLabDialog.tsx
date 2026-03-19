@@ -135,6 +135,31 @@ export function EnhancedLabDialog() {
     // Prepare confirmation data
     const selectedLabTests = labTests?.filter(test => selectedTests.includes(test.id)) || [];
     const totalAmount = selectedLabTests.reduce((sum, test) => sum + test.price, 0);
+
+    // Fetch discount preview
+    let discountInfo: { discountApplied: number; discountLabel: string | null; discountedAmount: number } = {
+      discountApplied: 0, discountLabel: null, discountedAmount: totalAmount
+    };
+    const patientIdForDiscount = activeTab === "register" ? null : selectedPatient?.id;
+    if (patientIdForDiscount && totalAmount > 0) {
+      const { data: discountData } = await supabase
+        .from('patient_discounts')
+        .select('discount_type, discount_value, expires_at, used_at')
+        .eq('patient_id', patientIdForDiscount)
+        .eq('is_active', true)
+        .eq('service_type', 'lab')
+        .maybeSingle();
+      if (discountData && !discountData.used_at && (!discountData.expires_at || new Date(discountData.expires_at) >= new Date())) {
+        if (discountData.discount_type === 'percentage') {
+          discountInfo.discountApplied = Math.round((totalAmount * discountData.discount_value) / 100);
+          discountInfo.discountLabel = `${discountData.discount_value}% discount`;
+        } else {
+          discountInfo.discountApplied = Math.min(discountData.discount_value, totalAmount);
+          discountInfo.discountLabel = `Rs. ${discountData.discount_value} discount`;
+        }
+        discountInfo.discountedAmount = totalAmount - discountInfo.discountApplied;
+      }
+    }
     
     const patientName = activeTab === "register" 
       ? `${newPatient.first_name} ${newPatient.last_name}`
@@ -153,7 +178,10 @@ export function EnhancedLabDialog() {
       selectedTests: selectedLabTests,
       totalAmount,
       notes: notes.trim() || undefined,
-      isNewPatient: activeTab === "register"
+      isNewPatient: activeTab === "register",
+      discountApplied: discountInfo.discountApplied,
+      discountLabel: discountInfo.discountLabel,
+      discountedAmount: discountInfo.discountedAmount,
     };
 
     setConfirmationData(confirmData);
