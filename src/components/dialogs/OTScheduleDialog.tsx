@@ -239,6 +239,7 @@ export function OTScheduleDialog() {
       } catch (error) {
         toast.error("Failed to register patient");
         console.error("Error creating patient:", error);
+        setSubmitting(false);
         return;
       }
     }
