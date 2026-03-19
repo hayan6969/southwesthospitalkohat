@@ -14,12 +14,14 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { formatPkrAmount } from "@/utils/currency";
 import { toast } from "sonner";
-import { Plus, Percent, Trash2, Search, Tag, Clock, CheckCircle2 } from "lucide-react";
+import { Plus, Percent, Trash2, Search, Tag, Clock, CheckCircle2, ReceiptText } from "lucide-react";
+import { PreviousBillDiscountDialog } from "@/components/dialogs/PreviousBillDiscountDialog";
 
 export default function FinanceDiscounts() {
   const { profile } = useAuth();
   const queryClient = useQueryClient();
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [prevBillDialogOpen, setPrevBillDialogOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [patientSearch, setPatientSearch] = useState("");
   const [selectedPatientId, setSelectedPatientId] = useState("");
@@ -167,10 +169,14 @@ export default function FinanceDiscounts() {
           <h2 className="text-2xl font-bold">Patient Discounts</h2>
           <p className="text-muted-foreground text-sm">Assign permanent discounts to patients for hospital invoices</p>
         </div>
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogTrigger asChild>
-            <Button><Plus className="w-4 h-4 mr-2" />Assign Discount</Button>
-          </DialogTrigger>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => setPrevBillDialogOpen(true)}>
+            <ReceiptText className="w-4 h-4 mr-2" />Discount on Previous Bill
+          </Button>
+          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+            <DialogTrigger asChild>
+              <Button><Plus className="w-4 h-4 mr-2" />Assign Discount</Button>
+            </DialogTrigger>
           <DialogContent className="z-[9999] max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Assign Patient Discount</DialogTitle>
@@ -259,7 +265,10 @@ export default function FinanceDiscounts() {
             </div>
           </DialogContent>
         </Dialog>
+        </div>
       </div>
+
+      <PreviousBillDiscountDialog open={prevBillDialogOpen} onOpenChange={setPrevBillDialogOpen} />
 
       <Card>
         <CardHeader>
