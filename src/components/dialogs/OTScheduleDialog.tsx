@@ -200,12 +200,15 @@ export function OTScheduleDialog() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSubmitting(true);
+    
+    if (submitting) return; // Prevent double submission
     
     if (!selectedOperations.length || !roomId || !doctorId) {
       toast.error("Please select at least one operation, room, and doctor");
       return;
     }
+
+    setSubmitting(true);
 
     let patientId = selectedPatient?.id;
     
@@ -213,6 +216,7 @@ export function OTScheduleDialog() {
     if (activeTab === "register") {
       if (!newPatient.first_name.trim() || !newPatient.last_name.trim() || !newPatient.phone.trim() || !newPatient.cnic.trim()) {
         toast.error("Please fill in all required patient fields");
+        setSubmitting(false);
         return;
       }
 
@@ -235,12 +239,14 @@ export function OTScheduleDialog() {
       } catch (error) {
         toast.error("Failed to register patient");
         console.error("Error creating patient:", error);
+        setSubmitting(false);
         return;
       }
     }
 
     if (!patientId) {
       toast.error("Please select or register a patient");
+      setSubmitting(false);
       return;
     }
 
@@ -300,7 +306,8 @@ export function OTScheduleDialog() {
           amount: otDiscount.discountedAmount,
           status: 'paid',
           description: `OT Procedure: ${getSelectedOperationsDetails().map(op => op.operation_name).join(', ')}${otDiscount.discountLabel ? ` (${otDiscount.discountLabel}, Original: Rs. ${otDiscount.originalAmount})` : ''}`,
-          paid_at: new Date().toISOString()
+          paid_at: new Date().toISOString(),
+          created_by: profile?.id || null
         });
 
       if (invoiceError) {
