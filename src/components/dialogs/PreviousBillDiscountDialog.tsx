@@ -174,6 +174,8 @@ export function PreviousBillDiscountDialog({ open, onOpenChange }: Props) {
       queryClient.invalidateQueries({ queryKey: ["search-paid-invoices"] });
       queryClient.invalidateQueries({ queryKey: ["refunds"] });
       queryClient.invalidateQueries({ queryKey: ["patient-discounts"] });
+      queryClient.invalidateQueries({ queryKey: ["invoices"] });
+      queryClient.invalidateQueries({ queryKey: ["daily-finance"] });
       toast.success(
         `Refund of ${formatPkrAmount(discountAmount)} created. Patient can collect cash from the counter.`
       );
