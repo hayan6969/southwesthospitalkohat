@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -13,7 +13,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { formatPkrAmount } from "@/utils/currency";
 import { toast } from "sonner";
 import { format } from "date-fns";
-import { ReceiptText, Search, Percent, ArrowDownRight } from "lucide-react";
+import { ReceiptText, Search, ArrowDownRight } from "lucide-react";
+import { generateRefundReceiptPDF } from "@/utils/pdfGenerator";
 
 interface Props {
   open: boolean;
@@ -30,24 +31,23 @@ export function PreviousBillDiscountDialog({ open, onOpenChange }: Props) {
   const [discountValue, setDiscountValue] = useState<number | "">("");
   const [reason, setReason] = useState("");
 
-  // Search paid invoices
+  // Search paid invoices (also fetch created_by for staff attribution)
   const { data: invoices, isLoading: searching } = useQuery({
     queryKey: ["search-paid-invoices", invoiceSearch],
     queryFn: async () => {
       if (!invoiceSearch || invoiceSearch.length < 2) return [];
 
-      // Search by invoice number or patient name
       const { data: invData, error } = await supabase
         .from("invoices")
-        .select("id, invoice_number, amount, description, patient_id, created_at, status, paid_at")
+        .select("id, invoice_number, amount, description, patient_id, created_at, status, paid_at, created_by")
         .eq("status", "paid")
         .ilike("invoice_number", `%${invoiceSearch}%`)
         .order("created_at", { ascending: false })
         .limit(20);
 
       if (error) throw error;
+
       if (!invData || invData.length === 0) {
-        // Try searching by patient name
         const { data: profiles } = await supabase
           .from("profiles")
           .select("id, first_name, last_name")
@@ -58,48 +58,44 @@ export function PreviousBillDiscountDialog({ open, onOpenChange }: Props) {
           const patientIds = profiles.map((p) => p.id);
           const { data: invByPatient } = await supabase
             .from("invoices")
-            .select("id, invoice_number, amount, description, patient_id, created_at, status, paid_at")
+            .select("id, invoice_number, amount, description, patient_id, created_at, status, paid_at, created_by")
             .eq("status", "paid")
             .in("patient_id", patientIds)
             .order("created_at", { ascending: false })
             .limit(20);
 
           if (invByPatient && invByPatient.length > 0) {
-            const pIds = invByPatient.map((i) => i.patient_id);
-            const { data: pProfiles } = await supabase
-              .from("profiles")
-              .select("id, first_name, last_name, phone")
-              .in("id", pIds);
-            const { data: pPatients } = await supabase
-              .from("patients")
-              .select("id, patient_number")
-              .in("id", pIds);
-
-            return invByPatient.map((inv) => ({
-              ...inv,
-              profile: pProfiles?.find((p) => p.id === inv.patient_id),
-              patient: pPatients?.find((p) => p.id === inv.patient_id),
-            }));
+            return await enrichInvoices(invByPatient);
           }
         }
         return [];
       }
 
-      // Enrich with patient data
-      const patientIds = [...new Set(invData.map((i) => i.patient_id))];
-      const [profilesRes, patientsRes] = await Promise.all([
-        supabase.from("profiles").select("id, first_name, last_name, phone").in("id", patientIds),
-        supabase.from("patients").select("id, patient_number").in("id", patientIds),
-      ]);
-
-      return invData.map((inv) => ({
-        ...inv,
-        profile: profilesRes.data?.find((p) => p.id === inv.patient_id),
-        patient: patientsRes.data?.find((p) => p.id === inv.patient_id),
-      }));
+      return await enrichInvoices(invData);
     },
     enabled: invoiceSearch.length >= 2,
   });
+
+  // Helper to enrich invoices with patient + creator profile data
+  const enrichInvoices = async (invData: any[]) => {
+    const patientIds = [...new Set(invData.map((i) => i.patient_id))];
+    const creatorIds = [...new Set(invData.map((i) => i.created_by).filter(Boolean))] as string[];
+
+    const [profilesRes, patientsRes, creatorsRes] = await Promise.all([
+      supabase.from("profiles").select("id, first_name, last_name, phone").in("id", patientIds),
+      supabase.from("patients").select("id, patient_number").in("id", patientIds),
+      creatorIds.length > 0
+        ? supabase.from("profiles").select("id, first_name, last_name").in("id", creatorIds)
+        : Promise.resolve({ data: [] as any[] }),
+    ]);
+
+    return invData.map((inv) => ({
+      ...inv,
+      profile: profilesRes.data?.find((p) => p.id === inv.patient_id),
+      patient: patientsRes.data?.find((p) => p.id === inv.patient_id),
+      creator: creatorsRes.data?.find((c: any) => c.id === inv.created_by),
+    }));
+  };
 
   const discountAmount =
     selectedInvoice && discountValue
@@ -108,7 +104,7 @@ export function PreviousBillDiscountDialog({ open, onOpenChange }: Props) {
         : Math.min(Number(discountValue), selectedInvoice.amount)
       : 0;
 
-  // Process discount → create refund
+  // Process discount → create refund → generate PDF receipt
   const processDiscount = useMutation({
     mutationFn: async () => {
       if (!selectedInvoice || !discountValue || discountAmount <= 0) {
@@ -127,6 +123,14 @@ export function PreviousBillDiscountDialog({ open, onOpenChange }: Props) {
         ? `${selectedInvoice.profile.first_name} ${selectedInvoice.profile.last_name}`
         : "Unknown";
 
+      const billedByStaff = selectedInvoice.creator
+        ? `${selectedInvoice.creator.first_name} ${selectedInvoice.creator.last_name}`
+        : "N/A";
+
+      const processedByStaff = profile
+        ? `${profile.first_name} ${profile.last_name}`
+        : "N/A";
+
       // Create refund entry
       const { error: refundError } = await supabase.from("refunds").insert({
         amount: discountAmount,
@@ -138,6 +142,22 @@ export function PreviousBillDiscountDialog({ open, onOpenChange }: Props) {
       });
 
       if (refundError) throw refundError;
+
+      // Generate refund receipt PDF
+      await generateRefundReceiptPDF({
+        invoiceNumber: selectedInvoice.invoice_number,
+        patientName,
+        patientPhone: selectedInvoice.profile?.phone || "N/A",
+        patientId: selectedInvoice.patient?.patient_number || "N/A",
+        originalAmount: selectedInvoice.amount,
+        discountLabel,
+        refundAmount: discountAmount,
+        reason: reason || "N/A",
+        billedByStaff,
+        processedByStaff,
+        originalDate: selectedInvoice.paid_at || selectedInvoice.created_at,
+        description: selectedInvoice.description || "",
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["search-paid-invoices"] });
@@ -187,7 +207,6 @@ export function PreviousBillDiscountDialog({ open, onOpenChange }: Props) {
               />
             </div>
 
-            {/* Invoice results */}
             {invoices && invoices.length > 0 && !selectedInvoice && (
               <div className="border rounded-md max-h-48 overflow-y-auto">
                 <Table>
@@ -246,6 +265,9 @@ export function PreviousBillDiscountDialog({ open, onOpenChange }: Props) {
               </div>
               <p className="text-xs text-muted-foreground">
                 Paid on {format(new Date(selectedInvoice.paid_at || selectedInvoice.created_at), "dd MMM yyyy, hh:mm a")}
+                {selectedInvoice.creator && (
+                  <> · Billed by: <span className="font-medium">{selectedInvoice.creator.first_name} {selectedInvoice.creator.last_name}</span></>
+                )}
               </p>
               <Button variant="ghost" size="sm" className="text-xs h-6 px-2" onClick={() => { setSelectedInvoice(null); setInvoiceSearch(""); }}>
                 Change Invoice

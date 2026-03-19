@@ -2566,3 +2566,149 @@ export const generateDailyClosingSummaryPDF = async (data: {
   const pdfUrl = URL.createObjectURL(pdfBlob);
   window.open(pdfUrl, '_blank');
 };
+
+// =============================================
+// REFUND RECEIPT PDF
+// =============================================
+export const generateRefundReceiptPDF = async (data: {
+  invoiceNumber: string;
+  patientName: string;
+  patientPhone: string;
+  patientId: string;
+  originalAmount: number;
+  discountLabel: string;
+  refundAmount: number;
+  reason: string;
+  billedByStaff: string;
+  processedByStaff: string;
+  originalDate: string;
+  description: string;
+}) => {
+  const doc = new jsPDF();
+  const pageWidth = doc.internal.pageSize.width;
+
+  let yPosition = await addHospitalHeader(doc, 'REFUND RECEIPT');
+
+  // Refund reference
+  doc.setFontSize(10);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(100, 100, 100);
+  doc.text(`Ref: REFUND-${Date.now().toString().slice(-8)}`, pageWidth - 20, yPosition - 5, { align: 'right' });
+  doc.text(`Date: ${new Date().toLocaleDateString()}`, pageWidth - 20, yPosition + 1, { align: 'right' });
+
+  yPosition += 10;
+
+  // Separator
+  doc.setDrawColor(200, 200, 200);
+  doc.line(20, yPosition, pageWidth - 20, yPosition);
+  yPosition += 10;
+
+  // Patient info
+  doc.setFontSize(11);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(40, 40, 40);
+  doc.text('Patient Information', 20, yPosition);
+  yPosition += 8;
+
+  doc.setFontSize(10);
+  doc.setFont('helvetica', 'normal');
+  const patientFields = [
+    ['Name:', data.patientName],
+    ['Patient ID:', data.patientId],
+    ['Phone:', data.patientPhone],
+  ];
+  for (const [label, value] of patientFields) {
+    doc.setFont('helvetica', 'bold');
+    doc.text(label, 25, yPosition);
+    doc.setFont('helvetica', 'normal');
+    doc.text(value, 70, yPosition);
+    yPosition += 7;
+  }
+
+  yPosition += 5;
+  doc.line(20, yPosition, pageWidth - 20, yPosition);
+  yPosition += 10;
+
+  // Original bill info
+  doc.setFontSize(11);
+  doc.setFont('helvetica', 'bold');
+  doc.text('Original Bill Details', 20, yPosition);
+  yPosition += 8;
+
+  doc.setFontSize(10);
+  doc.setFont('helvetica', 'normal');
+  const billFields = [
+    ['Invoice #:', data.invoiceNumber],
+    ['Description:', data.description.length > 50 ? data.description.substring(0, 50) + '...' : data.description],
+    ['Bill Amount:', formatPkrAmount(data.originalAmount)],
+    ['Billed On:', new Date(data.originalDate).toLocaleDateString()],
+    ['Billed By:', data.billedByStaff],
+  ];
+  for (const [label, value] of billFields) {
+    doc.setFont('helvetica', 'bold');
+    doc.text(label, 25, yPosition);
+    doc.setFont('helvetica', 'normal');
+    doc.text(value, 70, yPosition);
+    yPosition += 7;
+  }
+
+  yPosition += 5;
+  doc.line(20, yPosition, pageWidth - 20, yPosition);
+  yPosition += 10;
+
+  // Refund details
+  doc.setFontSize(11);
+  doc.setFont('helvetica', 'bold');
+  doc.text('Refund Details', 20, yPosition);
+  yPosition += 8;
+
+  doc.setFontSize(10);
+  const refundFields = [
+    ['Discount Applied:', data.discountLabel],
+    ['Reason:', data.reason],
+    ['Processed By:', data.processedByStaff],
+  ];
+  for (const [label, value] of refundFields) {
+    doc.setFont('helvetica', 'bold');
+    doc.text(label, 25, yPosition);
+    doc.setFont('helvetica', 'normal');
+    doc.text(value, 70, yPosition);
+    yPosition += 7;
+  }
+
+  yPosition += 5;
+
+  // Refund amount box
+  doc.setFillColor(240, 253, 244);
+  doc.setDrawColor(34, 197, 94);
+  doc.roundedRect(20, yPosition, pageWidth - 40, 20, 3, 3, 'FD');
+  doc.setFontSize(14);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(22, 101, 52);
+  doc.text(`Refund Amount: ${formatPkrAmount(data.refundAmount)}`, pageWidth / 2, yPosition + 13, { align: 'center' });
+
+  yPosition += 30;
+
+  // Footer note
+  doc.setFontSize(9);
+  doc.setFont('helvetica', 'italic');
+  doc.setTextColor(100, 100, 100);
+  doc.text('Patient may collect the above refund amount in cash from the billing counter.', pageWidth / 2, yPosition, { align: 'center' });
+  yPosition += 6;
+  doc.text(`Generated on: ${new Date().toLocaleString()}`, pageWidth / 2, yPosition, { align: 'center' });
+
+  // Signature lines
+  yPosition += 20;
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(40, 40, 40);
+  doc.line(25, yPosition, 85, yPosition);
+  doc.line(pageWidth - 85, yPosition, pageWidth - 25, yPosition);
+  yPosition += 5;
+  doc.setFontSize(8);
+  doc.text('Patient Signature', 55, yPosition, { align: 'center' });
+  doc.text('Authorized Signature', pageWidth - 55, yPosition, { align: 'center' });
+
+  const pdfBlob = doc.output('blob');
+  const pdfUrl = URL.createObjectURL(pdfBlob);
+  window.open(pdfUrl, '_blank');
+};
