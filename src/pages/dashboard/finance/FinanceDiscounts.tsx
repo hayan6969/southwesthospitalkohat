@@ -14,7 +14,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { formatPkrAmount } from "@/utils/currency";
 import { toast } from "sonner";
-import { Plus, Percent, Trash2, Search, Tag, Clock, CheckCircle2 } from "lucide-react";
+import { Plus, Percent, Trash2, Search, Tag, Clock, CheckCircle2, ReceiptText } from "lucide-react";
+import { PreviousBillDiscountDialog } from "@/components/dialogs/PreviousBillDiscountDialog";
 
 export default function FinanceDiscounts() {
   const { profile } = useAuth();
