@@ -23,6 +23,9 @@ interface ConfirmationData {
   totalAmount: number;
   notes: string;
   xrayDate: string;
+  discountApplied?: number;
+  discountLabel?: string | null;
+  discountedAmount?: number;
 }
 
 interface XrayOrderConfirmationDialogProps {

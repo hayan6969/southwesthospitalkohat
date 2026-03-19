@@ -227,6 +227,27 @@ export function XrayDialog({ open, onOpenChange, onSuccess }: XrayDialogProps) {
     try {
       const patientId = selectedPatient?.id;
       
+      // Apply patient discount for xray
+      const { applyPatientDiscount } = await import('@/utils/discountUtils');
+      const xrayDiscount = await applyPatientDiscount(patientId, totalAmount, 'xray');
+
+      // Create invoice for the xray order
+      const invoiceNumber = `XR-${Date.now()}`;
+      const { data: invoice, error: invoiceError } = await supabase
+        .from('invoices')
+        .insert([{
+          patient_id: patientId,
+          amount: xrayDiscount.discountedAmount,
+          description: `X-ray Tests: ${selectedTests.map(id => xrayTests?.find(t => t.id === id)?.name).filter(Boolean).join(', ')}${xrayDiscount.discountLabel ? ` (${xrayDiscount.discountLabel}, Original: Rs. ${xrayDiscount.originalAmount})` : ''}`,
+          invoice_number: invoiceNumber,
+          status: 'paid',
+          paid_at: new Date().toISOString()
+        }])
+        .select()
+        .single();
+
+      if (invoiceError) throw invoiceError;
+
       // Create X-ray reports for each selected test
       const createdReports = [];
       for (const testId of selectedTests) {
@@ -240,13 +261,13 @@ export function XrayDialog({ open, onOpenChange, onSuccess }: XrayDialogProps) {
           price: test.price,
           xray_date: xrayDate?.toISOString(),
           notes,
-          status: 'pending'
+          status: 'pending',
+          invoice_id: invoice.id
         };
 
         const report = await createXrayReport.mutateAsync(xrayData);
         createdReports.push(report);
         
-        // Log the X-ray creation
         const patientName = selectedPatient?.profile?.first_name && selectedPatient?.profile?.last_name
           ? `${selectedPatient.profile.first_name} ${selectedPatient.profile.last_name}`.trim()
           : "Unknown Patient";
@@ -260,7 +281,6 @@ export function XrayDialog({ open, onOpenChange, onSuccess }: XrayDialogProps) {
 
       // Generate and open PDF invoice
       if (createdReports.length > 0) {
-        
         const patientName = selectedPatient?.profile?.first_name && selectedPatient?.profile?.last_name
           ? `${selectedPatient.profile.first_name} ${selectedPatient.profile.last_name}`.trim()
           : "Unknown Patient";
@@ -277,14 +297,14 @@ export function XrayDialog({ open, onOpenChange, onSuccess }: XrayDialogProps) {
         }).filter(Boolean) as any[];
 
         await generateXrayInvoicePDF({
-          invoiceNumber: `XR-${createdReports[0].id.slice(0, 8)}`,
+          invoiceNumber: invoice.invoice_number,
           patientName: patientName,
           patientEmail: "N/A",
           patientId: selectedPatient?.patient_number || "N/A",
           patientPhone: patientPhone,
           doctorName: doctorName.trim() || undefined,
           tests: testsForPDF,
-          totalAmount: totalAmount,
+          totalAmount: xrayDiscount.discountedAmount,
           issueDate: new Date().toLocaleDateString(),
           xrayDate: xrayDate ? format(xrayDate, "MMM dd, yyyy") : new Date().toLocaleDateString(),
           notes: notes.trim()
