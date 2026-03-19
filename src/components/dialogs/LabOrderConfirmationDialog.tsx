@@ -20,6 +20,9 @@ interface ConfirmationData {
   totalAmount: number;
   notes?: string;
   isNewPatient: boolean;
+  discountApplied?: number;
+  discountLabel?: string | null;
+  discountedAmount?: number;
 }
 
 interface LabOrderConfirmationDialogProps {
