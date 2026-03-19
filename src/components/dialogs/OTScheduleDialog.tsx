@@ -216,6 +216,7 @@ export function OTScheduleDialog() {
     if (activeTab === "register") {
       if (!newPatient.first_name.trim() || !newPatient.last_name.trim() || !newPatient.phone.trim() || !newPatient.cnic.trim()) {
         toast.error("Please fill in all required patient fields");
+        setSubmitting(false);
         return;
       }
 
