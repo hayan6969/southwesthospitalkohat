@@ -12,8 +12,9 @@ import { StaffInvoices } from "@/components/staff/StaffInvoices";
 import { StaffLabReports } from "@/components/staff/StaffLabReports";
 import { StaffXray } from "@/components/staff/StaffXray";
 import { StaffRevenueBreakdown } from "@/components/staff/StaffRevenueBreakdown";
+import { StaffShiftClosing } from "@/components/staff/StaffShiftClosing";
 import { PatientSearchDialog } from "@/components/staff/PatientSearchDialog";
-import { Receipt, TestTube, Building2, FileText, Image, Search, ShoppingCart } from "lucide-react";
+import { Receipt, TestTube, Building2, FileText, Image, Search, ShoppingCart, Clock } from "lucide-react";
 import { useHospitalSettings } from "@/hooks/useHospitalSettings";
 import { AdminDashboardNav } from "@/components/AdminDashboardNav";
 
@@ -89,7 +90,7 @@ export default function DashboardStaff() {
 
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <div className="overflow-x-auto -mx-3 px-3 sm:mx-0 sm:px-0">
-              <TabsList className="inline-flex w-auto min-w-full sm:grid sm:w-full sm:grid-cols-7">
+              <TabsList className="inline-flex w-auto min-w-full sm:grid sm:w-full sm:grid-cols-8">
                 <TabsTrigger value="counter" className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm whitespace-nowrap">
                   <Receipt className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                   Counter
@@ -113,6 +114,10 @@ export default function DashboardStaff() {
                 <TabsTrigger value="invoices" className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm whitespace-nowrap">
                   <FileText className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                   Invoices
+                </TabsTrigger>
+                <TabsTrigger value="shift-closing" className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm whitespace-nowrap">
+                  <Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                  Shift Close
                 </TabsTrigger>
                 <TabsTrigger value="supplies" className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm whitespace-nowrap">
                   <ShoppingCart className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
@@ -139,6 +144,9 @@ export default function DashboardStaff() {
             </TabsContent>
             <TabsContent value="invoices" className="mt-4 sm:mt-6">
               <StaffInvoices />
+            </TabsContent>
+            <TabsContent value="shift-closing" className="mt-4 sm:mt-6">
+              <StaffShiftClosing />
             </TabsContent>
             <TabsContent value="supplies" className="mt-4 sm:mt-6">
               <MySupplyRequests />

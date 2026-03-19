@@ -90,6 +90,7 @@ export default function AdminStaff() {
                   <TableHead>Email</TableHead>
                   <TableHead>Phone</TableHead>
                   <TableHead>Role</TableHead>
+                  <TableHead>Shift</TableHead>
                   <TableHead>Department</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Join Date</TableHead>
@@ -100,7 +101,7 @@ export default function AdminStaff() {
                 {isLoading ? (
                   Array.from({ length: 5 }).map((_, i) => (
                     <TableRow key={i}>
-                      {Array.from({ length: 8 }).map((_, j) => (
+                      {Array.from({ length: 9 }).map((_, j) => (
                         <TableCell key={j}>
                           <div className="h-4 bg-gray-200 rounded animate-pulse"></div>
                         </TableCell>
@@ -122,6 +123,17 @@ export default function AdminStaff() {
                         <span className={`px-2 py-1 rounded-full text-sm font-medium ${getRoleBadgeColor(user.role)}`}>
                           {user.role}
                         </span>
+                      </TableCell>
+                      <TableCell>
+                        {user.role === 'staff' && (user as any).shift ? (
+                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                            (user as any).shift === 'morning' ? 'bg-yellow-100 text-yellow-700' : 'bg-indigo-100 text-indigo-700'
+                          }`}>
+                            {(user as any).shift}
+                          </span>
+                        ) : (
+                          <span className="text-gray-400">-</span>
+                        )}
                       </TableCell>
                       <TableCell>
                         {departments?.find(dept => dept.id === user.department_id)?.name || 'N/A'}
@@ -172,7 +184,7 @@ export default function AdminStaff() {
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={8} className="text-center text-gray-500 py-12">
+                    <TableCell colSpan={9} className="text-center text-gray-500 py-12">
                       No staff members found
                     </TableCell>
                   </TableRow>

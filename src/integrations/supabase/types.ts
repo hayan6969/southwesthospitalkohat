@@ -567,11 +567,15 @@ export type Database = {
           created_at: string | null
           emergency_consultation_fee: number | null
           emergency_slots_percentage: number | null
+          evening_shift_end: string | null
+          evening_shift_start: string | null
           hospital_address: string | null
           hospital_name: string | null
           id: string
           logo_url: string | null
           max_appointments_per_doctor: number | null
+          morning_shift_end: string | null
+          morning_shift_start: string | null
           opening_time: string | null
           payroll_payment_date: number | null
           updated_at: string | null
@@ -584,11 +588,15 @@ export type Database = {
           created_at?: string | null
           emergency_consultation_fee?: number | null
           emergency_slots_percentage?: number | null
+          evening_shift_end?: string | null
+          evening_shift_start?: string | null
           hospital_address?: string | null
           hospital_name?: string | null
           id?: string
           logo_url?: string | null
           max_appointments_per_doctor?: number | null
+          morning_shift_end?: string | null
+          morning_shift_start?: string | null
           opening_time?: string | null
           payroll_payment_date?: number | null
           updated_at?: string | null
@@ -601,11 +609,15 @@ export type Database = {
           created_at?: string | null
           emergency_consultation_fee?: number | null
           emergency_slots_percentage?: number | null
+          evening_shift_end?: string | null
+          evening_shift_start?: string | null
           hospital_address?: string | null
           hospital_name?: string | null
           id?: string
           logo_url?: string | null
           max_appointments_per_doctor?: number | null
+          morning_shift_end?: string | null
+          morning_shift_start?: string | null
           opening_time?: string | null
           payroll_payment_date?: number | null
           updated_at?: string | null
@@ -1755,6 +1767,7 @@ export type Database = {
           last_name: string
           phone: string | null
           role: string
+          shift: string | null
           updated_at: string | null
         }
         Insert: {
@@ -1767,6 +1780,7 @@ export type Database = {
           last_name: string
           phone?: string | null
           role: string
+          shift?: string | null
           updated_at?: string | null
         }
         Update: {
@@ -1779,6 +1793,7 @@ export type Database = {
           last_name?: string
           phone?: string | null
           role?: string
+          shift?: string | null
           updated_at?: string | null
         }
         Relationships: [
@@ -1890,6 +1905,99 @@ export type Database = {
           {
             foreignKeyName: "refunds_processed_by_fkey"
             columns: ["processed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      staff_shift_closings: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          closing_date: string
+          created_at: string | null
+          emergency_revenue: number | null
+          id: string
+          lab_revenue: number | null
+          misc_revenue: number | null
+          notes: string | null
+          opd_revenue: number | null
+          ot_revenue: number | null
+          overtime_amount: number | null
+          overtime_hours: number | null
+          shift: string
+          shift_end_time: string | null
+          shift_start_time: string | null
+          staff_id: string
+          status: string | null
+          summary_data: Json | null
+          total_invoices: number | null
+          total_revenue: number | null
+          updated_at: string | null
+          xray_revenue: number | null
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          closing_date: string
+          created_at?: string | null
+          emergency_revenue?: number | null
+          id?: string
+          lab_revenue?: number | null
+          misc_revenue?: number | null
+          notes?: string | null
+          opd_revenue?: number | null
+          ot_revenue?: number | null
+          overtime_amount?: number | null
+          overtime_hours?: number | null
+          shift: string
+          shift_end_time?: string | null
+          shift_start_time?: string | null
+          staff_id: string
+          status?: string | null
+          summary_data?: Json | null
+          total_invoices?: number | null
+          total_revenue?: number | null
+          updated_at?: string | null
+          xray_revenue?: number | null
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          closing_date?: string
+          created_at?: string | null
+          emergency_revenue?: number | null
+          id?: string
+          lab_revenue?: number | null
+          misc_revenue?: number | null
+          notes?: string | null
+          opd_revenue?: number | null
+          ot_revenue?: number | null
+          overtime_amount?: number | null
+          overtime_hours?: number | null
+          shift?: string
+          shift_end_time?: string | null
+          shift_start_time?: string | null
+          staff_id?: string
+          status?: string | null
+          summary_data?: Json | null
+          total_invoices?: number | null
+          total_revenue?: number | null
+          updated_at?: string | null
+          xray_revenue?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "staff_shift_closings_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "staff_shift_closings_staff_id_fkey"
+            columns: ["staff_id"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]

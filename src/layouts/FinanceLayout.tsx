@@ -1,7 +1,7 @@
 import { ReactNode } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useLocation, useNavigate } from "react-router-dom";
-import { Calculator, ChartBar, Receipt, Users, Info, User, LogOut, Stethoscope, Pill, RotateCcw, Calendar, FileText, Tag } from "lucide-react";
+import { Calculator, ChartBar, Receipt, Users, Info, User, LogOut, Stethoscope, Pill, RotateCcw, Calendar, FileText, Tag, Clock } from "lucide-react";
 import { useHospitalSettings } from "@/hooks/useHospitalSettings";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
@@ -26,6 +26,7 @@ export default function FinanceLayout({ children }: FinanceLayoutProps) {
     if (path === "/dashboard/finance/expenses") return "expenses";
     if (path === "/dashboard/finance/payroll") return "payroll";
     if (path === "/dashboard/finance/doctor-payments") return "doctor-payments";
+    if (path === "/dashboard/finance/staff-payments") return "staff-payments";
     if (path === "/dashboard/finance/pharmacy") return "pharmacy";
     if (path === "/dashboard/finance/refunds") return "refunds";
     if (path === "/dashboard/finance/invoices") return "invoices";
@@ -42,6 +43,7 @@ export default function FinanceLayout({ children }: FinanceLayoutProps) {
       case "expenses": navigate("/dashboard/finance/expenses"); break;
       case "payroll": navigate("/dashboard/finance/payroll"); break;
       case "doctor-payments": navigate("/dashboard/finance/doctor-payments"); break;
+      case "staff-payments": navigate("/dashboard/finance/staff-payments"); break;
       case "pharmacy": navigate("/dashboard/finance/pharmacy"); break;
       case "refunds": navigate("/dashboard/finance/refunds"); break;
       case "invoices": navigate("/dashboard/finance/invoices"); break;
@@ -106,7 +108,7 @@ export default function FinanceLayout({ children }: FinanceLayoutProps) {
 
         <Tabs value={getCurrentTab()} onValueChange={handleTabChange} className="w-full">
           <div className="overflow-x-auto -mx-3 px-3 sm:mx-0 sm:px-0 mb-4 sm:mb-8">
-            <TabsList className="inline-flex w-auto min-w-full sm:grid sm:w-full sm:grid-cols-5 lg:grid-cols-11">
+            <TabsList className="inline-flex w-auto min-w-full sm:grid sm:w-full sm:grid-cols-6 lg:grid-cols-12">
               <TabsTrigger value="dashboard" className="flex items-center gap-1.5 text-xs sm:text-sm whitespace-nowrap">
                 <Info className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                 Dashboard
@@ -134,6 +136,10 @@ export default function FinanceLayout({ children }: FinanceLayoutProps) {
               <TabsTrigger value="doctor-payments" className="flex items-center gap-1.5 text-xs sm:text-sm whitespace-nowrap">
                 <Stethoscope className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                 Dr. Payments
+              </TabsTrigger>
+              <TabsTrigger value="staff-payments" className="flex items-center gap-1.5 text-xs sm:text-sm whitespace-nowrap">
+                <Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                Staff Shifts
               </TabsTrigger>
               <TabsTrigger value="pharmacy" className="flex items-center gap-1.5 text-xs sm:text-sm whitespace-nowrap">
                 <Pill className="w-3.5 h-3.5 sm:w-4 sm:h-4" />

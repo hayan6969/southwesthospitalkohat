@@ -34,6 +34,7 @@ export function EditUserDialog({ user, open, onOpenChange, onUserUpdated }: Edit
   const [phone, setPhone] = useState("");
   const [role, setRole] = useState("");
   const [departmentId, setDepartmentId] = useState("");
+  const [shift, setShift] = useState("");
   const [password, setPassword] = useState("");
   
   const [loading, setLoading] = useState(false);
@@ -48,6 +49,7 @@ export function EditUserDialog({ user, open, onOpenChange, onUserUpdated }: Edit
       setPhone(user.phone || "");
       setRole(user.role);
       setDepartmentId(user.department_id || "");
+      setShift((user as any).shift || "");
       setPassword("");
     }
   }, [user, open]);
@@ -73,8 +75,9 @@ export function EditUserDialog({ user, open, onOpenChange, onUserUpdated }: Edit
           phone: phone.trim() || null,
           role: role,
           department_id: departmentId || null,
+          shift: shift || null,
           updated_at: new Date().toISOString()
-        })
+        } as any)
         .eq('id', user.id);
 
       if (profileError) throw profileError;
@@ -227,6 +230,21 @@ export function EditUserDialog({ user, open, onOpenChange, onUserUpdated }: Edit
               </SelectContent>
             </Select>
           </div>
+
+          {role === 'staff' && (
+            <div className="space-y-2">
+              <Label htmlFor="shift">Shift</Label>
+              <Select value={shift} onValueChange={setShift}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select shift" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="morning">Morning Shift</SelectItem>
+                  <SelectItem value="evening">Evening Shift</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          )}
 
           <div className="flex justify-end space-x-2 pt-4">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>

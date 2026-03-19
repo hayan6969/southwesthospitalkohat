@@ -19,6 +19,7 @@ export function AccountManagementDialog() {
   const [phone, setPhone] = useState("");
   const [role, setRole] = useState("");
   const [departmentId, setDepartmentId] = useState("");
+  const [shift, setShift] = useState("");
   const [loading, setLoading] = useState(false);
 
   const { createUserAccount } = useAuth();
@@ -59,6 +60,7 @@ export function AccountManagementDialog() {
         setPhone("");
         setRole("");
         setDepartmentId("");
+        setShift("");
       }
     } catch (error) {
       toast.error("Failed to create account");
@@ -171,21 +173,37 @@ export function AccountManagementDialog() {
           </div>
 
           {['staff', 'nursing', 'ota'].includes(role) && (
-            <div className="space-y-2">
-              <Label htmlFor="department">Department {role === 'staff' ? '*' : ''}</Label>
-              <Select value={departmentId} onValueChange={setDepartmentId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select a department" />
-                </SelectTrigger>
-                <SelectContent>
-                  {departments?.map((department) => (
-                    <SelectItem key={department.id} value={department.id}>
-                      {department.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            <>
+              <div className="space-y-2">
+                <Label htmlFor="department">Department {role === 'staff' ? '*' : ''}</Label>
+                <Select value={departmentId} onValueChange={setDepartmentId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a department" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {departments?.map((department) => (
+                      <SelectItem key={department.id} value={department.id}>
+                        {department.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              {role === 'staff' && (
+                <div className="space-y-2">
+                  <Label htmlFor="shift">Shift *</Label>
+                  <Select value={shift} onValueChange={setShift}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select shift" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="morning">Morning Shift</SelectItem>
+                      <SelectItem value="evening">Evening Shift</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+            </>
           )}
 
           <div className="flex justify-end space-x-2 pt-4">
