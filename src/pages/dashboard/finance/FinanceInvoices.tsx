@@ -32,10 +32,19 @@ export default function FinanceInvoices() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('invoices')
-        .select('*')
+        .select('*, creator:profiles!invoices_created_by_fkey(first_name, last_name)')
         .neq('status', 'cancelled')
         .order('created_at', { ascending: false });
-      if (error) throw error;
+      if (error) {
+        // Fallback without join if FK doesn't exist
+        const { data: fallback, error: fallbackError } = await supabase
+          .from('invoices')
+          .select('*')
+          .neq('status', 'cancelled')
+          .order('created_at', { ascending: false });
+        if (fallbackError) throw fallbackError;
+        return fallback || [];
+      }
       return data || [];
     }
   });
