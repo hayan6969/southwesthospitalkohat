@@ -41,6 +41,9 @@ import { RegionWiseReport } from "@/components/RegionWiseReport";
 import { RegionsTabContent } from "@/components/admin/RegionsTabContent";
 import { AuditLogDetailDialog } from "@/components/dialogs/AuditLogDetailDialog";
 import { AdminDashboardNav } from "@/components/AdminDashboardNav";
+import { useAllShifts, useCreateShift, useUpdateShift, useDeleteShift } from "@/hooks/useShifts";
+import { Badge } from "@/components/ui/badge";
+import { Edit2, Trash2, X, Check, Plus as PlusIcon } from "lucide-react";
 
 
 export default function DashboardAdmin() {
