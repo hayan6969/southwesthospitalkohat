@@ -111,6 +111,12 @@ export const generateLabInvoicePDF = async (data: {
   }>;
   totalAmount: number;
   issueDate: string;
+  discount?: {
+    originalAmount: number;
+    discountedAmount: number;
+    discountApplied: number;
+    discountLabel: string | null;
+  };
 }) => {
   const doc = new jsPDF();
   const pageWidth = doc.internal.pageSize.width;
@@ -231,13 +237,38 @@ export const generateLabInvoicePDF = async (data: {
 
   // Total section
   yPosition += 15;
-  const totalsX = pageWidth - 85; // Position box from right edge
+  const totalsX = pageWidth - 85;
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(12);
   doc.setTextColor(40, 40, 40);
-  doc.rect(totalsX, yPosition - 5, 80, 18); // Wider box for better fit
-  doc.text('Total Amount:', totalsX + 5, yPosition + 4); // Text starts inside box
-  doc.text(formatPkrAmount(data.totalAmount), totalsX + 5, yPosition + 12); // Amount below label
+
+  if (data.discount && data.discount.discountApplied > 0) {
+    // Show subtotal, discount, and final total
+    const boxHeight = 38;
+    doc.rect(totalsX, yPosition - 5, 80, boxHeight);
+    
+    doc.setFontSize(10);
+    doc.text('Subtotal:', totalsX + 5, yPosition + 4);
+    doc.setFont('helvetica', 'normal');
+    doc.text(formatPkrAmount(data.discount.originalAmount), totalsX + 45, yPosition + 4);
+    
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(0, 128, 0);
+    doc.text(`Discount (${data.discount.discountLabel}):`, totalsX + 5, yPosition + 14);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`-${formatPkrAmount(data.discount.discountApplied)}`, totalsX + 45, yPosition + 14);
+    
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(12);
+    doc.setTextColor(40, 40, 40);
+    doc.line(totalsX + 5, yPosition + 19, totalsX + 75, yPosition + 19);
+    doc.text('Total Amount:', totalsX + 5, yPosition + 26);
+    doc.text(formatPkrAmount(data.discount.discountedAmount), totalsX + 5, yPosition + 33);
+  } else {
+    doc.rect(totalsX, yPosition - 5, 80, 18);
+    doc.text('Total Amount:', totalsX + 5, yPosition + 4);
+    doc.text(formatPkrAmount(data.totalAmount), totalsX + 5, yPosition + 12);
+  }
 
   // Footer
   yPosition += 30;
