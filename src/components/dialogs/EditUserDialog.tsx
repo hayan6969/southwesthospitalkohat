@@ -49,6 +49,7 @@ export function EditUserDialog({ user, open, onOpenChange, onUserUpdated }: Edit
       setPhone(user.phone || "");
       setRole(user.role);
       setDepartmentId(user.department_id || "");
+      setShift((user as any).shift || "");
       setPassword("");
     }
   }, [user, open]);
