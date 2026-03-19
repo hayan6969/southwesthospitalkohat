@@ -169,10 +169,14 @@ export default function FinanceDiscounts() {
           <h2 className="text-2xl font-bold">Patient Discounts</h2>
           <p className="text-muted-foreground text-sm">Assign permanent discounts to patients for hospital invoices</p>
         </div>
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogTrigger asChild>
-            <Button><Plus className="w-4 h-4 mr-2" />Assign Discount</Button>
-          </DialogTrigger>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => setPrevBillDialogOpen(true)}>
+            <ReceiptText className="w-4 h-4 mr-2" />Discount on Previous Bill
+          </Button>
+          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+            <DialogTrigger asChild>
+              <Button><Plus className="w-4 h-4 mr-2" />Assign Discount</Button>
+            </DialogTrigger>
           <DialogContent className="z-[9999] max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Assign Patient Discount</DialogTitle>
