@@ -311,7 +311,8 @@ export function EnhancedLabDialog() {
           description: test.description
         })),
         totalAmount: result.invoice.amount || totalAmount,
-        issueDate: new Date().toLocaleDateString()
+        issueDate: new Date().toLocaleDateString(),
+        discount: result.discount && result.discount.discountApplied > 0 ? result.discount : undefined
       };
 
       await generateLabInvoicePDF(invoiceData);

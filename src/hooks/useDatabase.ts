@@ -869,7 +869,7 @@ export const useCreateLabOrderWithInvoice = () => {
 
       if (labReportsError) throw labReportsError;
 
-      return { invoice, labReports };
+      return { invoice, labReports, discount: labDiscount };
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['lab-reports'] });
