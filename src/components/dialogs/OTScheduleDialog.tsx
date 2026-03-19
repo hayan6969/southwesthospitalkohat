@@ -331,6 +331,7 @@ import { cn } from "@/lib/utils";
       toast.error("Failed to schedule OT operation");
       console.error("Error scheduling OT:", error);
     } finally {
+      submissionLockRef.current = false;
       setSubmitting(false);
     }
   };
