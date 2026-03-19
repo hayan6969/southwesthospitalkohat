@@ -161,6 +161,28 @@ export function XrayDialog({ open, onOpenChange, onSuccess }: XrayDialogProps) {
       return;
     }
 
+    // Fetch discount preview
+    let discountInfo = { discountApplied: 0, discountLabel: null as string | null, discountedAmount: totalAmount };
+    if (selectedPatient?.id && totalAmount > 0) {
+      const { data: discountData } = await supabase
+        .from('patient_discounts')
+        .select('discount_type, discount_value, expires_at, used_at')
+        .eq('patient_id', selectedPatient.id)
+        .eq('is_active', true)
+        .eq('service_type', 'xray')
+        .maybeSingle();
+      if (discountData && !discountData.used_at && (!discountData.expires_at || new Date(discountData.expires_at) >= new Date())) {
+        if (discountData.discount_type === 'percentage') {
+          discountInfo.discountApplied = Math.round((totalAmount * discountData.discount_value) / 100);
+          discountInfo.discountLabel = `${discountData.discount_value}% discount`;
+        } else {
+          discountInfo.discountApplied = Math.min(discountData.discount_value, totalAmount);
+          discountInfo.discountLabel = `Rs. ${discountData.discount_value} discount`;
+        }
+        discountInfo.discountedAmount = totalAmount - discountInfo.discountApplied;
+      }
+    }
+
     // Prepare confirmation data
     const patientData = selectedPatient;
 
@@ -180,7 +202,7 @@ export function XrayDialog({ open, onOpenChange, onSuccess }: XrayDialogProps) {
       } : null;
     }).filter(Boolean) as any[];
 
-    const confirmationData = {
+    const confirmationDataNew = {
       patient: {
         name: patientName,
         phone: patientData?.profile?.phone || "N/A"
@@ -189,10 +211,13 @@ export function XrayDialog({ open, onOpenChange, onSuccess }: XrayDialogProps) {
       selectedTests: testsData,
       totalAmount,
       xrayDate: format(xrayDate, "MMM dd, yyyy"),
-      notes: notes.trim()
+      notes: notes.trim(),
+      discountApplied: discountInfo.discountApplied,
+      discountLabel: discountInfo.discountLabel,
+      discountedAmount: discountInfo.discountedAmount,
     };
 
-    setConfirmationData(confirmationData);
+    setConfirmationData(confirmationDataNew);
     setShowConfirmation(true);
   };
 
