@@ -104,6 +104,17 @@ export function PreviousBillDiscountDialog({ open, onOpenChange }: Props) {
         : Math.min(Number(discountValue), selectedInvoice.amount)
       : 0;
 
+  const inferServiceType = (invoice: any) => {
+    const invoiceNumber = (invoice?.invoice_number || "").toLowerCase();
+    const description = (invoice?.description || "").toLowerCase();
+
+    if (invoiceNumber.startsWith("lab-") || description.includes("lab")) return "lab";
+    if (invoiceNumber.startsWith("xr-") || invoiceNumber.startsWith("xray-") || description.includes("x-ray") || description.includes("xray")) return "xray";
+    if (invoiceNumber.startsWith("ot-") || description.includes("ot procedure") || description.includes("operation") || description.includes("surgery")) return "ot";
+
+    return "consultation";
+  };
+
   // Process discount → create refund → generate PDF receipt
   const processDiscount = useMutation({
     mutationFn: async () => {
@@ -131,9 +142,12 @@ export function PreviousBillDiscountDialog({ open, onOpenChange }: Props) {
         ? `${profile.first_name} ${profile.last_name}`
         : "N/A";
 
-      // Create refund entry and update invoice amount in parallel
+      const processedAt = new Date().toISOString();
       const newInvoiceAmount = selectedInvoice.amount - discountAmount;
-      const [refundResult, invoiceUpdateResult] = await Promise.all([
+      const serviceType = inferServiceType(selectedInvoice);
+      const recordedDiscountValue = discountType === "percentage" ? Number(discountValue) : discountAmount;
+
+      const [refundResult, invoiceUpdateResult, discountRecordResult] = await Promise.all([
         supabase.from("refunds").insert({
           amount: discountAmount,
           refund_type: "discount_adjustment",
@@ -142,19 +156,29 @@ export function PreviousBillDiscountDialog({ open, onOpenChange }: Props) {
           related_record_id: selectedInvoice.id,
           processed_by: profile?.id,
         }),
-        // Reduce the invoice amount so revenue stats reflect the actual collected amount
         supabase.from("invoices").update({
           amount: newInvoiceAmount,
           description: `${selectedInvoice.description || ''} [Adjusted: ${discountLabel}, Refund: ${formatPkrAmount(discountAmount)}]`,
         }).eq("id", selectedInvoice.id),
+        supabase.from("patient_discounts").insert({
+          patient_id: selectedInvoice.patient_id,
+          discount_type: discountType,
+          discount_value: recordedDiscountValue,
+          service_type: serviceType,
+          expires_at: processedAt,
+          used_at: processedAt,
+          is_active: false,
+          notes: `Previous bill adjustment for ${selectedInvoice.invoice_number}${reason ? ` - ${reason}` : ''}`,
+          created_by: profile?.id || null,
+        }),
       ]);
 
       if (refundResult.error) throw refundResult.error;
+      if (discountRecordResult.error) throw discountRecordResult.error;
       if (invoiceUpdateResult.error) {
         console.error("Failed to update invoice amount:", invoiceUpdateResult.error);
       }
 
-      // Generate refund receipt PDF
       await generateRefundReceiptPDF({
         invoiceNumber: selectedInvoice.invoice_number,
         patientName,
@@ -174,6 +198,7 @@ export function PreviousBillDiscountDialog({ open, onOpenChange }: Props) {
       queryClient.invalidateQueries({ queryKey: ["search-paid-invoices"] });
       queryClient.invalidateQueries({ queryKey: ["refunds"] });
       queryClient.invalidateQueries({ queryKey: ["patient-discounts"] });
+      queryClient.invalidateQueries({ queryKey: ["all-patient-discounts"] });
       queryClient.invalidateQueries({ queryKey: ["invoices"] });
       queryClient.invalidateQueries({ queryKey: ["daily-finance"] });
       toast.success(
