@@ -90,6 +90,7 @@ export default function AdminStaff() {
                   <TableHead>Email</TableHead>
                   <TableHead>Phone</TableHead>
                   <TableHead>Role</TableHead>
+                  <TableHead>Shift</TableHead>
                   <TableHead>Department</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Join Date</TableHead>
