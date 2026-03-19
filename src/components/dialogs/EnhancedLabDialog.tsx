@@ -280,7 +280,7 @@ export function EnhancedLabDialog() {
           price: test.price,
           description: test.description
         })),
-        totalAmount,
+        totalAmount: result.invoice.amount || totalAmount,
         issueDate: new Date().toLocaleDateString()
       };
 
