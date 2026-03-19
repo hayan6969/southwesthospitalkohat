@@ -98,6 +98,36 @@ export function EnhancedLabDialog() {
     }
   });
 
+  // Fetch discount preview for button display
+  const patientIdForButton = activeTab === "register" ? null : selectedPatient?.id;
+  const { data: discountPreview } = useQuery({
+    queryKey: ['patient-discount-preview', patientIdForButton, 'lab'],
+    queryFn: async () => {
+      if (!patientIdForButton) return null;
+      const { data, error } = await supabase
+        .from('patient_discounts')
+        .select('discount_type, discount_value, expires_at, used_at')
+        .eq('patient_id', patientIdForButton)
+        .eq('is_active', true)
+        .eq('service_type', 'lab')
+        .maybeSingle();
+      if (error || !data) return null;
+      if (data.used_at) return null;
+      if (data.expires_at && new Date(data.expires_at) < new Date()) return null;
+      return data;
+    },
+    enabled: !!patientIdForButton,
+  });
+
+  const getDiscountedTotal = () => {
+    const total = getTotalAmount();
+    if (!discountPreview || total <= 0) return total;
+    if (discountPreview.discount_type === 'percentage') {
+      return total - Math.round((total * discountPreview.discount_value) / 100);
+    }
+    return total - Math.min(discountPreview.discount_value, total);
+  };
+
   // Filter lab tests based on search
   const filteredLabTests = labTests?.filter(test =>
     test.name.toLowerCase().includes(testSearchQuery.toLowerCase()) ||
@@ -647,10 +677,7 @@ export function EnhancedLabDialog() {
                   Creating...
                 </>
               ) : (
-                `Review Lab Order (${formatPkrAmount(selectedTests.reduce((sum, testId) => {
-                  const test = labTests?.find(t => t.id === testId);
-                  return sum + (test?.price || 0);
-                }, 0))})`
+                `Review Lab Order (${formatPkrAmount(getDiscountedTotal())})`
               )}
             </Button>
           </div>
