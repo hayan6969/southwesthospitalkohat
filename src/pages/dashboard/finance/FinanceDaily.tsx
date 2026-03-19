@@ -163,7 +163,7 @@ export default function FinanceDaily() {
 
       // Total hospital revenue excludes doctor consultation fees (those belong to doctor finances)
       const totalHospitalRevenue = emergencyRevenue + labRevenue + xrayRevenue + otHospitalRevenue + miscellaneousIncome;
-      const totalHospitalProfit = totalHospitalRevenue - totalExpenses;
+      const totalHospitalProfit = totalHospitalRevenue - totalExpenses - totalRefunds;
 
       // Categorize refunds
       const otRefunds = refunds?.filter(r => r.refund_type.includes('ot'))?.reduce((sum, r) => sum + r.amount, 0) || 0;
