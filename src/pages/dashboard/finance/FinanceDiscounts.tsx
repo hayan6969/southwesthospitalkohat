@@ -54,6 +54,7 @@ export default function FinanceDiscounts() {
       if (error) throw error;
       return data || [];
     },
+    refetchInterval: 10000, // Auto-refresh every 10s to catch discount usage
   });
 
   const filteredDiscounts = discounts?.filter(d => {
