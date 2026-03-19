@@ -640,6 +640,11 @@ export default function FinanceInvoices() {
         typeLabel = 'Emergency Consultation';
       }
       
+      const creatorProfile = (inv as any).creator;
+      const createdByName = creatorProfile
+        ? `${creatorProfile.first_name || ''} ${creatorProfile.last_name || ''}`.trim()
+        : null;
+
       return {
         ...inv,
         type,
@@ -647,7 +652,8 @@ export default function FinanceInvoices() {
         displayAmount: inv.amount,
         displayNumber: inv.invoice_number,
         displayDate: inv.created_at,
-        displayStatus: inv.status
+        displayStatus: inv.status,
+        createdByName,
       };
     }) || []),
     ...(pharmacyInvoices?.map(inv => ({
