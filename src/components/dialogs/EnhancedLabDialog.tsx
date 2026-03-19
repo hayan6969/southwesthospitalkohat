@@ -677,10 +677,7 @@ export function EnhancedLabDialog() {
                   Creating...
                 </>
               ) : (
-                `Review Lab Order (${formatPkrAmount(selectedTests.reduce((sum, testId) => {
-                  const test = labTests?.find(t => t.id === testId);
-                  return sum + (test?.price || 0);
-                }, 0))})`
+                `Review Lab Order (${formatPkrAmount(getDiscountedTotal())})`
               )}
             </Button>
           </div>
