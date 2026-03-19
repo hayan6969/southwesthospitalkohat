@@ -871,6 +871,9 @@ export default function FinanceInvoices() {
                       {invoice.displayStatus}
                     </Badge>
                   </TableCell>
+                  <TableCell className="text-sm text-muted-foreground">
+                    {invoice.createdByName || '—'}
+                  </TableCell>
                   <TableCell>{format(new Date(invoice.displayDate!), 'MMM dd, yyyy')}</TableCell>
                   <TableCell>
                     <Button 
