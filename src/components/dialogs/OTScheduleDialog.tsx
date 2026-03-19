@@ -303,7 +303,8 @@ export function OTScheduleDialog() {
           amount: otDiscount.discountedAmount,
           status: 'paid',
           description: `OT Procedure: ${getSelectedOperationsDetails().map(op => op.operation_name).join(', ')}${otDiscount.discountLabel ? ` (${otDiscount.discountLabel}, Original: Rs. ${otDiscount.originalAmount})` : ''}`,
-          paid_at: new Date().toISOString()
+          paid_at: new Date().toISOString(),
+          created_by: profile?.id || null
         });
 
       if (invoiceError) {
