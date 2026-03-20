@@ -177,9 +177,8 @@ export function StaffShiftClosing() {
     enabled: !!user?.id,
   });
 
-  const todayAlreadyClosed = effectiveClosings.some(
-    (closing) => closing.closing_date === format(today, 'yyyy-MM-dd') && closing.shift === staffShift && !(closing as any).is_overtime,
-  );
+  // Check if there's any new revenue since last closing
+  const hasNewRevenue = (todayRevenue?.total || 0) > 0;
 
   const submitClosing = useMutation({
     mutationFn: async () => {
