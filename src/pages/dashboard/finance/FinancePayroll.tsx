@@ -466,8 +466,15 @@ export default function FinancePayroll() {
     setEditingTemplate(null);
   };
 
+  const isLinkedToAccount = !!staff?.find(s => s.id === selectedEmployeeId);
+
   const handleSaveTemplate = () => {
     if (!employeeName || !employeeRole || !baseSalary) return;
+    // Require employee ID for manual (non-account) entries
+    if (!isLinkedToAccount && !selectedEmployeeId) {
+      toast({ title: "Error", description: "Employee ID is required for employees without a system account", variant: "destructive" });
+      return;
+    }
 
     const baseSalaryNum = parseFloat(baseSalary);
     const allowancesNum = parseFloat(allowances) || 0;
