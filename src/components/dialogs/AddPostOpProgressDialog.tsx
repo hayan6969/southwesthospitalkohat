@@ -23,7 +23,8 @@ export function AddPostOpProgressDialog({
   open, 
   onOpenChange, 
   otScheduleId,
-  onSave 
+  onSave,
+  editEntry 
 }: AddPostOpProgressDialogProps) {
   const { toast } = useToast();
   const { profile } = useAuth();
@@ -38,6 +39,32 @@ export function AddPostOpProgressDialog({
     output: "",
     remarks: ""
   });
+
+  useEffect(() => {
+    if (editEntry) {
+      setFormData({
+        entryDate: new Date(editEntry.entry_date),
+        entryTime: getCurrentPakistanTimeString(),
+        bloodPressure: editEntry.blood_pressure || "",
+        pulses: editEntry.pulses || "",
+        temperature: editEntry.temperature || "",
+        input: editEntry.input_data || "",
+        output: editEntry.output_data || "",
+        remarks: editEntry.remarks || ""
+      });
+    } else {
+      setFormData({
+        entryDate: new Date(),
+        entryTime: getCurrentPakistanTimeString(),
+        bloodPressure: "",
+        pulses: "",
+        temperature: "",
+        input: "",
+        output: "",
+        remarks: ""
+      });
+    }
+  }, [editEntry, open]);
 
   const handleSave = async () => {
     if (!profile?.email) {
