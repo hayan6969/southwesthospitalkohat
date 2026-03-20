@@ -285,7 +285,8 @@ export function TreatmentChartDialog({
                         <TableHead className="w-40">Date & Time</TableHead>
                         <TableHead className="w-60">Medicine</TableHead>
                         <TableHead className="w-60">Investigation</TableHead>
-                        <TableHead className="w-40">User</TableHead>
+                         <TableHead className="w-40">User</TableHead>
+                         {canEdit && <TableHead className="w-24">Actions</TableHead>}
                       </TableRow>
                     </TableHeader>
                     <TableBody>
