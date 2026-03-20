@@ -85,13 +85,14 @@ export default function FinanceInvoices() {
   // created in the 'invoices' table with invoice_number starting with "LAB-"
   // Fetching them separately would cause duplicates
 
-  // Get X-ray reports for invoicing
+  // Get X-ray reports for invoicing (only those without a linked hospital invoice)
   const { data: xrayReports, isLoading: xrayLoading } = useQuery({
     queryKey: ['xray-reports-invoices'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('xray_reports')
         .select('*')
+        .is('invoice_id', null)
         .order('created_at', { ascending: false });
       if (error) throw error;
       return data;
