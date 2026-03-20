@@ -1552,6 +1552,15 @@ export const generateDailyClosingPDF = async (data: {
       checkNewPage(20);
       doc.setFillColor(50, 50, 50);
       doc.rect(detailStartX, yPosition, totalTableWidth, 8, 'F');
+      doc.setDrawColor(180, 180, 180);
+      doc.setLineWidth(0.2);
+      // Draw vertical lines for header
+      let lx = detailStartX;
+      detailColWidths.forEach(w => {
+        doc.line(lx, yPosition, lx, yPosition + 8);
+        lx += w;
+      });
+      doc.line(lx, yPosition, lx, yPosition + 8); // right border
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(6);
       doc.setTextColor(255, 255, 255);
