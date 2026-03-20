@@ -744,6 +744,7 @@ export default function FinancePayroll() {
           <OvertimeManager />
         </TabsContent>
 
+        <TabsContent value="templates" className="space-y-6">
           {/* Templates Header */}
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
