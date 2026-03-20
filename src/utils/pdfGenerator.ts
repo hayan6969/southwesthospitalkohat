@@ -1882,8 +1882,8 @@ export const generateDailyClosingPDF = async (data: {
   const staffEntries = Array.from(staffCollectionMap.values()).sort((a, b) => b.total - a.total);
 
   if (staffEntries.length > 0) {
-    const staffHeaders = ['Sr#', 'Staff Name', 'OPD', 'Lab', 'X-Ray', 'OT', 'Emergency', 'Total'];
-    const staffColWidths = [8, 40, 22, 22, 22, 22, 22, 28];
+    const staffHeaders = ['Sr#', 'Staff Name', 'OPD', 'Lab', 'X-Ray', 'OT', 'Emergency', 'Misc', 'Total'];
+    const staffColWidths = [8, 36, 20, 20, 20, 20, 20, 20, 22];
     const staffRows: string[][] = staffEntries.map((s, i) => [
       String(i + 1),
       s.name,
@@ -1892,12 +1892,13 @@ export const generateDailyClosingPDF = async (data: {
       s.xray ? formatPkrAmount(s.xray) : '—',
       s.ot ? formatPkrAmount(s.ot) : '—',
       s.emergency ? formatPkrAmount(s.emergency) : '—',
+      s.misc ? formatPkrAmount(s.misc) : '—',
       formatPkrAmount(s.total)
     ]);
     const totals = staffEntries.reduce((acc, e) => ({
       opd: acc.opd + e.opd, lab: acc.lab + e.lab, xray: acc.xray + e.xray,
-      ot: acc.ot + e.ot, emergency: acc.emergency + e.emergency, total: acc.total + e.total
-    }), { opd: 0, lab: 0, xray: 0, ot: 0, emergency: 0, total: 0 });
+      ot: acc.ot + e.ot, emergency: acc.emergency + e.emergency, misc: acc.misc + e.misc, total: acc.total + e.total
+    }), { opd: 0, lab: 0, xray: 0, ot: 0, emergency: 0, misc: 0, total: 0 });
     staffRows.push([
       '', 'TOTAL',
       totals.opd ? formatPkrAmount(totals.opd) : '—',
@@ -1905,6 +1906,7 @@ export const generateDailyClosingPDF = async (data: {
       totals.xray ? formatPkrAmount(totals.xray) : '—',
       totals.ot ? formatPkrAmount(totals.ot) : '—',
       totals.emergency ? formatPkrAmount(totals.emergency) : '—',
+      totals.misc ? formatPkrAmount(totals.misc) : '—',
       formatPkrAmount(totals.total)
     ]);
     drawTable(staffHeaders, staffRows, staffColWidths);
