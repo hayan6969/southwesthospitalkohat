@@ -159,7 +159,7 @@ export default function FinanceStaffPayments() {
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-1">
-                          <Button size="sm" variant="outline" onClick={() => { setDetailClosing(closing); setOvertimeAmount(String(closing.overtime_amount || '')); }}>
+                          <Button size="sm" variant="outline" onClick={() => setDetailClosing(closing)}>
                             <Eye className="w-3 h-3 mr-1" /> View
                           </Button>
                           {closing.status === 'pending' && (
