@@ -20,14 +20,18 @@ export async function applyPatientDiscount(patientId: string, originalAmount: nu
       return { originalAmount, discountedAmount: originalAmount, discountApplied: 0, discountLabel: null };
     }
 
-    // Already used (one-time)
     if (data.used_at) {
       return { originalAmount, discountedAmount: originalAmount, discountApplied: 0, discountLabel: null };
     }
 
-    // Expired (48hr validity)
     if (data.expires_at && new Date(data.expires_at) < new Date()) {
-      await supabase.from('patient_discounts').update({ is_active: false }).eq('id', data.id);
+      const { error: expireError } = await supabase
+        .from('patient_discounts')
+        .update({ is_active: false })
+        .eq('id', data.id);
+
+      if (expireError) throw expireError;
+
       return { originalAmount, discountedAmount: originalAmount, discountApplied: 0, discountLabel: null };
     }
 
@@ -42,11 +46,22 @@ export async function applyPatientDiscount(patientId: string, originalAmount: nu
       discountLabel = `Rs. ${data.discount_value} discount`;
     }
 
-    // Mark as used and deactivate (one-time use)
-    await supabase.from('patient_discounts').update({
-      used_at: new Date().toISOString(),
-      is_active: false,
-    }).eq('id', data.id);
+    const usedAt = new Date().toISOString();
+    const { data: consumedDiscount, error: consumeError } = await supabase
+      .from('patient_discounts')
+      .update({
+        used_at: usedAt,
+        is_active: false,
+      })
+      .eq('id', data.id)
+      .eq('is_active', true)
+      .is('used_at', null)
+      .select('id')
+      .maybeSingle();
+
+    if (consumeError || !consumedDiscount) {
+      throw consumeError || new Error('Failed to mark discount as used');
+    }
 
     return {
       originalAmount,

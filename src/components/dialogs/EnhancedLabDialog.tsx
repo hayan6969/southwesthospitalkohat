@@ -276,6 +276,7 @@ export function EnhancedLabDialog() {
         selectedTests: selectedLabTests,
         notes: notes.trim() || null,
         totalAmount,
+        created_by: user?.id || null,
         invoiceNumber: `LAB-${Date.now()}`,
         invoiceDescription: `Lab Tests: ${selectedLabTests.map(test => test.name).join(', ')}`
       };

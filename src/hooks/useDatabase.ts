@@ -1208,9 +1208,10 @@ export const useCreateInvoice = () => {
   
   return useMutation({
     mutationFn: async (invoice: any) => {
+      const { data: { user: currentUser } } = await supabase.auth.getUser();
       const { data, error } = await supabase
         .from('invoices')
-        .insert([invoice])
+        .insert([{ ...invoice, created_by: invoice.created_by || currentUser?.id || null }])
         .select()
         .single();
 
