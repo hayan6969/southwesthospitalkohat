@@ -560,9 +560,9 @@ export function OvertimeManager() {
                               <Button
                                 size="sm"
                                 onClick={() => {
-                                  setPayingGroup(group);
-                                  setPayRate("");
-                                }}
+                                   setPayingGroup(group);
+                                   setPayRate(localStorage.getItem('overtime_default_rate') || "");
+                                 }}
                               >
                                 <Check className="w-3 h-3 mr-1" /> Pay
                               </Button>
