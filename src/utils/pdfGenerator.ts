@@ -1452,11 +1452,13 @@ export const generateDailyClosingPDF = async (data: {
     return '—';
   };
 
-  // Lab reports - use amount (invoice-level, includes discount) if available, fallback to price
+  // Lab reports - use invoice amount (includes discount) if available, fallback to price
   (transactionsData?.labReports || []).forEach((lab: any) => {
     const p = lab.patients?.profiles;
     const originalPrice = Number(lab.price) || 0;
-    const finalAmount = Number(lab.amount) || originalPrice;
+    // The invoice joined via invoice_id holds the actual paid amount after discount
+    const invoiceAmount = lab.invoices?.amount != null ? Number(lab.invoices.amount) : null;
+    const finalAmount = invoiceAmount != null ? invoiceAmount : originalPrice;
     const discountApplied = originalPrice > 0 && finalAmount < originalPrice ? originalPrice - finalAmount : 0;
     let procedure = lab.test_name || lab.description || 'Lab Test';
     if (discountApplied > 0) {
