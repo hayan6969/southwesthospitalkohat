@@ -264,6 +264,7 @@ export default function FinanceDaily() {
         refunds: refundsRes.data || [],
         pharmacyExpenses: pharmacyExpensesRes.data || [],
         miscellaneousIncome: miscellaneousIncomeRes.data || [],
+        staffShiftClosings: staffShiftClosingsRes.data || [],
         pharmacyAccount: pharmacyAccountRes.data?.[0] || null,
         totalStockValue,
         lastClosing: lastClosing,
