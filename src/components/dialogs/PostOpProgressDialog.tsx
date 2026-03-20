@@ -335,6 +335,28 @@ export function PostOpProgressDialog({
                               {entry.user_email}
                             </div>
                           </TableCell>
+                          {canEdit && (
+                            <TableCell className="w-20 align-top">
+                              <div className="flex items-center gap-1">
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-7 w-7"
+                                  onClick={() => { setEditingEntry(entry); setShowAddDialog(true); }}
+                                >
+                                  <Pencil className="w-3.5 h-3.5 text-blue-600" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-7 w-7"
+                                  onClick={() => handleDelete(entry.id)}
+                                >
+                                  <Trash2 className="w-3.5 h-3.5 text-red-600" />
+                                </Button>
+                              </div>
+                            </TableCell>
+                          )}
                         </TableRow>
                       ))}
                     </TableBody>
