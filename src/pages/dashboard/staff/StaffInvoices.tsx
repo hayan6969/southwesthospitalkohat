@@ -99,38 +99,23 @@ export default function StaffInvoices() {
   });
 
   // Combine all invoices into a single array with type information
+  const unmatchedOtSchedules =
+    otSchedules?.filter((ot) => !hasMatchingOtHospitalInvoice(ot, hospitalInvoices || [])) || [];
+
   const allInvoices = [
     ...(hospitalInvoices?.map(inv => {
-      // Check for emergency consultations first (most specific)
-      let type = 'appointment';
-      let typeLabel = 'Appointment';
-      
-      // Emergency consultation detection - check description, emergency_patient_data, AND invoice number patterns
-      if (inv.description?.toLowerCase().includes('emergency consultation') || 
-          inv.description?.toLowerCase().includes('emergency') ||
-          inv.emergency_patient_data ||
-          inv.invoice_number?.startsWith('EMG-') ||
-          inv.invoice_number?.startsWith('EMERGENCY-')) {
-        type = 'emergency';
-        typeLabel = 'Emergency Consultation';
-      }
-      // Check for other invoice number prefixes
-      else if (inv.invoice_number?.startsWith('OT-')) {
-        type = 'ot';
-        typeLabel = 'Operation Theater';
-      } else if (inv.invoice_number?.startsWith('LAB-')) {
-        type = 'lab';
-        typeLabel = 'Lab Test';
-      } else if (inv.invoice_number?.startsWith('XRAY-')) {
-        type = 'xray';
-        typeLabel = 'X-ray';
-      }
-      
-      // Debug specific invoice
-      if (inv.invoice_number === 'INV-1754351253847') {
-        console.log('🏥 HOSPITAL SOURCE - INV-1754351253847:', { type, typeLabel, description: inv.description });
-      }
-      
+      const type = getHospitalInvoiceType(inv);
+      const typeLabel =
+        type === 'ot'
+          ? 'Operation Theater'
+          : type === 'lab'
+            ? 'Lab Test'
+            : type === 'xray'
+              ? 'X-ray'
+              : type === 'emergency'
+                ? 'Emergency Consultation'
+                : 'Appointment';
+
       return {
         ...inv,
         type,
@@ -139,79 +124,49 @@ export default function StaffInvoices() {
         displayNumber: inv.invoice_number,
         displayDate: inv.created_at,
         displayStatus: inv.status,
-        source: 'hospital' // Add source tracking
+        source: 'hospital'
       };
     }) || []),
-    ...(pharmacyInvoices?.map(inv => {
-      if (inv.invoice_number === 'INV-1754351253847') {
-        console.log('💊 PHARMACY SOURCE - INV-1754351253847');
-      }
-      return {
-        ...inv,
-        type: 'pharmacy',
-        typeLabel: 'Pharmacy',
-        displayAmount: inv.final_amount,
-        displayNumber: inv.invoice_number,
-        displayDate: inv.created_at,
-        displayStatus: inv.status,
-        source: 'pharmacy'
-      };
-    }) || []),
-    ...(labReports?.map(lab => {
-      const displayNumber = `LAB-${lab.id.slice(0, 8)}`;
-      if (displayNumber === 'INV-1754351253847' || lab.id === 'INV-1754351253847') {
-        console.log('🧪 LAB SOURCE - Found match:', { 
-          id: lab.id, 
-          displayNumber, 
-          originalData: lab 
-        });
-      }
-      return {
-        ...lab,
-        type: 'lab',
-        typeLabel: 'Lab Test',
-        displayAmount: lab.price,
-        displayNumber,
-        displayDate: lab.created_at,
-        displayStatus: lab.status,
-        source: 'lab'
-      };
-    }) || []),
-    ...(xrayReports?.map(xray => {
-      const displayNumber = `XR-${xray.id.slice(0, 8)}`;
-      if (displayNumber === 'INV-1754351253847') {
-        console.log('📷 XRAY SOURCE - INV-1754351253847');
-      }
-      return {
-        ...xray,
-        type: 'xray',
-        typeLabel: 'X-ray',
-        displayAmount: xray.price,
-        displayNumber,
-        displayDate: xray.created_at,
-        displayStatus: xray.status,
-        source: 'xray'
-      };
-    }) || []),
-    ...(otSchedules?.map(ot => {
-      const displayNumber = `OT-${ot.id.slice(0, 8)}`;
-      console.log('Mapping OT Schedule:', { 
-        id: ot.id, 
-        displayNumber, 
-        total_cost: ot.total_cost, 
-        status: ot.status 
-      });
-      return {
-        ...ot,
-        type: 'ot',
-        typeLabel: 'Operation Theater',
-        displayAmount: ot.total_cost,
-        displayNumber,
-        displayDate: ot.created_at,
-        displayStatus: ot.status,
-        source: 'ot'
-      };
-    }) || [])
+    ...(pharmacyInvoices?.map(inv => ({
+      ...inv,
+      type: 'pharmacy',
+      typeLabel: 'Pharmacy',
+      displayAmount: inv.final_amount,
+      displayNumber: inv.invoice_number,
+      displayDate: inv.created_at,
+      displayStatus: inv.status,
+      source: 'pharmacy'
+    })) || []),
+    ...(labReports?.map(lab => ({
+      ...lab,
+      type: 'lab',
+      typeLabel: 'Lab Test',
+      displayAmount: lab.price,
+      displayNumber: `LAB-${lab.id.slice(0, 8)}`,
+      displayDate: lab.created_at,
+      displayStatus: lab.status,
+      source: 'lab'
+    })) || []),
+    ...(xrayReports?.map(xray => ({
+      ...xray,
+      type: 'xray',
+      typeLabel: 'X-ray',
+      displayAmount: xray.price,
+      displayNumber: `XR-${xray.id.slice(0, 8)}`,
+      displayDate: xray.created_at,
+      displayStatus: xray.status,
+      source: 'xray'
+    })) || []),
+    ...(unmatchedOtSchedules.map(ot => ({
+      ...ot,
+      type: 'ot',
+      typeLabel: 'Operation Theater',
+      displayAmount: ot.total_cost,
+      displayNumber: `OT-${ot.id.slice(0, 8)}`,
+      displayDate: ot.created_at,
+      displayStatus: ot.status,
+      source: 'ot'
+    })) || [])
   ];
 
   const isLoading = hospitalLoading || pharmacyLoading || labLoading || xrayLoading || otLoading;
