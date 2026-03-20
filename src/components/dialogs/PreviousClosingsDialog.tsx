@@ -157,7 +157,7 @@ export function PreviousClosingsDialog() {
   // Compute summary values for the selected closing
   const computeServicesRevenue = (td?: any): number => {
     if (!td) return 0;
-    const lab = (td.labReports || []).reduce((s: number, r: any) => s + (Number(r.price) || 0), 0);
+    const lab = (td.labReports || []).reduce((s: number, r: any) => s + (Number(r.price) || Number(r.amount) || 0), 0);
     const xray = (td.xrayReports || []).reduce((s: number, r: any) => s + (Number(r.price) || 0), 0);
     const ot = (td.otSchedules || []).reduce((s: number, ot: any) => s + ((Number(ot.total_cost) || 0) - (Number(ot.doctor_expense) || 0)), 0);
     const emergencyAppointments = (td.emergencyAppointments || []).reduce((s: number, e: any) => s + (Number(e.consultation_fee_at_time) || 0), 0);
