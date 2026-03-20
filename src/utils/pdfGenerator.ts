@@ -1505,10 +1505,11 @@ export const generateDailyClosingPDF = async (data: {
   // X-ray reports
   (transactionsData?.xrayReports || []).forEach((xray: any) => {
     const p = (xray as any).patients?.profiles;
+    const xrayTestName = xray.test_name || xray.xray_tests?.name || 'X-Ray';
     allTxns.push({
       patientName: p ? `${p.first_name || ''} ${p.last_name || ''}`.trim() : 'Unknown',
       time: xray.created_at,
-      procedure: xray.test_name || 'X-Ray',
+      procedure: xrayTestName,
       consultant: '—',
       amount: Number(xray.price) || 0,
       docShare: 0,
@@ -2391,10 +2392,10 @@ export const generateDailyClosingPDF = async (data: {
     yPosition += 16;
 
     // Table header
-    const staffColX = [20, 65, 95, 125, 150, 170];
-    const staffColLabels = ['Staff Name', 'Shift', 'Revenue', 'Invoices', 'OT Hours', 'OT Amount'];
+    const staffColX = [20, 56, 80, 110, 135, 158];
+    const staffColLabels = ['Staff Name', 'Shift', 'Revenue', 'Invoices', 'OT Hrs', 'OT Amt'];
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(9);
+    doc.setFontSize(8);
     doc.setTextColor(60, 60, 60);
     doc.setFillColor(243, 244, 246);
     doc.rect(20, yPosition - 4, pageWidth - 40, 8, 'F');
@@ -2404,7 +2405,7 @@ export const generateDailyClosingPDF = async (data: {
     yPosition += 8;
 
     doc.setFont('helvetica', 'normal');
-    doc.setFontSize(9);
+    doc.setFontSize(8);
     doc.setTextColor(40, 40, 40);
 
     let totalOTHours = 0;
@@ -2422,8 +2423,8 @@ export const generateDailyClosingPDF = async (data: {
       totalOTHours += otHours;
       totalOTAmount += otAmount;
 
-      doc.text(staffName.substring(0, 20), staffColX[0], yPosition);
-      doc.text(String(closing.shift || '-'), staffColX[1], yPosition);
+      doc.text(staffName.substring(0, 16), staffColX[0], yPosition);
+      doc.text(String(closing.shift || '-').substring(0, 10), staffColX[1], yPosition);
       doc.text(formatPkrAmount(Number(closing.total_revenue) || 0), staffColX[2], yPosition);
       doc.text(String(closing.total_invoices || 0), staffColX[3], yPosition);
       doc.text(otHours > 0 ? `${otHours}h` : '-', staffColX[4], yPosition);
