@@ -12,7 +12,8 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { formatPkrAmount } from "@/utils/currency";
 import { getCurrentPakistanTime } from "@/utils/timezone";
-import { Users, Banknote, Calendar, Plus, Download, Check, CheckCircle, CalendarIcon, Settings, RefreshCw, UserPlus, Edit, Trash2 } from "lucide-react";
+import { Users, Banknote, Calendar, Plus, Download, Check, CheckCircle, CalendarIcon, Settings, RefreshCw, UserPlus, Edit, Trash2, Clock } from "lucide-react";
+import { OvertimeManager } from "@/components/finance/OvertimeManager";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
@@ -583,8 +584,11 @@ export default function FinancePayroll() {
 
       {/* Payroll Management Tabs */}
       <Tabs defaultValue="records" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-2">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="records">Monthly Payroll</TabsTrigger>
+          <TabsTrigger value="overtime">
+            <Clock className="w-4 h-4 mr-1" /> Overtime
+          </TabsTrigger>
           <TabsTrigger value="templates">Employee Templates</TabsTrigger>
         </TabsList>
 
@@ -734,6 +738,10 @@ export default function FinancePayroll() {
               )}
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="overtime" className="space-y-6">
+          <OvertimeManager />
         </TabsContent>
 
         <TabsContent value="templates" className="space-y-6">

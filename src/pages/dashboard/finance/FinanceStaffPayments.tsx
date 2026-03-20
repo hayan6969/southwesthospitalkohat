@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -12,14 +12,14 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { formatPkrAmount } from "@/utils/currency";
 import { format } from "date-fns";
 import { toast } from "sonner";
-import { Users, CheckCircle, XCircle, Eye, Clock, DollarSign } from "lucide-react";
+import { Users, CheckCircle, XCircle, Eye, Clock } from "lucide-react";
 
 export default function FinanceStaffPayments() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [statusFilter, setStatusFilter] = useState("pending");
   const [detailClosing, setDetailClosing] = useState<any>(null);
-  const [overtimeAmount, setOvertimeAmount] = useState("");
+  
 
   const { data: closings, isLoading } = useQuery({
     queryKey: ['all-staff-shift-closings', statusFilter],
@@ -79,7 +79,7 @@ export default function FinanceStaffPayments() {
       toast.success("Shift closing updated");
       queryClient.invalidateQueries({ queryKey: ['all-staff-shift-closings'] });
       setDetailClosing(null);
-      setOvertimeAmount("");
+      
     },
     onError: (err: any) => toast.error(err.message),
   });
@@ -118,24 +118,22 @@ export default function FinanceStaffPayments() {
                   <TableHead>Shift</TableHead>
                   <TableHead className="text-right">Revenue</TableHead>
                   <TableHead className="text-center">Invoices</TableHead>
-                  <TableHead className="text-center">OT Hours</TableHead>
-                  <TableHead className="text-right">OT Amount</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {isLoading ? (
-                  Array.from({ length: 5 }).map((_, i) => (
+                  Array.from({ length: 7 }).map((_, i) => (
                     <TableRow key={i}>
-                      {Array.from({ length: 9 }).map((_, j) => (
+                      {Array.from({ length: 7 }).map((_, j) => (
                         <TableCell key={j}><div className="h-4 bg-muted rounded animate-pulse" /></TableCell>
                       ))}
                     </TableRow>
                   ))
                 ) : !closings || closings.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                       No shift closings found
                     </TableCell>
                   </TableRow>
@@ -151,16 +149,6 @@ export default function FinanceStaffPayments() {
                         {formatPkrAmount(Number(closing.total_revenue) || 0)}
                       </TableCell>
                       <TableCell className="text-center">{closing.total_invoices}</TableCell>
-                      <TableCell className="text-center">
-                        {Number(closing.overtime_hours) > 0 ? (
-                          <Badge variant="secondary" className="bg-amber-100 text-amber-800 font-semibold">
-                            {closing.overtime_hours}h
-                          </Badge>
-                        ) : '-'}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        {Number(closing.overtime_amount) > 0 ? formatPkrAmount(Number(closing.overtime_amount)) : '-'}
-                      </TableCell>
                       <TableCell>
                         <Badge
                           variant={closing.status === 'approved' ? 'default' : closing.status === 'rejected' ? 'destructive' : 'secondary'}
@@ -171,7 +159,7 @@ export default function FinanceStaffPayments() {
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-1">
-                          <Button size="sm" variant="outline" onClick={() => { setDetailClosing(closing); setOvertimeAmount(String(closing.overtime_amount || '')); }}>
+                          <Button size="sm" variant="outline" onClick={() => setDetailClosing(closing)}>
                             <Eye className="w-3 h-3 mr-1" /> View
                           </Button>
                           {closing.status === 'pending' && (
@@ -238,34 +226,8 @@ export default function FinanceStaffPayments() {
                 ))}
               </div>
 
-              {Number(detailClosing.overtime_hours) > 0 && (
-                <div className="space-y-2">
-                  <p className="text-sm font-medium flex items-center gap-1">
-                    <DollarSign className="w-4 h-4" />
-                    Overtime: {detailClosing.overtime_hours} hours
-                  </p>
-                  {detailClosing.status === 'pending' && (
-                    <div className="flex gap-2">
-                      <Input
-                        type="number"
-                        placeholder="Set overtime amount"
-                        value={overtimeAmount}
-                        onChange={(e) => setOvertimeAmount(e.target.value)}
-                      />
-                      <Button
-                        size="sm"
-                        onClick={() => updateStatus.mutate({
-                          id: detailClosing.id,
-                          status: 'approved',
-                          overtimeAmt: parseFloat(overtimeAmount) || 0,
-                        })}
-                      >
-                        Approve with OT
-                      </Button>
-                    </div>
-                  )}
-                </div>
-              )}
+
+
 
               {detailClosing.notes && (
                 <div className="p-3 rounded-lg bg-muted">

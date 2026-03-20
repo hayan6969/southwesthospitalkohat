@@ -1253,6 +1253,54 @@ export type Database = {
           },
         ]
       }
+      overtime_records: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          employee_id: string
+          employee_name: string
+          id: string
+          notes: string | null
+          overtime_amount: number
+          overtime_date: string
+          overtime_hours: number
+          overtime_rate: number
+          paid_at: string | null
+          status: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          employee_id: string
+          employee_name: string
+          id?: string
+          notes?: string | null
+          overtime_amount?: number
+          overtime_date?: string
+          overtime_hours?: number
+          overtime_rate?: number
+          paid_at?: string | null
+          status?: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          employee_id?: string
+          employee_name?: string
+          id?: string
+          notes?: string | null
+          overtime_amount?: number
+          overtime_date?: string
+          overtime_hours?: number
+          overtime_rate?: number
+          paid_at?: string | null
+          status?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       patient_discounts: {
         Row: {
           created_at: string | null
