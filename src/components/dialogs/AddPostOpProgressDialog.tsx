@@ -16,6 +16,7 @@ interface AddPostOpProgressDialogProps {
   onOpenChange: (open: boolean) => void;
   otScheduleId: string;
   onSave: () => void;
+  editEntry?: { id: string; entry_date: string; blood_pressure?: string; pulses?: string; temperature?: string; input_data?: string; output_data?: string; remarks?: string } | null;
 }
 
 export function AddPostOpProgressDialog({ 
