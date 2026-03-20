@@ -740,7 +740,9 @@ export const generateOTPDF = async (data: {
     totalPrice: number | string;
     isHeader?: boolean;
   }>;
+  createdBy?: string;
 }) => {
+  const createdByName = await fetchCreatorName(data.createdBy);
   const doc = new jsPDF();
   const pageWidth = doc.internal.pageSize.width;
 
