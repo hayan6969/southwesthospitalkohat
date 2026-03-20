@@ -246,7 +246,7 @@ export default function FinanceDaily() {
         ascending: false
       }).limit(1), supabase.from('medicines').select('stock_quantity, selling_price'), supabase.from('miscellaneous_income').select('*').gt('created_at', cutoffTime) // Use gt (>) not gte (>=) to exclude boundary
       .lte('created_at', upperBound),
-      supabase.from('staff_shift_closings').select('*').eq('closing_date', targetDate).order('created_at', { ascending: true })
+      supabase.from('staff_shift_closings').select('*').gt('created_at', cutoffTime).lte('created_at', upperBound).order('created_at', { ascending: true })
       ]);
 
       // Calculate total stock value
