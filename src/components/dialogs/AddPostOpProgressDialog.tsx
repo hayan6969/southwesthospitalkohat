@@ -78,26 +78,38 @@ export function AddPostOpProgressDialog({
 
     setSaving(true);
     try {
-      const { error } = await supabase
-        .from('postop_progress_entries')
-        .insert({
-          ot_schedule_id: otScheduleId,
-          entry_date: formData.entryDate.toISOString().split('T')[0],
-          blood_pressure: formData.bloodPressure,
-          pulses: formData.pulses,
-          temperature: formData.temperature,
-          input_data: formData.input,
-          output_data: formData.output,
-          remarks: formData.remarks,
-          user_email: profile.email
-        });
-
-      if (error) throw error;
-
-      toast({
-        title: "Success",
-        description: "Progress entry added successfully",
-      });
+      if (editEntry) {
+        const { error } = await supabase
+          .from('postop_progress_entries')
+          .update({
+            entry_date: formData.entryDate.toISOString().split('T')[0],
+            blood_pressure: formData.bloodPressure,
+            pulses: formData.pulses,
+            temperature: formData.temperature,
+            input_data: formData.input,
+            output_data: formData.output,
+            remarks: formData.remarks,
+          })
+          .eq('id', editEntry.id);
+        if (error) throw error;
+        toast({ title: "Success", description: "Progress entry updated successfully" });
+      } else {
+        const { error } = await supabase
+          .from('postop_progress_entries')
+          .insert({
+            ot_schedule_id: otScheduleId,
+            entry_date: formData.entryDate.toISOString().split('T')[0],
+            blood_pressure: formData.bloodPressure,
+            pulses: formData.pulses,
+            temperature: formData.temperature,
+            input_data: formData.input,
+            output_data: formData.output,
+            remarks: formData.remarks,
+            user_email: profile.email
+          });
+        if (error) throw error;
+        toast({ title: "Success", description: "Progress entry added successfully" });
+      }
 
       // Reset form
       setFormData({
