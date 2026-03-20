@@ -337,7 +337,8 @@ export default function StaffInvoices() {
           totalAmount: invoice.price || 0,
           issueDate: format(new Date(invoice.created_at), 'MMM dd, yyyy'),
           xrayDate: format(new Date(invoice.xray_date || invoice.created_at), 'MMM dd, yyyy'),
-          notes: invoice.notes
+          notes: invoice.notes,
+          createdBy: invoice.created_by
         });
       } else {
         await generateInvoicePDF(invoice);
