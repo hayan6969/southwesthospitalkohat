@@ -1614,6 +1614,7 @@ export const generateDailyClosingPDF = async (data: {
         if (yPosition + 15 > pageHeight - 20) { doc.addPage(); yPosition = 15; drawDetailHeader(); }
         doc.setFillColor(245, 245, 245);
         doc.rect(detailStartX, yPosition, totalTableWidth, 6, 'F');
+        drawRowBorders(yPosition, 6);
         doc.setFont('helvetica', 'bold');
         doc.setFontSize(6);
         doc.setTextColor(100, 100, 100);
