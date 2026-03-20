@@ -78,47 +78,50 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     let mounted = true;
+    let profileFetched = false;
+
+    const handleSession = async (session: Session | null) => {
+      if (!mounted) return;
+      
+      setSession(session);
+      setUser(session?.user ?? null);
+
+      if (session?.user && !profileFetched) {
+        profileFetched = true;
+        try {
+          const profileData = await fetchUserProfile(session.user.id);
+          if (!mounted) return;
+          
+          if (profileData && !profileData.is_active) {
+            console.log('User account is inactive, signing out');
+            await supabase.auth.signOut();
+            return;
+          }
+          
+          setProfile(profileData);
+        } catch (error) {
+          console.error('Error fetching profile:', error);
+        }
+      } else if (!session?.user) {
+        profileFetched = false;
+        setProfile(null);
+      }
+      
+      if (mounted) {
+        setLoading(false);
+      }
+    };
 
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         console.log('Auth state changed:', event, session?.user?.email);
-        if (!mounted) return;
-        
-        setSession(session);
-        setUser(session?.user ?? null);
-
-        if (session?.user) {
-          setTimeout(async () => {
-            if (!mounted) return;
-            
-            try {
-              const profileData = await fetchUserProfile(session.user.id);
-              if (mounted) {
-                // Check if user account is active
-                if (profileData && !profileData.is_active) {
-                  console.log('User account is inactive, signing out');
-                  await supabase.auth.signOut();
-                  return;
-                }
-                
-                console.log('📝 Setting profile data from auth state change:', profileData);
-                setProfile(profileData);
-                setLoading(false);
-              }
-            } catch (error) {
-              console.error('Error in profile fetch timeout:', error);
-              if (mounted) {
-                setLoading(false);
-              }
-            }
-          }, 50);
-        } else {
-          if (mounted) {
-            setProfile(null);
-            setLoading(false);
-          }
+        if (event === 'SIGNED_OUT') {
+          profileFetched = false;
         }
+        // Only re-fetch profile on sign-in events, not INITIAL_SESSION (handled by init)
+        if (event === 'SIGNED_IN' && profileFetched) return;
+        await handleSession(session);
       }
     );
 
@@ -126,38 +129,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const initializeAuth = async () => {
       try {
         console.log('🔍 Initializing auth...');
-        
         const { data: { session: onlineSession }, error } = await supabase.auth.getSession();
         
         if (error) {
           console.error('Error getting session:', error);
-        } else if (onlineSession?.user) {
-          console.log('✅ Found active online session for:', onlineSession.user.email);
-          const currentProfile = await fetchUserProfile(onlineSession.user.id);
-          
-          // Check if user account is active during initialization
-          if (currentProfile && !currentProfile.is_active) {
-            console.log('User account is inactive during init, signing out');
-            await supabase.auth.signOut();
-            return;
-          }
-          
-          if (mounted) {
-            setSession(onlineSession);
-            setUser(onlineSession.user);
-            setProfile(currentProfile);
-          }
+          if (mounted) setLoading(false);
+          return;
         }
         
-        if (mounted) {
-          setLoading(false);
-        }
-        
+        await handleSession(onlineSession);
       } catch (error) {
         console.error('Error in initializeAuth:', error);
-        if (mounted) {
-          setLoading(false);
-        }
+        if (mounted) setLoading(false);
       }
     };
 
