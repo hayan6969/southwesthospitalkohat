@@ -17,7 +17,7 @@ import { cn } from "@/lib/utils";
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Search } from "lucide-react";
-import { getHospitalInvoiceType, hasMatchingOtHospitalInvoice } from "@/utils/invoiceDeduplication";
+import { getHospitalInvoiceType, hasMatchingOtHospitalInvoice, deduplicateInvoices } from "@/utils/invoiceDeduplication";
 
 export default function FinanceInvoices() {
   const [filterDate, setFilterDate] = useState<Date | undefined>();
