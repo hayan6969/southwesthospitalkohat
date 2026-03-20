@@ -1438,7 +1438,7 @@ export const generateDailyClosingPDF = async (data: {
       amount: Number(xray.price) || 0,
       docShare: 0,
       hosShare: Number(xray.price) || 0,
-      operator: '—',
+      operator: resolveOperatorName(xray.created_by),
       category: 'X-Ray',
       shift: getShiftFromTime(xray.created_at),
     });
