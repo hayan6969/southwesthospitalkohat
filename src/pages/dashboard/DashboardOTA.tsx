@@ -255,6 +255,11 @@ export default function DashboardOTA() {
     setShowProgressDialog(true);
   };
 
+  const handleDischargeSlip = (ot: OTScheduleWithDetails) => {
+    setSelectedOT(ot);
+    setShowDischargeSlipDialog(true);
+  };
+
   const handleAssessment = (ot: OTScheduleWithDetails) => {
     setSelectedOT(ot);
     setShowAssessmentDialog(true);
