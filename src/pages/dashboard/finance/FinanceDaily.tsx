@@ -573,7 +573,7 @@ export default function FinanceDaily() {
         transactionsData: {
           hospitalInvoices,
           pharmacyInvoices,
-          labReports: labInvoices,
+          labReports: labInvoices.map(inv => ({ ...inv, price: inv.amount })),
           xrayReports,
           otSchedules,
           emergencyAppointments,
