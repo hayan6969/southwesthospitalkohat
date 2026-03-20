@@ -715,7 +715,14 @@ export default function FinancePayroll() {
                                 Mark Paid
                               </Button>
                             )}
-                            <Button size="sm" variant="outline">
+                            <Button 
+                              size="sm" 
+                              variant="outline"
+                              onClick={() => {
+                                const monthLabel = `${getMonthOptions().find(m => m.value === selectedMonthName)?.label || ''} ${selectedYear}`;
+                                downloadSalarySlip(record, monthLabel);
+                              }}
+                            >
                               <Download className="w-4 h-4" />
                             </Button>
                           </div>
