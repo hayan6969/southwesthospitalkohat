@@ -172,7 +172,8 @@ export function StaffShiftClosing() {
         status: 'pending',
         notes: notes.trim() || null,
         summary_data: { invoices: todayRevenue.invoices } as any,
-      });
+        is_overtime: isOvertimeMode,
+      } as any);
 
       if (error) throw error;
     },
