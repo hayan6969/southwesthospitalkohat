@@ -159,16 +159,16 @@ export default function DashboardOTA() {
           .select('id')
           .ilike('patient_number', `%${term}%`);
         
-        // Search by patient name in profiles
-        const { data: byName } = await supabase
+        // Search by patient name or phone in profiles
+        const { data: byNameOrPhone } = await supabase
           .from('profiles')
           .select('id')
-          .or(`first_name.ilike.%${term}%,last_name.ilike.%${term}%`);
+          .or(`first_name.ilike.%${term}%,last_name.ilike.%${term}%,phone.ilike.%${term}%`);
         
         // Combine unique patient IDs from both searches
         const patientIdSet = new Set<string>();
         byNumber?.forEach(p => patientIdSet.add(p.id));
-        byName?.forEach(p => patientIdSet.add(p.id));
+        byNameOrPhone?.forEach(p => patientIdSet.add(p.id));
         
         if (patientIdSet.size > 0) {
           query = query.in('patient_id', Array.from(patientIdSet));
@@ -346,11 +346,11 @@ export default function DashboardOTA() {
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <div className="space-y-2">
-                <label className="text-sm font-medium">Search by Patient ID / Name</label>
+                <label className="text-sm font-medium">Search Patient</label>
                 <div className="relative">
                   <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
                   <Input
-                    placeholder="Patient number or name..."
+                    placeholder="ID, name, or phone..."
                     value={searchPatientId}
                     onChange={(e) => setSearchPatientId(e.target.value)}
                     className="pl-8"
