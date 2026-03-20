@@ -1744,7 +1744,7 @@ export const generateDailyClosingPDF = async (data: {
       existing.opdRevenue += Number(inv.amount) || 0;
       // Try to resolve doctor name from description (e.g. "Consultation - Dr. XYZ")
       if (!existing.name && inv.description) {
-        const match = inv.description.match(/(?:Dr\.?\s*)(.+)/i);
+        const match = inv.description.match(/Dr\.?\s*([^-–—]+)/i);
         if (match) existing.name = `Dr. ${match[1].trim()}`;
       }
       doctorRevenueMap.set(doctorId, existing);
@@ -1924,6 +1924,74 @@ export const generateDailyClosingPDF = async (data: {
     doc.setTextColor(150, 150, 150);
     doc.text('No refunds recorded for this period', pageWidth / 2, yPosition, { align: 'center' });
     yPosition += 12;
+  }
+
+  // ===========================================
+  // DISCOUNTS SECTION
+  // ===========================================
+  const discountItems: { patient: string; service: string; original: number; discounted: number; discount: number }[] = [];
+
+  (transactionsData?.labReports || []).forEach((lab: any) => {
+    const originalPrice = Number(lab.price) || 0;
+    const finalAmount = Number(lab.amount) || originalPrice;
+    if (originalPrice > 0 && finalAmount < originalPrice) {
+      const p = lab.patients?.profiles;
+      discountItems.push({
+        patient: p ? `${p.first_name || ''} ${p.last_name || ''}`.trim() : 'Unknown',
+        service: `Lab - ${lab.test_name || 'Test'}`,
+        original: originalPrice,
+        discounted: finalAmount,
+        discount: originalPrice - finalAmount,
+      });
+    }
+  });
+
+  (transactionsData?.xrayReports || []).forEach((xray: any) => {
+    const originalPrice = Number(xray.price) || 0;
+    const finalAmount = Number(xray.amount) || originalPrice;
+    if (originalPrice > 0 && finalAmount < originalPrice) {
+      const p = (xray as any).patients?.profiles;
+      discountItems.push({
+        patient: p ? `${p.first_name || ''} ${p.last_name || ''}`.trim() : 'Unknown',
+        service: `X-Ray - ${xray.test_name || 'X-Ray'}`,
+        original: originalPrice,
+        discounted: finalAmount,
+        discount: originalPrice - finalAmount,
+      });
+    }
+  });
+
+  hospitalInvoicesAll
+    .filter((inv: any) => inv.invoice_number?.startsWith?.('INV-') && !isEmergencyInv(inv))
+    .forEach((inv: any) => {
+      const originalAmt = Number(inv.original_amount) || 0;
+      const finalAmt = Number(inv.amount) || 0;
+      if (originalAmt > 0 && finalAmt < originalAmt) {
+        discountItems.push({
+          patient: inv.description || 'OPD',
+          service: 'OPD Consultation',
+          original: originalAmt,
+          discounted: finalAmt,
+          discount: originalAmt - finalAmt,
+        });
+      }
+    });
+
+  if (discountItems.length > 0) {
+    drawSectionHeader(`DISCOUNTS APPLIED (${discountItems.length})`);
+    const discountHeaders = ['Sr#', 'Patient', 'Service', 'Original', 'Discount', 'Final Amount'];
+    const discountColWidths = [8, 40, 40, 28, 28, 28];
+    const discountRows: string[][] = discountItems.map((d, i) => [
+      String(i + 1),
+      d.patient,
+      d.service,
+      formatPkrAmount(d.original),
+      `-${formatPkrAmount(d.discount)}`,
+      formatPkrAmount(d.discounted),
+    ]);
+    const totalDiscount = discountItems.reduce((s, d) => s + d.discount, 0);
+    discountRows.push(['', '', '', '', 'Total Discount:', formatPkrAmount(totalDiscount)]);
+    drawTable(discountHeaders, discountRows, discountColWidths);
   }
 
   // ===========================================
@@ -2142,15 +2210,14 @@ export const generateDailyClosingPDF = async (data: {
   } // end if (!activeCategoryFilter)
 
   // ===========================================
-  // PROOF ATTACHMENTS SECTION
+  // PROOF ATTACHMENTS SECTION (split by category)
   // ===========================================
-  const proofItems: { label: string; description: string; amount: number; proofUrl: string }[] = [];
+  const expenseProofs: { description: string; amount: number; proofUrl: string }[] = [];
+  const refundProofs: { description: string; amount: number; proofUrl: string }[] = [];
 
-  // Collect expense proofs
   (transactionsData?.expenses || []).forEach((exp: any) => {
     if (exp.proof_url) {
-      proofItems.push({
-        label: 'Expense',
+      expenseProofs.push({
         description: exp.description || exp.category || 'Expense',
         amount: exp.amount || 0,
         proofUrl: exp.proof_url,
@@ -2158,11 +2225,9 @@ export const generateDailyClosingPDF = async (data: {
     }
   });
 
-  // Collect refund proofs
   (transactionsData?.refunds || []).forEach((ref: any) => {
     if (ref.proof_url) {
-      proofItems.push({
-        label: 'Refund',
+      refundProofs.push({
         description: ref.description || ref.refund_type || 'Refund',
         amount: ref.amount || 0,
         proofUrl: ref.proof_url,
@@ -2170,11 +2235,16 @@ export const generateDailyClosingPDF = async (data: {
     }
   });
 
-  if (proofItems.length > 0) {
-    doc.addPage();
-    yPosition = 20;
+  // Helper to render a group of proof images
+  const renderProofGroup = async (title: string, items: { description: string; amount: number; proofUrl: string }[]) => {
+    if (items.length === 0) return;
 
-    // Section header
+    if (yPosition + 30 > pageHeight - 20) {
+      doc.addPage();
+      yPosition = 20;
+    }
+
+    // Sub-header
     doc.setFillColor(240, 240, 240);
     doc.rect(15, yPosition - 2, pageWidth - 30, 12, 'F');
     doc.setDrawColor(200, 200, 200);
@@ -2182,26 +2252,23 @@ export const generateDailyClosingPDF = async (data: {
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(12);
     doc.setTextColor(40, 40, 40);
-    doc.text(`PROOF ATTACHMENTS (${proofItems.length})`, pageWidth / 2, yPosition + 6, { align: 'center' });
+    doc.text(`${title} (${items.length})`, pageWidth / 2, yPosition + 6, { align: 'center' });
     yPosition += 18;
 
-    for (let pi = 0; pi < proofItems.length; pi++) {
-      const proof = proofItems[pi];
+    for (let pi = 0; pi < items.length; pi++) {
+      const proof = items[pi];
 
-      // Check if we need a new page (need ~100mm for label + image)
       if (yPosition + 100 > pageHeight - 20) {
         doc.addPage();
         yPosition = 20;
       }
 
-      // Proof label
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(9);
       doc.setTextColor(40, 40, 40);
-      doc.text(`${pi + 1}. [${proof.label}] ${proof.description} — ${formatPkrAmount(proof.amount)}`, 20, yPosition);
+      doc.text(`${pi + 1}. ${proof.description} — ${formatPkrAmount(proof.amount)}`, 20, yPosition);
       yPosition += 6;
 
-      // Try to load and embed the proof image
       try {
         const img = new Image();
         img.crossOrigin = 'anonymous';
@@ -2214,18 +2281,13 @@ export const generateDailyClosingPDF = async (data: {
         });
 
         if (loaded && img.width > 0 && img.height > 0) {
-          // Scale image to fit within page width (max 160mm wide, max 80mm tall)
           const maxW = 160;
           const maxH = 80;
           let imgW = img.width;
           let imgH = img.height;
-          const scaleW = maxW / imgW;
-          const scaleH = maxH / imgH;
-          const scale = Math.min(scaleW, scaleH, 1);
+          const scale = Math.min(maxW / imgW, maxH / imgH, 1);
           imgW = imgW * scale;
           imgH = imgH * scale;
-
-          // Convert to mm (approximate 3.78 px/mm at 96dpi)
           const mmW = Math.min(imgW, maxW);
           const mmH = Math.min(imgH, maxH);
 
@@ -2234,11 +2296,9 @@ export const generateDailyClosingPDF = async (data: {
             yPosition = 20;
           }
 
-          // Draw border around image
           doc.setDrawColor(180, 180, 180);
           doc.setLineWidth(0.3);
           doc.rect(19, yPosition - 1, mmW + 2, mmH + 2);
-
           doc.addImage(img, 'JPEG', 20, yPosition, mmW, mmH);
           yPosition += mmH + 8;
         } else {
@@ -2257,6 +2317,13 @@ export const generateDailyClosingPDF = async (data: {
         yPosition += 8;
       }
     }
+  };
+
+  if (expenseProofs.length > 0 || refundProofs.length > 0) {
+    doc.addPage();
+    yPosition = 20;
+    await renderProofGroup('EXPENSE PROOFS', expenseProofs);
+    await renderProofGroup('REFUND PROOFS', refundProofs);
   }
 
   // Footer
