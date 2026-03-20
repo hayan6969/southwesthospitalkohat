@@ -225,7 +225,7 @@ export default function FinanceDaily() {
       const upperBound = isToday ? currentPakTime.toISOString() : toPakistanTime(new Date(`${targetDate}T23:59:59`)).toISOString();
 
       // Fetch all detailed transaction data using proper time filtering
-      const [hospitalInvoicesRes, pharmacyInvoicesRes, labInvoicesRes, xrayReportsRes, otSchedulesRes, emergencyAppointmentsRes, expensesRes, refundsRes, pharmacyExpensesRes, pharmacyAccountRes, totalStockRes, miscellaneousIncomeRes] = await Promise.all([supabase.from('invoices').select('*, patients(id, profiles(first_name, last_name))').eq('status', 'paid').gt('created_at', cutoffTime) // Use gt (>) not gte (>=) to exclude boundary
+      const [hospitalInvoicesRes, pharmacyInvoicesRes, labInvoicesRes, xrayReportsRes, otSchedulesRes, emergencyAppointmentsRes, expensesRes, refundsRes, pharmacyExpensesRes, pharmacyAccountRes, totalStockRes, miscellaneousIncomeRes, staffShiftClosingsRes] = await Promise.all([supabase.from('invoices').select('*, patients(id, profiles(first_name, last_name))').eq('status', 'paid').gt('created_at', cutoffTime) // Use gt (>) not gte (>=) to exclude boundary
       .lte('created_at', upperBound), supabase.from('pharmacy_invoices').select(`
             *,
             pharmacy_invoice_items(
@@ -245,7 +245,9 @@ export default function FinanceDaily() {
       .lte('created_at', upperBound), supabase.from('pharmacy_account').select('*').order('created_at', {
         ascending: false
       }).limit(1), supabase.from('medicines').select('stock_quantity, selling_price'), supabase.from('miscellaneous_income').select('*').gt('created_at', cutoffTime) // Use gt (>) not gte (>=) to exclude boundary
-      .lte('created_at', upperBound)]);
+      .lte('created_at', upperBound),
+      supabase.from('staff_shift_closings').select('*').eq('closing_date', targetDate).order('created_at', { ascending: true })
+      ]);
 
       // Calculate total stock value
       const totalStockValue = (totalStockRes.data || []).reduce((total: number, medicine: any) => {
