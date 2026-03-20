@@ -222,6 +222,9 @@ export function XrayDialog({ open, onOpenChange, onSuccess }: XrayDialogProps) {
 
     setConfirmationData(confirmationDataNew);
     setShowConfirmation(true);
+    } finally {
+      setIsPreparing(false);
+    }
   };
 
   const handleConfirm = async () => {
