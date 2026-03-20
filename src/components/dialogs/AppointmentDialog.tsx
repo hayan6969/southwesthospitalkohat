@@ -127,8 +127,6 @@ export function AppointmentDialog() {
           <div className="space-y-2">
             <Label htmlFor="patient">Patient</Label>
             <SearchablePatientSelect
-              patients={patients}
-              patientNames={patientNames}
               value={patientId}
               onValueChange={setPatientId}
               placeholder="Search by patient ID or name..."
