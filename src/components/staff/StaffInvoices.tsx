@@ -111,9 +111,12 @@ export function StaffInvoices() {
     const unmatchedOtSchedules =
       otSchedules?.filter((otSchedule) => !hasMatchingOtHospitalInvoice(otSchedule, hospitalInvoices || [])) || [];
 
+    // Deduplicate hospital invoices first
+    const dedupedHospitalInvoices = deduplicateInvoices(hospitalInvoices || []);
+
     // Process all invoices and categorize them by invoice number prefix
-    if (hospitalInvoices) {
-      hospitalInvoices.forEach(invoice => {
+    if (dedupedHospitalInvoices.length > 0) {
+      dedupedHospitalInvoices.forEach(invoice => {
         const hospitalType = getHospitalInvoiceType(invoice);
         const type = hospitalType === 'appointment' ? 'appointments' : hospitalType;
 

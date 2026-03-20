@@ -628,8 +628,9 @@ export default function FinanceInvoices() {
   const unmatchedOtSchedules =
     otSchedules?.filter((ot) => !hasMatchingOtHospitalInvoice(ot, hospitalInvoices || [])) || [];
 
+  const dedupedHospitalInvoices = deduplicateInvoices(hospitalInvoices || []);
   const allInvoices = [
-    ...(hospitalInvoices?.filter(inv => inv.status === 'paid').map(inv => {
+    ...(dedupedHospitalInvoices.filter(inv => inv.status === 'paid').map(inv => {
       const type = getHospitalInvoiceType(inv);
       const typeLabel =
         type === 'ot'
