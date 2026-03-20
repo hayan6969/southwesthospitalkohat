@@ -2208,7 +2208,8 @@ export const generateDailyClosingPDF = async (data: {
   drawSectionHeader('HOSPITAL CLOSING BALANCE CALCULATION');
 
   const computedHospitalRevenue = correctHospitalServicesRevenue;
-  const hospitalNetProfit = computedHospitalRevenue - data.totalExpenses - data.totalRefunds;
+  const pharmacyProfitForBalance = data.pharmacyProfit || 0;
+  const hospitalNetProfit = computedHospitalRevenue - data.totalExpenses - data.totalRefunds + pharmacyProfitForBalance;
   const newClosingBalance = previousClosingBalance + hospitalNetProfit;
 
   drawTable(
@@ -2216,6 +2217,7 @@ export const generateDailyClosingPDF = async (data: {
     [
       ['Opening Balance (Previous Day)', formatPkrAmount(previousClosingBalance)],
       ['Todays Hospital Revenue', formatPkrAmount(computedHospitalRevenue)],
+      ['Todays Pharmacy Profit', formatPkrAmount(pharmacyProfitForBalance)],
       ['Todays Hospital Expenses', `(${formatPkrAmount(data.totalExpenses)})`],
       ['Todays Refunds', `(${formatPkrAmount(data.totalRefunds)})`],
       ['Todays Hospital Net Profit/Loss', formatPkrAmount(hospitalNetProfit)]
@@ -2985,7 +2987,8 @@ export const generateDailyClosingSummaryPDF = async (data: {
   checkNewPage(120);
   drawSectionHeader('HOSPITAL CLOSING BALANCE CALCULATION');
 
-  const hospitalNetProfit = totalHosShare - totalExp - totalRef;
+  const summaryPharmacyProfit = data.pharmacyProfit || 0;
+  const hospitalNetProfit = totalHosShare - totalExp - totalRef + summaryPharmacyProfit;
   const newClosingBalance = previousClosingBalance + hospitalNetProfit;
 
   drawTable(
@@ -2993,6 +2996,7 @@ export const generateDailyClosingSummaryPDF = async (data: {
     [
       ['Opening Balance (Previous Day)', formatPkrAmount(previousClosingBalance)],
       ['Todays Hospital Revenue', formatPkrAmount(totalHosShare)],
+      ['Todays Pharmacy Profit', formatPkrAmount(summaryPharmacyProfit)],
       ['Todays Hospital Expenses', `(${formatPkrAmount(totalExp)})`],
       ['Todays Refunds', `(${formatPkrAmount(totalRef)})`],
       ['Todays Hospital Net Profit/Loss', formatPkrAmount(hospitalNetProfit)]
