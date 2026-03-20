@@ -301,7 +301,7 @@ export default function FinanceDiscounts() {
 
       {/* Assign Discount Dialog */}
       <Dialog open={assignDialogOpen} onOpenChange={(v) => { setAssignDialogOpen(v); if (!v) resetAssignForm(); }}>
-        <DialogContent className="sm:max-w-[500px]">
+        <DialogContent className="sm:max-w-[500px] z-[9999]">
           <DialogHeader>
             <DialogTitle>Assign Patient Discount</DialogTitle>
           </DialogHeader>
