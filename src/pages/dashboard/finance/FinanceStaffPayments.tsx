@@ -118,8 +118,6 @@ export default function FinanceStaffPayments() {
                   <TableHead>Shift</TableHead>
                   <TableHead className="text-right">Revenue</TableHead>
                   <TableHead className="text-center">Invoices</TableHead>
-                  <TableHead className="text-center">OT Hours</TableHead>
-                  <TableHead className="text-right">OT Amount</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
