@@ -23,7 +23,8 @@ export function AddTreatmentEntryDialog({
   open, 
   onOpenChange, 
   otScheduleId,
-  onSave 
+  onSave,
+  editEntry 
 }: AddTreatmentEntryDialogProps) {
   const { toast } = useToast();
   const { profile } = useAuth();
@@ -34,6 +35,24 @@ export function AddTreatmentEntryDialog({
     medicine: "",
     investigation: ""
   });
+
+  useEffect(() => {
+    if (editEntry) {
+      setFormData({
+        entryDate: new Date(editEntry.entry_date),
+        entryTime: getCurrentPakistanTimeString(),
+        medicine: editEntry.medicine || "",
+        investigation: editEntry.investigation || ""
+      });
+    } else {
+      setFormData({
+        entryDate: new Date(),
+        entryTime: getCurrentPakistanTimeString(),
+        medicine: "",
+        investigation: ""
+      });
+    }
+  }, [editEntry, open]);
 
   const handleSave = async () => {
     if (!profile?.email) {
