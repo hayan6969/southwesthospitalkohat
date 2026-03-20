@@ -1455,19 +1455,21 @@ export const generateDailyClosingPDF = async (data: {
   // Lab reports - use amount (invoice-level, includes discount) if available, fallback to price
   (transactionsData?.labReports || []).forEach((lab: any) => {
     const p = lab.patients?.profiles;
-    const labAmount = Number(lab.amount) || Number(lab.price) || 0;
-    const hasDiscount = lab.description && lab.description.includes('discount');
-    const procedure = hasDiscount 
-      ? (lab.description || lab.test_name || 'Lab Test')
-      : (lab.test_name || lab.description || 'Lab Test');
+    const originalPrice = Number(lab.price) || 0;
+    const finalAmount = Number(lab.amount) || originalPrice;
+    const discountApplied = originalPrice > 0 && finalAmount < originalPrice ? originalPrice - finalAmount : 0;
+    let procedure = lab.test_name || lab.description || 'Lab Test';
+    if (discountApplied > 0) {
+      procedure = `${procedure} (Disc: Rs. ${discountApplied.toFixed(2)})`;
+    }
     allTxns.push({
       patientName: p ? `${p.first_name || ''} ${p.last_name || ''}`.trim() : 'Unknown',
       time: lab.created_at || lab.test_date,
       procedure,
       consultant: '—',
-      amount: labAmount,
+      amount: finalAmount,
       docShare: 0,
-      hosShare: labAmount,
+      hosShare: finalAmount,
       operator: resolveLabOperator(lab),
       category: 'Lab',
       shift: getShiftFromTime(lab.created_at || lab.test_date),
@@ -2455,7 +2457,7 @@ export const generateDailyClosingSummaryPDF = async (data: {
     inv.invoice_number?.startsWith('EMERGENCY-');
 
   const labReports = transactionsData?.labReports || [];
-  const labRevenue = labReports.reduce((s: number, r: any) => s + (Number(r.price) || 0), 0);
+  const labRevenue = labReports.reduce((s: number, r: any) => s + (Number(r.amount) || Number(r.price) || 0), 0);
 
   const xrayReports = transactionsData?.xrayReports || [];
   const xrayRevenue = xrayReports.reduce((s: number, r: any) => s + (Number(r.price) || 0), 0);
