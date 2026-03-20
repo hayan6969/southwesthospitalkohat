@@ -145,8 +145,8 @@ export function StaffShiftClosing() {
   });
 
   const todayRegularClosed = previousClosings?.some((c) => c.closing_date === format(today, 'yyyy-MM-dd') && c.shift === staffShift && !(c as any).is_overtime);
-  const todayOvertimeClosed = previousClosings?.some((c) => c.closing_date === format(today, 'yyyy-MM-dd') && c.shift === staffShift && (c as any).is_overtime);
-  const todayAlreadyClosed = isOvertimeMode ? todayOvertimeClosed : todayRegularClosed;
+  // Allow multiple overtime submissions - never block overtime mode
+  const todayAlreadyClosed = isOvertimeMode ? false : todayRegularClosed;
 
   const submitClosing = useMutation({
     mutationFn: async () => {
@@ -291,8 +291,8 @@ export function StaffShiftClosing() {
                       {isOvertimeMode ? 'Overtime already submitted for today' : 'Shift already closed for today'}
                     </span>
                   </div>
-                  {/* Show overtime option only if regular shift is closed and overtime not yet submitted */}
-                  {!isOvertimeMode && todayRegularClosed && !todayOvertimeClosed && (
+                  {/* Show overtime option when regular shift is closed */}
+                  {!isOvertimeMode && todayRegularClosed && (
                     <Button
                       onClick={() => {
                         setIsOvertimeMode(true);
