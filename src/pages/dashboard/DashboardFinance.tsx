@@ -184,17 +184,42 @@ export default function DashboardFinance() {
     return staff ? `${staff.first_name} ${staff.last_name}` : '—';
   };
 
-  // Calculate hospital revenue from paid invoices
-  const emergencyConsultationRevenue = invoices?.filter(inv => 
-    inv.status === 'paid' && inv.description?.toLowerCase().includes('emergency')
-  ).reduce((sum, invoice) => sum + (invoice.amount || 0), 0) || 0;
+  // Deduplicate invoices helper (same patient, same amount, within 2 min)
+  const deduplicateInvs = (invs: typeof invoices) => {
+    if (!invs) return [];
+    const kept: typeof invs = [];
+    for (const inv of invs) {
+      const amt = Number(inv.amount ?? 0);
+      const ts = inv.created_at ? new Date(inv.created_at).getTime() : 0;
+      const isDup = kept.some(
+        (e) =>
+          e.patient_id === inv.patient_id &&
+          Number(e.amount ?? 0) === amt &&
+          Math.abs((e.created_at ? new Date(e.created_at).getTime() : 0) - ts) <= 2 * 60 * 1000
+      );
+      if (!isDup) kept.push(inv);
+    }
+    return kept;
+  };
 
-  // Regular consultation revenue (paid, non-emergency)
-  const consultationRevenue = invoices?.filter(inv =>
-    inv.status === 'paid' &&
-    inv.description?.toLowerCase().includes('consultation') &&
-    !inv.description?.toLowerCase().includes('emergency')
-  ).reduce((sum, invoice) => sum + (invoice.amount || 0), 0) || 0;
+  const paidInvoices = deduplicateInvs(invoices?.filter(inv => inv.status === 'paid'));
+
+  // Emergency detection — consistent with PDF logic
+  const isEmergencyInv = (inv: any) =>
+    inv.description?.toLowerCase().includes('emergency') ||
+    inv.emergency_patient_data ||
+    inv.invoice_number?.startsWith('EMG-') ||
+    inv.invoice_number?.startsWith('EMERGENCY-');
+
+  // Hospital revenue from paid invoices — using invoice_number prefix (consistent with PDF)
+  const emergencyConsultationRevenue = paidInvoices
+    .filter(isEmergencyInv)
+    .reduce((sum, inv) => sum + (inv.amount || 0), 0);
+
+  // Regular consultation revenue (OPD — INV- prefix, non-emergency)
+  const consultationRevenue = paidInvoices
+    .filter(inv => inv.invoice_number?.startsWith('INV-') && !isEmergencyInv(inv))
+    .reduce((sum, inv) => sum + (inv.amount || 0), 0);
   
   // Calculate pharmacy revenue and profit correctly
   let pharmacyRevenue = 0;
@@ -214,11 +239,10 @@ export default function DashboardFinance() {
     }, 0);
   }
   
-  const labRevenue = invoices?.filter(invoice => 
-    invoice.status === 'paid' && 
-    invoice.description && 
-    invoice.description.toLowerCase().includes('lab')
-  ).reduce((sum, invoice) => sum + Number(invoice.amount), 0) || 0;
+  // Lab revenue — from LAB- prefixed invoices (consistent with PDF)
+  const labRevenue = paidInvoices
+    .filter(inv => inv.invoice_number?.startsWith('LAB-'))
+    .reduce((sum, inv) => sum + Number(inv.amount), 0);
 
   const xrayRevenue = xrayReports?.reduce((sum, xray) => sum + (Number(xray.price) || 0), 0) || 0;
   
@@ -236,7 +260,9 @@ export default function DashboardFinance() {
   const doctorsRevenue = consultationRevenue + otDoctorRevenue;
   const hospitalRevenue = emergencyConsultationRevenue + labRevenue + xrayRevenue + otHospitalRevenue + miscellaneousIncome;
   const totalExpenses = expenses?.reduce((sum, exp) => sum + (exp.amount || 0), 0) || 0;
-  const hospitalNetProfit = hospitalRevenue + pharmacyProfit - totalExpenses;
+  const totalRefunds = refunds?.reduce((sum, r) => sum + (Number(r.amount) || 0), 0) || 0;
+  // CORRECT FORMULA: Hospital Share + Pharmacy Profit - Expenses - Refunds
+  const hospitalNetProfit = hospitalRevenue + pharmacyProfit - totalExpenses - totalRefunds;
   const totalRevenue = hospitalRevenue + doctorsRevenue + pharmacyRevenue;
   const pharmacyTotalExpenses = pharmacyExpenses?.reduce((sum, exp) => sum + exp.amount, 0) || 0;
 
