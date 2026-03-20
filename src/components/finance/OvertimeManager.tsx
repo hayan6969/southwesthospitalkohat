@@ -386,16 +386,17 @@ export function OvertimeManager() {
       }
 
       const totalHours = pendingRecords.reduce((s, r) => s + (Number(r.overtime_hours) || 0), 0);
-      const totalAmount = totalHours * rate;
-      const dateRange = pendingRecords.length === 1
-        ? format(new Date(pendingRecords[0].overtime_date), 'dd MMM yyyy')
-        : `${format(new Date(pendingRecords[0].overtime_date), 'dd MMM')} - ${format(new Date(pendingRecords[pendingRecords.length - 1].overtime_date), 'dd MMM yyyy')}`;
+      const totalAmount = pendingRecords.reduce((s, r) => s + (Number(r.overtime_hours) || 0) * rate, 0);
+      const dates = pendingRecords.map(r => new Date(r.overtime_date)).sort((a, b) => a.getTime() - b.getTime());
+      const dateRange = dates.length === 1
+        ? format(dates[0], 'dd MMM yyyy')
+        : `${format(dates[0], 'dd MMM')} - ${format(dates[dates.length - 1], 'dd MMM yyyy')}`;
 
       const { error: expenseError } = await supabase
         .from('expenses')
         .insert({
           category: 'Overtime',
-          description: `Overtime payment for ${payingGroup.employee_name} (${totalHours}h @ ${formatPkrAmount(rate)}/h) - ${dateRange}`,
+          description: `OT: ${payingGroup.employee_name} - ${totalHours}h @ ${rate}/h - ${dateRange}`,
           amount: totalAmount,
           expense_date: getCurrentPakistanTime().toISOString().split('T')[0],
           created_by: userData.user?.id,
