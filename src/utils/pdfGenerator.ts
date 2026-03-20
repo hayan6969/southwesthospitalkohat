@@ -1237,25 +1237,26 @@ export const generateDailyClosingPDF = async (data: {
         }
         
         xPos = startX + 2;
+        // Ensure correct font is set for text width measurement
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(8);
         row.forEach((cell, colIndex) => {
-          // Clip text to fit within column width using actual text measurement
+          // Clip text to fit within column width
           let displayText = cell;
-          const availableWidth = colWidths[colIndex] - 4; // 2px padding each side
+          const availableWidth = colWidths[colIndex] - 5; // padding buffer
           
           // Don't truncate amounts
-          if (!cell.includes('Rs.') && !cell.includes('(')) {
-            let textWidth = doc.getTextWidth(displayText);
-            if (textWidth > availableWidth) {
-              // Progressively trim until it fits
-              while (doc.getTextWidth(displayText + '...') > availableWidth && displayText.length > 1) {
-                displayText = displayText.substring(0, displayText.length - 1);
-              }
-              displayText = displayText.trim() + '...';
+          const isAmount = cell.includes('Rs.') || cell.includes('(');
+          if (!isAmount && displayText.length > 0) {
+            // Use character-based limit as primary method (more reliable)
+            const charLimit = Math.max(3, Math.floor(availableWidth / 1.8));
+            if (displayText.length > charLimit) {
+              displayText = displayText.substring(0, charLimit - 2).trim() + '..';
             }
           }
           
           // Right align numeric values (amounts)
-          if (cell.includes('Rs.') || cell.includes('(') || !isNaN(parseFloat(cell))) {
+          if (isAmount || (!isNaN(parseFloat(cell)) && cell.trim().length > 0)) {
             doc.text(displayText, xPos + colWidths[colIndex] - 4, tableY + 6, { align: 'right' });
           } else {
             doc.text(displayText, xPos, tableY + 6);
