@@ -212,15 +212,17 @@ export function OvertimeManager() {
   const createMutation = useMutation({
     mutationFn: async () => {
       const hours = parseFloat(overtimeHours) || 0;
-      const empId = selectedEmployeeId || crypto.randomUUID();
+      const name = employeeName.trim();
+      if (!name) throw new Error("Employee name is required");
 
-      const { data: existing } = await supabase
+      const { data: existingRecords } = await supabase
         .from('overtime_records')
         .select('*')
-        .eq('employee_id', empId)
+        .ilike('employee_name', name)
         .eq('overtime_date', overtimeDate)
-        .eq('status', 'pending')
-        .maybeSingle();
+        .eq('status', 'pending');
+
+      const existing = existingRecords?.[0];
 
       if (existing) {
         const newHours = (Number(existing.overtime_hours) || 0) + hours;
@@ -231,11 +233,12 @@ export function OvertimeManager() {
           .eq('id', existing.id);
         if (error) throw error;
       } else {
+        const empId = selectedEmployeeId || crypto.randomUUID();
         const { error } = await supabase
           .from('overtime_records')
           .insert({
             employee_id: empId,
-            employee_name: employeeName,
+            employee_name: name,
             overtime_hours: hours,
             overtime_rate: 0,
             overtime_amount: 0,
