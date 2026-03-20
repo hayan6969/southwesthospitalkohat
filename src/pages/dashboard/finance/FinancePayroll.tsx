@@ -989,7 +989,8 @@ export default function FinancePayroll() {
                           </div>
                         </TableCell>
                       </TableRow>
-                    ))}
+                      );
+                    })}
                   </TableBody>
                 </Table>
               )}
