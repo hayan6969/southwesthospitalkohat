@@ -962,7 +962,7 @@ const queryTransactionDataForDate = async (closingDate: string, closingTime: str
     
     supabase
       .from('xray_reports')
-      .select('*, patients(id, profiles(first_name, last_name))')
+      .select('*, patients(id, profiles(first_name, last_name)), xray_tests(name)')
       .not('price', 'is', null)
       .gte('created_at', cutoffTime)
       .lte('created_at', upperBound),
@@ -1903,14 +1903,18 @@ export const generateDailyClosingPDF = async (data: {
 
   if (expenseCount > 0) {
     const expenseHeaders = ['Sr#', 'Category', 'Description / Bill', 'Date & Time', 'Amount'];
-    const expenseColWidths = [10, 35, 65, 30, 30];
-    const expenseRows: string[][] = transactionsData.expenses.map((exp: any, i: number) => [
-      String(i + 1),
-      exp.category || '—',
-      exp.description || '—',
-      exp.created_at ? formatTime(exp.created_at) + ' ' + new Date(exp.expense_date).toLocaleDateString() : new Date(exp.expense_date).toLocaleDateString(),
-      formatPkrAmount(exp.amount)
-    ]);
+    const expenseColWidths = [10, 25, 75, 30, 30];
+    const expenseRows: string[][] = transactionsData.expenses.map((exp: any, i: number) => {
+      // Truncate category to fit narrow column
+      const category = (exp.category || '—').substring(0, 12);
+      return [
+        String(i + 1),
+        category,
+        exp.description || '—',
+        exp.created_at ? formatTime(exp.created_at) + ' ' + new Date(exp.expense_date).toLocaleDateString() : new Date(exp.expense_date).toLocaleDateString(),
+        formatPkrAmount(exp.amount)
+      ];
+    });
 
     expenseRows.push(['', '', '', 'Total Expenses:', formatPkrAmount(detailedTotalExpenses)]);
     drawTable(expenseHeaders, expenseRows, expenseColWidths);
