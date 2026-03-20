@@ -1375,11 +1375,16 @@ export const generateDailyClosingPDF = async (data: {
   // OPD Consultations
   hospitalInvoicesAll.filter((inv: any) => inv.invoice_number?.startsWith?.('INV-') && !isEmergencyInv(inv)).forEach((inv: any) => {
     const p = inv.patients?.profiles;
+    let consultantName = '—';
+    if (inv.description) {
+      const drMatch = inv.description.match(/(?:Consultation with\s+)(Dr\.?\s*[^-–—]+)/i);
+      if (drMatch) consultantName = drMatch[1].trim();
+    }
     allTxns.push({
       patientName: p ? `${p.first_name || ''} ${p.last_name || ''}`.trim() : 'Unknown',
       time: inv.created_at,
       procedure: inv.description || 'OPD Consultancy',
-      consultant: '—',
+      consultant: consultantName,
       amount: Number(inv.amount) || 0,
       docShare: Number(inv.amount) || 0,
       hosShare: 0,
