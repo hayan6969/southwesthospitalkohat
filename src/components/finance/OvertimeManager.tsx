@@ -203,7 +203,7 @@ export function OvertimeManager() {
         .eq('id', 1)
         .maybeSingle();
       if (error) throw error;
-      return (data ?? null) as FinanceSettings | null;
+      return (data ?? null) as unknown as FinanceSettings | null;
     }
   });
 
