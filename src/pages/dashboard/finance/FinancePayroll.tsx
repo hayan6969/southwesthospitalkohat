@@ -931,6 +931,7 @@ export default function FinancePayroll() {
                   <TableHeader>
                     <TableRow>
                       <TableHead>Employee</TableHead>
+                      <TableHead>Employee ID</TableHead>
                       <TableHead>Role</TableHead>
                       <TableHead>Base Salary</TableHead>
                       <TableHead>Allowances</TableHead>
@@ -940,9 +941,19 @@ export default function FinancePayroll() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {payrollTemplates?.map((template) => (
+                    {payrollTemplates?.map((template) => {
+                      const isLinked = staff?.find(s => s.id === template.employee_id);
+                      return (
                       <TableRow key={template.id}>
                         <TableCell className="font-medium">{template.employee_name}</TableCell>
+                        <TableCell>
+                          <span className="text-xs font-mono text-muted-foreground">
+                            {template.employee_id.substring(0, 8)}...
+                          </span>
+                          {isLinked && (
+                            <Badge variant="secondary" className="ml-1 text-[10px] px-1">Linked</Badge>
+                          )}
+                        </TableCell>
                         <TableCell>
                           <Badge variant="outline" className="capitalize">
                             {template.role}
