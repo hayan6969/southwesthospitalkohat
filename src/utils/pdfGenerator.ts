@@ -1749,10 +1749,10 @@ export const generateDailyClosingPDF = async (data: {
       doc.setFontSize(6.5);
       doc.setTextColor(40, 60, 120);
       doc.text(`${cat} / Sub Total:`, detailStartX + 3, yPosition + 5);
-      const ctX = detailStartX + detailColWidths[0] + detailColWidths[1] + detailColWidths[2] + detailColWidths[3] + detailColWidths[4];
-      doc.text(formatPkrAmount(catTotal), ctX + detailColWidths[5] - 2, yPosition + 5, { align: 'right' });
-      doc.text(formatPkrAmount(catDoc), ctX + detailColWidths[5] + detailColWidths[6] - 2, yPosition + 5, { align: 'right' });
-      doc.text(formatPkrAmount(catHos), ctX + detailColWidths[5] + detailColWidths[6] + detailColWidths[7] - 2, yPosition + 5, { align: 'right' });
+      const ctX = detailStartX + detailColWidths[0] + detailColWidths[1] + detailColWidths[2] + detailColWidths[3] + detailColWidths[4] + detailColWidths[5];
+      doc.text(formatPkrAmount(catTotal), ctX + detailColWidths[6] - 2, yPosition + 5, { align: 'right' });
+      doc.text(formatPkrAmount(catDoc), ctX + detailColWidths[6] + detailColWidths[7] - 2, yPosition + 5, { align: 'right' });
+      doc.text(formatPkrAmount(catHos), ctX + detailColWidths[6] + detailColWidths[7] + detailColWidths[8] - 2, yPosition + 5, { align: 'right' });
       yPosition += 8;
 
       grandTotal += catTotal;
