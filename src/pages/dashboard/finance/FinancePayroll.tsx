@@ -816,7 +816,7 @@ export default function FinancePayroll() {
                       )}
                     </div>
                     <div>
-                      <Label htmlFor="employeeName">Employee Name</Label>
+                      <Label htmlFor="employeeName">Employee Name *</Label>
                       <Input
                         id="employeeName"
                         value={employeeName}
@@ -826,7 +826,21 @@ export default function FinancePayroll() {
                       />
                     </div>
                     <div>
-                      <Label htmlFor="employeeRole">Role</Label>
+                      <Label htmlFor="employeeId">Employee ID</Label>
+                      <Input
+                        id="employeeId"
+                        value={selectedEmployeeId || "(Auto-generated)"}
+                        readOnly
+                        className="bg-muted text-muted-foreground text-xs font-mono"
+                      />
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {selectedEmployeeId && staff?.find(s => s.id === selectedEmployeeId)
+                          ? "Linked to system account"
+                          : "Will be auto-generated for manual entries"}
+                      </p>
+                    </div>
+                    <div>
+                      <Label htmlFor="employeeRole">Role *</Label>
                       <Input
                         id="employeeRole"
                         value={employeeRole}
