@@ -9,13 +9,13 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { formatPkrAmount } from "@/utils/currency";
 import { getCurrentPakistanTime } from "@/utils/timezone";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Clock, Check, Trash2 } from "lucide-react";
+import { Plus, Clock, Check, Trash2, Edit } from "lucide-react";
 
 interface OvertimeRecord {
   id: string;
@@ -39,11 +39,19 @@ export function OvertimeManager() {
   const [selectedEmployeeId, setSelectedEmployeeId] = useState("");
   const [employeeName, setEmployeeName] = useState("");
   const [overtimeHours, setOvertimeHours] = useState("");
-  const [overtimeRate, setOvertimeRate] = useState("");
   const [overtimeDate, setOvertimeDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [notes, setNotes] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("pending");
+
+  // Pay dialog state
+  const [payingRecord, setPayingRecord] = useState<OvertimeRecord | null>(null);
+  const [payRate, setPayRate] = useState("");
+
+  // Edit dialog state
+  const [editingRecord, setEditingRecord] = useState<OvertimeRecord | null>(null);
+  const [editHours, setEditHours] = useState("");
+  const [editNotes, setEditNotes] = useState("");
 
   // Fetch staff
   const { data: staff } = useQuery({
@@ -79,48 +87,101 @@ export function OvertimeManager() {
     }
   });
 
-  // Create overtime record
+  // Create or accumulate overtime record (upsert by employee+date)
   const createMutation = useMutation({
     mutationFn: async () => {
       const hours = parseFloat(overtimeHours) || 0;
-      const rate = parseFloat(overtimeRate) || 0;
-      const amount = hours * rate;
+      const empId = selectedEmployeeId || crypto.randomUUID();
 
-      const { error } = await supabase
+      // Check if a pending record already exists for this employee on this date
+      const { data: existing } = await supabase
         .from('overtime_records')
-        .insert({
-          employee_id: selectedEmployeeId || crypto.randomUUID(),
-          employee_name: employeeName,
-          overtime_hours: hours,
-          overtime_rate: rate,
-          overtime_amount: amount,
-          overtime_date: overtimeDate,
-          notes: notes.trim() || null,
-          created_by: user?.id,
-          status: 'pending',
-        });
-      if (error) throw error;
+        .select('*')
+        .eq('employee_id', empId)
+        .eq('overtime_date', overtimeDate)
+        .eq('status', 'pending')
+        .maybeSingle();
+
+      if (existing) {
+        // Accumulate hours into existing record
+        const newHours = (Number(existing.overtime_hours) || 0) + hours;
+        const combinedNotes = [existing.notes, notes.trim()].filter(Boolean).join('; ');
+        const { error } = await supabase
+          .from('overtime_records')
+          .update({
+            overtime_hours: newHours,
+            notes: combinedNotes || null,
+          })
+          .eq('id', existing.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from('overtime_records')
+          .insert({
+            employee_id: empId,
+            employee_name: employeeName,
+            overtime_hours: hours,
+            overtime_rate: 0,
+            overtime_amount: 0,
+            overtime_date: overtimeDate,
+            notes: notes.trim() || null,
+            created_by: user?.id,
+            status: 'pending',
+          });
+        if (error) throw error;
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['overtime-records'] });
       setIsDialogOpen(false);
       resetForm();
-      toast({ title: "Overtime record created" });
+      toast({ title: "Overtime hours recorded" });
     },
     onError: (err: any) => {
       toast({ title: "Error", description: err.message, variant: "destructive" });
     }
   });
 
-  // Mark paid mutation
+  // Edit overtime hours
+  const editMutation = useMutation({
+    mutationFn: async () => {
+      if (!editingRecord) return;
+      const { error } = await supabase
+        .from('overtime_records')
+        .update({
+          overtime_hours: parseFloat(editHours) || 0,
+          notes: editNotes.trim() || null,
+        })
+        .eq('id', editingRecord.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['overtime-records'] });
+      setEditingRecord(null);
+      toast({ title: "Overtime record updated" });
+    },
+    onError: (err: any) => {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    }
+  });
+
+  // Mark paid mutation - now takes rate at payment time
   const markPaidMutation = useMutation({
-    mutationFn: async (record: OvertimeRecord) => {
+    mutationFn: async () => {
+      if (!payingRecord) return;
       const { data: userData } = await supabase.auth.getUser();
+      const rate = parseFloat(payRate) || 0;
+      const amount = Number(payingRecord.overtime_hours) * rate;
 
       const { error: updateError } = await supabase
         .from('overtime_records')
-        .update({ status: 'paid', paid_at: new Date().toISOString() })
-        .eq('id', record.id);
+        .update({
+          status: 'paid',
+          paid_at: new Date().toISOString(),
+          overtime_rate: rate,
+          overtime_amount: amount,
+        })
+        .eq('id', payingRecord.id);
       if (updateError) throw updateError;
 
       // Add to expenses
@@ -128,8 +189,8 @@ export function OvertimeManager() {
         .from('expenses')
         .insert({
           category: 'Overtime',
-          description: `Overtime payment for ${record.employee_name} (${record.overtime_hours}h @ ${formatPkrAmount(record.overtime_rate)}/h) - ${format(new Date(record.overtime_date), 'dd MMM yyyy')}`,
-          amount: record.overtime_amount,
+          description: `Overtime payment for ${payingRecord.employee_name} (${payingRecord.overtime_hours}h @ ${formatPkrAmount(rate)}/h) - ${format(new Date(payingRecord.overtime_date), 'dd MMM yyyy')}`,
+          amount: amount,
           expense_date: getCurrentPakistanTime().toISOString().split('T')[0],
           created_by: userData.user?.id,
         });
@@ -138,6 +199,8 @@ export function OvertimeManager() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['overtime-records'] });
       queryClient.invalidateQueries({ queryKey: ['expenses'] });
+      setPayingRecord(null);
+      setPayRate("");
       toast({ title: "Overtime marked as paid and added to expenses" });
     },
     onError: (err: any) => {
@@ -164,13 +227,12 @@ export function OvertimeManager() {
     setSelectedEmployeeId("");
     setEmployeeName("");
     setOvertimeHours("");
-    setOvertimeRate("");
     setOvertimeDate(format(new Date(), 'yyyy-MM-dd'));
     setNotes("");
     setSearchQuery("");
   };
 
-  const totalPending = overtimeRecords?.filter(r => r.status === 'pending').reduce((s, r) => s + (Number(r.overtime_amount) || 0), 0) || 0;
+  const totalPending = overtimeRecords?.filter(r => r.status === 'pending').reduce((s, r) => s + (Number(r.overtime_hours) || 0), 0) || 0;
   const totalPaid = overtimeRecords?.filter(r => r.status === 'paid').reduce((s, r) => s + (Number(r.overtime_amount) || 0), 0) || 0;
 
   return (
@@ -180,16 +242,16 @@ export function OvertimeManager() {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-              <Clock className="w-4 h-4" /> Pending Overtime
+              <Clock className="w-4 h-4" /> Pending Hours
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-orange-600">{formatPkrAmount(totalPending)}</div>
+            <div className="text-2xl font-bold text-orange-600">{totalPending}h</div>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Paid Overtime</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">Total Paid</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-green-600">{formatPkrAmount(totalPaid)}</div>
@@ -232,7 +294,7 @@ export function OvertimeManager() {
               </DialogTrigger>
               <DialogContent className="max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
-                  <DialogTitle>Add Overtime Record</DialogTitle>
+                  <DialogTitle>Add Overtime Hours</DialogTitle>
                 </DialogHeader>
                 <div className="space-y-4">
                   <div>
@@ -282,30 +344,23 @@ export function OvertimeManager() {
                       <Input type="number" step="0.5" min="0" value={overtimeHours} onChange={(e) => setOvertimeHours(e.target.value)} placeholder="e.g. 2.5" />
                     </div>
                     <div>
-                      <Label>Rate per Hour (PKR)</Label>
-                      <Input type="number" min="0" value={overtimeRate} onChange={(e) => setOvertimeRate(e.target.value)} placeholder="e.g. 500" />
+                      <Label>Date</Label>
+                      <Input type="date" value={overtimeDate} onChange={(e) => setOvertimeDate(e.target.value)} />
                     </div>
-                  </div>
-                  <div>
-                    <Label>Date</Label>
-                    <Input type="date" value={overtimeDate} onChange={(e) => setOvertimeDate(e.target.value)} />
                   </div>
                   <div>
                     <Label>Notes (optional)</Label>
                     <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Reason for overtime..." />
                   </div>
-                  {overtimeHours && overtimeRate && (
-                    <div className="p-3 rounded-lg bg-muted text-center">
-                      <p className="text-sm text-muted-foreground">Total Overtime Amount</p>
-                      <p className="text-xl font-bold">{formatPkrAmount((parseFloat(overtimeHours) || 0) * (parseFloat(overtimeRate) || 0))}</p>
-                    </div>
-                  )}
+                  <p className="text-xs text-muted-foreground">
+                    If this employee already has pending overtime for this date, hours will be added to the existing record.
+                  </p>
                   <Button
                     onClick={() => createMutation.mutate()}
                     className="w-full"
-                    disabled={createMutation.isPending || !employeeName || !overtimeHours || !overtimeRate}
+                    disabled={createMutation.isPending || !employeeName || !overtimeHours}
                   >
-                    {createMutation.isPending ? "Saving..." : "Add Overtime Record"}
+                    {createMutation.isPending ? "Saving..." : "Add Overtime Hours"}
                   </Button>
                 </div>
               </DialogContent>
@@ -324,7 +379,6 @@ export function OvertimeManager() {
                   <TableHead>Employee</TableHead>
                   <TableHead>Date</TableHead>
                   <TableHead className="text-center">Hours</TableHead>
-                  <TableHead className="text-right">Rate/Hr</TableHead>
                   <TableHead className="text-right">Amount</TableHead>
                   <TableHead>Notes</TableHead>
                   <TableHead>Status</TableHead>
@@ -335,14 +389,14 @@ export function OvertimeManager() {
                 {isLoading ? (
                   Array.from({ length: 3 }).map((_, i) => (
                     <TableRow key={i}>
-                      {Array.from({ length: 8 }).map((_, j) => (
+                      {Array.from({ length: 7 }).map((_, j) => (
                         <TableCell key={j}><div className="h-4 bg-muted rounded animate-pulse" /></TableCell>
                       ))}
                     </TableRow>
                   ))
                 ) : !overtimeRecords || overtimeRecords.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                       No overtime records found
                     </TableCell>
                   </TableRow>
@@ -354,8 +408,9 @@ export function OvertimeManager() {
                       <TableCell className="text-center">
                         <Badge variant="secondary" className="font-semibold">{record.overtime_hours}h</Badge>
                       </TableCell>
-                      <TableCell className="text-right">{formatPkrAmount(Number(record.overtime_rate))}</TableCell>
-                      <TableCell className="text-right font-semibold">{formatPkrAmount(Number(record.overtime_amount))}</TableCell>
+                      <TableCell className="text-right font-semibold">
+                        {record.status === 'paid' ? formatPkrAmount(Number(record.overtime_amount)) : '-'}
+                      </TableCell>
                       <TableCell className="max-w-[150px] truncate text-sm text-muted-foreground">{record.notes || '-'}</TableCell>
                       <TableCell>
                         <Badge variant={record.status === 'paid' ? 'default' : 'secondary'} className="capitalize">
@@ -365,23 +420,36 @@ export function OvertimeManager() {
                       <TableCell>
                         <div className="flex items-center gap-1">
                           {record.status === 'pending' && (
-                            <Button
-                              size="sm"
-                              onClick={() => markPaidMutation.mutate(record)}
-                              disabled={markPaidMutation.isPending}
-                            >
-                              <Check className="w-3 h-3 mr-1" /> Pay
-                            </Button>
-                          )}
-                          {record.status === 'pending' && (
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => deleteMutation.mutate(record.id)}
-                              disabled={deleteMutation.isPending}
-                            >
-                              <Trash2 className="w-3 h-3" />
-                            </Button>
+                            <>
+                              <Button
+                                size="sm"
+                                onClick={() => {
+                                  setPayingRecord(record);
+                                  setPayRate("");
+                                }}
+                              >
+                                <Check className="w-3 h-3 mr-1" /> Pay
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => {
+                                  setEditingRecord(record);
+                                  setEditHours(String(record.overtime_hours));
+                                  setEditNotes(record.notes || "");
+                                }}
+                              >
+                                <Edit className="w-3 h-3" />
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => deleteMutation.mutate(record.id)}
+                                disabled={deleteMutation.isPending}
+                              >
+                                <Trash2 className="w-3 h-3" />
+                              </Button>
+                            </>
                           )}
                         </div>
                       </TableCell>
@@ -393,6 +461,95 @@ export function OvertimeManager() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Pay Dialog - set rate at payment time */}
+      <Dialog open={!!payingRecord} onOpenChange={(o) => { if (!o) { setPayingRecord(null); setPayRate(""); } }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Pay Overtime</DialogTitle>
+          </DialogHeader>
+          {payingRecord && (
+            <div className="space-y-4">
+              <div className="p-3 rounded-lg bg-muted space-y-1">
+                <div className="flex justify-between text-sm">
+                  <span>Employee</span>
+                  <span className="font-semibold">{payingRecord.employee_name}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span>Date</span>
+                  <span className="font-semibold">{format(new Date(payingRecord.overtime_date), 'MMM d, yyyy')}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span>Hours</span>
+                  <span className="font-semibold">{payingRecord.overtime_hours}h</span>
+                </div>
+              </div>
+              <div>
+                <Label>Rate per Hour (PKR)</Label>
+                <Input
+                  type="number"
+                  min="0"
+                  value={payRate}
+                  onChange={(e) => setPayRate(e.target.value)}
+                  placeholder="e.g. 500"
+                  autoFocus
+                />
+              </div>
+              {payRate && (
+                <div className="p-3 rounded-lg bg-green-50 border border-green-200 text-center">
+                  <p className="text-sm text-green-600">Total Payment</p>
+                  <p className="text-xl font-bold text-green-700">
+                    {formatPkrAmount(Number(payingRecord.overtime_hours) * (parseFloat(payRate) || 0))}
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setPayingRecord(null); setPayRate(""); }}>Cancel</Button>
+            <Button
+              onClick={() => markPaidMutation.mutate()}
+              disabled={markPaidMutation.isPending || !payRate || parseFloat(payRate) <= 0}
+            >
+              {markPaidMutation.isPending ? "Processing..." : "Confirm Payment"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Dialog */}
+      <Dialog open={!!editingRecord} onOpenChange={(o) => { if (!o) setEditingRecord(null); }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Edit Overtime Hours</DialogTitle>
+          </DialogHeader>
+          {editingRecord && (
+            <div className="space-y-4">
+              <div className="p-3 rounded-lg bg-muted">
+                <p className="text-sm font-semibold">{editingRecord.employee_name}</p>
+                <p className="text-xs text-muted-foreground">{format(new Date(editingRecord.overtime_date), 'MMM d, yyyy')}</p>
+              </div>
+              <div>
+                <Label>Overtime Hours</Label>
+                <Input type="number" step="0.5" min="0" value={editHours} onChange={(e) => setEditHours(e.target.value)} />
+              </div>
+              <div>
+                <Label>Notes</Label>
+                <Textarea value={editNotes} onChange={(e) => setEditNotes(e.target.value)} />
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditingRecord(null)}>Cancel</Button>
+            <Button
+              onClick={() => editMutation.mutate()}
+              disabled={editMutation.isPending || !editHours}
+            >
+              {editMutation.isPending ? "Saving..." : "Save Changes"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
