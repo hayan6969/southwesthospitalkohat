@@ -182,7 +182,7 @@ export function StaffShiftClosing() {
       queryClient.invalidateQueries({ queryKey: ['staff-shift-closings'] });
       setOvertimeHours('');
       setNotes('');
-      setIsOvertimeMode(false);
+    },
     onError: (err: any) => {
       toast.error('Failed to submit shift closing: ' + err.message);
     },
