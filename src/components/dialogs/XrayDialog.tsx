@@ -600,13 +600,21 @@ export function XrayDialog({ open, onOpenChange, onSuccess }: XrayDialogProps) {
               <Button 
                 onClick={handleSubmit}
                 disabled={
+                  isPreparing ||
                   testsLoading || 
                   selectedTests.length === 0 || 
                   !xrayDate || 
                   !selectedPatient
                 }
               >
-                Continue to Confirmation
+                {isPreparing ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin mr-2" />
+                    Processing...
+                  </>
+                ) : (
+                  "Continue to Confirmation"
+                )}
               </Button>
             </div>
           </div>
