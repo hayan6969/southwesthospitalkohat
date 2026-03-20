@@ -829,14 +829,15 @@ export default function FinancePayroll() {
                       <Label htmlFor="employeeId">Employee ID</Label>
                       <Input
                         id="employeeId"
-                        value={selectedEmployeeId || "(Auto-generated)"}
-                        readOnly
-                        className="bg-muted text-muted-foreground text-xs font-mono"
+                        value={selectedEmployeeId}
+                        onChange={(e) => setSelectedEmployeeId(e.target.value)}
+                        placeholder="Leave empty to auto-generate"
+                        className="text-xs font-mono"
                       />
                       <p className="text-xs text-muted-foreground mt-1">
-                        {selectedEmployeeId && staff?.find(s => s.id === selectedEmployeeId)
+                        {staff?.find(s => s.id === selectedEmployeeId)
                           ? "Linked to system account"
-                          : "Will be auto-generated for manual entries"}
+                          : selectedEmployeeId ? "Manual ID" : "Will be auto-generated"}
                       </p>
                     </div>
                     <div>
