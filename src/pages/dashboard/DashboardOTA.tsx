@@ -159,11 +159,11 @@ export default function DashboardOTA() {
           .select('id')
           .ilike('patient_number', `%${term}%`);
         
-        // Search by patient name in profiles
-        const { data: byName } = await supabase
+        // Search by patient name or phone in profiles
+        const { data: byNameOrPhone } = await supabase
           .from('profiles')
           .select('id')
-          .or(`first_name.ilike.%${term}%,last_name.ilike.%${term}%`);
+          .or(`first_name.ilike.%${term}%,last_name.ilike.%${term}%,phone.ilike.%${term}%`);
         
         // Combine unique patient IDs from both searches
         const patientIdSet = new Set<string>();
