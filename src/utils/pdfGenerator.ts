@@ -1325,6 +1325,14 @@ export const generateDailyClosingPDF = async (data: {
     }
   };
 
+  const formatDate = (dateStr: string): string => {
+    try {
+      return formatInPakistanTime(dateStr, 'dd MMM');
+    } catch {
+      return '—';
+    }
+  };
+
   interface TxnItem {
     patientName: string;
     time: string;
