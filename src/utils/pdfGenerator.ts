@@ -1001,10 +1001,28 @@ const queryTransactionDataForDate = async (closingDate: string, closingTime: str
       .lte('created_at', upperBound)
   ]);
   
+  // Enrich lab reports with invoice amounts (for discount visibility)
+  const labReports = labReportsRes.data || [];
+  const labInvoiceIds = labReports.map((lr: any) => lr.invoice_id).filter(Boolean);
+  let labInvoiceMap = new Map<string, number>();
+  if (labInvoiceIds.length > 0) {
+    const { data: labInvoices } = await supabase
+      .from('invoices')
+      .select('id, amount')
+      .in('id', labInvoiceIds);
+    (labInvoices || []).forEach((inv: any) => {
+      labInvoiceMap.set(inv.id, Number(inv.amount) || 0);
+    });
+  }
+  const enrichedLabReports = labReports.map((lr: any) => ({
+    ...lr,
+    invoice_amount: lr.invoice_id ? labInvoiceMap.get(lr.invoice_id) ?? null : null,
+  }));
+
   return {
     hospitalInvoices: hospitalInvoicesRes.data || [],
     pharmacyInvoices: pharmacyInvoicesRes.data || [],
-    labReports: labReportsRes.data || [],
+    labReports: enrichedLabReports,
     xrayReports: xrayReportsRes.data || [],
     otSchedules: otSchedulesRes.data || [],
     emergencyAppointments: emergencyAppointmentsRes.data || [],
