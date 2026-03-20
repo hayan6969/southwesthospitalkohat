@@ -353,7 +353,7 @@ export default function DashboardFinance() {
       pharmacyRevenue,
       pharmacyProfit,
       totalExpenses,
-      totalRefunds: 0,
+      totalRefunds,
       netProfit: hospitalNetProfit,
     });
   };
