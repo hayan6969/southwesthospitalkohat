@@ -326,21 +326,7 @@ export const generateInvoicePDF = async (invoice: any) => {
   console.log('invoice.patient?.patient_number:', invoice.patient?.patient_number);
   
   // Fetch creator name if created_by exists
-  let createdByName = invoice.created_by_name || '';
-  if (!createdByName && invoice.created_by) {
-    try {
-      const { data: creatorProfile } = await supabase
-        .from('profiles')
-        .select('first_name, last_name')
-        .eq('id', invoice.created_by)
-        .single();
-      if (creatorProfile) {
-        createdByName = `${creatorProfile.first_name} ${creatorProfile.last_name}`.trim();
-      }
-    } catch (e) {
-      console.error('Error fetching creator name:', e);
-    }
-  }
+  const createdByName = invoice.created_by_name || await fetchCreatorName(invoice.created_by);
   
   const doc = new jsPDF();
   const pageWidth = doc.internal.pageSize.width;
