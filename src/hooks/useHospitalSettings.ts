@@ -18,23 +18,28 @@ interface HospitalSettings {
   emergency_consultation_fee?: number;
 }
 
-export const useHospitalSettings = () => {
+export const useHospitalSettings = (enabled = true) => {
   const [settings, setSettings] = useState<HospitalSettings | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(enabled);
 
   const fetchSettings = async () => {
+    if (!enabled) {
+      setLoading(false);
+      return;
+    }
+
     try {
       setLoading(true);
       const { data, error } = await supabase
-        .from('hospital_settings')
-        .select('*')
+        .from("hospital_settings")
+        .select("*")
         .limit(1)
         .maybeSingle();
 
       if (error) throw error;
       setSettings(data);
     } catch (error) {
-      console.error('Error fetching hospital settings:', error);
+      console.error("Error fetching hospital settings:", error);
       toast({
         title: "Error",
         description: "Failed to load hospital settings",
@@ -48,34 +53,32 @@ export const useHospitalSettings = () => {
   const updateSettings = async (updates: Partial<HospitalSettings>) => {
     try {
       if (settings?.id) {
-        // Update existing settings
         const { error } = await supabase
-          .from('hospital_settings')
+          .from("hospital_settings")
           .update(updates)
-          .eq('id', settings.id);
+          .eq("id", settings.id);
 
         if (error) throw error;
 
         setSettings({ ...settings, ...updates });
       } else {
-        // Insert new settings record with defaults
         const newSettings = {
-          hospital_name: 'City General Hospital',
-          contact_number: '+92-XXX-XXXXXXX',
-          hospital_address: '123 Main Street, City Center',
-          opening_time: '08:00:00',
-          closing_time: '20:00:00',
-          working_days: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
+          hospital_name: "City General Hospital",
+          contact_number: "+92-XXX-XXXXXXX",
+          hospital_address: "123 Main Street, City Center",
+          opening_time: "08:00:00",
+          closing_time: "20:00:00",
+          working_days: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"],
           max_appointments_per_doctor: 50,
           booking_lead_time_hours: 2,
           emergency_slots_percentage: 20,
           payroll_payment_date: 1,
           emergency_consultation_fee: 10000,
-          ...updates
+          ...updates,
         };
 
         const { data, error } = await supabase
-          .from('hospital_settings')
+          .from("hospital_settings")
           .insert(newSettings)
           .select()
           .single();
@@ -91,7 +94,7 @@ export const useHospitalSettings = () => {
       });
       return true;
     } catch (error) {
-      console.error('Error updating hospital settings:', error);
+      console.error("Error updating hospital settings:", error);
       toast({
         title: "Error",
         description: "Failed to update hospital settings",
@@ -102,13 +105,18 @@ export const useHospitalSettings = () => {
   };
 
   useEffect(() => {
+    if (!enabled) {
+      setLoading(false);
+      return;
+    }
+
     fetchSettings();
-  }, []);
+  }, [enabled]);
 
   return {
     settings,
     loading,
     updateSettings,
-    refetch: fetchSettings
+    refetch: fetchSettings,
   };
 };

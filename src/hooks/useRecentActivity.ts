@@ -1,63 +1,79 @@
-import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
-import { formatDistanceToNow } from 'date-fns';
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { formatDistanceToNow } from "date-fns";
 
-export const useRecentActivity = () => {
+interface UseRecentActivityOptions {
+  enabled?: boolean;
+}
+
+export const useRecentActivity = (options?: UseRecentActivityOptions) => {
+  const enabled = options?.enabled ?? true;
+
   return useQuery({
-    queryKey: ['recent-activity'],
+    queryKey: ["recent-activity"],
+    enabled,
     queryFn: async () => {
-      // Get recent audit logs for staff activity
-      const { data: auditLogs } = await supabase
-        .from('audit_logs')
-        .select(`
-          *
-        `)
-        .order('created_at', { ascending: false })
+      const { data: auditLogs, error: auditLogsError } = await supabase
+        .from("audit_logs")
+        .select("id, user_id, created_at, action, details")
+        .order("created_at", { ascending: false })
         .limit(20);
 
-      if (!auditLogs) return [];
+      if (auditLogsError) throw auditLogsError;
+      if (!auditLogs?.length) return [];
 
-      // Get user profiles to match with audit logs
-      const userIds = [...new Set(auditLogs.map(log => log.user_id).filter(Boolean))];
-      const { data: profiles } = await supabase
-        .from('profiles')
-        .select('id, first_name, last_name, role, department_id')
-        .in('id', userIds);
+      const userIds = [...new Set(auditLogs.map((log) => log.user_id).filter(Boolean))];
+      if (!userIds.length) return [];
 
-      // Get departments for department names
-      const { data: departments } = await supabase
-        .from('departments')
-        .select('id, name');
+      const { data: profiles, error: profilesError } = await supabase
+        .from("profiles")
+        .select("id, first_name, last_name, role, department_id")
+        .in("id", userIds);
 
-      const departmentMap = new Map(departments?.map(dept => [dept.id, dept.name]) || []);
-      const profileMap = new Map(profiles?.map(profile => [profile.id, profile]) || []);
+      if (profilesError) throw profilesError;
 
-      // Format activity data
-      const recentActivity = auditLogs
-        .filter(log => log.user_id && profileMap.has(log.user_id))
+      const departmentIds = [
+        ...new Set(profiles?.map((profile) => profile.department_id).filter(Boolean) || []),
+      ];
+
+      const departmentsResult = departmentIds.length
+        ? await supabase.from("departments").select("id, name").in("id", departmentIds)
+        : { data: [], error: null };
+
+      if (departmentsResult.error) throw departmentsResult.error;
+
+      const departmentMap = new Map(
+        (departmentsResult.data || []).map((department) => [department.id, department.name])
+      );
+      const profileMap = new Map((profiles || []).map((profile) => [profile.id, profile]));
+
+      return auditLogs
+        .filter((log) => log.user_id && profileMap.has(log.user_id))
         .slice(0, 10)
-        .map(log => {
+        .map((log) => {
           const profile = profileMap.get(log.user_id!);
-          const departmentName = profile?.department_id 
-            ? departmentMap.get(profile.department_id) || 'Unknown Department'
-            : profile?.role === 'admin' ? 'Administration' 
-            : profile?.role === 'doctor' ? 'Medical' 
-            : profile?.role === 'pharmacy' ? 'Pharmacy'
-            : profile?.role === 'finance' ? 'Finance'
-            : 'General';
+          const departmentName = profile?.department_id
+            ? departmentMap.get(profile.department_id) || "Unknown Department"
+            : profile?.role === "admin"
+              ? "Administration"
+              : profile?.role === "doctor"
+                ? "Medical"
+                : profile?.role === "pharmacy"
+                  ? "Pharmacy"
+                  : profile?.role === "finance"
+                    ? "Finance"
+                    : "General";
 
           return {
-            staffMember: `${profile?.first_name || 'Unknown'} ${profile?.last_name || ''}`.trim(),
+            staffMember: `${profile?.first_name || "Unknown"} ${profile?.last_name || ""}`.trim(),
             department: departmentName,
-            lastActivity: formatDistanceToNow(new Date(log.created_at || ''), { addSuffix: true }),
+            lastActivity: formatDistanceToNow(new Date(log.created_at || ""), { addSuffix: true }),
             action: log.action,
-            details: log.details
+            details: log.details,
           };
         });
-
-      return recentActivity;
     },
-    staleTime: 2 * 60 * 1000, // 2 minutes
+    staleTime: 2 * 60 * 1000,
     refetchInterval: 2 * 60 * 1000,
   });
 };
