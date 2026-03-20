@@ -387,9 +387,10 @@ export function PostOpProgressDialog({
       {/* Add Progress Entry Dialog */}
       <AddPostOpProgressDialog
         open={showAddDialog}
-        onOpenChange={setShowAddDialog}
+        onOpenChange={(open) => { setShowAddDialog(open); if (!open) setEditingEntry(null); }}
         otScheduleId={otSchedule?.id || ""}
         onSave={fetchProgressEntries}
+        editEntry={editingEntry}
       />
     </>
   );
