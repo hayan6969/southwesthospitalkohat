@@ -98,8 +98,24 @@ export const generateAnalyticsReportPDF = async (startDate: Date, endDate: Date)
     invoice_amount: lr.invoice_id ? labInvoiceMap.get(lr.invoice_id) ?? null : null,
   }));
 
+  // Deduplicate hospital invoices (same patient, amount, within 2 min)
+  const rawHospitalInvoices = hospitalInvoicesRes.data || [];
+  const dedupWindowMs = 2 * 60 * 1000;
+  const dedupedHospitalInvoices: any[] = [];
+  for (const inv of rawHospitalInvoices) {
+    const amt = Number(inv.amount ?? 0);
+    const ts = inv.created_at ? new Date(inv.created_at).getTime() : 0;
+    const isDup = dedupedHospitalInvoices.some(
+      (e: any) =>
+        e.patient_id === inv.patient_id &&
+        Number(e.amount ?? 0) === amt &&
+        Math.abs((e.created_at ? new Date(e.created_at).getTime() : 0) - ts) <= dedupWindowMs
+    );
+    if (!isDup) dedupedHospitalInvoices.push(inv);
+  }
+
   const transactionsData = {
-    hospitalInvoices: hospitalInvoicesRes.data || [],
+    hospitalInvoices: dedupedHospitalInvoices,
     pharmacyInvoices: pharmacyInvoicesRes.data || [],
     labReports: enrichedLabReports,
     xrayReports: xrayReportsRes.data || [],
