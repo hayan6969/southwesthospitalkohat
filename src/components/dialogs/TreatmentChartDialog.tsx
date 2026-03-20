@@ -54,6 +54,25 @@ export function TreatmentChartDialog({
   const [treatmentEntries, setTreatmentEntries] = useState<TreatmentEntry[]>([]);
   const [loading, setLoading] = useState(false);
   const [showAddDialog, setShowAddDialog] = useState(false);
+  const [editingEntry, setEditingEntry] = useState<TreatmentEntry | null>(null);
+
+  const canEdit = ['staff', 'nursing', 'ota', 'doctor', 'admin'].includes(profile?.role as string);
+
+  const handleDelete = async (entryId: string) => {
+    if (!confirm('Are you sure you want to delete this entry?')) return;
+    try {
+      const { error } = await supabase
+        .from('treatment_chart_entries')
+        .delete()
+        .eq('id', entryId);
+      if (error) throw error;
+      toast({ title: "Deleted", description: "Treatment entry deleted successfully" });
+      fetchTreatmentEntries();
+    } catch (error) {
+      console.error('Error deleting entry:', error);
+      toast({ title: "Error", description: "Failed to delete entry", variant: "destructive" });
+    }
+  };
 
   useEffect(() => {
     if (open && otSchedule) {
