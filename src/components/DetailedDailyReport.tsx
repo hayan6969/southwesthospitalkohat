@@ -924,6 +924,91 @@ export function DetailedDailyReport({
       </>
       )}
 
+      {/* ========== STAFF SHIFT CLOSINGS ========== */}
+      {staffShiftClosings.length > 0 && categoryFilter === 'all' && (
+        <Card className="border-l-4 border-l-purple-500">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Users className="w-4 h-4 text-purple-600" />
+              Staff Shift Closings & Overtime
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-0">
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Staff</TableHead>
+                    <TableHead>Shift</TableHead>
+                    <TableHead className="text-right">Revenue</TableHead>
+                    <TableHead className="text-center">Invoices</TableHead>
+                    <TableHead className="text-center">OT Hours</TableHead>
+                    <TableHead className="text-right">OT Amount</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Notes</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {staffShiftClosings.map((closing: any) => {
+                    const staffProfile = staffProfiles?.find((p: any) => p.id === closing.staff_id);
+                    const staffName = staffProfile ? `${staffProfile.first_name} ${staffProfile.last_name}` : 'Unknown';
+                    return (
+                      <TableRow key={closing.id}>
+                        <TableCell className="font-medium">{staffName}</TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className="capitalize">{closing.shift}</Badge>
+                        </TableCell>
+                        <TableCell className="text-right font-semibold">
+                          {formatPkrAmount(Number(closing.total_revenue) || 0)}
+                        </TableCell>
+                        <TableCell className="text-center">{closing.total_invoices || 0}</TableCell>
+                        <TableCell className="text-center">
+                          {Number(closing.overtime_hours) > 0 ? (
+                            <Badge variant="secondary" className="bg-amber-100 text-amber-800">
+                              {closing.overtime_hours}h
+                            </Badge>
+                          ) : '-'}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {Number(closing.overtime_amount) > 0 ? formatPkrAmount(Number(closing.overtime_amount)) : '-'}
+                        </TableCell>
+                        <TableCell>
+                          <Badge
+                            variant={closing.status === 'approved' ? 'default' : closing.status === 'rejected' ? 'destructive' : 'secondary'}
+                            className="capitalize"
+                          >
+                            {closing.status}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-xs text-muted-foreground max-w-[150px] truncate">
+                          {closing.notes || '-'}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </div>
+            {/* Summary row */}
+            <div className="p-3 border-t bg-muted/30 flex flex-wrap gap-4 text-sm">
+              <span className="font-medium">
+                Total Staff: {staffShiftClosings.length}
+              </span>
+              <span>
+                Total OT Hours: <strong className="text-amber-700">
+                  {staffShiftClosings.reduce((sum: number, c: any) => sum + (Number(c.overtime_hours) || 0), 0)}h
+                </strong>
+              </span>
+              <span>
+                Total OT Amount: <strong className="text-amber-700">
+                  {formatPkrAmount(staffShiftClosings.reduce((sum: number, c: any) => sum + (Number(c.overtime_amount) || 0), 0))}
+                </strong>
+              </span>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* ========== NET SUMMARY ========== */}
       <Card className="border-2 border-foreground/10">
         <CardContent className="p-4">
