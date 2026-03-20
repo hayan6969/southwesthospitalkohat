@@ -2929,12 +2929,13 @@ export const generateDailyClosingSummaryPDF = async (data: {
   if (refunds.length > 0) {
     drawSectionHeader(`REFUNDS (${refunds.length})`);
     const refRows: string[][] = refunds.map((r: any) => [
+      r.created_at ? formatInPakistanTime(r.created_at, 'dd MMM') : '—',
       (r.refund_type || '').replace(/_/g, ' '),
       r.description || '',
       formatPkrAmount(r.amount)
     ]);
-    refRows.push(['', 'Total Refunds', formatPkrAmount(totalRef)]);
-    drawTable(['Type', 'Description', 'Amount'], refRows, [40, 80, 40]);
+    refRows.push(['', '', 'Total Refunds', formatPkrAmount(totalRef)]);
+    drawTable(['Date', 'Type', 'Description', 'Amount'], refRows, [20, 30, 70, 40]);
   }
 
   // ========== FINANCIAL SUMMARY ==========
