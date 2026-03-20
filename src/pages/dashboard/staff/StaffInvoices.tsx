@@ -74,7 +74,7 @@ export default function StaffInvoices() {
       const { data, error } = await supabase
         .from('xray_reports')
         .select('*')
-        .is('invoice_id', null)  // Only get X-ray reports that aren't linked to hospital invoices
+        .is('invoice_id', null)
         .order('created_at', { ascending: false });
       if (error) throw error;
       return data;
