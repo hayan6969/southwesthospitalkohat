@@ -291,6 +291,23 @@ export const generateInvoicePDF = async (invoice: any) => {
   console.log('invoice.patient structure:', invoice.patient);
   console.log('invoice.patient?.patient_number:', invoice.patient?.patient_number);
   
+  // Fetch creator name if created_by exists
+  let createdByName = invoice.created_by_name || '';
+  if (!createdByName && invoice.created_by) {
+    try {
+      const { data: creatorProfile } = await supabase
+        .from('profiles')
+        .select('first_name, last_name')
+        .eq('id', invoice.created_by)
+        .single();
+      if (creatorProfile) {
+        createdByName = `${creatorProfile.first_name} ${creatorProfile.last_name}`.trim();
+      }
+    } catch (e) {
+      console.error('Error fetching creator name:', e);
+    }
+  }
+  
   const doc = new jsPDF();
   const pageWidth = doc.internal.pageSize.width;
 
@@ -463,8 +480,19 @@ export const generateInvoicePDF = async (invoice: any) => {
   doc.text('Total Amount:', totalsX + 5, yPosition + 4); // Text starts inside box
   doc.text(formatPkrAmount(invoice.amount), totalsX + 5, yPosition + 12); // Amount below label
 
+  // Created By attribution
+  if (createdByName) {
+    yPosition += 10;
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(60, 60, 60);
+    doc.text('Created By:', 15, yPosition);
+    doc.setFont('helvetica', 'normal');
+    doc.text(createdByName, 55, yPosition);
+  }
+
   // Footer
-  yPosition += 30;
+  yPosition += 15;
   doc.setFontSize(9);
   doc.setFont('helvetica', 'italic');
   doc.setTextColor(100, 100, 100);
