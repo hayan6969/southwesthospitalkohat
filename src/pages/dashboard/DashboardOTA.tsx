@@ -168,7 +168,7 @@ export default function DashboardOTA() {
         // Combine unique patient IDs from both searches
         const patientIdSet = new Set<string>();
         byNumber?.forEach(p => patientIdSet.add(p.id));
-        byName?.forEach(p => patientIdSet.add(p.id));
+        byNameOrPhone?.forEach(p => patientIdSet.add(p.id));
         
         if (patientIdSet.size > 0) {
           query = query.in('patient_id', Array.from(patientIdSet));
