@@ -484,6 +484,12 @@ export default function DashboardFinance() {
                   <TableCell className="font-semibold text-red-700">Less: Expenses</TableCell>
                   <TableCell className="text-right font-semibold text-red-700">-{formatPkrAmount(totalExpenses)}</TableCell>
                 </TableRow>
+                {totalRefunds > 0 && (
+                  <TableRow className="bg-red-50/50">
+                    <TableCell className="font-semibold text-red-700">Less: Refunds</TableCell>
+                    <TableCell className="text-right font-semibold text-red-700">-{formatPkrAmount(totalRefunds)}</TableCell>
+                  </TableRow>
+                )}
                 <TableRow className={hospitalNetProfit >= 0 ? 'bg-green-50/80' : 'bg-red-50/80'}>
                   <TableCell className="font-bold text-base">Hospital Net Profit</TableCell>
                   <TableCell className={`text-right font-bold text-base ${hospitalNetProfit >= 0 ? 'text-green-700' : 'text-red-700'}`}>
