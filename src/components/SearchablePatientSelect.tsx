@@ -83,7 +83,7 @@ export function SearchablePatientSelect({
             onValueChange={setSearchQuery}
           />
           <CommandList className="max-h-[200px] overflow-y-auto">
-            <CommandEmpty>No patient found.</CommandEmpty>
+            <CommandEmpty>{searchQuery.length < 2 ? "Type at least 2 characters to search..." : "No patient found."}</CommandEmpty>
             <CommandGroup>
               {filteredPatients.map((patient) => {
                 const patientName = getPatientName(patient.id, patientNames || []);
