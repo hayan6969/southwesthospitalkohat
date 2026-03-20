@@ -224,9 +224,9 @@ export function TreatmentChartDialog({
                   <Printer className="w-4 h-4" />
                   Print
                 </Button>
-                {(profile?.role === 'staff' || (profile?.role as string) === 'nursing') && (
+                {canEdit && (
                   <Button 
-                    onClick={() => setShowAddDialog(true)}
+                    onClick={() => { setEditingEntry(null); setShowAddDialog(true); }}
                     className="flex items-center gap-2"
                     size="sm"
                   >
