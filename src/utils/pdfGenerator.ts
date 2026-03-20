@@ -1391,6 +1391,11 @@ export const generateDailyClosingPDF = async (data: {
       const drMatch = inv.description.match(/(?:Consultation with\s+)(Dr\.?\s*[^-–—]+)/i);
       if (drMatch) consultantName = drMatch[1].trim();
     }
+    // Fallback: resolve from doctor_id if description didn't yield a name
+    if (consultantName === '—' && inv.doctor_id && operatorNamesById.has(inv.doctor_id)) {
+      const name = operatorNamesById.get(inv.doctor_id) || '';
+      if (name) consultantName = name.startsWith('Dr') ? name : `Dr. ${name}`;
+    }
     allTxns.push({
       patientName: p ? `${p.first_name || ''} ${p.last_name || ''}`.trim() : 'Unknown',
       time: inv.created_at,
