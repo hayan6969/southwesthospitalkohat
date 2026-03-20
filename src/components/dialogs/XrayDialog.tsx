@@ -72,6 +72,7 @@ export function XrayDialog({ open, onOpenChange, onSuccess }: XrayDialogProps) {
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [confirmationData, setConfirmationData] = useState<any>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isPreparing, setIsPreparing] = useState(false);
 
   const queryClient = useQueryClient();
   const { data: searchResults } = useSearchPatientsWithNames(searchTerm);
@@ -146,6 +147,8 @@ export function XrayDialog({ open, onOpenChange, onSuccess }: XrayDialogProps) {
     .reduce((sum, test) => sum + test.price, 0) || 0;
 
   const handleSubmit = async () => {
+    setIsPreparing(true);
+    try {
     if (selectedTests.length === 0) {
       toast.error("Please select at least one X-ray test");
       return;
@@ -219,6 +222,9 @@ export function XrayDialog({ open, onOpenChange, onSuccess }: XrayDialogProps) {
 
     setConfirmationData(confirmationDataNew);
     setShowConfirmation(true);
+    } finally {
+      setIsPreparing(false);
+    }
   };
 
   const handleConfirm = async () => {
@@ -594,13 +600,21 @@ export function XrayDialog({ open, onOpenChange, onSuccess }: XrayDialogProps) {
               <Button 
                 onClick={handleSubmit}
                 disabled={
+                  isPreparing ||
                   testsLoading || 
                   selectedTests.length === 0 || 
                   !xrayDate || 
                   !selectedPatient
                 }
               >
-                Continue to Confirmation
+                {isPreparing ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin mr-2" />
+                    Processing...
+                  </>
+                ) : (
+                  "Continue to Confirmation"
+                )}
               </Button>
             </div>
           </div>
