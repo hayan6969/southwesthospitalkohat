@@ -1694,14 +1694,15 @@ export const generateDailyClosingPDF = async (data: {
           let xPos = detailStartX + 1;
           const rowData = [
             String(srNo),
-            (item.patientName || '').substring(0, 18),
+            formatDate(item.time),
+            (item.patientName || '').substring(0, 16),
             formatTime(item.time),
-            (item.procedure || '').substring(0, 22),
-            (item.consultant || '').substring(0, 16),
+            (item.procedure || '').substring(0, 20),
+            (item.consultant || '').substring(0, 14),
             formatPkrAmount(item.amount),
             item.docShare > 0 ? formatPkrAmount(item.docShare) : '—',
             Number(item.hosShare) > 0 ? formatPkrAmount(Number(item.hosShare)) : '—',
-            (item.operator || '—').substring(0, 12),
+            (item.operator || '—').substring(0, 10),
           ];
 
           rowData.forEach((cell, i) => {
