@@ -23,6 +23,7 @@ export function StaffShiftClosing() {
   const [overtimeHours, setOvertimeHours] = useState("");
   const [notes, setNotes] = useState("");
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [isOvertimeMode, setIsOvertimeMode] = useState(false);
 
   const today = new Date();
   const staffShift = (profile as any)?.shift || "morning";
@@ -143,7 +144,9 @@ export function StaffShiftClosing() {
     enabled: !!user?.id,
   });
 
-  const todayAlreadyClosed = previousClosings?.some((c) => c.closing_date === format(today, 'yyyy-MM-dd') && c.shift === staffShift);
+  const todayRegularClosed = previousClosings?.some((c) => c.closing_date === format(today, 'yyyy-MM-dd') && c.shift === staffShift && !(c as any).is_overtime);
+  const todayOvertimeClosed = previousClosings?.some((c) => c.closing_date === format(today, 'yyyy-MM-dd') && c.shift === staffShift && (c as any).is_overtime);
+  const todayAlreadyClosed = isOvertimeMode ? todayOvertimeClosed : todayRegularClosed;
 
   const submitClosing = useMutation({
     mutationFn: async () => {
@@ -169,12 +172,13 @@ export function StaffShiftClosing() {
         status: 'pending',
         notes: notes.trim() || null,
         summary_data: { invoices: todayRevenue.invoices } as any,
-      });
+        is_overtime: isOvertimeMode,
+      } as any);
 
       if (error) throw error;
     },
     onSuccess: () => {
-      toast.success('Shift closing submitted to finance for approval');
+      toast.success(isOvertimeMode ? 'Overtime closing submitted to finance for approval' : 'Shift closing submitted to finance for approval');
       queryClient.invalidateQueries({ queryKey: ['staff-shift-closings'] });
       setOvertimeHours('');
       setNotes('');
@@ -202,15 +206,22 @@ export function StaffShiftClosing() {
             <div className="flex items-center gap-2">
               <Clock className="w-5 h-5 text-blue-600" />
               <CardTitle className="text-lg">
-                {staffShift === 'morning' ? '🌅 Morning' : '🌆 Evening'} Shift Closing
+                {isOvertimeMode ? '⏱️ Overtime' : staffShift === 'morning' ? '🌅 Morning' : '🌆 Evening'} Shift Closing
               </CardTitle>
             </div>
-            <Badge variant={staffShift === 'morning' ? 'default' : 'secondary'}>
-              {staffShift === 'morning' ? 'Morning Shift' : 'Evening Shift'}
-            </Badge>
+            <div className="flex items-center gap-2">
+              {isOvertimeMode && (
+                <Button variant="ghost" size="sm" onClick={() => setIsOvertimeMode(false)}>
+                  Back to Regular
+                </Button>
+              )}
+              <Badge variant={isOvertimeMode ? 'outline' : staffShift === 'morning' ? 'default' : 'secondary'}>
+                {isOvertimeMode ? 'Overtime' : `${staffShift} Shift`}
+              </Badge>
+            </div>
           </div>
           <p className="text-sm text-muted-foreground">
-            {format(today, 'EEEE, MMMM d, yyyy')} — Revenue summary for your shift
+            {format(today, 'EEEE, MMMM d, yyyy')} — {isOvertimeMode ? 'Overtime revenue submission' : 'Revenue summary for your shift'}
           </p>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -221,10 +232,12 @@ export function StaffShiftClosing() {
           ) : (
             <>
               {/* Total Revenue Card */}
-              <div className="p-4 rounded-xl bg-blue-50 border border-blue-200 text-center">
-                <p className="text-sm text-blue-600 font-medium">Total Revenue</p>
-                <p className="text-3xl font-bold text-blue-700">{formatPkrAmount(todayRevenue?.total || 0)}</p>
-                <p className="text-xs text-blue-500 mt-1">{todayRevenue?.invoiceCount || 0} invoices</p>
+              <div className={`p-4 rounded-xl text-center ${isOvertimeMode ? 'bg-amber-50 border border-amber-200' : 'bg-blue-50 border border-blue-200'}`}>
+                <p className={`text-sm font-medium ${isOvertimeMode ? 'text-amber-600' : 'text-blue-600'}`}>
+                  {isOvertimeMode ? 'Overtime Revenue' : 'Total Revenue'}
+                </p>
+                <p className={`text-3xl font-bold ${isOvertimeMode ? 'text-amber-700' : 'text-blue-700'}`}>{formatPkrAmount(todayRevenue?.total || 0)}</p>
+                <p className={`text-xs mt-1 ${isOvertimeMode ? 'text-amber-500' : 'text-blue-500'}`}>{todayRevenue?.invoiceCount || 0} invoices</p>
               </div>
 
               {/* Breakdown Grid */}
@@ -240,12 +253,12 @@ export function StaffShiftClosing() {
                 ))}
               </div>
 
-              {/* Overtime & Notes */}
+              {/* Overtime Hours & Notes */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
                 <div className="space-y-2">
                   <Label className="flex items-center gap-1">
                     <Timer className="w-3.5 h-3.5" />
-                    Overtime Hours (if any)
+                    Overtime Hours {isOvertimeMode ? '*' : '(if any)'}
                   </Label>
                   <Input
                     type="number"
@@ -258,9 +271,9 @@ export function StaffShiftClosing() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>Notes (optional)</Label>
+                  <Label>Notes {isOvertimeMode ? '(reason for overtime)' : '(optional)'}</Label>
                   <Textarea
-                    placeholder="Any shift notes..."
+                    placeholder={isOvertimeMode ? "Reason for overtime work..." : "Any shift notes..."}
                     value={notes}
                     onChange={(e) => setNotes(e.target.value)}
                     disabled={todayAlreadyClosed}
@@ -271,18 +284,37 @@ export function StaffShiftClosing() {
 
               {/* Submit Button */}
               {todayAlreadyClosed ? (
-                <div className="flex items-center gap-2 p-3 rounded-lg bg-green-50 border border-green-200 text-green-700">
-                  <CheckCircle className="w-4 h-4" />
-                  <span className="text-sm font-medium">Shift already closed for today</span>
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2 p-3 rounded-lg bg-green-50 border border-green-200 text-green-700">
+                    <CheckCircle className="w-4 h-4" />
+                    <span className="text-sm font-medium">
+                      {isOvertimeMode ? 'Overtime already submitted for today' : 'Shift already closed for today'}
+                    </span>
+                  </div>
+                  {/* Show overtime option only if regular shift is closed and overtime not yet submitted */}
+                  {!isOvertimeMode && todayRegularClosed && !todayOvertimeClosed && (
+                    <Button
+                      onClick={() => {
+                        setIsOvertimeMode(true);
+                        setOvertimeHours('');
+                        setNotes('');
+                      }}
+                      variant="outline"
+                      className="w-full border-amber-300 text-amber-700 hover:bg-amber-50"
+                    >
+                      <Timer className="w-4 h-4 mr-2" />
+                      Submit Overtime Closing
+                    </Button>
+                  )}
                 </div>
               ) : (
                 <Button
                   onClick={() => setConfirmOpen(true)}
-                  disabled={submitClosing.isPending || !todayRevenue}
-                  className="w-full bg-blue-600 hover:bg-blue-700"
+                  disabled={submitClosing.isPending || !todayRevenue || (isOvertimeMode && !overtimeHours)}
+                  className={`w-full ${isOvertimeMode ? 'bg-amber-600 hover:bg-amber-700' : 'bg-blue-600 hover:bg-blue-700'}`}
                 >
                   <Send className="w-4 h-4 mr-2" />
-                  Close Shift & Submit to Finance
+                  {isOvertimeMode ? 'Submit Overtime & Send to Finance' : 'Close Shift & Submit to Finance'}
                 </Button>
               )}
             </>
@@ -321,9 +353,16 @@ export function StaffShiftClosing() {
                         {format(new Date(closing.closing_date), 'MMM d, yyyy')}
                       </TableCell>
                       <TableCell>
+                      <div className="flex items-center gap-1">
                         <Badge variant="outline" className="capitalize">
                           {closing.shift}
                         </Badge>
+                        {(closing as any).is_overtime && (
+                          <Badge variant="secondary" className="text-amber-700 bg-amber-100 text-[10px]">
+                            OT
+                          </Badge>
+                        )}
+                      </div>
                       </TableCell>
                       <TableCell className="text-right font-semibold">
                         {formatPkrAmount(Number(closing.total_revenue) || 0)}
@@ -354,12 +393,15 @@ export function StaffShiftClosing() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <AlertTriangle className="w-5 h-5 text-amber-500" />
-              Confirm Shift Closing
+              {isOvertimeMode ? 'Confirm Overtime Submission' : 'Confirm Shift Closing'}
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-3">
             <p className="text-sm text-muted-foreground">
-              Are you sure you want to close your <strong>{staffShift}</strong> shift? This will submit the following summary to finance for approval:
+              {isOvertimeMode 
+                ? <>Are you sure you want to submit your <strong>overtime</strong> closing? This will be sent to finance for approval.</>
+                : <>Are you sure you want to close your <strong>{staffShift}</strong> shift? This will submit the following summary to finance for approval:</>
+              }
             </p>
             <div className="p-3 rounded-lg bg-muted space-y-1">
               <div className="flex justify-between text-sm">

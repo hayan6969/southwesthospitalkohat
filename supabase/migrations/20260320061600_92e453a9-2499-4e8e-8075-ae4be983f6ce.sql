@@ -1,0 +1,1 @@
+ALTER TABLE public.staff_shift_closings ADD COLUMN is_overtime boolean NOT NULL DEFAULT false;

@@ -1949,6 +1949,7 @@ export type Database = {
           created_at: string | null
           emergency_revenue: number | null
           id: string
+          is_overtime: boolean
           lab_revenue: number | null
           misc_revenue: number | null
           notes: string | null
@@ -1974,6 +1975,7 @@ export type Database = {
           created_at?: string | null
           emergency_revenue?: number | null
           id?: string
+          is_overtime?: boolean
           lab_revenue?: number | null
           misc_revenue?: number | null
           notes?: string | null
@@ -1999,6 +2001,7 @@ export type Database = {
           created_at?: string | null
           emergency_revenue?: number | null
           id?: string
+          is_overtime?: boolean
           lab_revenue?: number | null
           misc_revenue?: number | null
           notes?: string | null
