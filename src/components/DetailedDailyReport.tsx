@@ -97,6 +97,7 @@ export function DetailedDailyReport({
   refunds,
   miscellaneousIncome,
   staffProfiles,
+  staffShiftClosings = [],
   reportDate,
   initialCategoryFilter = "all",
   initialViewMode = "detailed",
