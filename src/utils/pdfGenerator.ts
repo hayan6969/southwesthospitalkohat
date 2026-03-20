@@ -962,7 +962,7 @@ const queryTransactionDataForDate = async (closingDate: string, closingTime: str
     
     supabase
       .from('xray_reports')
-      .select('*')
+      .select('*, patients(id, profiles(first_name, last_name))')
       .not('price', 'is', null)
       .gte('created_at', cutoffTime)
       .lte('created_at', upperBound),

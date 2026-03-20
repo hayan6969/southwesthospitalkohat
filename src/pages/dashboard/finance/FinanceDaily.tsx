@@ -237,7 +237,7 @@ export default function FinanceDaily() {
             )
           `).gt('created_at', cutoffTime) // Use gt (>) not gte (>=) to exclude boundary
       .lte('created_at', upperBound), supabase.from('lab_reports').select('*, patients(id, profiles(first_name, last_name))').not('price', 'is', null).gt('created_at', cutoffTime) // Use gt (>) not gte (>=) to exclude boundary
-      .lte('created_at', upperBound), supabase.from('xray_reports').select('*').not('price', 'is', null).gt('created_at', cutoffTime) // Use gt (>) not gte (>=) to exclude boundary
+      .lte('created_at', upperBound), supabase.from('xray_reports').select('*, patients(id, profiles(first_name, last_name))').not('price', 'is', null).gt('created_at', cutoffTime) // Use gt (>) not gte (>=) to exclude boundary
       .lte('created_at', upperBound), supabase.from('ot_schedules').select('*, patients(id, profiles(first_name, last_name)), ot_operations(operation_name)').in('status', ['completed', 'pending']).gt('created_at', cutoffTime) // Use gt (>) not gte (>=) to exclude boundary
       .lte('created_at', upperBound), supabase.from('appointments').select('*, patients(id, profiles(first_name, last_name)), doctors(id, profiles(first_name, last_name))').ilike('type', 'emergency').eq('status', 'completed').gte('appointment_date', cutoffTime).lte('appointment_date', upperBound), supabase.from('expenses').select('*').gt('created_at', cutoffTime) // Use gt (>) not gte (>=) to exclude boundary
       .lte('created_at', upperBound), supabase.from('refunds').select('*').gt('created_at', cutoffTime) // Use gt (>) not gte (>=) to exclude boundary
