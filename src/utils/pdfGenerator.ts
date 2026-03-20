@@ -301,8 +301,11 @@ export const generateLabInvoicePDF = async (data: {
     doc.text(formatPkrAmount(data.totalAmount), totalsX + 5, yPosition + 12);
   }
 
+  // Created By attribution
+  yPosition = addCreatedByLine(doc, yPosition, createdByName);
+
   // Footer
-  yPosition += 30;
+  yPosition += 15;
   doc.setFontSize(9);
   doc.setFont('helvetica', 'italic');
   doc.setTextColor(100, 100, 100);
