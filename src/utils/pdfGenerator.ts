@@ -5,6 +5,24 @@ import { supabase } from '@/integrations/supabase/client';
 import { getPatientContactNumber } from './patientUtils';
 import { formatInPakistanTime } from './timezone';
 
+// Deduplicate hospital invoices: same patient, same amount, within 2 minutes
+const DEDUP_WINDOW_MS = 2 * 60 * 1000;
+const deduplicateHospitalInvoices = (invoices: any[]): any[] => {
+  const kept: any[] = [];
+  for (const inv of invoices) {
+    const amt = Number(inv.amount ?? 0);
+    const ts = inv.created_at ? new Date(inv.created_at).getTime() : 0;
+    const isDup = kept.some(
+      (e) =>
+        e.patient_id === inv.patient_id &&
+        Number(e.amount ?? 0) === amt &&
+        Math.abs((e.created_at ? new Date(e.created_at).getTime() : 0) - ts) <= DEDUP_WINDOW_MS
+    );
+    if (!isDup) kept.push(inv);
+  }
+  return kept;
+};
+
 // Get hospital settings for PDF branding
 const getHospitalSettings = async () => {
   try {
@@ -1347,7 +1365,7 @@ export const generateDailyClosingPDF = async (data: {
   }
 
   const allTxns: TxnItem[] = [];
-  const hospitalInvoicesAll = transactionsData?.hospitalInvoices || [];
+  const hospitalInvoicesAll = deduplicateHospitalInvoices(transactionsData?.hospitalInvoices || []);
 
   // Resolve operator names from profile IDs so PDF matches on-screen report
   const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -2728,7 +2746,7 @@ export const generateDailyClosingSummaryPDF = async (data: {
   yPosition += 20;
 
   // ========== COMPUTE DATA ==========
-  const hospitalInvoicesAll = transactionsData?.hospitalInvoices || [];
+  const hospitalInvoicesAll = deduplicateHospitalInvoices(transactionsData?.hospitalInvoices || []);
   const isEmergencyInv = (inv: any) =>
     inv.description?.toLowerCase().includes('emergency') ||
     inv.emergency_patient_data ||
