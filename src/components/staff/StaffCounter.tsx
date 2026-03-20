@@ -331,20 +331,41 @@ export function StaffCounter() {
         console.error('Error fetching patient data:', patientError);
       }
 
-      const consultationDescriptionPattern = `Consultation with ${getDoctorName(currentAppointment.doctor_id, doctorNames || [])} - Patient: ${patientData?.patient_number || 'N/A'}`;
+      const doctorName = getDoctorName(currentAppointment.doctor_id, doctorNames || []);
+      const consultationDescriptionPattern = `Consultation with ${doctorName} - Patient: ${patientData?.patient_number || 'N/A'}`;
 
-      const { data: existingInvoice, error: existingInvoiceError } = await supabase
+      // Check for existing invoice: first by description match, then by patient+doctor+amount+time window
+      let existingInvoice: any = null;
+
+      const { data: descMatch } = await supabase
         .from('invoices')
         .select('*')
         .eq('patient_id', currentAppointment.patient_id)
         .eq('doctor_id', currentAppointment.doctor_id)
         .eq('status', 'paid')
-        .ilike('description', `${consultationDescriptionPattern}%`)
+        .ilike('description', `%Consultation with ${doctorName}%`)
         .order('created_at', { ascending: false })
         .limit(1)
         .maybeSingle();
 
-      if (existingInvoiceError) throw existingInvoiceError;
+      existingInvoice = descMatch;
+
+      // Fallback: check by patient + doctor + similar amount within last 5 minutes
+      if (!existingInvoice) {
+        const fiveMinAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
+        const { data: recentMatch } = await supabase
+          .from('invoices')
+          .select('*')
+          .eq('patient_id', currentAppointment.patient_id)
+          .eq('doctor_id', currentAppointment.doctor_id)
+          .eq('status', 'paid')
+          .gte('created_at', fiveMinAgo)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        existingInvoice = recentMatch;
+      }
 
       let invoiceData = existingInvoice;
 
