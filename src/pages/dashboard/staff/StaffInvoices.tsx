@@ -17,6 +17,7 @@ import { format } from "date-fns";
 import { toast } from "sonner";
 import { formatPkrCurrency } from "@/utils/currency";
 import { useState } from "react";
+import { getHospitalInvoiceType, hasMatchingOtHospitalInvoice } from "@/utils/invoiceDeduplication";
 
 export default function StaffInvoices() {
   const [filterType, setFilterType] = useState<string>("all");
