@@ -162,7 +162,10 @@ export function OvertimeManager() {
 
   // Pay dialog state
   const [payingGroup, setPayingGroup] = useState<GroupedEmployee | null>(null);
+  const savedRate = localStorage.getItem('overtime_default_rate') || '';
   const [payRate, setPayRate] = useState("");
+  const [showRateSetting, setShowRateSetting] = useState(false);
+  const [defaultRate, setDefaultRate] = useState(savedRate);
 
   // Edit dialog state
   const [editingRecord, setEditingRecord] = useState<OvertimeRecord | null>(null);
@@ -367,7 +370,7 @@ export function OvertimeManager() {
   return (
     <div className="space-y-6">
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
@@ -392,6 +395,39 @@ export function OvertimeManager() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{grouped.length}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Default Rate / Hour</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {showRateSetting ? (
+              <div className="flex items-center gap-2">
+                <Input
+                  type="number"
+                  min="0"
+                  value={defaultRate}
+                  onChange={(e) => setDefaultRate(e.target.value)}
+                  placeholder="e.g. 500"
+                  className="h-8 w-24"
+                />
+                <Button size="sm" className="h-8" onClick={() => {
+                  localStorage.setItem('overtime_default_rate', defaultRate);
+                  setShowRateSetting(false);
+                  toast({ title: "Default rate saved", description: `Rs. ${defaultRate}/hour` });
+                }}>Save</Button>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2">
+                <span className="text-2xl font-bold">
+                  {savedRate ? formatPkrAmount(Number(savedRate)) : 'Not set'}
+                </span>
+                <Button size="sm" variant="outline" className="h-7" onClick={() => setShowRateSetting(true)}>
+                  <Edit className="w-3 h-3" />
+                </Button>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -557,9 +593,9 @@ export function OvertimeManager() {
                               <Button
                                 size="sm"
                                 onClick={() => {
-                                  setPayingGroup(group);
-                                  setPayRate("");
-                                }}
+                                   setPayingGroup(group);
+                                   setPayRate(localStorage.getItem('overtime_default_rate') || "");
+                                 }}
                               >
                                 <Check className="w-3 h-3 mr-1" /> Pay
                               </Button>
