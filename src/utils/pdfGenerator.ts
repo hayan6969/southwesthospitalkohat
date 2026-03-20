@@ -1405,6 +1405,53 @@ export const generateDailyClosingPDF = async (data: {
     });
   });
 
+  // Build operator lookup from hospital invoices for lab/xray/OT attribution
+  const invoiceOperatorLookup = new Map<string, string>();
+  hospitalInvoicesAll.forEach((inv: any) => {
+    if (inv.created_by && inv.invoice_number) {
+      // Map by invoice_number prefix + patient_id for matching
+      invoiceOperatorLookup.set(inv.invoice_number, inv.created_by);
+      // Also map by patient_id + type for fuzzy matching
+      const key = `${inv.patient_id}_${inv.invoice_number?.split('-')[0]}`;
+      if (!invoiceOperatorLookup.has(key)) {
+        invoiceOperatorLookup.set(key, inv.created_by);
+      }
+    }
+  });
+
+  const resolveLabOperator = (lab: any): string => {
+    // Direct created_by
+    if (lab.created_by) return resolveOperatorName(lab.created_by);
+    // Try to find matching LAB- invoice by patient_id
+    const key = `${lab.patient_id}_LAB`;
+    const opId = invoiceOperatorLookup.get(key);
+    if (opId) return resolveOperatorName(opId);
+    // Try matching by invoice_id
+    if (lab.invoice_id) {
+      const matchingInv = hospitalInvoicesAll.find((inv: any) => inv.id === lab.invoice_id);
+      if (matchingInv?.created_by) return resolveOperatorName(matchingInv.created_by);
+    }
+    return '—';
+  };
+
+  const resolveXrayOperator = (xray: any): string => {
+    if (xray.created_by) return resolveOperatorName(xray.created_by);
+    // Find matching XRAY- invoice
+    const key = `${xray.patient_id}_XRAY`;
+    const opId = invoiceOperatorLookup.get(key) || invoiceOperatorLookup.get(`${xray.patient_id}_XR`);
+    if (opId) return resolveOperatorName(opId);
+    return '—';
+  };
+
+  const resolveOtOperator = (ot: any): string => {
+    if (ot.created_by) return resolveOperatorName(ot.created_by);
+    // Find matching OT- invoice
+    const key = `${ot.patient_id}_OT`;
+    const opId = invoiceOperatorLookup.get(key);
+    if (opId) return resolveOperatorName(opId);
+    return '—';
+  };
+
   // Lab reports - use amount (invoice-level, includes discount) if available, fallback to price
   (transactionsData?.labReports || []).forEach((lab: any) => {
     const p = lab.patients?.profiles;
@@ -1421,7 +1468,7 @@ export const generateDailyClosingPDF = async (data: {
       amount: labAmount,
       docShare: 0,
       hosShare: labAmount,
-      operator: resolveOperatorName(lab.created_by),
+      operator: resolveLabOperator(lab),
       category: 'Lab',
       shift: getShiftFromTime(lab.created_at || lab.test_date),
     });
@@ -1438,7 +1485,7 @@ export const generateDailyClosingPDF = async (data: {
       amount: Number(xray.price) || 0,
       docShare: 0,
       hosShare: Number(xray.price) || 0,
-      operator: resolveOperatorName(xray.created_by),
+      operator: resolveXrayOperator(xray),
       category: 'X-Ray',
       shift: getShiftFromTime(xray.created_at),
     });
@@ -1455,7 +1502,7 @@ export const generateDailyClosingPDF = async (data: {
       amount: Number(ot.total_cost) || 0,
       docShare: Number(ot.doctor_expense) || 0,
       hosShare: (Number(ot.total_cost) || 0) - (Number(ot.doctor_expense) || 0),
-      operator: resolveOperatorName(ot.created_by),
+      operator: resolveOtOperator(ot),
       category: 'OT',
       shift: getShiftFromTime(ot.created_at),
     });
@@ -1735,19 +1782,17 @@ export const generateDailyClosingPDF = async (data: {
   // Aggregate by operator
   const staffCollectionMap = new Map<string, { name: string; count: number; total: number; opd: number; lab: number; xray: number; ot: number; emergency: number; misc: number }>();
   allTxns.forEach(txn => {
-    const op = txn.operator;
-    if (op && op !== '—') {
-      const existing = staffCollectionMap.get(op) || { name: op, count: 0, total: 0, opd: 0, lab: 0, xray: 0, ot: 0, emergency: 0, misc: 0 };
-      existing.count += 1;
-      existing.total += txn.amount;
-      if (txn.category === 'OPD') existing.opd += txn.amount;
-      else if (txn.category === 'Lab') existing.lab += txn.amount;
-      else if (txn.category === 'X-Ray') existing.xray += txn.amount;
-      else if (txn.category === 'OT') existing.ot += txn.amount;
-      else if (txn.category === 'Emergency') existing.emergency += txn.amount;
-      else if (txn.category === 'Miscellaneous') existing.misc += txn.amount;
-      staffCollectionMap.set(op, existing);
-    }
+    const op = txn.operator && txn.operator !== '—' ? txn.operator : 'Unattributed';
+    const existing = staffCollectionMap.get(op) || { name: op, count: 0, total: 0, opd: 0, lab: 0, xray: 0, ot: 0, emergency: 0, misc: 0 };
+    existing.count += 1;
+    existing.total += txn.amount;
+    if (txn.category === 'OPD') existing.opd += txn.amount;
+    else if (txn.category === 'Lab') existing.lab += txn.amount;
+    else if (txn.category === 'X-Ray') existing.xray += txn.amount;
+    else if (txn.category === 'OT') existing.ot += txn.amount;
+    else if (txn.category === 'Emergency') existing.emergency += txn.amount;
+    else if (txn.category === 'Miscellaneous') existing.misc += txn.amount;
+    staffCollectionMap.set(op, existing);
   });
 
   const staffEntries = Array.from(staffCollectionMap.values()).sort((a, b) => b.total - a.total);
