@@ -84,6 +84,19 @@ export default function DashboardFinance() {
     }
   });
 
+  // Get refunds
+  const { data: refunds } = useQuery({
+    queryKey: ['refunds-finance-dashboard'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('refunds')
+        .select('*')
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return data;
+    }
+  });
+
   // Get pharmacy account and expenses
   const { data: pharmacyAccount } = useQuery({
     queryKey: ['pharmacy-account'],
@@ -171,17 +184,42 @@ export default function DashboardFinance() {
     return staff ? `${staff.first_name} ${staff.last_name}` : '—';
   };
 
-  // Calculate hospital revenue from paid invoices
-  const emergencyConsultationRevenue = invoices?.filter(inv => 
-    inv.status === 'paid' && inv.description?.toLowerCase().includes('emergency')
-  ).reduce((sum, invoice) => sum + (invoice.amount || 0), 0) || 0;
+  // Deduplicate invoices helper (same patient, same amount, within 2 min)
+  const deduplicateInvs = (invs: typeof invoices) => {
+    if (!invs) return [];
+    const kept: typeof invs = [];
+    for (const inv of invs) {
+      const amt = Number(inv.amount ?? 0);
+      const ts = inv.created_at ? new Date(inv.created_at).getTime() : 0;
+      const isDup = kept.some(
+        (e) =>
+          e.patient_id === inv.patient_id &&
+          Number(e.amount ?? 0) === amt &&
+          Math.abs((e.created_at ? new Date(e.created_at).getTime() : 0) - ts) <= 2 * 60 * 1000
+      );
+      if (!isDup) kept.push(inv);
+    }
+    return kept;
+  };
 
-  // Regular consultation revenue (paid, non-emergency)
-  const consultationRevenue = invoices?.filter(inv =>
-    inv.status === 'paid' &&
-    inv.description?.toLowerCase().includes('consultation') &&
-    !inv.description?.toLowerCase().includes('emergency')
-  ).reduce((sum, invoice) => sum + (invoice.amount || 0), 0) || 0;
+  const paidInvoices = deduplicateInvs(invoices?.filter(inv => inv.status === 'paid'));
+
+  // Emergency detection — consistent with PDF logic
+  const isEmergencyInv = (inv: any) =>
+    inv.description?.toLowerCase().includes('emergency') ||
+    inv.emergency_patient_data ||
+    inv.invoice_number?.startsWith('EMG-') ||
+    inv.invoice_number?.startsWith('EMERGENCY-');
+
+  // Hospital revenue from paid invoices — using invoice_number prefix (consistent with PDF)
+  const emergencyConsultationRevenue = paidInvoices
+    .filter(isEmergencyInv)
+    .reduce((sum, inv) => sum + (inv.amount || 0), 0);
+
+  // Regular consultation revenue (OPD — INV- prefix, non-emergency)
+  const consultationRevenue = paidInvoices
+    .filter(inv => inv.invoice_number?.startsWith('INV-') && !isEmergencyInv(inv))
+    .reduce((sum, inv) => sum + (inv.amount || 0), 0);
   
   // Calculate pharmacy revenue and profit correctly
   let pharmacyRevenue = 0;
@@ -201,11 +239,10 @@ export default function DashboardFinance() {
     }, 0);
   }
   
-  const labRevenue = invoices?.filter(invoice => 
-    invoice.status === 'paid' && 
-    invoice.description && 
-    invoice.description.toLowerCase().includes('lab')
-  ).reduce((sum, invoice) => sum + Number(invoice.amount), 0) || 0;
+  // Lab revenue — from LAB- prefixed invoices (consistent with PDF)
+  const labRevenue = paidInvoices
+    .filter(inv => inv.invoice_number?.startsWith('LAB-'))
+    .reduce((sum, inv) => sum + Number(inv.amount), 0);
 
   const xrayRevenue = xrayReports?.reduce((sum, xray) => sum + (Number(xray.price) || 0), 0) || 0;
   
@@ -223,31 +260,27 @@ export default function DashboardFinance() {
   const doctorsRevenue = consultationRevenue + otDoctorRevenue;
   const hospitalRevenue = emergencyConsultationRevenue + labRevenue + xrayRevenue + otHospitalRevenue + miscellaneousIncome;
   const totalExpenses = expenses?.reduce((sum, exp) => sum + (exp.amount || 0), 0) || 0;
-  const hospitalNetProfit = hospitalRevenue + pharmacyProfit - totalExpenses;
+  const totalRefunds = refunds?.reduce((sum, r) => sum + (Number(r.amount) || 0), 0) || 0;
+  // CORRECT FORMULA: Hospital Share + Pharmacy Profit - Expenses - Refunds
+  const hospitalNetProfit = hospitalRevenue + pharmacyProfit - totalExpenses - totalRefunds;
   const totalRevenue = hospitalRevenue + doctorsRevenue + pharmacyRevenue;
   const pharmacyTotalExpenses = pharmacyExpenses?.reduce((sum, exp) => sum + exp.amount, 0) || 0;
 
-  // Per-doctor revenue breakdown
+  // Per-doctor revenue breakdown (using deduped invoices)
   const perDoctorRevenue = doctorProfiles?.map(doctor => {
     const profile = doctor.profiles as any;
     const doctorName = profile ? `Dr. ${profile.first_name} ${profile.last_name}` : 'Unknown';
     
-    const drConsultation = invoices?.filter(inv =>
-      inv.status === 'paid' &&
-      inv.doctor_id === doctor.id &&
-      inv.description?.toLowerCase().includes('consultation') &&
-      !inv.description?.toLowerCase().includes('emergency')
-    ).reduce((sum, inv) => sum + (inv.amount || 0), 0) || 0;
+    const drConsultation = paidInvoices
+      .filter(inv => inv.doctor_id === doctor.id && inv.invoice_number?.startsWith('INV-') && !isEmergencyInv(inv))
+      .reduce((sum, inv) => sum + (inv.amount || 0), 0);
 
     const drOT = otSchedules?.filter(s => s.doctor_id === doctor.id)
       .reduce((sum, s) => sum + (Number(s.doctor_expense) || 0), 0) || 0;
 
-    const appointmentCount = invoices?.filter(inv =>
-      inv.status === 'paid' &&
-      inv.doctor_id === doctor.id &&
-      inv.description?.toLowerCase().includes('consultation') &&
-      !inv.description?.toLowerCase().includes('emergency')
-    ).length || 0;
+    const appointmentCount = paidInvoices
+      .filter(inv => inv.doctor_id === doctor.id && inv.invoice_number?.startsWith('INV-') && !isEmergencyInv(inv))
+      .length;
 
     const otCount = otSchedules?.filter(s => s.doctor_id === doctor.id).length || 0;
 
@@ -320,7 +353,7 @@ export default function DashboardFinance() {
       pharmacyRevenue,
       pharmacyProfit,
       totalExpenses,
-      totalRefunds: 0,
+      totalRefunds,
       netProfit: hospitalNetProfit,
     });
   };
@@ -351,8 +384,8 @@ export default function DashboardFinance() {
         </Card>
         <Card className="bg-gradient-to-br from-red-50 to-rose-50 border-red-200">
           <CardContent className="pt-4 pb-3 px-4">
-            <p className="text-[11px] uppercase tracking-wider text-muted-foreground font-medium">Total Expenses</p>
-            <p className="text-xl font-bold text-red-700 mt-1">-{formatPkrAmount(totalExpenses)}</p>
+            <p className="text-[11px] uppercase tracking-wider text-muted-foreground font-medium">Expenses + Refunds</p>
+            <p className="text-xl font-bold text-red-700 mt-1">-{formatPkrAmount(totalExpenses + totalRefunds)}</p>
           </CardContent>
         </Card>
         <Card className="bg-gradient-to-br from-blue-50 to-sky-50 border-blue-200">
@@ -451,6 +484,12 @@ export default function DashboardFinance() {
                   <TableCell className="font-semibold text-red-700">Less: Expenses</TableCell>
                   <TableCell className="text-right font-semibold text-red-700">-{formatPkrAmount(totalExpenses)}</TableCell>
                 </TableRow>
+                {totalRefunds > 0 && (
+                  <TableRow className="bg-red-50/50">
+                    <TableCell className="font-semibold text-red-700">Less: Refunds</TableCell>
+                    <TableCell className="text-right font-semibold text-red-700">-{formatPkrAmount(totalRefunds)}</TableCell>
+                  </TableRow>
+                )}
                 <TableRow className={hospitalNetProfit >= 0 ? 'bg-green-50/80' : 'bg-red-50/80'}>
                   <TableCell className="font-bold text-base">Hospital Net Profit</TableCell>
                   <TableCell className={`text-right font-bold text-base ${hospitalNetProfit >= 0 ? 'text-green-700' : 'text-red-700'}`}>
