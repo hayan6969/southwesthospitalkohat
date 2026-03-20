@@ -25,7 +25,8 @@ export function StaffShiftClosing() {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [isOvertimeMode, setIsOvertimeMode] = useState(false);
 
-  const today = new Date();
+  const now = new Date();
+  const today = now;
   const staffShift = (profile as any)?.shift || "morning";
   const activeShiftConfig = shifts?.find((shift) => shift.name.toLowerCase() === String(staffShift).toLowerCase());
 
@@ -58,43 +59,80 @@ export function StaffShiftClosing() {
 
   const shiftWindow = getShiftWindow();
 
+  const { data: previousClosings = [] } = useQuery({
+    queryKey: ['staff-shift-closings', user?.id, staffShift],
+    queryFn: async () => {
+      if (!user?.id) return [];
+      const { data, error } = await supabase
+        .from('staff_shift_closings')
+        .select('*')
+        .eq('staff_id', user.id)
+        .eq('shift', staffShift)
+        .order('created_at', { ascending: false })
+        .limit(10);
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!user?.id,
+  });
+
+  const effectiveClosings = previousClosings.filter((closing) => closing.status !== 'rejected');
+  const lastSubmittedClosing = effectiveClosings[0];
+  const hasCutoffWithinShift = Boolean(
+    lastSubmittedClosing?.created_at && new Date(lastSubmittedClosing.created_at) > shiftWindow.start,
+  );
+  const periodStart = hasCutoffWithinShift
+    ? new Date(lastSubmittedClosing!.created_at as string)
+    : shiftWindow.start;
+  const regularPeriodEnd = now < shiftWindow.end ? now : shiftWindow.end;
+  const periodEnd = isOvertimeMode ? now : regularPeriodEnd;
+  const periodStartIso = periodStart.toISOString();
+  const periodEndIso = (periodEnd > periodStart ? periodEnd : periodStart).toISOString();
+
   const { data: todayRevenue, isLoading: revenueLoading } = useQuery({
-    queryKey: ['staff-shift-revenue', user?.id, staffShift, shiftWindow.start.toISOString(), shiftWindow.end.toISOString()],
+    queryKey: ['staff-shift-revenue', user?.id, staffShift, isOvertimeMode, periodStartIso, periodEndIso],
     queryFn: async () => {
       if (!user?.id) return null;
 
-      // Query invoices created by this staff member within the shift window
-      // Use paid_at for timing, fall back to created_at for invoices without paid_at
-      const { data: byPaidAt, error: err1 } = await supabase
+      let paidInvoicesQuery = supabase
         .from('invoices')
-        .select('amount, description, invoice_number, created_at, paid_at, status, created_by')
+        .select('id, amount, description, invoice_number, created_at, paid_at, status, created_by')
         .eq('created_by', user.id)
         .eq('status', 'paid')
-        .gte('paid_at', shiftWindow.start.toISOString())
-        .lte('paid_at', shiftWindow.end.toISOString());
+        .lte('paid_at', periodEndIso);
 
-      // Also get invoices by this user that have no paid_at but were created in the window
-      const { data: byCreatedAt, error: err2 } = await supabase
+      let createdInvoicesQuery = supabase
         .from('invoices')
-        .select('amount, description, invoice_number, created_at, paid_at, status, created_by')
+        .select('id, amount, description, invoice_number, created_at, paid_at, status, created_by')
         .eq('created_by', user.id)
         .eq('status', 'paid')
         .is('paid_at', null)
-        .gte('created_at', shiftWindow.start.toISOString())
-        .lte('created_at', shiftWindow.end.toISOString());
+        .lte('created_at', periodEndIso);
+
+      if (hasCutoffWithinShift) {
+        paidInvoicesQuery = paidInvoicesQuery.gt('paid_at', periodStartIso);
+        createdInvoicesQuery = createdInvoicesQuery.gt('created_at', periodStartIso);
+      } else {
+        paidInvoicesQuery = paidInvoicesQuery.gte('paid_at', periodStartIso);
+        createdInvoicesQuery = createdInvoicesQuery.gte('created_at', periodStartIso);
+      }
+
+      const [{ data: byPaidAt, error: err1 }, { data: byCreatedAt, error: err2 }] = await Promise.all([
+        paidInvoicesQuery,
+        createdInvoicesQuery,
+      ]);
 
       const error = err1 || err2;
-      // Merge and deduplicate
+      if (error) throw error;
+
       const allInvoices = [...(byPaidAt || []), ...(byCreatedAt || [])];
       const seen = new Set<string>();
-      const invoices = allInvoices.filter(inv => {
-        const key = (inv as any).id || `${inv.invoice_number}-${inv.created_at}`;
+      const invoices = allInvoices.filter((inv) => {
+        const key = inv.id || `${inv.invoice_number}-${inv.created_at}`;
         if (seen.has(key)) return false;
         seen.add(key);
         return true;
       });
-
-      if (error) throw error;
 
       let opd = 0, lab = 0, xray = 0, ot = 0, emergency = 0, misc = 0;
 
@@ -133,19 +171,9 @@ export function StaffShiftClosing() {
     enabled: !!user?.id,
   });
 
-  const { data: previousClosings } = useQuery({
-    queryKey: ['staff-shift-closings', user?.id],
-    queryFn: async () => {
-      if (!user?.id) return [];
-      const { data, error } = await supabase.from('staff_shift_closings').select('*').eq('staff_id', user.id).order('created_at', { ascending: false }).limit(10);
-      if (error) throw error;
-      return data || [];
-    },
-    enabled: !!user?.id,
-  });
-
-  const todayRegularClosed = previousClosings?.some((c) => c.closing_date === format(today, 'yyyy-MM-dd') && c.shift === staffShift && !(c as any).is_overtime);
-  // Allow multiple overtime submissions - never block overtime mode
+  const todayRegularClosed = effectiveClosings.some(
+    (closing) => closing.closing_date === format(today, 'yyyy-MM-dd') && closing.shift === staffShift && !(closing as any).is_overtime,
+  );
   const todayAlreadyClosed = isOvertimeMode ? false : todayRegularClosed;
 
   const submitClosing = useMutation({
@@ -157,8 +185,8 @@ export function StaffShiftClosing() {
         staff_id: user.id,
         shift: staffShift,
         closing_date: format(today, 'yyyy-MM-dd'),
-        shift_start_time: shiftWindow.start.toISOString(),
-        shift_end_time: shiftWindow.end.toISOString(),
+        shift_start_time: periodStartIso,
+        shift_end_time: periodEndIso,
         total_revenue: todayRevenue.total,
         opd_revenue: todayRevenue.opd,
         lab_revenue: todayRevenue.lab,
