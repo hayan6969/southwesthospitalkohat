@@ -181,6 +181,11 @@ const App = () => (
                 <DashboardOTA />
               </ProtectedRoute>
             } />
+            <Route path="/dashboard/ota/*" element={
+              <ProtectedRoute allowedRoles={['ota', 'nursing', 'admin']}>
+                <DashboardOTA />
+              </ProtectedRoute>
+            } />
 
             {/* Admin dashboard routes */}
             <Route path="/dashboard/admin" element={
