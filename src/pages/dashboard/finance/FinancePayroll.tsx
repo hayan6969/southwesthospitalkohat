@@ -832,21 +832,21 @@ export default function FinancePayroll() {
                         readOnly={!!editingTemplate}
                       />
                     </div>
+                    {!isLinkedToAccount && (
                     <div>
-                      <Label htmlFor="employeeId">Employee ID</Label>
+                      <Label htmlFor="employeeId">Employee ID *</Label>
                       <Input
                         id="employeeId"
                         value={selectedEmployeeId}
                         onChange={(e) => setSelectedEmployeeId(e.target.value)}
-                        placeholder="Leave empty to auto-generate"
+                        placeholder="Enter unique employee ID"
                         className="text-xs font-mono"
                       />
                       <p className="text-xs text-muted-foreground mt-1">
-                        {staff?.find(s => s.id === selectedEmployeeId)
-                          ? "Linked to system account"
-                          : selectedEmployeeId ? "Manual ID" : "Will be auto-generated"}
+                        Required for employees without a system account
                       </p>
                     </div>
+                    )}
                     <div>
                       <Label htmlFor="employeeRole">Role *</Label>
                       <Input
