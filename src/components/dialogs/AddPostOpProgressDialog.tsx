@@ -143,7 +143,7 @@ export function AddPostOpProgressDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Plus className="w-5 h-5 text-blue-600" />
-            Add Progress Entry
+            {editEntry ? 'Edit Progress Entry' : 'Add Progress Entry'}
           </DialogTitle>
         </DialogHeader>
         
