@@ -1045,6 +1045,7 @@ export const generateDailyClosingPDF = async (data: {
   netProfit: number;
   transactionsData?: any;
   categoryFilter?: string; // 'all' or specific category like 'Lab', 'OPD', etc.
+  closingEndDate?: string; // For date range reports
 }) => {
   const doc = new jsPDF({
     orientation: 'portrait',
