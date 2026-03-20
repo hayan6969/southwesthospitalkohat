@@ -124,9 +124,9 @@ export default function FinanceStaffPayments() {
               </TableHeader>
               <TableBody>
                 {isLoading ? (
-                  Array.from({ length: 5 }).map((_, i) => (
+                  Array.from({ length: 7 }).map((_, i) => (
                     <TableRow key={i}>
-                      {Array.from({ length: 9 }).map((_, j) => (
+                      {Array.from({ length: 7 }).map((_, j) => (
                         <TableCell key={j}><div className="h-4 bg-muted rounded animate-pulse" /></TableCell>
                       ))}
                     </TableRow>
