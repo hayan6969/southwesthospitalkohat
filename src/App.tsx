@@ -1,5 +1,4 @@
-
-import React from 'react';
+import React, { Suspense, lazy } from 'react';
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -7,79 +6,86 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "./hooks/useAuth";
 import { useRealTimeUpdates } from "./hooks/useRealTimeUpdates";
-import { useOfflineDataSync } from "./hooks/useOfflineDataSync";
 import ProtectedRoute from "./components/ProtectedRoute";
-import Index from "./pages/Index";
-import Auth from "./pages/Auth";
-import NotFound from "./pages/NotFound";
-import OfflineMode from "./pages/OfflineMode";
-import OfflineModePharmacy from "./pages/OfflineModePharmacy";
 
-// Dashboard main pages
-import DashboardPatient from "./pages/dashboard/DashboardPatient";
-import DashboardDoctor from "./pages/dashboard/DashboardDoctor";
-import DashboardStaff from "./pages/dashboard/DashboardStaff";
-import DashboardAdmin from "./pages/dashboard/DashboardAdmin";
-import DashboardPharmacy from "./pages/dashboard/DashboardPharmacy";
-import DashboardFinance from "./pages/dashboard/DashboardFinance";
-import DashboardOTA from "./pages/dashboard/DashboardOTA";
-import DashboardStore from "./pages/dashboard/DashboardStore";
-import DashboardLab from "./pages/dashboard/DashboardLab";
+const Index = lazy(() => import("./pages/Index"));
+const Auth = lazy(() => import("./pages/Auth"));
+const NotFound = lazy(() => import("./pages/NotFound"));
+const OfflineMode = lazy(() => import("./pages/OfflineMode"));
+const OfflineModePharmacy = lazy(() => import("./pages/OfflineModePharmacy"));
 
-// Doctor pages
-import DoctorSchedule from "./pages/dashboard/doctor/DoctorSchedule";
-import DoctorPatients from "./pages/dashboard/doctor/DoctorPatients";
-import DoctorNotes from "./pages/dashboard/doctor/DoctorNotes";
+const DashboardPatient = lazy(() => import("./pages/dashboard/DashboardPatient"));
+const DashboardDoctor = lazy(() => import("./pages/dashboard/DashboardDoctor"));
+const DashboardStaff = lazy(() => import("./pages/dashboard/DashboardStaff"));
+const DashboardAdmin = lazy(() => import("./pages/dashboard/DashboardAdmin"));
+const DashboardPharmacy = lazy(() => import("./pages/dashboard/DashboardPharmacy"));
+const DashboardOTA = lazy(() => import("./pages/dashboard/DashboardOTA"));
+const DashboardStore = lazy(() => import("./pages/dashboard/DashboardStore"));
+const DashboardLab = lazy(() => import("./pages/dashboard/DashboardLab"));
 
-// Patient pages
-import PatientAppointments from "./pages/dashboard/patient/PatientAppointments";
-import PatientRecords from "./pages/dashboard/patient/PatientRecords";
-import PatientInvoices from "./pages/dashboard/patient/PatientInvoices";
-import PatientLabs from "./pages/dashboard/patient/PatientLabs";
+const DoctorSchedule = lazy(() => import("./pages/dashboard/doctor/DoctorSchedule"));
+const DoctorPatients = lazy(() => import("./pages/dashboard/doctor/DoctorPatients"));
+const DoctorNotes = lazy(() => import("./pages/dashboard/doctor/DoctorNotes"));
 
-// Staff pages
-import StaffPatients from "./pages/dashboard/staff/StaffPatients";
-import StaffAppointments from "./pages/dashboard/staff/StaffAppointments";
-import StaffInvoices from "./pages/dashboard/staff/StaffInvoices";
-import StaffLabs from "./pages/dashboard/staff/StaffLabs";
+const PatientAppointments = lazy(() => import("./pages/dashboard/patient/PatientAppointments"));
+const PatientRecords = lazy(() => import("./pages/dashboard/patient/PatientRecords"));
+const PatientInvoices = lazy(() => import("./pages/dashboard/patient/PatientInvoices"));
+const PatientLabs = lazy(() => import("./pages/dashboard/patient/PatientLabs"));
 
-// Admin pages
-import AdminDepartments from "./pages/dashboard/admin/AdminDepartments";
-import AdminStaff from "./pages/dashboard/admin/AdminStaff";
-import AdminDoctors from "./pages/dashboard/admin/AdminDoctors";
-import AdminAuditLogs from "./pages/dashboard/admin/AdminAuditLogs";
-import AdminSettings from "./pages/dashboard/admin/AdminSettings";
-import AdminRegions from "./pages/dashboard/admin/AdminRegions";
+const StaffPatients = lazy(() => import("./pages/dashboard/staff/StaffPatients"));
+const StaffAppointments = lazy(() => import("./pages/dashboard/staff/StaffAppointments"));
+const StaffInvoices = lazy(() => import("./pages/dashboard/staff/StaffInvoices"));
+const StaffLabs = lazy(() => import("./pages/dashboard/staff/StaffLabs"));
 
-// Pharmacy pages
-import PharmacyMedicines from "./pages/dashboard/pharmacy/PharmacyMedicines";
-import PharmacyInvoices from "./pages/dashboard/pharmacy/PharmacyInvoices";
-import PharmacyExpiry from "./pages/dashboard/pharmacy/PharmacyExpiry";
-import PharmacyAnalytics from "./pages/dashboard/pharmacy/PharmacyAnalytics";
-import PharmacySell from "./pages/dashboard/pharmacy/PharmacySell";
-import PharmacyStock from "./pages/dashboard/pharmacy/PharmacyStock";
-import PharmacyReturns from "./pages/dashboard/pharmacy/PharmacyReturns";
-import PharmacyLabReports from "./pages/dashboard/pharmacy/PharmacyLabReports";
+const AdminDepartments = lazy(() => import("./pages/dashboard/admin/AdminDepartments"));
+const AdminStaff = lazy(() => import("./pages/dashboard/admin/AdminStaff"));
+const AdminDoctors = lazy(() => import("./pages/dashboard/admin/AdminDoctors"));
+const AdminAuditLogs = lazy(() => import("./pages/dashboard/admin/AdminAuditLogs"));
+const AdminSettings = lazy(() => import("./pages/dashboard/admin/AdminSettings"));
+const AdminRegions = lazy(() => import("./pages/dashboard/admin/AdminRegions"));
 
-// Finance routes component
-import FinanceRoutes from "./pages/dashboard/FinanceRoutes";
+const PharmacyMedicines = lazy(() => import("./pages/dashboard/pharmacy/PharmacyMedicines"));
+const PharmacyInvoices = lazy(() => import("./pages/dashboard/pharmacy/PharmacyInvoices"));
+const PharmacyExpiry = lazy(() => import("./pages/dashboard/pharmacy/PharmacyExpiry"));
+const PharmacyAnalytics = lazy(() => import("./pages/dashboard/pharmacy/PharmacyAnalytics"));
+const PharmacySell = lazy(() => import("./pages/dashboard/pharmacy/PharmacySell"));
+const PharmacyStock = lazy(() => import("./pages/dashboard/pharmacy/PharmacyStock"));
+const PharmacyReturns = lazy(() => import("./pages/dashboard/pharmacy/PharmacyReturns"));
+const PharmacyLabReports = lazy(() => import("./pages/dashboard/pharmacy/PharmacyLabReports"));
+
+const FinanceRoutes = lazy(() => import("./pages/dashboard/FinanceRoutes"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 1000 * 30, // 30 seconds - shorter for real-time feel
-      refetchInterval: 1000 * 60, // Refetch every minute as backup
+      staleTime: 1000 * 30,
+      refetchInterval: 1000 * 60,
       retry: 1,
     },
   },
 });
 
-// Component to initialize real-time updates only (no auto-sync in offline mode)
 const RealTimeProvider = ({ children }: { children: React.ReactNode }) => {
   useRealTimeUpdates();
-  // Removed useOfflineDataSync to prevent automatic uploads
   return <>{children}</>;
 };
+
+const RouteLoader = () => (
+  <div className="flex min-h-screen items-center justify-center bg-background">
+    <div className="flex items-center gap-3 text-muted-foreground">
+      <div className="h-5 w-5 animate-spin rounded-full border-2 border-border border-t-primary" />
+      <span className="text-sm font-medium">Loading...</span>
+    </div>
+  </div>
+);
+
+const withSuspense = (element: React.ReactNode) => (
+  <Suspense fallback={<RouteLoader />}>{element}</Suspense>
+);
+
+const protectedElement = (element: React.ReactNode, allowedRoles?: string[]) => (
+  <ProtectedRoute allowedRoles={allowedRoles}>{withSuspense(element)}</ProtectedRoute>
+);
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -89,226 +95,64 @@ const App = () => (
           <Toaster />
           <Sonner />
           <BrowserRouter>
-          <Routes>
-            <Route path="/auth" element={<Auth />} />
-            <Route path="/offline-mode" element={<OfflineMode />} />
-            <Route path="/offline-mode-pharmacy" element={<OfflineModePharmacy />} />
-            <Route path="/" element={
-              <ProtectedRoute>
-                <Index />
-              </ProtectedRoute>
-            } />
+            <Routes>
+              <Route path="/auth" element={withSuspense(<Auth />)} />
+              <Route path="/offline-mode" element={withSuspense(<OfflineMode />)} />
+              <Route path="/offline-mode-pharmacy" element={withSuspense(<OfflineModePharmacy />)} />
+              <Route path="/" element={protectedElement(<Index />)} />
 
-            {/* Patient dashboard routes */}
-            <Route path="/dashboard/patient" element={
-              <ProtectedRoute allowedRoles={['patient']}>
-                <DashboardPatient />
-              </ProtectedRoute>
-            } />
-            <Route path="/dashboard/patient/appointments" element={
-              <ProtectedRoute allowedRoles={['patient']}>
-                <PatientAppointments />
-              </ProtectedRoute>
-            } />
-            <Route path="/dashboard/patient/records" element={
-              <ProtectedRoute allowedRoles={['patient']}>
-                <PatientRecords />
-              </ProtectedRoute>
-            } />
-            <Route path="/dashboard/patient/invoices" element={
-              <ProtectedRoute allowedRoles={['patient']}>
-                <PatientInvoices />
-              </ProtectedRoute>
-            } />
-            <Route path="/dashboard/patient/labs" element={
-              <ProtectedRoute allowedRoles={['patient']}>
-                <PatientLabs />
-              </ProtectedRoute>
-            } />
+              <Route path="/dashboard/patient" element={protectedElement(<DashboardPatient />, ['patient'])} />
+              <Route path="/dashboard/patient/appointments" element={protectedElement(<PatientAppointments />, ['patient'])} />
+              <Route path="/dashboard/patient/records" element={protectedElement(<PatientRecords />, ['patient'])} />
+              <Route path="/dashboard/patient/invoices" element={protectedElement(<PatientInvoices />, ['patient'])} />
+              <Route path="/dashboard/patient/labs" element={protectedElement(<PatientLabs />, ['patient'])} />
 
-            {/* Doctor dashboard routes */}
-            <Route path="/dashboard/doctor" element={
-              <ProtectedRoute allowedRoles={['doctor', 'admin']}>
-                <DashboardDoctor />
-              </ProtectedRoute>
-            } />
-            <Route path="/dashboard/doctor/schedule" element={
-              <ProtectedRoute allowedRoles={['doctor', 'admin']}>
-                <DoctorSchedule />
-              </ProtectedRoute>
-            } />
-            <Route path="/dashboard/doctor/patients" element={
-              <ProtectedRoute allowedRoles={['doctor', 'admin']}>
-                <DoctorPatients />
-              </ProtectedRoute>
-            } />
-            <Route path="/dashboard/doctor/notes" element={
-              <ProtectedRoute allowedRoles={['doctor', 'admin']}>
-                <DoctorNotes />
-              </ProtectedRoute>
-            } />
+              <Route path="/dashboard/doctor" element={protectedElement(<DashboardDoctor />, ['doctor', 'admin'])} />
+              <Route path="/dashboard/doctor/schedule" element={protectedElement(<DoctorSchedule />, ['doctor', 'admin'])} />
+              <Route path="/dashboard/doctor/patients" element={protectedElement(<DoctorPatients />, ['doctor', 'admin'])} />
+              <Route path="/dashboard/doctor/notes" element={protectedElement(<DoctorNotes />, ['doctor', 'admin'])} />
 
-            {/* Staff dashboard routes */}
-            <Route path="/dashboard/staff" element={
-              <ProtectedRoute allowedRoles={['staff', 'admin']}>
-                <DashboardStaff />
-              </ProtectedRoute>
-            } />
-            <Route path="/dashboard/staff/patients" element={
-              <ProtectedRoute allowedRoles={['staff', 'admin']}>
-                <StaffPatients />
-              </ProtectedRoute>
-            } />
-            <Route path="/dashboard/staff/appointments" element={
-              <ProtectedRoute allowedRoles={['staff', 'admin']}>
-                <StaffAppointments />
-              </ProtectedRoute>
-            } />
-            <Route path="/dashboard/staff/invoices" element={
-              <ProtectedRoute allowedRoles={['staff', 'admin']}>
-                <StaffInvoices />
-              </ProtectedRoute>
-            } />
-            <Route path="/dashboard/staff/labs" element={
-              <ProtectedRoute allowedRoles={['staff', 'admin']}>
-                <StaffLabs />
-              </ProtectedRoute>
-            } />
+              <Route path="/dashboard/staff" element={protectedElement(<DashboardStaff />, ['staff', 'admin'])} />
+              <Route path="/dashboard/staff/patients" element={protectedElement(<StaffPatients />, ['staff', 'admin'])} />
+              <Route path="/dashboard/staff/appointments" element={protectedElement(<StaffAppointments />, ['staff', 'admin'])} />
+              <Route path="/dashboard/staff/invoices" element={protectedElement(<StaffInvoices />, ['staff', 'admin'])} />
+              <Route path="/dashboard/staff/labs" element={protectedElement(<StaffLabs />, ['staff', 'admin'])} />
 
-            {/* OTA dashboard routes */}
-            <Route path="/dashboard/ota" element={
-              <ProtectedRoute allowedRoles={['ota', 'nursing', 'admin']}>
-                <DashboardOTA />
-              </ProtectedRoute>
-            } />
+              <Route path="/dashboard/ota" element={protectedElement(<DashboardOTA />, ['ota', 'nursing', 'admin'])} />
 
-            {/* Admin dashboard routes */}
-            <Route path="/dashboard/admin" element={
-              <ProtectedRoute allowedRoles={['admin']}>
-                <DashboardAdmin />
-              </ProtectedRoute>
-            } />
-            <Route path="/dashboard/admin/departments" element={
-              <ProtectedRoute allowedRoles={['admin']}>
-                <AdminDepartments />
-              </ProtectedRoute>
-            } />
-            <Route path="/dashboard/admin/staff" element={
-              <ProtectedRoute allowedRoles={['admin']}>
-                <AdminStaff />
-              </ProtectedRoute>
-            } />
-            <Route path="/dashboard/admin/doctors" element={
-              <ProtectedRoute allowedRoles={['admin']}>
-                <AdminDoctors />
-              </ProtectedRoute>
-            } />
-            <Route path="/dashboard/admin/audit-logs" element={
-              <ProtectedRoute allowedRoles={['admin']}>
-                <AdminAuditLogs />
-              </ProtectedRoute>
-            } />
-            <Route path="/dashboard/admin/settings" element={
-              <ProtectedRoute allowedRoles={['admin']}>
-                <AdminSettings />
-              </ProtectedRoute>
-            } />
-            <Route path="/dashboard/admin/regions" element={
-              <ProtectedRoute allowedRoles={['admin']}>
-                <AdminRegions />
-              </ProtectedRoute>
-            } />
+              <Route path="/dashboard/admin" element={protectedElement(<DashboardAdmin />, ['admin'])} />
+              <Route path="/dashboard/admin/departments" element={protectedElement(<AdminDepartments />, ['admin'])} />
+              <Route path="/dashboard/admin/staff" element={protectedElement(<AdminStaff />, ['admin'])} />
+              <Route path="/dashboard/admin/doctors" element={protectedElement(<AdminDoctors />, ['admin'])} />
+              <Route path="/dashboard/admin/audit-logs" element={protectedElement(<AdminAuditLogs />, ['admin'])} />
+              <Route path="/dashboard/admin/settings" element={protectedElement(<AdminSettings />, ['admin'])} />
+              <Route path="/dashboard/admin/regions" element={protectedElement(<AdminRegions />, ['admin'])} />
 
-            {/* Pharmacy dashboard routes */}
-            <Route path="/dashboard/pharmacy" element={
-              <ProtectedRoute allowedRoles={['head_pharmacist', 'assistant_pharmacist', 'salesman_pharmacist', 'admin']}>
-                <DashboardPharmacy />
-              </ProtectedRoute>
-            } />
-            {/* Legacy redirects for pharmacist roles */}
-            <Route path="/dashboard/head_pharmacist" element={<Navigate to="/dashboard/pharmacy" replace />} />
-            <Route path="/dashboard/assistant_pharmacist" element={<Navigate to="/dashboard/pharmacy" replace />} />
-            <Route path="/dashboard/salesman_pharmacist" element={<Navigate to="/dashboard/pharmacy" replace />} />
-            
-            {/* Nursing role redirect to OTA dashboard */}
-            <Route path="/dashboard/nursing" element={<Navigate to="/dashboard/ota" replace />} />
-            <Route path="/dashboard/pharmacy/medicines" element={
-              <ProtectedRoute allowedRoles={['head_pharmacist', 'assistant_pharmacist', 'admin']}>
-                <PharmacyMedicines />
-              </ProtectedRoute>
-            } />
-            <Route path="/dashboard/pharmacy/invoices" element={
-              <ProtectedRoute allowedRoles={['head_pharmacist', 'assistant_pharmacist', 'admin']}>
-                <PharmacyInvoices />
-              </ProtectedRoute>
-            } />
-            <Route path="/dashboard/pharmacy/expiry" element={
-              <ProtectedRoute allowedRoles={['head_pharmacist', 'assistant_pharmacist', 'admin']}>
-                <PharmacyExpiry />
-              </ProtectedRoute>
-            } />
-            <Route path="/dashboard/pharmacy/analytics" element={
-              <ProtectedRoute allowedRoles={['head_pharmacist', 'assistant_pharmacist', 'admin']}>
-                <PharmacyAnalytics />
-              </ProtectedRoute>
-            } />
-            <Route path="/dashboard/pharmacy/sell" element={
-              <ProtectedRoute allowedRoles={['head_pharmacist', 'assistant_pharmacist', 'salesman_pharmacist', 'admin']}>
-                <PharmacySell />
-              </ProtectedRoute>
-            } />
-            <Route path="/dashboard/pharmacy/stock" element={
-              <ProtectedRoute allowedRoles={['head_pharmacist', 'assistant_pharmacist', 'admin']}>
-                <PharmacyStock />
-              </ProtectedRoute>
-            } />
-            <Route path="/dashboard/pharmacy/returns" element={
-              <ProtectedRoute allowedRoles={['head_pharmacist', 'assistant_pharmacist', 'admin']}>
-                <PharmacyReturns />
-              </ProtectedRoute>
-            } />
-            <Route path="/dashboard/pharmacy/lab-reports" element={
-              <ProtectedRoute allowedRoles={['head_pharmacist', 'assistant_pharmacist', 'admin']}>
-                <PharmacyLabReports />
-              </ProtectedRoute>
-            } />
+              <Route path="/dashboard/pharmacy" element={protectedElement(<DashboardPharmacy />, ['head_pharmacist', 'assistant_pharmacist', 'salesman_pharmacist', 'admin'])} />
+              <Route path="/dashboard/head_pharmacist" element={<Navigate to="/dashboard/pharmacy" replace />} />
+              <Route path="/dashboard/assistant_pharmacist" element={<Navigate to="/dashboard/pharmacy" replace />} />
+              <Route path="/dashboard/salesman_pharmacist" element={<Navigate to="/dashboard/pharmacy" replace />} />
+              <Route path="/dashboard/nursing" element={<Navigate to="/dashboard/ota" replace />} />
+              <Route path="/dashboard/pharmacy/medicines" element={protectedElement(<PharmacyMedicines />, ['head_pharmacist', 'assistant_pharmacist', 'admin'])} />
+              <Route path="/dashboard/pharmacy/invoices" element={protectedElement(<PharmacyInvoices />, ['head_pharmacist', 'assistant_pharmacist', 'admin'])} />
+              <Route path="/dashboard/pharmacy/expiry" element={protectedElement(<PharmacyExpiry />, ['head_pharmacist', 'assistant_pharmacist', 'admin'])} />
+              <Route path="/dashboard/pharmacy/analytics" element={protectedElement(<PharmacyAnalytics />, ['head_pharmacist', 'assistant_pharmacist', 'admin'])} />
+              <Route path="/dashboard/pharmacy/sell" element={protectedElement(<PharmacySell />, ['head_pharmacist', 'assistant_pharmacist', 'salesman_pharmacist', 'admin'])} />
+              <Route path="/dashboard/pharmacy/stock" element={protectedElement(<PharmacyStock />, ['head_pharmacist', 'assistant_pharmacist', 'admin'])} />
+              <Route path="/dashboard/pharmacy/returns" element={protectedElement(<PharmacyReturns />, ['head_pharmacist', 'assistant_pharmacist', 'admin'])} />
+              <Route path="/dashboard/pharmacy/lab-reports" element={protectedElement(<PharmacyLabReports />, ['head_pharmacist', 'assistant_pharmacist', 'admin'])} />
 
-            {/* Finance dashboard routes - All wrapped in FinanceLayout */}
-            <Route path="/dashboard/finance/*" element={
-              <ProtectedRoute allowedRoles={['finance', 'admin']}>
-                <FinanceRoutes />
-              </ProtectedRoute>
-            } />
+              <Route path="/dashboard/finance/*" element={protectedElement(<FinanceRoutes />, ['finance', 'admin'])} />
 
-            {/* Inventory Manager redirect to store */}
-            <Route path="/dashboard/inventory_manager" element={<Navigate to="/dashboard/store" replace />} />
-            <Route path="/dashboard/inventory_manager/*" element={<Navigate to="/dashboard/store" replace />} />
+              <Route path="/dashboard/inventory_manager" element={<Navigate to="/dashboard/store" replace />} />
+              <Route path="/dashboard/inventory_manager/*" element={<Navigate to="/dashboard/store" replace />} />
+              <Route path="/dashboard/store" element={protectedElement(<DashboardStore />, ['store', 'inventory_manager', 'admin'])} />
+              <Route path="/dashboard/store/*" element={protectedElement(<DashboardStore />, ['store', 'inventory_manager', 'admin'])} />
 
-            {/* Store & Inventory Manager dashboard */}
-            <Route path="/dashboard/store" element={
-              <ProtectedRoute allowedRoles={['store', 'inventory_manager', 'admin']}>
-                <DashboardStore />
-              </ProtectedRoute>
-            } />
-            <Route path="/dashboard/store/*" element={
-              <ProtectedRoute allowedRoles={['store', 'inventory_manager', 'admin']}>
-                <DashboardStore />
-              </ProtectedRoute>
-            } />
-
-            {/* Lab dashboard routes */}
-            <Route path="/dashboard/lab" element={
-              <ProtectedRoute allowedRoles={['lab', 'admin']}>
-                <DashboardLab />
-              </ProtectedRoute>
-            } />
-            
-            {/* Redirect for unknown dashboard routes */}
-            <Route path="/dashboard" element={<Navigate to="/" replace />} />
-
-            {/* Catch-all route */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
+              <Route path="/dashboard/lab" element={protectedElement(<DashboardLab />, ['lab', 'admin'])} />
+              <Route path="/dashboard" element={<Navigate to="/" replace />} />
+              <Route path="*" element={withSuspense(<NotFound />)} />
+            </Routes>
           </BrowserRouter>
         </RealTimeProvider>
       </TooltipProvider>

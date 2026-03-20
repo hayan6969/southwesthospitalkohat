@@ -1,127 +1,102 @@
-
 import { useAuth } from "@/hooks/useAuth";
 import { useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import UserAccountDialog from "@/components/UserAccountDialog";
 import { User, LogOut } from "lucide-react";
 
+const resolveDashboardRole = (role?: string) => {
+  if (!role) return null;
+  if (role.includes("pharmacist")) return "pharmacy";
+  if (role === ("nursing" as any)) return "ota";
+  return role;
+};
+
 const Index = () => {
-  const { user, profile, signOut } = useAuth();
+  const { profile, signOut } = useAuth();
+  const navigate = useNavigate();
+  const dashboardRole = resolveDashboardRole(profile?.role);
 
   useEffect(() => {
-    // Normal redirect logic - offline detection is now handled in ProtectedRoute
-    console.log('Index.tsx - Current profile:', profile);
-    console.log('Index.tsx - Profile role:', profile?.role);
-    if (profile?.role) {
-      console.log('Redirecting to dashboard for role:', profile.role);
-      
-      let dashboardRole;
-      // Handle special role mappings
-      if (profile.role.includes('pharmacist')) {
-        dashboardRole = 'pharmacy';
-      } else if (profile.role === 'nursing' as any) {
-        dashboardRole = 'ota';
-      } else {
-        dashboardRole = profile.role;
-      }
-      
-      console.log('Redirect URL:', `/dashboard/${dashboardRole}`);
-      window.location.href = `/dashboard/${dashboardRole}`;
-    } else {
-      console.log('No profile role found, staying on Index');
+    if (dashboardRole) {
+      navigate(`/dashboard/${dashboardRole}`, { replace: true });
     }
-  }, [profile]);
+  }, [dashboardRole, navigate]);
 
-  // Show loading while checking for profile
   if (!profile) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <div className="h-16 w-16 animate-spin rounded-full border-2 border-border border-t-primary" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-background">
-      <div className="flex justify-between items-center p-6 border-b">
+    <div className="flex min-h-screen flex-col bg-background">
+      <div className="flex items-center justify-between border-b p-6">
         <div className="flex items-center gap-2">
-          <span className="inline-block w-2 h-8 bg-blue-500 rounded-full" />
+          <span className="inline-block h-8 w-2 rounded-full bg-primary" />
           <h1 className="text-2xl font-bold text-primary">HIMS</h1>
         </div>
-        
+
         <div className="flex items-center gap-4">
-          {profile && (
-            <div className="flex items-center gap-2 text-sm text-gray-600">
-              <User className="w-4 h-4" />
-              <span>{profile.first_name} {profile.last_name}</span>
-              <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs">
-                {profile.role}
-              </span>
-            </div>
-          )}
-          
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <User className="h-4 w-4" />
+            <span>{profile.first_name} {profile.last_name}</span>
+            <span className="rounded-full bg-accent px-2 py-1 text-xs text-accent-foreground">
+              {profile.role}
+            </span>
+          </div>
+
           <Button variant="outline" onClick={signOut} className="flex items-center gap-2">
-            <LogOut className="w-4 h-4" />
+            <LogOut className="h-4 w-4" />
             Sign Out
           </Button>
         </div>
       </div>
 
-      <div className="flex-1 flex flex-col items-center justify-center p-10">
+      <div className="flex flex-1 flex-col items-center justify-center p-10">
         <div className="w-full max-w-2xl">
-          <Card className="shadow-xl border border-muted">
+          <Card className="border border-muted shadow-xl">
             <CardHeader className="text-center">
-              <CardTitle className="text-3xl font-bold text-primary mb-2">
+              <CardTitle className="mb-2 text-3xl font-bold text-primary">
                 Welcome to HIMS
               </CardTitle>
               <CardDescription className="text-lg">
                 Hospital Information Management System
               </CardDescription>
-              {profile && (
-                <div className="mt-4 p-4 bg-blue-50 rounded-lg">
-                  <p className="text-blue-800 font-medium">
-                    Welcome back, {profile.first_name}!
-                  </p>
-                  <p className="text-blue-600 text-sm">
-                    Role: {profile.role} | Email: {profile.email}
-                  </p>
-                </div>
-              )}
+              <div className="mt-4 rounded-lg bg-muted/50 p-4">
+                <p className="font-medium text-foreground">
+                  Welcome back, {profile.first_name}!
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  Role: {profile.role} | Email: {profile.email}
+                </p>
+              </div>
             </CardHeader>
-            
+
             <CardContent className="space-y-6">
               <div className="text-center">
-                <Button 
-                  onClick={() => {
-                    let dashboardRole;
-                    // Handle special role mappings
-                    if (profile.role.includes('pharmacist')) {
-                      dashboardRole = 'pharmacy';
-                    } else if (profile.role === 'nursing' as any) {
-                      dashboardRole = 'ota';
-                    } else {
-                      dashboardRole = profile.role;
-                    }
-                    window.location.href = `/dashboard/${dashboardRole}`;
-                  }}
-                  className="text-lg px-8 py-3"
+                <Button
+                  onClick={() => dashboardRole && navigate(`/dashboard/${dashboardRole}`)}
+                  className="px-8 py-3 text-lg"
                 >
                   Go to My Dashboard
                 </Button>
               </div>
-              
-              {profile?.role === 'admin' && (
+
+              {profile.role === "admin" && (
                 <div className="border-t pt-6">
-                  <div className="text-center space-y-4">
+                  <div className="space-y-4 text-center">
                     <h3 className="text-lg font-semibold">Admin Functions</h3>
                     <UserAccountDialog />
                   </div>
                 </div>
               )}
-              
-              <div className="text-center text-sm text-gray-600 border-t pt-4">
-                <p>Authenticated with Supabase</p>
+
+              <div className="border-t pt-4 text-center text-sm text-muted-foreground">
+                <p>Authenticated securely</p>
                 <p>Role-based access control enabled</p>
               </div>
             </CardContent>
