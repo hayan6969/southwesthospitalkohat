@@ -955,7 +955,7 @@ const queryTransactionDataForDate = async (closingDate: string, closingTime: str
     
     supabase
       .from('lab_reports')
-      .select('*, patients(id, profiles(first_name, last_name))')
+      .select('*, patients(id, profiles(first_name, last_name)), invoices:invoice_id(amount, created_by)')
       .not('price', 'is', null)
       .gte('created_at', cutoffTime)
       .lte('created_at', upperBound),
@@ -1452,11 +1452,13 @@ export const generateDailyClosingPDF = async (data: {
     return '—';
   };
 
-  // Lab reports - use amount (invoice-level, includes discount) if available, fallback to price
+  // Lab reports - use invoice amount (includes discount) if available, fallback to price
   (transactionsData?.labReports || []).forEach((lab: any) => {
     const p = lab.patients?.profiles;
     const originalPrice = Number(lab.price) || 0;
-    const finalAmount = Number(lab.amount) || originalPrice;
+    // The invoice joined via invoice_id holds the actual paid amount after discount
+    const invoiceAmount = lab.invoices?.amount != null ? Number(lab.invoices.amount) : null;
+    const finalAmount = invoiceAmount != null ? invoiceAmount : originalPrice;
     const discountApplied = originalPrice > 0 && finalAmount < originalPrice ? originalPrice - finalAmount : 0;
     let procedure = lab.test_name || lab.description || 'Lab Test';
     if (discountApplied > 0) {
@@ -1933,7 +1935,8 @@ export const generateDailyClosingPDF = async (data: {
 
   (transactionsData?.labReports || []).forEach((lab: any) => {
     const originalPrice = Number(lab.price) || 0;
-    const finalAmount = Number(lab.amount) || originalPrice;
+    const invoiceAmount = lab.invoices?.amount != null ? Number(lab.invoices.amount) : null;
+    const finalAmount = invoiceAmount != null ? invoiceAmount : originalPrice;
     if (originalPrice > 0 && finalAmount < originalPrice) {
       const p = lab.patients?.profiles;
       discountItems.push({
@@ -2524,7 +2527,7 @@ export const generateDailyClosingSummaryPDF = async (data: {
     inv.invoice_number?.startsWith('EMERGENCY-');
 
   const labReports = transactionsData?.labReports || [];
-  const labRevenue = labReports.reduce((s: number, r: any) => s + (Number(r.amount) || Number(r.price) || 0), 0);
+  const labRevenue = labReports.reduce((s: number, r: any) => s + (r.invoices?.amount != null ? Number(r.invoices.amount) : (Number(r.price) || 0)), 0);
 
   const xrayReports = transactionsData?.xrayReports || [];
   const xrayRevenue = xrayReports.reduce((s: number, r: any) => s + (Number(r.price) || 0), 0);
