@@ -1347,7 +1347,7 @@ export const generateDailyClosingPDF = async (data: {
   }
 
   const allTxns: TxnItem[] = [];
-  const hospitalInvoicesAll = transactionsData?.hospitalInvoices || [];
+  const hospitalInvoicesAll = deduplicateHospitalInvoices(transactionsData?.hospitalInvoices || []);
 
   // Resolve operator names from profile IDs so PDF matches on-screen report
   const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
