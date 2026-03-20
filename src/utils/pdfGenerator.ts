@@ -1348,7 +1348,10 @@ export const generateDailyClosingPDF = async (data: {
     if (value && uuidRegex.test(value)) operatorIdSet.add(value);
   };
 
-  hospitalInvoicesAll.forEach((inv: any) => collectOperatorId(inv.created_by));
+  hospitalInvoicesAll.forEach((inv: any) => {
+    collectOperatorId(inv.created_by);
+    collectOperatorId(inv.doctor_id);
+  });
   (transactionsData?.miscellaneousIncome || []).forEach((misc: any) => collectOperatorId(misc.created_by));
 
   const operatorNamesById = new Map<string, string>();
