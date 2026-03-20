@@ -181,7 +181,7 @@ export default function FinancePayroll() {
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
-        .in('role', ['staff', 'doctor', 'admin', 'pharmacy'])
+        .in('role', ['staff', 'doctor', 'admin', 'pharmacy', 'head_pharmacist', 'assistant_pharmacist', 'salesman_pharmacist', 'finance', 'inventory_manager', 'store', 'lab', 'ota', 'nursing'])
         .eq('is_active', true);
       if (error) throw error;
       return data;
