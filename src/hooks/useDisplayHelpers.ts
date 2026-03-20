@@ -1,19 +1,66 @@
+import { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+
+const patientSearchMemoryCache = new Map<string, any[]>();
+
+const cachePatientsForOffline = (combinedData: any[]) => {
+  const existingCache = localStorage.getItem('cached_patients');
+  let cachedPatients = existingCache ? JSON.parse(existingCache) : [];
+
+  combinedData.forEach((newPatient) => {
+    const existingIndex = cachedPatients.findIndex((p: any) => p.id === newPatient.id);
+    if (existingIndex >= 0) {
+      cachedPatients[existingIndex] = newPatient;
+    } else {
+      cachedPatients.push(newPatient);
+    }
+  });
+
+  if (cachedPatients.length > 100) {
+    cachedPatients = cachedPatients.slice(-100);
+  }
+
+  localStorage.setItem('cached_patients', JSON.stringify(cachedPatients));
+};
+
+const searchCachedPatients = (searchTerm: string) => {
+  const cachedPatients = localStorage.getItem('cached_patients');
+  if (!cachedPatients) return [];
+
+  const query = searchTerm.toLowerCase();
+  const patients = JSON.parse(cachedPatients);
+
+  return patients.filter((patient: any) => {
+    const name = `${patient.profile?.first_name || ''} ${patient.profile?.last_name || ''}`.toLowerCase();
+    const patientNumber = (patient.patient_number || '').toLowerCase();
+    const cnic = (patient.cnic || '').toLowerCase();
+    const emergencyPhone = (patient.emergency_contact_phone || '').toLowerCase();
+    const phone = (patient.profile?.phone || '').toLowerCase();
+    const email = (patient.profile?.email || '').toLowerCase();
+
+    return (
+      name.includes(query) ||
+      patientNumber.includes(query) ||
+      cnic.includes(query) ||
+      emergencyPhone.includes(query) ||
+      phone.includes(query) ||
+      email.includes(query)
+    );
+  }).slice(0, 10);
+};
 
 // Helper hook to get patient names from profiles table (with offline support)
 export const usePatientNames = () => {
   return useQuery({
     queryKey: ['patient-names'],
     queryFn: async () => {
-      // If offline, return cached data
       if (!navigator.onLine) {
         const cachedData = localStorage.getItem('cached_patient_names');
         return cachedData ? JSON.parse(cachedData) : [];
       }
 
       try {
-        // Fetch all patients without limit to ensure we get everyone
         let allPatients: any[] = [];
         let start = 0;
         const batchSize = 1000;
@@ -28,7 +75,7 @@ export const usePatientNames = () => {
             .order('created_at', { ascending: true });
 
           if (error) throw error;
-          
+
           if (data && data.length > 0) {
             allPatients = [...allPatients, ...data];
             start += batchSize;
@@ -38,17 +85,13 @@ export const usePatientNames = () => {
           }
         }
 
-        const data = allPatients;
-        
-        // Cache the data for offline use
-        if (data) {
-          localStorage.setItem('cached_patient_names', JSON.stringify(data));
+        if (allPatients) {
+          localStorage.setItem('cached_patient_names', JSON.stringify(allPatients));
         }
-        
-        return data;
+
+        return allPatients;
       } catch (error) {
         console.error('Error fetching patient names:', error);
-        // Fallback to cached data
         const cachedData = localStorage.getItem('cached_patient_names');
         return cachedData ? JSON.parse(cachedData) : [];
       }
@@ -62,22 +105,19 @@ export const useDoctorNames = () => {
   return useQuery({
     queryKey: ['doctor-names'],
     queryFn: async () => {
-      // If offline, return cached data
       if (!navigator.onLine) {
         const cachedData = localStorage.getItem('cached_doctor_names');
         return cachedData ? JSON.parse(cachedData) : [];
       }
 
       try {
-        // Fetch only doctors that exist in both profiles AND doctors table
         const { data, error } = await supabase
           .from('doctors')
           .select('id, profiles!inner(first_name, last_name, phone, email)')
           .eq('profiles.role', 'doctor');
 
         if (error) throw error;
-        
-        // Flatten the data structure to match the expected format
+
         const formattedData = data?.map(doctor => ({
           id: doctor.id,
           first_name: (doctor.profiles as any)?.first_name,
@@ -85,16 +125,14 @@ export const useDoctorNames = () => {
           phone: (doctor.profiles as any)?.phone,
           email: (doctor.profiles as any)?.email,
         })) || [];
-        
-        // Cache the data for offline use
+
         if (formattedData) {
           localStorage.setItem('cached_doctor_names', JSON.stringify(formattedData));
         }
-        
+
         return formattedData;
       } catch (error) {
         console.error('Error fetching doctor names:', error);
-        // Fallback to cached data
         const cachedData = localStorage.getItem('cached_doctor_names');
         return cachedData ? JSON.parse(cachedData) : [];
       }
@@ -105,121 +143,101 @@ export const useDoctorNames = () => {
 
 // Helper hook to search patients by Patient ID with profile info (with offline support)
 export const useSearchPatientsWithNames = (searchTerm: string) => {
+  const trimmedSearchTerm = searchTerm.trim();
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState(trimmedSearchTerm);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchTerm(trimmedSearchTerm);
+    }, 200);
+
+    return () => clearTimeout(timer);
+  }, [trimmedSearchTerm]);
+
   return useQuery({
-    queryKey: ['search-patients-patient-id', searchTerm],
+    queryKey: ['search-patients-patient-id', debouncedSearchTerm],
     queryFn: async () => {
-      if (!searchTerm.trim()) return [];
-      
-      // If offline, search in cached data
+      const term = debouncedSearchTerm.trim();
+      if (term.length < 2) return [];
+
+      const normalizedTerm = term.toLowerCase();
+      const cachedResult = patientSearchMemoryCache.get(normalizedTerm);
+      if (cachedResult) return cachedResult;
+
       if (!navigator.onLine) {
-        const cachedPatients = localStorage.getItem('cached_patients');
-        if (cachedPatients) {
-          const patients = JSON.parse(cachedPatients);
-          return patients.filter((patient: any) => 
-            patient.patient_number?.toLowerCase().includes(searchTerm.toLowerCase())
-          ).slice(0, 10);
-        }
-        return [];
+        return searchCachedPatients(term);
       }
-      
+
       try {
-        // Search patients by patient_number, phone, or CNIC
-        const { data: patientsByNumber, error: patientsError } = await supabase
-          .from('patients')
-          .select('*')
-          .or(`patient_number.ilike.%${searchTerm}%,emergency_contact_phone.ilike.%${searchTerm}%,cnic.ilike.%${searchTerm}%`)
-          .limit(10);
+        const safeTerm = term.replace(/[,%()]/g, ' ').trim();
+        const digitsOnly = safeTerm.replace(/[^0-9]/g, '');
+        const emailPhonePattern = digitsOnly ? `${digitsOnly}@patient.local` : null;
 
-        if (patientsError) throw patientsError;
-
-        // Also search by name, phone, or email-based phone in profiles
-        const emailPhonePattern = `${searchTerm.replace(/[^0-9]/g, '')}@patient.local`;
-        const { data: profileMatches } = await supabase
-          .from('profiles')
-          .select('id')
-          .eq('role', 'patient')
-          .or(`first_name.ilike.%${searchTerm}%,last_name.ilike.%${searchTerm}%,phone.ilike.%${searchTerm}%,email.ilike.%${searchTerm}%${searchTerm.match(/\d/) ? `,email.eq.${emailPhonePattern}` : ''}`)
-          .limit(10);
-
-        // Get patient records for profile matches
-        let patientsByProfile: any[] = [];
-        if (profileMatches && profileMatches.length > 0) {
-          const profileIds = profileMatches.map(p => p.id);
-          const { data } = await supabase
+        const [patientsByNumberResponse, profileMatchesResponse] = await Promise.all([
+          supabase
             .from('patients')
-            .select('*')
-            .in('id', profileIds);
-          patientsByProfile = data || [];
-        }
+            .select('id, patient_number, cnic, emergency_contact_phone')
+            .or(`patient_number.ilike.%${safeTerm}%,emergency_contact_phone.ilike.%${safeTerm}%,cnic.ilike.%${safeTerm}%`)
+            .limit(10),
+          supabase
+            .from('profiles')
+            .select('id, first_name, last_name, phone, email')
+            .eq('role', 'patient')
+            .or(`first_name.ilike.%${safeTerm}%,last_name.ilike.%${safeTerm}%,phone.ilike.%${safeTerm}%,email.ilike.%${safeTerm}%${emailPhonePattern ? `,email.eq.${emailPhonePattern}` : ''}`)
+            .limit(10),
+        ]);
 
-        // Merge and deduplicate
-        const allPatients = [...(patientsByNumber || [])];
-        patientsByProfile.forEach(p => {
-          if (!allPatients.find(existing => existing.id === p.id)) {
-            allPatients.push(p);
-          }
+        if (patientsByNumberResponse.error) throw patientsByNumberResponse.error;
+        if (profileMatchesResponse.error) throw profileMatchesResponse.error;
+
+        const patientMap = new Map<string, any>();
+        (patientsByNumberResponse.data || []).forEach((patient) => {
+          patientMap.set(patient.id, patient);
         });
 
-        const patients = allPatients.slice(0, 10);
-        if (patients.length === 0) return [];
+        const missingPatientIds = (profileMatchesResponse.data || [])
+          .map((profile) => profile.id)
+          .filter((id) => !patientMap.has(id));
 
-        // Then get profile data for these patients
-        const patientIds = patients.map(p => p.id);
-        const { data: profiles, error: profilesError } = await supabase
-          .from('profiles')
-          .select('id, first_name, last_name, phone, email')
-          .in('id', patientIds);
+        if (missingPatientIds.length > 0) {
+          const { data: missingPatients, error: missingPatientsError } = await supabase
+            .from('patients')
+            .select('id, patient_number, cnic, emergency_contact_phone')
+            .in('id', missingPatientIds.slice(0, 10));
 
-        if (profilesError) throw profilesError;
+          if (missingPatientsError) throw missingPatientsError;
 
-        // Combine the data
-        const combinedData = patients.map(patient => {
-          const profile = profiles?.find(p => p.id === patient.id);
-          return {
+          (missingPatients || []).forEach((patient) => {
+            patientMap.set(patient.id, patient);
+          });
+        }
+
+        const profileMap = new Map<string, any>();
+        (profileMatchesResponse.data || []).forEach((profile) => {
+          profileMap.set(profile.id, profile);
+        });
+
+        const combinedData = Array.from(patientMap.values())
+          .map((patient) => ({
             ...patient,
-            profile: profile || null
-          };
-        });
-        
-        // Cache the data for offline use (update existing cache)
-        const existingCache = localStorage.getItem('cached_patients');
-        let cachedPatients = existingCache ? JSON.parse(existingCache) : [];
-        
-        // Add new patients to cache (avoid duplicates)
-        combinedData.forEach(newPatient => {
-          const existingIndex = cachedPatients.findIndex((p: any) => p.id === newPatient.id);
-          if (existingIndex >= 0) {
-            cachedPatients[existingIndex] = newPatient;
-          } else {
-            cachedPatients.push(newPatient);
-          }
-        });
-        
-        // Keep cache reasonable size (last 100 patients)
-        if (cachedPatients.length > 100) {
-          cachedPatients = cachedPatients.slice(-100);
-        }
-        
-        localStorage.setItem('cached_patients', JSON.stringify(cachedPatients));
-        
+            profile: profileMap.get(patient.id) || null,
+          }))
+          .slice(0, 10);
+
+        patientSearchMemoryCache.set(normalizedTerm, combinedData);
+        cachePatientsForOffline(combinedData);
+
         return combinedData;
       } catch (error) {
         console.error('Error searching patients:', error);
-        // Fallback to cached data on error
-        const cachedPatients = localStorage.getItem('cached_patients');
-        if (cachedPatients) {
-          const patients = JSON.parse(cachedPatients);
-          return patients.filter((patient: any) => 
-            patient.patient_number?.toLowerCase().includes(searchTerm.toLowerCase())
-          ).slice(0, 10);
-        }
-        return [];
+        return searchCachedPatients(term);
       }
     },
-    enabled: !!searchTerm && searchTerm.length >= 1,
-    retry: false, // Don't retry on offline
-    staleTime: 0,
-    gcTime: 0,
+    enabled: debouncedSearchTerm.length >= 2,
+    retry: false,
+    staleTime: 5 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
+    refetchOnWindowFocus: false,
   });
 };
 
