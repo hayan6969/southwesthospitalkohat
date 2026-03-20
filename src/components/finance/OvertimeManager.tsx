@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -37,7 +37,14 @@ interface GroupedEmployee {
   employee_name: string;
   totalHours: number;
   records: OvertimeRecord[];
-  status: string; // 'pending' if any pending, 'paid' if all paid
+  status: string;
+}
+
+interface FinanceSettings {
+  id: number;
+  overtime_hourly_rate: number;
+  created_at: string;
+  updated_at: string;
 }
 
 function groupByEmployee(records: OvertimeRecord[]): GroupedEmployee[] {
@@ -66,7 +73,6 @@ function generateOvertimePDF(group: GroupedEmployee) {
   const doc = new jsPDF();
   const pageWidth = doc.internal.pageSize.getWidth();
 
-  // Header
   doc.setFontSize(16);
   doc.setFont('helvetica', 'bold');
   doc.text('Overtime Report', pageWidth / 2, 20, { align: 'center' });
@@ -81,7 +87,6 @@ function generateOvertimePDF(group: GroupedEmployee) {
     doc.text(`Total Paid: Rs. ${totalPaid.toLocaleString()}`, 20, 51);
   }
 
-  // Table header
   let y = 65;
   const cols = [20, 55, 85, 115, 145, pageWidth - 15];
   const headers = ['#', 'Date', 'Hours', 'Rate/Hr', 'Amount', 'Status'];
@@ -105,7 +110,6 @@ function generateOvertimePDF(group: GroupedEmployee) {
       y = 20;
     }
 
-    // Alternate row bg
     if (idx % 2 === 0) {
       doc.setFillColor(245, 245, 245);
       doc.rect(15, y - 5, pageWidth - 30, 8, 'F');
@@ -115,17 +119,19 @@ function generateOvertimePDF(group: GroupedEmployee) {
     doc.text(String(idx + 1), cols[0], y);
     doc.text(format(new Date(r.overtime_date), 'dd MMM yyyy'), cols[1], y);
     doc.text(`${r.overtime_hours}h`, cols[2], y);
-    doc.text(r.status === 'paid' ? `Rs. ${Number(r.overtime_rate).toLocaleString()}` : '-', cols[3], y);
-    doc.text(r.status === 'paid' ? `Rs. ${Number(r.overtime_amount).toLocaleString()}` : '-', cols[4], y);
+    doc.text(Number(r.overtime_rate) > 0 ? `Rs. ${Number(r.overtime_rate).toLocaleString()}` : '-', cols[3], y);
+    doc.text(Number(r.overtime_amount) > 0 ? `Rs. ${Number(r.overtime_amount).toLocaleString()}` : '-', cols[4], y);
     doc.text(r.status === 'paid' ? 'Paid' : 'Pending', cols[5] - 15, y);
     y += 8;
   });
 
-  // Notes section
   const notedRecords = group.records.filter(r => r.notes);
   if (notedRecords.length > 0) {
     y += 5;
-    if (y > 250) { doc.addPage(); y = 20; }
+    if (y > 250) {
+      doc.addPage();
+      y = 20;
+    }
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(10);
     doc.text('Notes:', 20, y);
@@ -133,13 +139,15 @@ function generateOvertimePDF(group: GroupedEmployee) {
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(8);
     notedRecords.forEach(r => {
-      if (y > 275) { doc.addPage(); y = 20; }
+      if (y > 275) {
+        doc.addPage();
+        y = 20;
+      }
       doc.text(`${format(new Date(r.overtime_date), 'dd MMM')}: ${r.notes}`, 25, y);
       y += 5;
     });
   }
 
-  // Footer
   doc.setFontSize(7);
   doc.setTextColor(150);
   doc.text(`Generated on ${format(new Date(), 'dd MMM yyyy, hh:mm a')}`, pageWidth / 2, doc.internal.pageSize.getHeight() - 10, { align: 'center' });
@@ -160,22 +168,19 @@ export function OvertimeManager() {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("pending");
 
-  // Pay dialog state
   const [payingGroup, setPayingGroup] = useState<GroupedEmployee | null>(null);
-  const savedRate = localStorage.getItem('overtime_default_rate') || '';
+  const savedRate = typeof window !== "undefined" ? localStorage.getItem('overtime_default_rate') || '' : '';
   const [payRate, setPayRate] = useState("");
   const [showRateSetting, setShowRateSetting] = useState(false);
   const [defaultRate, setDefaultRate] = useState(savedRate);
+  const [hasSyncedLegacyRate, setHasSyncedLegacyRate] = useState(false);
 
-  // Edit dialog state
   const [editingRecord, setEditingRecord] = useState<OvertimeRecord | null>(null);
   const [editHours, setEditHours] = useState("");
   const [editNotes, setEditNotes] = useState("");
 
-  // Detail view dialog
   const [viewingGroup, setViewingGroup] = useState<GroupedEmployee | null>(null);
 
-  // Fetch staff
   const { data: staff } = useQuery({
     queryKey: ['staff-for-overtime'],
     queryFn: async () => {
@@ -189,7 +194,57 @@ export function OvertimeManager() {
     }
   });
 
-  // Fetch overtime records
+  const { data: financeSettings } = useQuery({
+    queryKey: ['finance-settings'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('finance_settings' as any)
+        .select('*')
+        .eq('id', 1)
+        .maybeSingle();
+      if (error) throw error;
+      return (data ?? null) as unknown as FinanceSettings | null;
+    }
+  });
+
+  const updateFinanceSettingsMutation = useMutation({
+    mutationFn: async (rate: number) => {
+      const { error } = await supabase
+        .from('finance_settings' as any)
+        .upsert({ id: 1, overtime_hourly_rate: rate }, { onConflict: 'id' });
+      if (error) throw error;
+      if (typeof window !== "undefined") {
+        localStorage.setItem('overtime_default_rate', String(rate));
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['finance-settings'] });
+      setShowRateSetting(false);
+      toast({ title: "Default rate saved", description: `Rs. ${defaultRate || '0'}/hour` });
+    },
+    onError: (err: any) => {
+      toast({ title: "Error", description: err.message || "Failed to save overtime rate", variant: "destructive" });
+    }
+  });
+
+  useEffect(() => {
+    const dbRate = Number(financeSettings?.overtime_hourly_rate ?? 0);
+    if (dbRate > 0) {
+      const nextRate = String(dbRate);
+      setDefaultRate(nextRate);
+      if (typeof window !== "undefined") {
+        localStorage.setItem('overtime_default_rate', nextRate);
+      }
+      return;
+    }
+
+    const legacyRate = Number(savedRate || 0);
+    if (financeSettings && dbRate === 0 && legacyRate > 0 && !hasSyncedLegacyRate) {
+      setHasSyncedLegacyRate(true);
+      updateFinanceSettingsMutation.mutate(legacyRate);
+    }
+  }, [financeSettings, savedRate, hasSyncedLegacyRate]);
+
   const { data: overtimeRecords, isLoading } = useQuery({
     queryKey: ['overtime-records', statusFilter],
     queryFn: async () => {
@@ -211,11 +266,11 @@ export function OvertimeManager() {
 
   const grouped = groupByEmployee(overtimeRecords || []);
 
-  // Create or accumulate overtime record
   const createMutation = useMutation({
     mutationFn: async () => {
       const hours = parseFloat(overtimeHours) || 0;
       const name = employeeName.trim();
+      const currentRate = Number(financeSettings?.overtime_hourly_rate ?? savedRate ?? 0);
       if (!name) throw new Error("Employee name is required");
 
       const { data: existingRecords } = await supabase
@@ -229,10 +284,16 @@ export function OvertimeManager() {
 
       if (existing) {
         const newHours = (Number(existing.overtime_hours) || 0) + hours;
+        const appliedRate = Number(existing.overtime_rate) || currentRate;
         const combinedNotes = [existing.notes, notes.trim()].filter(Boolean).join('; ');
         const { error } = await supabase
           .from('overtime_records')
-          .update({ overtime_hours: newHours, notes: combinedNotes || null })
+          .update({
+            overtime_hours: newHours,
+            overtime_rate: appliedRate,
+            overtime_amount: newHours * appliedRate,
+            notes: combinedNotes || null,
+          })
           .eq('id', existing.id);
         if (error) throw error;
       } else {
@@ -243,8 +304,8 @@ export function OvertimeManager() {
             employee_id: empId,
             employee_name: name,
             overtime_hours: hours,
-            overtime_rate: 0,
-            overtime_amount: 0,
+            overtime_rate: currentRate,
+            overtime_amount: hours * currentRate,
             overtime_date: overtimeDate,
             notes: notes.trim() || null,
             created_by: user?.id,
@@ -264,14 +325,18 @@ export function OvertimeManager() {
     }
   });
 
-  // Edit overtime hours
   const editMutation = useMutation({
     mutationFn: async () => {
       if (!editingRecord) return;
+      const nextHours = parseFloat(editHours) || 0;
+      const fallbackRate = Number(financeSettings?.overtime_hourly_rate ?? savedRate ?? 0);
+      const nextRate = Number(editingRecord.overtime_rate) || fallbackRate;
       const { error } = await supabase
         .from('overtime_records')
         .update({
-          overtime_hours: parseFloat(editHours) || 0,
+          overtime_hours: nextHours,
+          overtime_rate: nextRate,
+          overtime_amount: nextHours * nextRate,
           notes: editNotes.trim() || null,
         })
         .eq('id', editingRecord.id);
@@ -287,7 +352,6 @@ export function OvertimeManager() {
     }
   });
 
-  // Mark all pending records for an employee as paid
   const markPaidMutation = useMutation({
     mutationFn: async () => {
       if (!payingGroup) return;
@@ -309,7 +373,6 @@ export function OvertimeManager() {
         if (error) throw error;
       }
 
-      // Single expense entry for total
       const totalHours = pendingRecords.reduce((s, r) => s + (Number(r.overtime_hours) || 0), 0);
       const totalAmount = totalHours * rate;
       const dateRange = pendingRecords.length === 1
@@ -339,7 +402,6 @@ export function OvertimeManager() {
     }
   });
 
-  // Delete a single record
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase.from('overtime_records').delete().eq('id', id);
@@ -412,11 +474,14 @@ export function OvertimeManager() {
                   placeholder="e.g. 500"
                   className="h-8 w-24"
                 />
-                <Button size="sm" className="h-8" onClick={() => {
-                  localStorage.setItem('overtime_default_rate', defaultRate);
-                  setShowRateSetting(false);
-                  toast({ title: "Default rate saved", description: `Rs. ${defaultRate}/hour` });
-                }}>Save</Button>
+                <Button
+                  size="sm"
+                  className="h-8"
+                  onClick={() => updateFinanceSettingsMutation.mutate(Number(defaultRate) || 0)}
+                  disabled={updateFinanceSettingsMutation.isPending}
+                >
+                  {updateFinanceSettingsMutation.isPending ? "Saving..." : "Save"}
+                </Button>
               </div>
             ) : (
               <div className="flex items-center gap-2">
