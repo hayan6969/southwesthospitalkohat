@@ -226,34 +226,8 @@ export default function FinanceStaffPayments() {
                 ))}
               </div>
 
-              {Number(detailClosing.overtime_hours) > 0 && (
-                <div className="space-y-2">
-                  <p className="text-sm font-medium flex items-center gap-1">
-                    <DollarSign className="w-4 h-4" />
-                    Overtime: {detailClosing.overtime_hours} hours
-                  </p>
-                  {detailClosing.status === 'pending' && (
-                    <div className="flex gap-2">
-                      <Input
-                        type="number"
-                        placeholder="Set overtime amount"
-                        value={overtimeAmount}
-                        onChange={(e) => setOvertimeAmount(e.target.value)}
-                      />
-                      <Button
-                        size="sm"
-                        onClick={() => updateStatus.mutate({
-                          id: detailClosing.id,
-                          status: 'approved',
-                          overtimeAmt: parseFloat(overtimeAmount) || 0,
-                        })}
-                      >
-                        Approve with OT
-                      </Button>
-                    </div>
-                  )}
-                </div>
-              )}
+
+
 
               {detailClosing.notes && (
                 <div className="p-3 rounded-lg bg-muted">
