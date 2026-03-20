@@ -2728,7 +2728,7 @@ export const generateDailyClosingSummaryPDF = async (data: {
   yPosition += 20;
 
   // ========== COMPUTE DATA ==========
-  const hospitalInvoicesAll = transactionsData?.hospitalInvoices || [];
+  const hospitalInvoicesAll = deduplicateHospitalInvoices(transactionsData?.hospitalInvoices || []);
   const isEmergencyInv = (inv: any) =>
     inv.description?.toLowerCase().includes('emergency') ||
     inv.emergency_patient_data ||
