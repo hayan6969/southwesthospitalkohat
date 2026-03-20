@@ -1572,6 +1572,21 @@ export const generateDailyClosingPDF = async (data: {
       yPosition += 8;
     };
 
+    // Helper to draw cell borders for a row
+    const drawRowBorders = (rowY: number, rowH: number) => {
+      doc.setDrawColor(200, 200, 200);
+      doc.setLineWidth(0.15);
+      // Horizontal bottom line
+      doc.line(detailStartX, rowY + rowH, detailStartX + totalTableWidth, rowY + rowH);
+      // Vertical cell lines
+      let lx = detailStartX;
+      detailColWidths.forEach(w => {
+        doc.line(lx, rowY, lx, rowY + rowH);
+        lx += w;
+      });
+      doc.line(lx, rowY, lx, rowY + rowH); // right border
+    };
+
     drawDetailHeader();
 
     categoryOrder.forEach(cat => {
