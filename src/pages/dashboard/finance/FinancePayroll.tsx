@@ -398,20 +398,27 @@ export default function FinancePayroll() {
 
       if (payrollError) throw payrollError;
 
-      await syncPayrollOvertimePayments(record, paidAt);
+      // Sync overtime and add expense - don't fail the whole operation if these error
+      try {
+        await syncPayrollOvertimePayments(record, paidAt);
+      } catch (e) {
+        console.warn('Overtime sync warning:', e);
+      }
 
-      // Add to expenses table
-      const { error: expenseError } = await supabase
-        .from('expenses')
-        .insert([{
-          category: 'Payroll',
-          description: `Salary payment for ${record.employee_name} (${record.pay_period})`,
-          amount: record.net_salary,
-          expense_date: getCurrentPakistanTime().toISOString().split('T')[0],
-          created_by: userData.user?.id
-        }]);
-
-      if (expenseError) throw expenseError;
+      try {
+        const { error: expenseError } = await supabase
+          .from('expenses')
+          .insert([{
+            category: 'Payroll',
+            description: `Salary payment for ${record.employee_name} (${record.pay_period})`,
+            amount: record.net_salary,
+            expense_date: getCurrentPakistanTime().toISOString().split('T')[0],
+            created_by: userData.user?.id
+          }]);
+        if (expenseError) console.warn('Expense insert warning:', expenseError);
+      } catch (e) {
+        console.warn('Expense insert warning:', e);
+      }
       
       return { success: true };
     },
