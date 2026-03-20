@@ -25,8 +25,8 @@ export function StaffShiftClosing() {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [isOvertimeMode, setIsOvertimeMode] = useState(false);
 
-  const now = new Date();
-  const today = now;
+  const today = new Date();
+  const [queryAnchor, setQueryAnchor] = useState(() => new Date());
   const staffShift = (profile as any)?.shift || "morning";
   const activeShiftConfig = shifts?.find((shift) => shift.name.toLowerCase() === String(staffShift).toLowerCase());
 
@@ -84,8 +84,8 @@ export function StaffShiftClosing() {
   const periodStart = hasCutoffWithinShift
     ? new Date(lastSubmittedClosing!.created_at as string)
     : shiftWindow.start;
-  const regularPeriodEnd = now < shiftWindow.end ? now : shiftWindow.end;
-  const periodEnd = isOvertimeMode ? now : regularPeriodEnd;
+  const regularPeriodEnd = queryAnchor < shiftWindow.end ? queryAnchor : shiftWindow.end;
+  const periodEnd = isOvertimeMode ? queryAnchor : regularPeriodEnd;
   const periodStartIso = periodStart.toISOString();
   const periodEndIso = (periodEnd > periodStart ? periodEnd : periodStart).toISOString();
 
@@ -209,6 +209,7 @@ export function StaffShiftClosing() {
       toast.success(isOvertimeMode ? 'Overtime closing submitted to finance for approval' : 'Shift closing submitted to finance for approval');
       queryClient.invalidateQueries({ queryKey: ['staff-shift-closings'] });
       queryClient.invalidateQueries({ queryKey: ['staff-shift-revenue'] });
+      setQueryAnchor(new Date());
       setOvertimeHours('');
       setNotes('');
       setConfirmOpen(false);
