@@ -46,7 +46,7 @@ export const generateAnalyticsReportPDF = async (startDate: Date, endDate: Date)
       .lte('created_at', endISO),
     supabase
       .from('xray_reports')
-      .select('*')
+      .select('*, patients(id, profiles(first_name, last_name))')
       .not('price', 'is', null)
       .gte('created_at', startISO)
       .lte('created_at', endISO),
