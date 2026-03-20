@@ -67,7 +67,7 @@ export function OTScheduleDialog() {
   const { data: doctorNames } = useDoctorNames();
   const { data: searchResults } = useSearchPatientsWithNames(searchTerm);
   const { logAction } = useAuditLogger();
-  const { profile } = useAuth();
+  const { profile, user } = useAuth();
 
   useEffect(() => {
     const fetchData = async () => {

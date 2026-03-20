@@ -117,6 +117,8 @@ export function EnhancedLabDialog() {
       return data;
     },
     enabled: !!patientIdForButton,
+    staleTime: 0,
+    refetchOnMount: 'always',
   });
 
   const getDiscountedTotal = () => {

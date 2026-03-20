@@ -759,6 +759,7 @@ export const useCreateAppointmentWithInvoice = () => {
       queryClient.invalidateQueries({ queryKey: ['appointments'] });
       queryClient.invalidateQueries({ queryKey: ['invoices'] });
       queryClient.invalidateQueries({ queryKey: ['patient-discount-preview'] });
+      queryClient.invalidateQueries({ queryKey: ['all-patient-discounts'] });
     },
   });
 };
@@ -789,7 +790,8 @@ export const useCreateLabOrderWithInvoice = () => {
             paid_at: new Date().toISOString(),
             created_at: new Date().toISOString(),
             due_date: new Date().toISOString(),
-            created_offline: true
+            created_offline: true,
+            created_by: labOrderData.created_by || null,
           }
         };
         
@@ -834,6 +836,7 @@ export const useCreateLabOrderWithInvoice = () => {
       // Apply patient discount for lab orders
       const labDiscount = await applyPatientDiscount(labOrderData.patient_id, labOrderData.totalAmount, 'lab');
       const { data: { user: currentUser } } = await supabase.auth.getUser();
+      const createdBy = labOrderData.created_by || currentUser?.id || null;
 
       const { data: invoice, error: invoiceError } = await supabase
         .from('invoices')
@@ -844,7 +847,7 @@ export const useCreateLabOrderWithInvoice = () => {
           invoice_number: labOrderData.invoiceNumber,
           status: 'paid',
           paid_at: new Date().toISOString(),
-          created_by: currentUser?.id || null
+          created_by: createdBy
         }])
         .select()
         .single();
@@ -876,6 +879,8 @@ export const useCreateLabOrderWithInvoice = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['lab-reports'] });
       queryClient.invalidateQueries({ queryKey: ['invoices'] });
+      queryClient.invalidateQueries({ queryKey: ['patient-discount-preview'] });
+      queryClient.invalidateQueries({ queryKey: ['all-patient-discounts'] });
     },
   });
 };
