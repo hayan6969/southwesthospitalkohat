@@ -346,11 +346,11 @@ export default function DashboardOTA() {
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <div className="space-y-2">
-                <label className="text-sm font-medium">Search by Patient ID / Name</label>
+                <label className="text-sm font-medium">Search Patient</label>
                 <div className="relative">
                   <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
                   <Input
-                    placeholder="Patient number or name..."
+                    placeholder="ID, name, or phone..."
                     value={searchPatientId}
                     onChange={(e) => setSearchPatientId(e.target.value)}
                     className="pl-8"
