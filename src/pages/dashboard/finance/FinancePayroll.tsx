@@ -18,6 +18,87 @@ import { useToast } from "@/hooks/use-toast";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
+import jsPDF from "jspdf";
+
+const downloadSalarySlip = (record: PayrollRecord, monthLabel: string) => {
+  const doc = new jsPDF();
+  const pageWidth = doc.internal.pageSize.getWidth();
+
+  // Header
+  doc.setFontSize(18);
+  doc.setFont("helvetica", "bold");
+  doc.text("SALARY SLIP", pageWidth / 2, 25, { align: "center" });
+
+  doc.setFontSize(11);
+  doc.setFont("helvetica", "normal");
+  doc.text(`Pay Period: ${monthLabel}`, pageWidth / 2, 33, { align: "center" });
+
+  // Divider
+  doc.setDrawColor(59, 130, 246);
+  doc.setLineWidth(0.8);
+  doc.line(20, 38, pageWidth - 20, 38);
+
+  // Employee details
+  let y = 50;
+  doc.setFontSize(11);
+  doc.setFont("helvetica", "bold");
+  doc.text("Employee Details", 20, y);
+  y += 8;
+  doc.setFont("helvetica", "normal");
+  doc.text(`Name: ${record.employee_name}`, 20, y);
+  doc.text(`Role: ${record.role}`, pageWidth / 2, y);
+  y += 7;
+  doc.text(`Status: ${record.status.toUpperCase()}`, 20, y);
+  if (record.paid_at) {
+    doc.text(`Paid On: ${format(new Date(record.paid_at), "dd MMM yyyy")}`, pageWidth / 2, y);
+  }
+
+  // Salary breakdown table
+  y += 15;
+  doc.setFont("helvetica", "bold");
+  doc.text("Salary Breakdown", 20, y);
+  y += 8;
+
+  // Table header
+  doc.setFillColor(241, 245, 249);
+  doc.rect(20, y - 5, pageWidth - 40, 10, "F");
+  doc.setFontSize(10);
+  doc.text("Component", 25, y + 1);
+  doc.text("Amount (PKR)", pageWidth - 25, y + 1, { align: "right" });
+  y += 12;
+
+  // Table rows
+  doc.setFont("helvetica", "normal");
+  const rows = [
+    { label: "Base Salary", amount: record.base_salary },
+    { label: "Allowances (+)", amount: record.allowances },
+    { label: "Deductions (-)", amount: record.deductions },
+  ];
+
+  rows.forEach((row) => {
+    doc.text(row.label, 25, y);
+    doc.text(formatPkrAmount(row.amount), pageWidth - 25, y, { align: "right" });
+    y += 8;
+  });
+
+  // Net salary
+  doc.setDrawColor(0);
+  doc.line(20, y - 2, pageWidth - 20, y - 2);
+  y += 5;
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(12);
+  doc.text("Net Salary", 25, y);
+  doc.text(formatPkrAmount(record.net_salary), pageWidth - 25, y, { align: "right" });
+
+  // Footer
+  y += 25;
+  doc.setFontSize(9);
+  doc.setFont("helvetica", "italic");
+  doc.setTextColor(128, 128, 128);
+  doc.text("This is a system-generated salary slip.", pageWidth / 2, y, { align: "center" });
+
+  doc.save(`salary-slip-${record.employee_name.replace(/\s+/g, "-")}-${record.pay_period}.pdf`);
+};
 
 interface PayrollRecord {
   id: string;
