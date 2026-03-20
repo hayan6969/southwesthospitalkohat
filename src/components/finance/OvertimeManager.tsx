@@ -15,7 +15,8 @@ import { formatPkrAmount } from "@/utils/currency";
 import { getCurrentPakistanTime } from "@/utils/timezone";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Clock, Check, Trash2, Edit } from "lucide-react";
+import { Plus, Clock, Check, Trash2, Edit, Eye } from "lucide-react";
+import jsPDF from "jspdf";
 
 interface OvertimeRecord {
   id: string;
@@ -29,6 +30,122 @@ interface OvertimeRecord {
   notes: string | null;
   paid_at: string | null;
   created_at: string;
+}
+
+interface GroupedEmployee {
+  employee_id: string;
+  employee_name: string;
+  totalHours: number;
+  records: OvertimeRecord[];
+  status: string; // 'pending' if any pending, 'paid' if all paid
+}
+
+function groupByEmployee(records: OvertimeRecord[]): GroupedEmployee[] {
+  const map = new Map<string, GroupedEmployee>();
+  records.forEach(r => {
+    const key = r.employee_id;
+    if (!map.has(key)) {
+      map.set(key, {
+        employee_id: r.employee_id,
+        employee_name: r.employee_name,
+        totalHours: 0,
+        records: [],
+        status: 'paid',
+      });
+    }
+    const group = map.get(key)!;
+    group.totalHours += Number(r.overtime_hours) || 0;
+    group.records.push(r);
+    if (r.status === 'pending') group.status = 'pending';
+  });
+  // Sort records within each group by date
+  map.forEach(g => g.records.sort((a, b) => a.overtime_date.localeCompare(b.overtime_date)));
+  return Array.from(map.values()).sort((a, b) => a.employee_name.localeCompare(b.employee_name));
+}
+
+function generateOvertimePDF(group: GroupedEmployee) {
+  const doc = new jsPDF();
+  const pageWidth = doc.internal.pageSize.getWidth();
+
+  // Header
+  doc.setFontSize(16);
+  doc.setFont('helvetica', 'bold');
+  doc.text('Overtime Report', pageWidth / 2, 20, { align: 'center' });
+
+  doc.setFontSize(12);
+  doc.setFont('helvetica', 'normal');
+  doc.text(`Employee: ${group.employee_name}`, 20, 35);
+  doc.text(`Total Hours: ${group.totalHours}h`, 20, 43);
+
+  const totalPaid = group.records.filter(r => r.status === 'paid').reduce((s, r) => s + (Number(r.overtime_amount) || 0), 0);
+  if (totalPaid > 0) {
+    doc.text(`Total Paid: Rs. ${totalPaid.toLocaleString()}`, 20, 51);
+  }
+
+  // Table header
+  let y = 65;
+  const cols = [20, 55, 85, 115, 145, pageWidth - 15];
+  const headers = ['#', 'Date', 'Hours', 'Rate/Hr', 'Amount', 'Status'];
+
+  doc.setFillColor(59, 130, 246);
+  doc.rect(15, y - 6, pageWidth - 30, 10, 'F');
+  doc.setTextColor(255, 255, 255);
+  doc.setFontSize(9);
+  doc.setFont('helvetica', 'bold');
+  headers.forEach((h, i) => {
+    doc.text(h, cols[i], y);
+  });
+
+  doc.setTextColor(0, 0, 0);
+  doc.setFont('helvetica', 'normal');
+  y += 10;
+
+  group.records.forEach((r, idx) => {
+    if (y > 270) {
+      doc.addPage();
+      y = 20;
+    }
+
+    // Alternate row bg
+    if (idx % 2 === 0) {
+      doc.setFillColor(245, 245, 245);
+      doc.rect(15, y - 5, pageWidth - 30, 8, 'F');
+    }
+
+    doc.setFontSize(9);
+    doc.text(String(idx + 1), cols[0], y);
+    doc.text(format(new Date(r.overtime_date), 'dd MMM yyyy'), cols[1], y);
+    doc.text(`${r.overtime_hours}h`, cols[2], y);
+    doc.text(r.status === 'paid' ? `Rs. ${Number(r.overtime_rate).toLocaleString()}` : '-', cols[3], y);
+    doc.text(r.status === 'paid' ? `Rs. ${Number(r.overtime_amount).toLocaleString()}` : '-', cols[4], y);
+    doc.text(r.status === 'paid' ? 'Paid' : 'Pending', cols[5] - 15, y);
+    y += 8;
+  });
+
+  // Notes section
+  const notedRecords = group.records.filter(r => r.notes);
+  if (notedRecords.length > 0) {
+    y += 5;
+    if (y > 250) { doc.addPage(); y = 20; }
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(10);
+    doc.text('Notes:', 20, y);
+    y += 7;
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8);
+    notedRecords.forEach(r => {
+      if (y > 275) { doc.addPage(); y = 20; }
+      doc.text(`${format(new Date(r.overtime_date), 'dd MMM')}: ${r.notes}`, 25, y);
+      y += 5;
+    });
+  }
+
+  // Footer
+  doc.setFontSize(7);
+  doc.setTextColor(150);
+  doc.text(`Generated on ${format(new Date(), 'dd MMM yyyy, hh:mm a')}`, pageWidth / 2, doc.internal.pageSize.getHeight() - 10, { align: 'center' });
+
+  doc.save(`Overtime_${group.employee_name.replace(/\s+/g, '_')}.pdf`);
 }
 
 export function OvertimeManager() {
@@ -45,13 +162,16 @@ export function OvertimeManager() {
   const [statusFilter, setStatusFilter] = useState("pending");
 
   // Pay dialog state
-  const [payingRecord, setPayingRecord] = useState<OvertimeRecord | null>(null);
+  const [payingGroup, setPayingGroup] = useState<GroupedEmployee | null>(null);
   const [payRate, setPayRate] = useState("");
 
   // Edit dialog state
   const [editingRecord, setEditingRecord] = useState<OvertimeRecord | null>(null);
   const [editHours, setEditHours] = useState("");
   const [editNotes, setEditNotes] = useState("");
+
+  // Detail view dialog
+  const [viewingGroup, setViewingGroup] = useState<GroupedEmployee | null>(null);
 
   // Fetch staff
   const { data: staff } = useQuery({
@@ -75,7 +195,7 @@ export function OvertimeManager() {
         .from('overtime_records')
         .select('*')
         .order('overtime_date', { ascending: false })
-        .limit(100);
+        .limit(500);
 
       if (statusFilter !== 'all') {
         query = query.eq('status', statusFilter);
@@ -87,13 +207,14 @@ export function OvertimeManager() {
     }
   });
 
-  // Create or accumulate overtime record (upsert by employee+date)
+  const grouped = groupByEmployee(overtimeRecords || []);
+
+  // Create or accumulate overtime record
   const createMutation = useMutation({
     mutationFn: async () => {
       const hours = parseFloat(overtimeHours) || 0;
       const empId = selectedEmployeeId || crypto.randomUUID();
 
-      // Check if a pending record already exists for this employee on this date
       const { data: existing } = await supabase
         .from('overtime_records')
         .select('*')
@@ -103,15 +224,11 @@ export function OvertimeManager() {
         .maybeSingle();
 
       if (existing) {
-        // Accumulate hours into existing record
         const newHours = (Number(existing.overtime_hours) || 0) + hours;
         const combinedNotes = [existing.notes, notes.trim()].filter(Boolean).join('; ');
         const { error } = await supabase
           .from('overtime_records')
-          .update({
-            overtime_hours: newHours,
-            notes: combinedNotes || null,
-          })
+          .update({ overtime_hours: newHours, notes: combinedNotes || null })
           .eq('id', existing.id);
         if (error) throw error;
       } else {
@@ -165,32 +282,41 @@ export function OvertimeManager() {
     }
   });
 
-  // Mark paid mutation - now takes rate at payment time
+  // Mark all pending records for an employee as paid
   const markPaidMutation = useMutation({
     mutationFn: async () => {
-      if (!payingRecord) return;
+      if (!payingGroup) return;
       const { data: userData } = await supabase.auth.getUser();
       const rate = parseFloat(payRate) || 0;
-      const amount = Number(payingRecord.overtime_hours) * rate;
+      const pendingRecords = payingGroup.records.filter(r => r.status === 'pending');
 
-      const { error: updateError } = await supabase
-        .from('overtime_records')
-        .update({
-          status: 'paid',
-          paid_at: new Date().toISOString(),
-          overtime_rate: rate,
-          overtime_amount: amount,
-        })
-        .eq('id', payingRecord.id);
-      if (updateError) throw updateError;
+      for (const record of pendingRecords) {
+        const amount = Number(record.overtime_hours) * rate;
+        const { error } = await supabase
+          .from('overtime_records')
+          .update({
+            status: 'paid',
+            paid_at: new Date().toISOString(),
+            overtime_rate: rate,
+            overtime_amount: amount,
+          })
+          .eq('id', record.id);
+        if (error) throw error;
+      }
 
-      // Add to expenses
+      // Single expense entry for total
+      const totalHours = pendingRecords.reduce((s, r) => s + (Number(r.overtime_hours) || 0), 0);
+      const totalAmount = totalHours * rate;
+      const dateRange = pendingRecords.length === 1
+        ? format(new Date(pendingRecords[0].overtime_date), 'dd MMM yyyy')
+        : `${format(new Date(pendingRecords[0].overtime_date), 'dd MMM')} - ${format(new Date(pendingRecords[pendingRecords.length - 1].overtime_date), 'dd MMM yyyy')}`;
+
       const { error: expenseError } = await supabase
         .from('expenses')
         .insert({
           category: 'Overtime',
-          description: `Overtime payment for ${payingRecord.employee_name} (${payingRecord.overtime_hours}h @ ${formatPkrAmount(rate)}/h) - ${format(new Date(payingRecord.overtime_date), 'dd MMM yyyy')}`,
-          amount: amount,
+          description: `Overtime payment for ${payingGroup.employee_name} (${totalHours}h @ ${formatPkrAmount(rate)}/h) - ${dateRange}`,
+          amount: totalAmount,
           expense_date: getCurrentPakistanTime().toISOString().split('T')[0],
           created_by: userData.user?.id,
         });
@@ -199,16 +325,16 @@ export function OvertimeManager() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['overtime-records'] });
       queryClient.invalidateQueries({ queryKey: ['expenses'] });
-      setPayingRecord(null);
+      setPayingGroup(null);
       setPayRate("");
-      toast({ title: "Overtime marked as paid and added to expenses" });
+      toast({ title: "All overtime records marked as paid and added to expenses" });
     },
     onError: (err: any) => {
       toast({ title: "Error", description: err.message, variant: "destructive" });
     }
   });
 
-  // Delete mutation
+  // Delete a single record
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase.from('overtime_records').delete().eq('id', id);
@@ -216,6 +342,7 @@ export function OvertimeManager() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['overtime-records'] });
+      setViewingGroup(null);
       toast({ title: "Overtime record deleted" });
     },
     onError: (err: any) => {
@@ -232,8 +359,8 @@ export function OvertimeManager() {
     setSearchQuery("");
   };
 
-  const totalPending = overtimeRecords?.filter(r => r.status === 'pending').reduce((s, r) => s + (Number(r.overtime_hours) || 0), 0) || 0;
-  const totalPaid = overtimeRecords?.filter(r => r.status === 'paid').reduce((s, r) => s + (Number(r.overtime_amount) || 0), 0) || 0;
+  const totalPendingHours = grouped.reduce((s, g) => s + g.records.filter(r => r.status === 'pending').reduce((ss, r) => ss + (Number(r.overtime_hours) || 0), 0), 0);
+  const totalPaidAmount = (overtimeRecords || []).filter(r => r.status === 'paid').reduce((s, r) => s + (Number(r.overtime_amount) || 0), 0);
 
   return (
     <div className="space-y-6">
@@ -246,7 +373,7 @@ export function OvertimeManager() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-orange-600">{totalPending}h</div>
+            <div className="text-2xl font-bold text-orange-600">{totalPendingHours}h</div>
           </CardContent>
         </Card>
         <Card>
@@ -254,15 +381,15 @@ export function OvertimeManager() {
             <CardTitle className="text-sm font-medium text-muted-foreground">Total Paid</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">{formatPkrAmount(totalPaid)}</div>
+            <div className="text-2xl font-bold text-green-600">{formatPkrAmount(totalPaidAmount)}</div>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Total Records</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">Employees</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{overtimeRecords?.length || 0}</div>
+            <div className="text-2xl font-bold">{grouped.length}</div>
           </CardContent>
         </Card>
       </div>
@@ -369,7 +496,7 @@ export function OvertimeManager() {
         </CardHeader>
       </Card>
 
-      {/* Records Table */}
+      {/* Grouped Table - One row per employee */}
       <Card>
         <CardContent className="p-0">
           <div className="overflow-x-auto">
@@ -377,10 +504,8 @@ export function OvertimeManager() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Employee</TableHead>
-                  <TableHead>Date</TableHead>
-                  <TableHead className="text-center">Hours</TableHead>
-                  <TableHead className="text-right">Amount</TableHead>
-                  <TableHead>Notes</TableHead>
+                  <TableHead className="text-center">Total Hours</TableHead>
+                  <TableHead className="text-center">Entries</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
@@ -389,72 +514,62 @@ export function OvertimeManager() {
                 {isLoading ? (
                   Array.from({ length: 3 }).map((_, i) => (
                     <TableRow key={i}>
-                      {Array.from({ length: 7 }).map((_, j) => (
+                      {Array.from({ length: 5 }).map((_, j) => (
                         <TableCell key={j}><div className="h-4 bg-muted rounded animate-pulse" /></TableCell>
                       ))}
                     </TableRow>
                   ))
-                ) : !overtimeRecords || overtimeRecords.length === 0 ? (
+                ) : grouped.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
                       No overtime records found
                     </TableCell>
                   </TableRow>
                 ) : (
-                  overtimeRecords.map(record => (
-                    <TableRow key={record.id}>
-                      <TableCell className="font-medium">{record.employee_name}</TableCell>
-                      <TableCell>{format(new Date(record.overtime_date), 'MMM d, yyyy')}</TableCell>
-                      <TableCell className="text-center">
-                        <Badge variant="secondary" className="font-semibold">{record.overtime_hours}h</Badge>
-                      </TableCell>
-                      <TableCell className="text-right font-semibold">
-                        {record.status === 'paid' ? formatPkrAmount(Number(record.overtime_amount)) : '-'}
-                      </TableCell>
-                      <TableCell className="max-w-[150px] truncate text-sm text-muted-foreground">{record.notes || '-'}</TableCell>
-                      <TableCell>
-                        <Badge variant={record.status === 'paid' ? 'default' : 'secondary'} className="capitalize">
-                          {record.status}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-1">
-                          {record.status === 'pending' && (
-                            <>
+                  grouped.map(group => {
+                    const pendingCount = group.records.filter(r => r.status === 'pending').length;
+                    const paidAmount = group.records.filter(r => r.status === 'paid').reduce((s, r) => s + (Number(r.overtime_amount) || 0), 0);
+                    return (
+                      <TableRow key={group.employee_id}>
+                        <TableCell className="font-medium">{group.employee_name}</TableCell>
+                        <TableCell className="text-center">
+                          <Badge variant="secondary" className="font-semibold">{group.totalHours}h</Badge>
+                        </TableCell>
+                        <TableCell className="text-center text-sm text-muted-foreground">
+                          {group.records.length} {group.records.length === 1 ? 'entry' : 'entries'}
+                        </TableCell>
+                        <TableCell>
+                          {pendingCount > 0 ? (
+                            <Badge variant="secondary" className="capitalize">Pending ({pendingCount})</Badge>
+                          ) : (
+                            <Badge variant="default" className="capitalize">Paid ({formatPkrAmount(paidAmount)})</Badge>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-1">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => setViewingGroup(group)}
+                            >
+                              <Eye className="w-3 h-3 mr-1" /> View
+                            </Button>
+                            {pendingCount > 0 && (
                               <Button
                                 size="sm"
                                 onClick={() => {
-                                  setPayingRecord(record);
+                                  setPayingGroup(group);
                                   setPayRate("");
                                 }}
                               >
                                 <Check className="w-3 h-3 mr-1" /> Pay
                               </Button>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => {
-                                  setEditingRecord(record);
-                                  setEditHours(String(record.overtime_hours));
-                                  setEditNotes(record.notes || "");
-                                }}
-                              >
-                                <Edit className="w-3 h-3" />
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => deleteMutation.mutate(record.id)}
-                                disabled={deleteMutation.isPending}
-                              >
-                                <Trash2 className="w-3 h-3" />
-                              </Button>
-                            </>
-                          )}
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))
+                            )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })
                 )}
               </TableBody>
             </Table>
@@ -462,51 +577,132 @@ export function OvertimeManager() {
         </CardContent>
       </Card>
 
-      {/* Pay Dialog - set rate at payment time */}
-      <Dialog open={!!payingRecord} onOpenChange={(o) => { if (!o) { setPayingRecord(null); setPayRate(""); } }}>
+      {/* View Detail Dialog - date-wise breakdown */}
+      <Dialog open={!!viewingGroup} onOpenChange={(o) => { if (!o) setViewingGroup(null); }}>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Overtime Details - {viewingGroup?.employee_name}</DialogTitle>
+          </DialogHeader>
+          {viewingGroup && (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between p-3 rounded-lg bg-muted">
+                <div>
+                  <p className="text-sm font-semibold">Total Hours: {viewingGroup.totalHours}h</p>
+                  <p className="text-xs text-muted-foreground">{viewingGroup.records.length} entries</p>
+                </div>
+                <Button size="sm" variant="outline" onClick={() => generateOvertimePDF(viewingGroup)}>
+                  <Eye className="w-3 h-3 mr-1" /> Download PDF
+                </Button>
+              </div>
+
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Date</TableHead>
+                    <TableHead className="text-center">Hours</TableHead>
+                    <TableHead>Notes</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {viewingGroup.records.map(record => (
+                    <TableRow key={record.id}>
+                      <TableCell className="text-sm">{format(new Date(record.overtime_date), 'dd MMM yyyy')}</TableCell>
+                      <TableCell className="text-center">
+                        <Badge variant="secondary">{record.overtime_hours}h</Badge>
+                      </TableCell>
+                      <TableCell className="text-sm text-muted-foreground max-w-[120px] truncate">{record.notes || '-'}</TableCell>
+                      <TableCell>
+                        <Badge variant={record.status === 'paid' ? 'default' : 'secondary'} className="capitalize text-xs">
+                          {record.status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        {record.status === 'pending' && (
+                          <div className="flex items-center gap-1">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="h-7 w-7 p-0"
+                              onClick={() => {
+                                setEditingRecord(record);
+                                setEditHours(String(record.overtime_hours));
+                                setEditNotes(record.notes || "");
+                              }}
+                            >
+                              <Edit className="w-3 h-3" />
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="h-7 w-7 p-0"
+                              onClick={() => deleteMutation.mutate(record.id)}
+                              disabled={deleteMutation.isPending}
+                            >
+                              <Trash2 className="w-3 h-3" />
+                            </Button>
+                          </div>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Pay Dialog - pay all pending records for this employee */}
+      <Dialog open={!!payingGroup} onOpenChange={(o) => { if (!o) { setPayingGroup(null); setPayRate(""); } }}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
             <DialogTitle>Pay Overtime</DialogTitle>
           </DialogHeader>
-          {payingRecord && (
-            <div className="space-y-4">
-              <div className="p-3 rounded-lg bg-muted space-y-1">
-                <div className="flex justify-between text-sm">
-                  <span>Employee</span>
-                  <span className="font-semibold">{payingRecord.employee_name}</span>
+          {payingGroup && (() => {
+            const pendingRecords = payingGroup.records.filter(r => r.status === 'pending');
+            const pendingHours = pendingRecords.reduce((s, r) => s + (Number(r.overtime_hours) || 0), 0);
+            return (
+              <div className="space-y-4">
+                <div className="p-3 rounded-lg bg-muted space-y-1">
+                  <div className="flex justify-between text-sm">
+                    <span>Employee</span>
+                    <span className="font-semibold">{payingGroup.employee_name}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span>Pending Entries</span>
+                    <span className="font-semibold">{pendingRecords.length}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span>Total Pending Hours</span>
+                    <span className="font-semibold">{pendingHours}h</span>
+                  </div>
                 </div>
-                <div className="flex justify-between text-sm">
-                  <span>Date</span>
-                  <span className="font-semibold">{format(new Date(payingRecord.overtime_date), 'MMM d, yyyy')}</span>
+                <div>
+                  <Label>Rate per Hour (PKR)</Label>
+                  <Input
+                    type="number"
+                    min="0"
+                    value={payRate}
+                    onChange={(e) => setPayRate(e.target.value)}
+                    placeholder="e.g. 500"
+                    autoFocus
+                  />
                 </div>
-                <div className="flex justify-between text-sm">
-                  <span>Hours</span>
-                  <span className="font-semibold">{payingRecord.overtime_hours}h</span>
-                </div>
+                {payRate && (
+                  <div className="p-3 rounded-lg bg-green-50 border border-green-200 text-center">
+                    <p className="text-sm text-green-600">Total Payment</p>
+                    <p className="text-xl font-bold text-green-700">
+                      {formatPkrAmount(pendingHours * (parseFloat(payRate) || 0))}
+                    </p>
+                  </div>
+                )}
               </div>
-              <div>
-                <Label>Rate per Hour (PKR)</Label>
-                <Input
-                  type="number"
-                  min="0"
-                  value={payRate}
-                  onChange={(e) => setPayRate(e.target.value)}
-                  placeholder="e.g. 500"
-                  autoFocus
-                />
-              </div>
-              {payRate && (
-                <div className="p-3 rounded-lg bg-green-50 border border-green-200 text-center">
-                  <p className="text-sm text-green-600">Total Payment</p>
-                  <p className="text-xl font-bold text-green-700">
-                    {formatPkrAmount(Number(payingRecord.overtime_hours) * (parseFloat(payRate) || 0))}
-                  </p>
-                </div>
-              )}
-            </div>
-          )}
+            );
+          })()}
           <DialogFooter>
-            <Button variant="outline" onClick={() => { setPayingRecord(null); setPayRate(""); }}>Cancel</Button>
+            <Button variant="outline" onClick={() => { setPayingGroup(null); setPayRate(""); }}>Cancel</Button>
             <Button
               onClick={() => markPaidMutation.mutate()}
               disabled={markPaidMutation.isPending || !payRate || parseFloat(payRate) <= 0}
