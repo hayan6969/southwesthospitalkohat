@@ -2428,6 +2428,7 @@ export const generateDailyClosingPDF = async (data: {
     yPosition += 10;
   }
 
+  if (expenseProofs.length > 0 || refundProofs.length > 0) {
     doc.addPage();
     yPosition = 20;
     await renderProofGroup('EXPENSE PROOFS', expenseProofs);
