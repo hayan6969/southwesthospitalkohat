@@ -46,10 +46,10 @@ export function PreOperationOrdersDialog({
   const [saving, setSaving] = useState(false);
   const [preOpOrders, setPreOpOrders] = useState("");
 
-  // Check if user can edit (only doctors)
-  const canEdit = profile?.role === 'doctor';
-  // OTA, staff, nursing, and admins can view
-  const canView = profile?.role === 'ota' || profile?.role === 'staff' || profile?.role === 'nursing' || profile?.role === 'admin' || canEdit;
+  // Doctor, OTA, and Admin can edit pre-op orders
+  const canEdit = ['doctor', 'ota', 'admin'].includes(profile?.role as string);
+  // Staff and nursing can view
+  const canView = ['staff', 'nursing'].includes(profile?.role as string) || canEdit;
 
   useEffect(() => {
     if (otSchedule?.ot_notes?.pre_operation_orders) {
