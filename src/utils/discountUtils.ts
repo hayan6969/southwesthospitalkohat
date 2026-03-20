@@ -59,8 +59,16 @@ export async function applyPatientDiscount(patientId: string, originalAmount: nu
       .select('id')
       .maybeSingle();
 
-    if (consumeError || !consumedDiscount) {
-      throw consumeError || new Error('Failed to mark discount as used');
+    if (consumeError) {
+      console.error('Error consuming discount:', consumeError);
+      // Don't silently fail - still apply the discount since we already calculated it
+      // The discount may not be marked as used, but the patient gets the discount
+    }
+
+    if (!consumedDiscount && !consumeError) {
+      // Race condition: discount was already consumed by another request
+      console.warn('Discount already consumed by another request');
+      return { originalAmount, discountedAmount: originalAmount, discountApplied: 0, discountLabel: null };
     }
 
     return {
@@ -69,7 +77,8 @@ export async function applyPatientDiscount(patientId: string, originalAmount: nu
       discountApplied,
       discountLabel,
     };
-  } catch {
+  } catch (err) {
+    console.error('Discount application error:', err);
     return { originalAmount, discountedAmount: originalAmount, discountApplied: 0, discountLabel: null };
   }
 }
