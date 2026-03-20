@@ -284,7 +284,7 @@ export function StaffShiftClosing() {
                   placeholder="Any shift notes..."
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
-                  disabled={todayAlreadyClosed}
+                  disabled={!hasNewRevenue}
                   className="h-[38px]"
                 />
               </div>
