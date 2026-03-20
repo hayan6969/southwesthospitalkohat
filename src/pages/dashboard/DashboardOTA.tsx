@@ -72,6 +72,7 @@ export default function DashboardOTA() {
   const [showProgressDialog, setShowProgressDialog] = useState(false);
   const [showAssessmentDialog, setShowAssessmentDialog] = useState(false);
   const [selectedOT, setSelectedOT] = useState<OTScheduleWithDetails | null>(null);
+  const [showDischargeSlipDialog, setShowDischargeSlipDialog] = useState(false);
   const [activeMainTab, setActiveMainTab] = useState("ot-operations");
 
   useEffect(() => {
