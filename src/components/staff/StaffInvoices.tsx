@@ -28,13 +28,14 @@ export function StaffInvoices() {
   const { data: hospitalInvoices, isLoading: hospitalLoading } = useInvoices();
   const { data: patientNames } = usePatientNames();
 
-  // Fetch X-ray reports
+  // Fetch X-ray reports without linked invoices to avoid duplicates in invoice lists
   const { data: xrayReports, isLoading: xrayLoading } = useQuery({
     queryKey: ['xray-reports-staff'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('xray_reports')
         .select('*')
+        .is('invoice_id', null)
         .order('created_at', { ascending: false });
       
       if (error) throw error;
