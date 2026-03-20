@@ -178,11 +178,11 @@ export function StaffShiftClosing() {
       if (error) throw error;
     },
     onSuccess: () => {
-      toast.success('Shift closing submitted to finance for approval');
+      toast.success(isOvertimeMode ? 'Overtime closing submitted to finance for approval' : 'Shift closing submitted to finance for approval');
       queryClient.invalidateQueries({ queryKey: ['staff-shift-closings'] });
       setOvertimeHours('');
       setNotes('');
-    },
+      setIsOvertimeMode(false);
     onError: (err: any) => {
       toast.error('Failed to submit shift closing: ' + err.message);
     },
