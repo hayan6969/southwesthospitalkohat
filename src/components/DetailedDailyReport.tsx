@@ -268,7 +268,7 @@ export function DetailedDailyReport({
   });
 
   // Group by category, then by shift
-  const categories = ['OPD', 'Emergency', 'Lab', 'X-Ray', 'OT', 'Miscellaneous'];
+  const categories = ['OPD', 'Emergency', 'X-Ray', 'Miscellaneous'];
   // Apply category filter
   const filteredCategories = categoryFilter === 'all' ? categories : [categoryFilter];
   
