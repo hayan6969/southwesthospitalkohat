@@ -66,22 +66,30 @@ export function AddTreatmentEntryDialog({
 
     setSaving(true);
     try {
-      const { error } = await supabase
-        .from('treatment_chart_entries')
-        .insert({
-          ot_schedule_id: otScheduleId,
-          entry_date: formData.entryDate.toISOString().split('T')[0],
-          medicine: formData.medicine,
-          investigation: formData.investigation,
-          user_email: profile.email
-        });
-
-      if (error) throw error;
-
-      toast({
-        title: "Success",
-        description: "Treatment entry added successfully",
-      });
+      if (editEntry) {
+        const { error } = await supabase
+          .from('treatment_chart_entries')
+          .update({
+            entry_date: formData.entryDate.toISOString().split('T')[0],
+            medicine: formData.medicine,
+            investigation: formData.investigation,
+          })
+          .eq('id', editEntry.id);
+        if (error) throw error;
+        toast({ title: "Success", description: "Treatment entry updated successfully" });
+      } else {
+        const { error } = await supabase
+          .from('treatment_chart_entries')
+          .insert({
+            ot_schedule_id: otScheduleId,
+            entry_date: formData.entryDate.toISOString().split('T')[0],
+            medicine: formData.medicine,
+            investigation: formData.investigation,
+            user_email: profile.email
+          });
+        if (error) throw error;
+        toast({ title: "Success", description: "Treatment entry added successfully" });
+      }
 
       // Reset form
       setFormData({
