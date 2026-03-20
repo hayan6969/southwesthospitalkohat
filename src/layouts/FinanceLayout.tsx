@@ -115,7 +115,7 @@ export default function FinanceLayout({ children }: FinanceLayoutProps) {
             {children}
           </TabsContent>
         </Tabs>
-      </main>
-    </div>
+      </div>
+    </AppLayout>
   );
 }

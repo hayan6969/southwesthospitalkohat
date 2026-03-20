@@ -96,7 +96,6 @@ export default function DashboardStaff() {
             </TabsContent>
           </Tabs>
         </div>
-      </main>
-    </div>
+    </AppLayout>
   );
 }
