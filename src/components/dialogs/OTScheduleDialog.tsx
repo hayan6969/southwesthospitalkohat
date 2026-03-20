@@ -266,6 +266,7 @@ export function OTScheduleDialog() {
         date: new Date(operationDate).toLocaleDateString(),
         totalAmount: totalCost,
         items,
+        createdBy: user?.id,
       });
 
       await logAction(
