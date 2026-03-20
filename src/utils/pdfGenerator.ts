@@ -1238,13 +1238,20 @@ export const generateDailyClosingPDF = async (data: {
         
         xPos = startX + 2;
         row.forEach((cell, colIndex) => {
-          // Adjust text truncation based on column width and content
+          // Clip text to fit within column width using actual text measurement
           let displayText = cell;
-          let maxLength = Math.floor(colWidths[colIndex] * 0.8); // Adjust based on column width
+          const availableWidth = colWidths[colIndex] - 4; // 2px padding each side
           
-          // Don't truncate amounts or short text
-          if (typeof cell === 'string' && cell.length > maxLength && !cell.includes('Rs.') && !cell.includes('(') && maxLength > 10) {
-            displayText = cell.substring(0, maxLength - 3) + '...';
+          // Don't truncate amounts
+          if (!cell.includes('Rs.') && !cell.includes('(')) {
+            let textWidth = doc.getTextWidth(displayText);
+            if (textWidth > availableWidth) {
+              // Progressively trim until it fits
+              while (doc.getTextWidth(displayText + '...') > availableWidth && displayText.length > 1) {
+                displayText = displayText.substring(0, displayText.length - 1);
+              }
+              displayText = displayText.trim() + '...';
+            }
           }
           
           // Right align numeric values (amounts)
