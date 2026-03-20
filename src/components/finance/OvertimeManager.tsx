@@ -43,7 +43,7 @@ interface GroupedEmployee {
 function groupByEmployee(records: OvertimeRecord[]): GroupedEmployee[] {
   const map = new Map<string, GroupedEmployee>();
   records.forEach(r => {
-    const key = r.employee_id;
+    const key = r.employee_name.toLowerCase().trim();
     if (!map.has(key)) {
       map.set(key, {
         employee_id: r.employee_id,
@@ -58,7 +58,6 @@ function groupByEmployee(records: OvertimeRecord[]): GroupedEmployee[] {
     group.records.push(r);
     if (r.status === 'pending') group.status = 'pending';
   });
-  // Sort records within each group by date
   map.forEach(g => g.records.sort((a, b) => a.overtime_date.localeCompare(b.overtime_date)));
   return Array.from(map.values()).sort((a, b) => a.employee_name.localeCompare(b.employee_name));
 }
