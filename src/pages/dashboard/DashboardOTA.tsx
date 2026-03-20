@@ -705,6 +705,18 @@ export default function DashboardOTA() {
                                            POPPR
                                          </Button>
                                        )}
+                                       {ot.status === 'completed' && (
+                                         <Button 
+                                           size="sm" 
+                                           variant="default"
+                                           onClick={() => handleDischargeSlip(ot)}
+                                           className="flex items-center gap-1 text-xs"
+                                           title="Print Discharge Slip"
+                                         >
+                                           <Printer className="w-3 h-3" />
+                                           Discharge Slip
+                                         </Button>
+                                       )}
                                      </div>
                                     </TableCell>
                                 </TableRow>
