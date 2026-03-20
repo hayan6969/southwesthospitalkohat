@@ -6,6 +6,15 @@ import { componentTagger } from "lovable-tagger";
 const manualChunks = (id: string) => {
   if (!id.includes("node_modules")) return undefined;
 
+  // Keep React and React DOM together - MUST NOT be separated
+  if (
+    id.includes("/react/") ||
+    id.includes("/react-dom/") ||
+    id.includes("/scheduler/")
+  ) {
+    return "react-vendor";
+  }
+
   if (id.includes("jspdf") || id.includes("html2canvas") || id.includes("dompurify")) {
     return "pdf-vendor";
   }
@@ -14,36 +23,8 @@ const manualChunks = (id: string) => {
     return "chart-vendor";
   }
 
-  if (id.includes("@radix-ui") || id.includes("cmdk") || id.includes("vaul") || id.includes("embla-carousel")) {
-    return "ui-vendor";
-  }
-
-  if (id.includes("@supabase")) {
-    return "backend-vendor";
-  }
-
-  if (id.includes("react-router")) {
-    return "router-vendor";
-  }
-
-  if (id.includes("@tanstack/react-query")) {
-    return "query-vendor";
-  }
-
-  if (id.includes("react-day-picker") || id.includes("date-fns") || id.includes("date-fns-tz")) {
-    return "date-vendor";
-  }
-
   if (id.includes("lucide-react")) {
     return "icons-vendor";
-  }
-
-  if (
-    id.includes("react") ||
-    id.includes("react-dom") ||
-    id.includes("scheduler")
-  ) {
-    return "react-vendor";
   }
 
   return "vendor";
