@@ -84,6 +84,19 @@ export default function DashboardFinance() {
     }
   });
 
+  // Get refunds
+  const { data: refunds } = useQuery({
+    queryKey: ['refunds-finance-dashboard'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('refunds')
+        .select('*')
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return data;
+    }
+  });
+
   // Get pharmacy account and expenses
   const { data: pharmacyAccount } = useQuery({
     queryKey: ['pharmacy-account'],
