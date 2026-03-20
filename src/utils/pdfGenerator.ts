@@ -1552,6 +1552,15 @@ export const generateDailyClosingPDF = async (data: {
       checkNewPage(20);
       doc.setFillColor(50, 50, 50);
       doc.rect(detailStartX, yPosition, totalTableWidth, 8, 'F');
+      doc.setDrawColor(180, 180, 180);
+      doc.setLineWidth(0.2);
+      // Draw vertical lines for header
+      let lx = detailStartX;
+      detailColWidths.forEach(w => {
+        doc.line(lx, yPosition, lx, yPosition + 8);
+        lx += w;
+      });
+      doc.line(lx, yPosition, lx, yPosition + 8); // right border
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(6);
       doc.setTextColor(255, 255, 255);
@@ -1561,6 +1570,21 @@ export const generateDailyClosingPDF = async (data: {
         xPos += detailColWidths[i];
       });
       yPosition += 8;
+    };
+
+    // Helper to draw cell borders for a row
+    const drawRowBorders = (rowY: number, rowH: number) => {
+      doc.setDrawColor(200, 200, 200);
+      doc.setLineWidth(0.15);
+      // Horizontal bottom line
+      doc.line(detailStartX, rowY + rowH, detailStartX + totalTableWidth, rowY + rowH);
+      // Vertical cell lines
+      let lx = detailStartX;
+      detailColWidths.forEach(w => {
+        doc.line(lx, rowY, lx, rowY + rowH);
+        lx += w;
+      });
+      doc.line(lx, rowY, lx, rowY + rowH); // right border
     };
 
     drawDetailHeader();
@@ -1573,6 +1597,7 @@ export const generateDailyClosingPDF = async (data: {
       checkNewPage(15);
       doc.setFillColor(230, 240, 250);
       doc.rect(detailStartX, yPosition, totalTableWidth, 7, 'F');
+      drawRowBorders(yPosition, 7);
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(7);
       doc.setTextColor(40, 60, 120);
@@ -1589,6 +1614,7 @@ export const generateDailyClosingPDF = async (data: {
         if (yPosition + 15 > pageHeight - 20) { doc.addPage(); yPosition = 15; drawDetailHeader(); }
         doc.setFillColor(245, 245, 245);
         doc.rect(detailStartX, yPosition, totalTableWidth, 6, 'F');
+        drawRowBorders(yPosition, 6);
         doc.setFont('helvetica', 'bold');
         doc.setFontSize(6);
         doc.setTextColor(100, 100, 100);
@@ -1606,6 +1632,7 @@ export const generateDailyClosingPDF = async (data: {
             doc.setFillColor(252, 252, 252);
             doc.rect(detailStartX, yPosition, totalTableWidth, 7, 'F');
           }
+          drawRowBorders(yPosition, 7);
 
           doc.setFont('helvetica', 'normal');
           doc.setFontSize(6);
@@ -1643,6 +1670,7 @@ export const generateDailyClosingPDF = async (data: {
         if (yPosition + 8 > pageHeight - 20) { doc.addPage(); yPosition = 15; drawDetailHeader(); }
         doc.setFillColor(240, 240, 240);
         doc.rect(detailStartX, yPosition, totalTableWidth, 6, 'F');
+        drawRowBorders(yPosition, 6);
         doc.setFont('helvetica', 'bold');
         doc.setFontSize(6);
         doc.setTextColor(80, 80, 80);
@@ -1662,6 +1690,7 @@ export const generateDailyClosingPDF = async (data: {
       if (yPosition + 8 > pageHeight - 20) { doc.addPage(); yPosition = 15; drawDetailHeader(); }
       doc.setFillColor(220, 230, 245);
       doc.rect(detailStartX, yPosition, totalTableWidth, 7, 'F');
+      drawRowBorders(yPosition, 7);
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(6.5);
       doc.setTextColor(40, 60, 120);
@@ -1681,6 +1710,7 @@ export const generateDailyClosingPDF = async (data: {
     checkNewPage(12);
     doc.setFillColor(40, 40, 40);
     doc.rect(detailStartX, yPosition, totalTableWidth, 8, 'F');
+    drawRowBorders(yPosition, 8);
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(7);
     doc.setTextColor(255, 255, 255);
