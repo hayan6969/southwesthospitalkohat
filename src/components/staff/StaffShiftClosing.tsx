@@ -145,8 +145,8 @@ export function StaffShiftClosing() {
   });
 
   const todayRegularClosed = previousClosings?.some((c) => c.closing_date === format(today, 'yyyy-MM-dd') && c.shift === staffShift && !(c as any).is_overtime);
-  const todayOvertimeClosed = previousClosings?.some((c) => c.closing_date === format(today, 'yyyy-MM-dd') && c.shift === staffShift && (c as any).is_overtime);
-  const todayAlreadyClosed = isOvertimeMode ? todayOvertimeClosed : todayRegularClosed;
+  // Allow multiple overtime submissions - never block overtime mode
+  const todayAlreadyClosed = isOvertimeMode ? false : todayRegularClosed;
 
   const submitClosing = useMutation({
     mutationFn: async () => {
