@@ -1,8 +1,7 @@
 
 import { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
-import { Button } from "@/components/ui/button";
-import { LogOut, User, Menu } from "lucide-react";
+import AppLayout from "@/layouts/AppLayout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MySupplyRequests } from "@/components/inventory/MySupplyRequests";
 import { StaffCounter } from "@/components/staff/StaffCounter";
