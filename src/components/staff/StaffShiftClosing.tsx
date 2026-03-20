@@ -290,10 +290,10 @@ export function StaffShiftClosing() {
               </div>
 
               {/* Submit Button */}
-              {todayAlreadyClosed ? (
+              {!hasNewRevenue ? (
                 <div className="flex items-center gap-2 p-3 rounded-lg bg-green-50 border border-green-200 text-green-700">
                   <CheckCircle className="w-4 h-4" />
-                  <span className="text-sm font-medium">Shift already closed for today</span>
+                  <span className="text-sm font-medium">No new revenue since last closing</span>
                 </div>
               ) : (
                 <Button
