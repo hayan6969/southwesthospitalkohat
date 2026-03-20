@@ -732,7 +732,6 @@ export default function DashboardOTA() {
               </TabsContent>
             </Tabs>
           </div>
-        </main>
-      </div>
+    </AppLayout>
     );
   }
