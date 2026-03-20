@@ -23,9 +23,6 @@ export function StaffShiftClosing() {
   const [overtimeHours, setOvertimeHours] = useState("");
   const [notes, setNotes] = useState("");
   const [confirmOpen, setConfirmOpen] = useState(false);
-  const [overtimeConfirmOpen, setOvertimeConfirmOpen] = useState(false);
-  const [otOvertimeHours, setOtOvertimeHours] = useState("");
-  const [otNotes, setOtNotes] = useState("");
 
   const today = new Date();
   const staffShift = (profile as any)?.shift || "morning";
@@ -65,6 +62,8 @@ export function StaffShiftClosing() {
     queryFn: async () => {
       if (!user?.id) return null;
 
+      // Query invoices created by this staff member within the shift window
+      // Use paid_at for timing, fall back to created_at for invoices without paid_at
       const { data: byPaidAt, error: err1 } = await supabase
         .from('invoices')
         .select('amount, description, invoice_number, created_at, paid_at, status, created_by')
@@ -73,6 +72,7 @@ export function StaffShiftClosing() {
         .gte('paid_at', shiftWindow.start.toISOString())
         .lte('paid_at', shiftWindow.end.toISOString());
 
+      // Also get invoices by this user that have no paid_at but were created in the window
       const { data: byCreatedAt, error: err2 } = await supabase
         .from('invoices')
         .select('amount, description, invoice_number, created_at, paid_at, status, created_by')
@@ -83,6 +83,7 @@ export function StaffShiftClosing() {
         .lte('created_at', shiftWindow.end.toISOString());
 
       const error = err1 || err2;
+      // Merge and deduplicate
       const allInvoices = [...(byPaidAt || []), ...(byCreatedAt || [])];
       const seen = new Set<string>();
       const invoices = allInvoices.filter(inv => {
@@ -118,7 +119,12 @@ export function StaffShiftClosing() {
 
       return {
         total: opd + lab + xray + ot + emergency + misc,
-        opd, lab, xray, ot, emergency, misc,
+        opd,
+        lab,
+        xray,
+        ot,
+        emergency,
+        misc,
         invoiceCount: invoices?.length || 0,
         invoices: invoices || [],
       };
@@ -137,9 +143,7 @@ export function StaffShiftClosing() {
     enabled: !!user?.id,
   });
 
-  const todayClosings = previousClosings?.filter((c) => c.closing_date === format(today, 'yyyy-MM-dd') && c.shift === staffShift) || [];
-  const todayRegularClosed = todayClosings.some((c) => !(c as any).is_overtime);
-  const todayOvertimeClosed = todayClosings.some((c) => (c as any).is_overtime);
+  const todayAlreadyClosed = previousClosings?.some((c) => c.closing_date === format(today, 'yyyy-MM-dd') && c.shift === staffShift);
 
   const submitClosing = useMutation({
     mutationFn: async () => {
@@ -177,46 +181,6 @@ export function StaffShiftClosing() {
     },
     onError: (err: any) => {
       toast.error('Failed to submit shift closing: ' + err.message);
-    },
-  });
-
-  const submitOvertime = useMutation({
-    mutationFn: async () => {
-      if (!user?.id) throw new Error('Missing data');
-      const overtime = parseFloat(otOvertimeHours) || 0;
-      if (overtime <= 0) throw new Error('Please enter overtime hours');
-
-      const { error } = await supabase.from('staff_shift_closings').insert({
-        staff_id: user.id,
-        shift: staffShift,
-        closing_date: format(today, 'yyyy-MM-dd'),
-        shift_start_time: shiftWindow.end.toISOString(),
-        shift_end_time: new Date().toISOString(),
-        total_revenue: 0,
-        opd_revenue: 0,
-        lab_revenue: 0,
-        xray_revenue: 0,
-        ot_revenue: 0,
-        emergency_revenue: 0,
-        misc_revenue: 0,
-        total_invoices: 0,
-        overtime_hours: overtime,
-        overtime_amount: 0,
-        status: 'pending',
-        notes: `[OVERTIME] ${otNotes.trim() || 'Overtime submission'}`,
-        summary_data: { is_overtime: true } as any,
-      });
-
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      toast.success('Overtime submitted to finance for approval');
-      queryClient.invalidateQueries({ queryKey: ['staff-shift-closings'] });
-      setOtOvertimeHours('');
-      setOtNotes('');
-    },
-    onError: (err: any) => {
-      toast.error('Failed to submit overtime: ' + err.message);
     },
   });
 
@@ -277,36 +241,36 @@ export function StaffShiftClosing() {
               </div>
 
               {/* Overtime & Notes */}
-              {!todayRegularClosed && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
-                  <div className="space-y-2">
-                    <Label className="flex items-center gap-1">
-                      <Timer className="w-3.5 h-3.5" />
-                      Overtime Hours (if any)
-                    </Label>
-                    <Input
-                      type="number"
-                      step="0.5"
-                      min="0"
-                      placeholder="e.g. 2.5"
-                      value={overtimeHours}
-                      onChange={(e) => setOvertimeHours(e.target.value)}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Notes (optional)</Label>
-                    <Textarea
-                      placeholder="Any shift notes..."
-                      value={notes}
-                      onChange={(e) => setNotes(e.target.value)}
-                      className="h-[38px]"
-                    />
-                  </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-1">
+                    <Timer className="w-3.5 h-3.5" />
+                    Overtime Hours (if any)
+                  </Label>
+                  <Input
+                    type="number"
+                    step="0.5"
+                    min="0"
+                    placeholder="e.g. 2.5"
+                    value={overtimeHours}
+                    onChange={(e) => setOvertimeHours(e.target.value)}
+                    disabled={todayAlreadyClosed}
+                  />
                 </div>
-              )}
+                <div className="space-y-2">
+                  <Label>Notes (optional)</Label>
+                  <Textarea
+                    placeholder="Any shift notes..."
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
+                    disabled={todayAlreadyClosed}
+                    className="h-[38px]"
+                  />
+                </div>
+              </div>
 
-              {/* Submit Button or Closed Status */}
-              {todayRegularClosed ? (
+              {/* Submit Button */}
+              {todayAlreadyClosed ? (
                 <div className="flex items-center gap-2 p-3 rounded-lg bg-green-50 border border-green-200 text-green-700">
                   <CheckCircle className="w-4 h-4" />
                   <span className="text-sm font-medium">Shift already closed for today</span>
@@ -326,68 +290,6 @@ export function StaffShiftClosing() {
         </CardContent>
       </Card>
 
-      {/* Overtime Submission Card - shows only after regular shift is closed */}
-      {todayRegularClosed && !todayOvertimeClosed && (
-        <Card className="border-t-4 border-t-amber-500">
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Timer className="w-5 h-5 text-amber-600" />
-                <CardTitle className="text-lg">Submit Overtime</CardTitle>
-              </div>
-              <Badge variant="outline" className="text-amber-600 border-amber-300 bg-amber-50">
-                Overtime
-              </Badge>
-            </div>
-            <p className="text-sm text-muted-foreground">
-              Your regular shift is closed. You can submit overtime hours below.
-            </p>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label className="flex items-center gap-1">
-                  <Timer className="w-3.5 h-3.5" />
-                  Overtime Hours *
-                </Label>
-                <Input
-                  type="number"
-                  step="0.5"
-                  min="0.5"
-                  placeholder="e.g. 2.5"
-                  value={otOvertimeHours}
-                  onChange={(e) => setOtOvertimeHours(e.target.value)}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Notes (optional)</Label>
-                <Textarea
-                  placeholder="Reason for overtime..."
-                  value={otNotes}
-                  onChange={(e) => setOtNotes(e.target.value)}
-                  className="h-[38px]"
-                />
-              </div>
-            </div>
-            <Button
-              onClick={() => setOvertimeConfirmOpen(true)}
-              disabled={submitOvertime.isPending || !otOvertimeHours || parseFloat(otOvertimeHours) <= 0}
-              className="w-full bg-amber-600 hover:bg-amber-700"
-            >
-              <Timer className="w-4 h-4 mr-2" />
-              Submit Overtime
-            </Button>
-          </CardContent>
-        </Card>
-      )}
-
-      {todayRegularClosed && todayOvertimeClosed && (
-        <div className="flex items-center gap-2 p-3 rounded-lg bg-amber-50 border border-amber-200 text-amber-700">
-          <CheckCircle className="w-4 h-4" />
-          <span className="text-sm font-medium">Overtime already submitted for today</span>
-        </div>
-      )}
-
       {/* Previous Closings */}
       <Card>
         <CardHeader>
@@ -406,7 +308,6 @@ export function StaffShiftClosing() {
                   <TableRow>
                     <TableHead>Date</TableHead>
                     <TableHead>Shift</TableHead>
-                    <TableHead>Type</TableHead>
                     <TableHead className="text-right">Revenue</TableHead>
                     <TableHead className="text-center">Invoices</TableHead>
                     <TableHead className="text-center">OT Hours</TableHead>
@@ -414,49 +315,40 @@ export function StaffShiftClosing() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {previousClosings.map(closing => {
-                    const isOT = closing.notes?.startsWith('[OVERTIME]') || (closing.summary_data as any)?.is_overtime;
-                    return (
-                      <TableRow key={closing.id}>
-                        <TableCell className="font-medium">
-                          {format(new Date(closing.closing_date), 'MMM d, yyyy')}
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="outline" className="capitalize">
-                            {closing.shift}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant={isOT ? 'outline' : 'secondary'} className={isOT ? 'text-amber-600 border-amber-300 bg-amber-50' : ''}>
-                            {isOT ? 'Overtime' : 'Regular'}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-right font-semibold">
-                          {formatPkrAmount(Number(closing.total_revenue) || 0)}
-                        </TableCell>
-                        <TableCell className="text-center">{closing.total_invoices}</TableCell>
-                        <TableCell className="text-center">
-                          {Number(closing.overtime_hours) > 0 ? `${closing.overtime_hours}h` : '-'}
-                        </TableCell>
-                        <TableCell>
-                          <Badge
-                            variant={closing.status === 'approved' ? 'default' : closing.status === 'rejected' ? 'destructive' : 'secondary'}
-                            className="capitalize"
-                          >
-                            {closing.status}
-                          </Badge>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
+                  {previousClosings.map(closing => (
+                    <TableRow key={closing.id}>
+                      <TableCell className="font-medium">
+                        {format(new Date(closing.closing_date), 'MMM d, yyyy')}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className="capitalize">
+                          {closing.shift}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right font-semibold">
+                        {formatPkrAmount(Number(closing.total_revenue) || 0)}
+                      </TableCell>
+                      <TableCell className="text-center">{closing.total_invoices}</TableCell>
+                      <TableCell className="text-center">
+                        {Number(closing.overtime_hours) > 0 ? `${closing.overtime_hours}h` : '-'}
+                      </TableCell>
+                      <TableCell>
+                        <Badge
+                          variant={closing.status === 'approved' ? 'default' : closing.status === 'rejected' ? 'destructive' : 'secondary'}
+                          className="capitalize"
+                        >
+                          {closing.status}
+                        </Badge>
+                      </TableCell>
+                    </TableRow>
+                  ))}
                 </TableBody>
               </Table>
             </div>
           )}
         </CardContent>
       </Card>
-
-      {/* Regular Shift Confirmation Dialog */}
+      {/* Confirmation Dialog */}
       <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
         <DialogContent className="max-w-md z-[9999]">
           <DialogHeader>
@@ -515,51 +407,6 @@ export function StaffShiftClosing() {
             >
               <CheckCircle className="w-4 h-4 mr-2" />
               {submitClosing.isPending ? "Submitting..." : "Confirm & Submit"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Overtime Confirmation Dialog */}
-      <Dialog open={overtimeConfirmOpen} onOpenChange={setOvertimeConfirmOpen}>
-        <DialogContent className="max-w-md z-[9999]">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Timer className="w-5 h-5 text-amber-500" />
-              Confirm Overtime Submission
-            </DialogTitle>
-          </DialogHeader>
-          <div className="space-y-3">
-            <p className="text-sm text-muted-foreground">
-              You are submitting overtime for your <strong>{staffShift}</strong> shift. This will be sent to finance for approval.
-            </p>
-            <div className="p-3 rounded-lg bg-amber-50 border border-amber-200 space-y-1">
-              <div className="flex justify-between text-sm">
-                <span>Overtime Hours</span>
-                <span className="font-bold text-amber-700">{otOvertimeHours}h</span>
-              </div>
-              {otNotes.trim() && (
-                <div className="flex justify-between text-sm">
-                  <span>Notes</span>
-                  <span className="font-medium text-amber-700 text-right max-w-[200px] truncate">{otNotes}</span>
-                </div>
-              )}
-            </div>
-          </div>
-          <DialogFooter className="gap-2">
-            <Button variant="outline" onClick={() => setOvertimeConfirmOpen(false)}>
-              Cancel
-            </Button>
-            <Button
-              onClick={() => {
-                setOvertimeConfirmOpen(false);
-                submitOvertime.mutate();
-              }}
-              disabled={submitOvertime.isPending}
-              className="bg-amber-600 hover:bg-amber-700"
-            >
-              <CheckCircle className="w-4 h-4 mr-2" />
-              {submitOvertime.isPending ? "Submitting..." : "Confirm Overtime"}
             </Button>
           </DialogFooter>
         </DialogContent>

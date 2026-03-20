@@ -12,10 +12,9 @@ export interface Shift {
   updated_at: string;
 }
 
-export const useShifts = (enabled = true) => {
+export const useShifts = () => {
   return useQuery({
     queryKey: ["shifts"],
-    enabled,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("shifts")
@@ -28,10 +27,9 @@ export const useShifts = (enabled = true) => {
   });
 };
 
-export const useAllShifts = (enabled = true) => {
+export const useAllShifts = () => {
   return useQuery({
     queryKey: ["shifts", "all"],
-    enabled,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("shifts")

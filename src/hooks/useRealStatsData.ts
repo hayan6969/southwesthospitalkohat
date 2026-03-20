@@ -1,17 +1,10 @@
-import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
-import { format, subDays, startOfDay, endOfDay } from "date-fns";
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { format, subDays, startOfDay, endOfDay } from 'date-fns';
 
-interface UseRealStatsDataOptions {
-  enabled?: boolean;
-}
-
-export const useRealStatsData = (options?: UseRealStatsDataOptions) => {
-  const enabled = options?.enabled ?? true;
-
+export const useRealStatsData = () => {
   return useQuery({
-    queryKey: ["real-stats-data"],
-    enabled,
+    queryKey: ['real-stats-data'],
     queryFn: async () => {
       const today = new Date();
       const yesterday = subDays(today, 1);
@@ -19,103 +12,105 @@ export const useRealStatsData = (options?: UseRealStatsDataOptions) => {
       const todayEnd = endOfDay(today);
       const yesterdayStart = startOfDay(yesterday);
       const yesterdayEnd = endOfDay(yesterday);
-      const trendStart = startOfDay(subDays(today, 4));
 
-      const [appointmentsWindow, totalDoctors, totalPatients, totalAppointments, allCompletedAppointments] = await Promise.all([
-        supabase
-          .from("appointments")
-          .select("id, created_at, consultation_fee_at_time, status, payment_status")
-          .gte("created_at", trendStart.toISOString())
-          .lte("created_at", todayEnd.toISOString()),
-        supabase.from("doctors").select("id", { count: "exact", head: true }),
-        supabase.from("patients").select("id", { count: "exact", head: true }),
-        supabase.from("appointments").select("id", { count: "exact", head: true }),
-        supabase
-          .from("appointments")
-          .select("consultation_fee_at_time")
-          .eq("status", "completed")
-          .eq("payment_status", "paid"),
+      // Get today's and yesterday's data for appointments and invoices only
+      // (doctors and patients don't have created_at columns)
+      const [
+        todayAppointmentsResult,
+        yesterdayAppointmentsResult
+      ] = await Promise.all([
+        supabase.from('appointments').select('id, consultation_fee_at_time, status, payment_status').gte('created_at', todayStart.toISOString()).lte('created_at', todayEnd.toISOString()),
+        supabase.from('appointments').select('id, consultation_fee_at_time, status, payment_status').gte('created_at', yesterdayStart.toISOString()).lte('created_at', yesterdayEnd.toISOString()),
       ]);
 
-      const firstError = [
-        appointmentsWindow.error,
-        totalDoctors.error,
-        totalPatients.error,
-        totalAppointments.error,
-        allCompletedAppointments.error,
-      ].find(Boolean);
+      // Get total counts
+      const [totalDoctors, totalPatients, totalAppointments, allCompletedAppointments] = await Promise.all([
+        supabase.from('doctors').select('id', { count: 'exact' }),
+        supabase.from('patients').select('id', { count: 'exact' }),
+        supabase.from('appointments').select('id', { count: 'exact' }),
+        supabase.from('appointments').select('consultation_fee_at_time').eq('status', 'completed').eq('payment_status', 'paid')
+      ]);
 
-      if (firstError) throw firstError;
+      // Calculate totals - only count revenue from completed & paid appointments
+      const todayAppointmentsCount = todayAppointmentsResult.data?.length || 0;
+      const todayRevenue = todayAppointmentsResult.data
+        ?.filter(a => a.status === 'completed' && a.payment_status === 'paid')
+        .reduce((sum, a) => sum + (a.consultation_fee_at_time || 0), 0) || 0;
 
-      const dayKeys = Array.from({ length: 5 }, (_, index) =>
-        format(subDays(today, 4 - index), "yyyy-MM-dd")
-      );
-      const appointmentsByDay = new Map(dayKeys.map((key) => [key, 0]));
-      const revenueByDay = new Map(dayKeys.map((key) => [key, 0]));
+      const yesterdayAppointmentsCount = yesterdayAppointmentsResult.data?.length || 0;
+      const yesterdayRevenue = yesterdayAppointmentsResult.data
+        ?.filter(a => a.status === 'completed' && a.payment_status === 'paid')
+        .reduce((sum, a) => sum + (a.consultation_fee_at_time || 0), 0) || 0;
 
-      let todayAppointmentsCount = 0;
-      let yesterdayAppointmentsCount = 0;
-      let todayRevenue = 0;
-      let yesterdayRevenue = 0;
+      // Revenue from completed & paid appointments only
+      const totalRevenue = allCompletedAppointments.data?.reduce((sum, a) => sum + (a.consultation_fee_at_time || 0), 0) || 0;
 
-      appointmentsWindow.data?.forEach((appointment) => {
-        if (!appointment.created_at) return;
+      // Calculate percentage changes
+      const calculateChange = (today: number, yesterday: number) => {
+        if (yesterday === 0) return today > 0 ? '+100%' : '0%';
+        const change = ((today - yesterday) / yesterday) * 100;
+        return `${change >= 0 ? '+' : ''}${Math.round(change)}%`;
+      };
 
-        const createdAt = new Date(appointment.created_at);
-        const dayKey = format(createdAt, "yyyy-MM-dd");
-        if (!appointmentsByDay.has(dayKey)) return;
+      const calculateChangeType = (today: number, yesterday: number): 'positive' | 'negative' => {
+        return today >= yesterday ? 'positive' : 'negative';
+      };
 
-        appointmentsByDay.set(dayKey, (appointmentsByDay.get(dayKey) || 0) + 1);
-
-        const paidRevenue =
-          appointment.status === "completed" && appointment.payment_status === "paid"
-            ? appointment.consultation_fee_at_time || 0
-            : 0;
-
-        revenueByDay.set(dayKey, (revenueByDay.get(dayKey) || 0) + paidRevenue);
-
-        if (createdAt >= todayStart && createdAt <= todayEnd) {
-          todayAppointmentsCount += 1;
-          todayRevenue += paidRevenue;
-        } else if (createdAt >= yesterdayStart && createdAt <= yesterdayEnd) {
-          yesterdayAppointmentsCount += 1;
-          yesterdayRevenue += paidRevenue;
+      // Generate trend data for the last 5 days (only for tables with created_at)
+      const generateTrendData = async (table: 'appointments', isRevenue: boolean = false) => {
+        const data = [];
+        for (let i = 4; i >= 0; i--) {
+          const date = subDays(today, i);
+          const start = startOfDay(date);
+          const end = endOfDay(date);
+          
+          if (isRevenue) {
+            const { data: dayData } = await supabase
+              .from('appointments')
+              .select('consultation_fee_at_time')
+              .eq('status', 'completed')
+              .eq('payment_status', 'paid')
+              .gte('created_at', start.toISOString())
+              .lte('created_at', end.toISOString());
+            
+            const value = dayData?.reduce((sum: number, item: any) => sum + (item.consultation_fee_at_time || 0), 0) || 0;
+            data.push({ value });
+          } else {
+            const { data: dayData } = await supabase
+              .from('appointments')
+              .select('id')
+              .gte('created_at', start.toISOString())
+              .lte('created_at', end.toISOString());
+            
+            data.push({ value: dayData?.length || 0 });
+          }
         }
-      });
-
-      const totalRevenue =
-        allCompletedAppointments.data?.reduce(
-          (sum, appointment) => sum + (appointment.consultation_fee_at_time || 0),
-          0
-        ) || 0;
-
-      const calculateChange = (currentValue: number, previousValue: number) => {
-        if (previousValue === 0) return currentValue > 0 ? "+100%" : "0%";
-        const change = ((currentValue - previousValue) / previousValue) * 100;
-        return `${change >= 0 ? "+" : ""}${Math.round(change)}%`;
+        return data;
       };
 
-      const calculateChangeType = (
-        currentValue: number,
-        previousValue: number
-      ): "positive" | "negative" => {
-        return currentValue >= previousValue ? "positive" : "negative";
+      // Generate static trend data for doctors and patients (no created_at columns)
+      const generateStaticTrendData = (totalCount: number) => {
+        return Array(5).fill({ value: Math.floor(totalCount / 5) });
       };
 
-      const appointmentsTrend = dayKeys.map((key) => ({ value: appointmentsByDay.get(key) || 0 }));
-      const revenueTrend = dayKeys.map((key) => ({ value: revenueByDay.get(key) || 0 }));
-      const doctorsTrend = Array.from({ length: 5 }, () => ({ value: Math.floor((totalDoctors.count || 0) / 5) }));
-      const patientsTrend = Array.from({ length: 5 }, () => ({ value: Math.floor((totalPatients.count || 0) / 5) }));
+      const [appointmentsTrend, revenueTrend] = await Promise.all([
+        generateTrendData('appointments'),
+        generateTrendData('appointments', true)
+      ]);
+
+      // Generate static trends for doctors and patients
+      const doctorsTrend = generateStaticTrendData(totalDoctors.count || 0);
+      const patientsTrend = generateStaticTrendData(totalPatients.count || 0);
 
       return {
         totalDoctors: totalDoctors.count || 0,
         totalPatients: totalPatients.count || 0,
         totalAppointments: totalAppointments.count || 0,
         totalRevenue,
-        doctorsChange: "0%",
-        doctorsChangeType: "positive" as const,
-        patientsChange: "0%",
-        patientsChangeType: "positive" as const,
+        doctorsChange: '0%', // No created_at data available
+        doctorsChangeType: 'positive' as const,
+        patientsChange: '0%', // No created_at data available  
+        patientsChangeType: 'positive' as const,
         appointmentsChange: calculateChange(todayAppointmentsCount, yesterdayAppointmentsCount),
         appointmentsChangeType: calculateChangeType(todayAppointmentsCount, yesterdayAppointmentsCount),
         revenueChange: calculateChange(todayRevenue, yesterdayRevenue),
@@ -124,11 +119,11 @@ export const useRealStatsData = (options?: UseRealStatsDataOptions) => {
           doctors: doctorsTrend,
           patients: patientsTrend,
           appointments: appointmentsTrend,
-          revenue: revenueTrend,
-        },
+          revenue: revenueTrend
+        }
       };
     },
-    staleTime: 5 * 60 * 1000,
-    refetchInterval: 5 * 60 * 1000,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    refetchInterval: 5 * 60 * 1000, // Refetch every 5 minutes
   });
 };
