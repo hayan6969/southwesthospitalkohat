@@ -1729,10 +1729,10 @@ export const generateDailyClosingPDF = async (data: {
         doc.setFontSize(6);
         doc.setTextColor(80, 80, 80);
         doc.text(`${shift} / Sub Total:`, detailStartX + 3, yPosition + 4.5);
-        const stX = detailStartX + detailColWidths[0] + detailColWidths[1] + detailColWidths[2] + detailColWidths[3] + detailColWidths[4];
-        doc.text(formatPkrAmount(shiftTotal), stX + detailColWidths[5] - 2, yPosition + 4.5, { align: 'right' });
-        doc.text(formatPkrAmount(shiftDoc), stX + detailColWidths[5] + detailColWidths[6] - 2, yPosition + 4.5, { align: 'right' });
-        doc.text(formatPkrAmount(shiftHos), stX + detailColWidths[5] + detailColWidths[6] + detailColWidths[7] - 2, yPosition + 4.5, { align: 'right' });
+        const stX = detailStartX + detailColWidths[0] + detailColWidths[1] + detailColWidths[2] + detailColWidths[3] + detailColWidths[4] + detailColWidths[5];
+        doc.text(formatPkrAmount(shiftTotal), stX + detailColWidths[6] - 2, yPosition + 4.5, { align: 'right' });
+        doc.text(formatPkrAmount(shiftDoc), stX + detailColWidths[6] + detailColWidths[7] - 2, yPosition + 4.5, { align: 'right' });
+        doc.text(formatPkrAmount(shiftHos), stX + detailColWidths[6] + detailColWidths[7] + detailColWidths[8] - 2, yPosition + 4.5, { align: 'right' });
         yPosition += 6;
 
         catTotal += shiftTotal;
