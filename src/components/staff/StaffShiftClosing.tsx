@@ -177,9 +177,8 @@ export function StaffShiftClosing() {
     enabled: !!user?.id,
   });
 
-  const todayAlreadyClosed = effectiveClosings.some(
-    (closing) => closing.closing_date === format(today, 'yyyy-MM-dd') && closing.shift === staffShift && !(closing as any).is_overtime,
-  );
+  // Check if there's any new revenue since last closing
+  const hasNewRevenue = (todayRevenue?.total || 0) > 0;
 
   const submitClosing = useMutation({
     mutationFn: async () => {
@@ -285,16 +284,16 @@ export function StaffShiftClosing() {
                   placeholder="Any shift notes..."
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
-                  disabled={todayAlreadyClosed}
+                  disabled={!hasNewRevenue}
                   className="h-[38px]"
                 />
               </div>
 
               {/* Submit Button */}
-              {todayAlreadyClosed ? (
+              {!hasNewRevenue ? (
                 <div className="flex items-center gap-2 p-3 rounded-lg bg-green-50 border border-green-200 text-green-700">
                   <CheckCircle className="w-4 h-4" />
-                  <span className="text-sm font-medium">Shift already closed for today</span>
+                  <span className="text-sm font-medium">No new revenue since last closing</span>
                 </div>
               ) : (
                 <Button
