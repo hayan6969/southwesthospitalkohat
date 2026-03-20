@@ -175,5 +175,6 @@ export const generateAnalyticsReportPDF = async (startDate: Date, endDate: Date)
     totalRefunds,
     netProfit,
     transactionsData,
+    closingEndDate: endDateStr,
   });
 };

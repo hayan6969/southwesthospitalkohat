@@ -1045,6 +1045,7 @@ export const generateDailyClosingPDF = async (data: {
   netProfit: number;
   transactionsData?: any;
   categoryFilter?: string; // 'all' or specific category like 'Lab', 'OPD', etc.
+  closingEndDate?: string; // For date range reports
 }) => {
   const doc = new jsPDF({
     orientation: 'portrait',
@@ -2339,6 +2340,103 @@ export const generateDailyClosingPDF = async (data: {
       }
     }
   };
+
+  // ===========================================
+  // STAFF SHIFT CLOSINGS & OVERTIME SECTION
+  // ===========================================
+  let staffClosingsQuery = supabase
+    .from('staff_shift_closings')
+    .select('*')
+    .order('created_at', { ascending: true });
+  
+  if (data.closingEndDate && data.closingEndDate !== data.closingDate) {
+    staffClosingsQuery = staffClosingsQuery
+      .gte('closing_date', data.closingDate)
+      .lte('closing_date', data.closingEndDate);
+  } else {
+    staffClosingsQuery = staffClosingsQuery.eq('closing_date', data.closingDate);
+  }
+  
+  const { data: staffShiftClosings } = await staffClosingsQuery;
+
+  if (staffShiftClosings && staffShiftClosings.length > 0) {
+    // Fetch staff profiles for names
+    const staffIds = [...new Set(staffShiftClosings.map((c: any) => c.staff_id))];
+    let staffProfilesMap: Record<string, string> = {};
+    if (staffIds.length > 0) {
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('id, first_name, last_name')
+        .in('id', staffIds);
+      (profiles || []).forEach((p: any) => {
+        staffProfilesMap[p.id] = `${p.first_name} ${p.last_name}`;
+      });
+    }
+
+    doc.addPage();
+    yPosition = 20;
+
+    // Section header
+    doc.setFillColor(109, 40, 217); // Purple
+    doc.rect(20, yPosition, pageWidth - 40, 10, 'F');
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(12);
+    doc.setTextColor(255, 255, 255);
+    doc.text('STAFF SHIFT CLOSINGS & OVERTIME', pageWidth / 2, yPosition + 7, { align: 'center' });
+    yPosition += 16;
+
+    // Table header
+    const staffColX = [20, 65, 95, 125, 150, 170];
+    const staffColLabels = ['Staff Name', 'Shift', 'Revenue', 'Invoices', 'OT Hours', 'OT Amount'];
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(9);
+    doc.setTextColor(60, 60, 60);
+    doc.setFillColor(243, 244, 246);
+    doc.rect(20, yPosition - 4, pageWidth - 40, 8, 'F');
+    staffColLabels.forEach((label, i) => {
+      doc.text(label, staffColX[i], yPosition);
+    });
+    yPosition += 8;
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+    doc.setTextColor(40, 40, 40);
+
+    let totalOTHours = 0;
+    let totalOTAmount = 0;
+
+    for (const closing of staffShiftClosings) {
+      if (yPosition > pageHeight - 30) {
+        doc.addPage();
+        yPosition = 20;
+      }
+
+      const staffName = staffProfilesMap[closing.staff_id] || 'Unknown';
+      const otHours = Number(closing.overtime_hours) || 0;
+      const otAmount = Number(closing.overtime_amount) || 0;
+      totalOTHours += otHours;
+      totalOTAmount += otAmount;
+
+      doc.text(staffName.substring(0, 20), staffColX[0], yPosition);
+      doc.text(String(closing.shift || '-'), staffColX[1], yPosition);
+      doc.text(formatPkrAmount(Number(closing.total_revenue) || 0), staffColX[2], yPosition);
+      doc.text(String(closing.total_invoices || 0), staffColX[3], yPosition);
+      doc.text(otHours > 0 ? `${otHours}h` : '-', staffColX[4], yPosition);
+      doc.text(otAmount > 0 ? formatPkrAmount(otAmount) : '-', staffColX[5], yPosition);
+      yPosition += 7;
+    }
+
+    // Totals row
+    yPosition += 2;
+    doc.setLineWidth(0.5);
+    doc.line(20, yPosition, pageWidth - 20, yPosition);
+    yPosition += 6;
+    doc.setFont('helvetica', 'bold');
+    doc.text(`Total Staff: ${staffShiftClosings.length}`, staffColX[0], yPosition);
+    doc.text(`Total OT: ${totalOTHours}h`, staffColX[4], yPosition);
+    doc.text(totalOTAmount > 0 ? formatPkrAmount(totalOTAmount) : '-', staffColX[5], yPosition);
+    yPosition += 10;
+  }
 
   if (expenseProofs.length > 0 || refundProofs.length > 0) {
     doc.addPage();
