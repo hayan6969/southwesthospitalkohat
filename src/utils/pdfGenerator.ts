@@ -1325,6 +1325,14 @@ export const generateDailyClosingPDF = async (data: {
     }
   };
 
+  const formatDate = (dateStr: string): string => {
+    try {
+      return formatInPakistanTime(dateStr, 'dd MMM');
+    } catch {
+      return '—';
+    }
+  };
+
   interface TxnItem {
     patientName: string;
     time: string;
@@ -1578,8 +1586,8 @@ export const generateDailyClosingPDF = async (data: {
   const shiftOrder = ['Night', 'Morning', 'Evening'];
 
   // Table column widths for detailed report
-  const detailColWidths = [8, 30, 14, 35, 25, 18, 18, 18, 18];
-  const detailHeaders = ['Sr#', 'Patient', 'Time', 'Procedure', 'Consultant', 'Amount', 'Doc.Share', 'Hos.Share', 'Operator'];
+  const detailColWidths = [8, 14, 28, 14, 32, 22, 18, 16, 16, 16];
+  const detailHeaders = ['Sr#', 'Date', 'Patient', 'Time', 'Procedure', 'Consultant', 'Amount', 'Doc.Share', 'Hos.Share', 'Operator'];
   const totalTableWidth = detailColWidths.reduce((a, b) => a + b, 0);
   const detailStartX = (pageWidth - totalTableWidth) / 2;
 
@@ -1686,18 +1694,19 @@ export const generateDailyClosingPDF = async (data: {
           let xPos = detailStartX + 1;
           const rowData = [
             String(srNo),
-            (item.patientName || '').substring(0, 18),
+            formatDate(item.time),
+            (item.patientName || '').substring(0, 16),
             formatTime(item.time),
-            (item.procedure || '').substring(0, 22),
-            (item.consultant || '').substring(0, 16),
+            (item.procedure || '').substring(0, 20),
+            (item.consultant || '').substring(0, 14),
             formatPkrAmount(item.amount),
             item.docShare > 0 ? formatPkrAmount(item.docShare) : '—',
             Number(item.hosShare) > 0 ? formatPkrAmount(Number(item.hosShare)) : '—',
-            (item.operator || '—').substring(0, 12),
+            (item.operator || '—').substring(0, 10),
           ];
 
           rowData.forEach((cell, i) => {
-            if (i >= 5 && i <= 7) {
+            if (i >= 6 && i <= 8) {
               doc.text(cell, xPos + detailColWidths[i] - 2, yPosition + 5, { align: 'right' });
             } else {
               doc.text(cell, xPos, yPosition + 5);
@@ -1720,10 +1729,10 @@ export const generateDailyClosingPDF = async (data: {
         doc.setFontSize(6);
         doc.setTextColor(80, 80, 80);
         doc.text(`${shift} / Sub Total:`, detailStartX + 3, yPosition + 4.5);
-        const stX = detailStartX + detailColWidths[0] + detailColWidths[1] + detailColWidths[2] + detailColWidths[3] + detailColWidths[4];
-        doc.text(formatPkrAmount(shiftTotal), stX + detailColWidths[5] - 2, yPosition + 4.5, { align: 'right' });
-        doc.text(formatPkrAmount(shiftDoc), stX + detailColWidths[5] + detailColWidths[6] - 2, yPosition + 4.5, { align: 'right' });
-        doc.text(formatPkrAmount(shiftHos), stX + detailColWidths[5] + detailColWidths[6] + detailColWidths[7] - 2, yPosition + 4.5, { align: 'right' });
+        const stX = detailStartX + detailColWidths[0] + detailColWidths[1] + detailColWidths[2] + detailColWidths[3] + detailColWidths[4] + detailColWidths[5];
+        doc.text(formatPkrAmount(shiftTotal), stX + detailColWidths[6] - 2, yPosition + 4.5, { align: 'right' });
+        doc.text(formatPkrAmount(shiftDoc), stX + detailColWidths[6] + detailColWidths[7] - 2, yPosition + 4.5, { align: 'right' });
+        doc.text(formatPkrAmount(shiftHos), stX + detailColWidths[6] + detailColWidths[7] + detailColWidths[8] - 2, yPosition + 4.5, { align: 'right' });
         yPosition += 6;
 
         catTotal += shiftTotal;
@@ -1740,10 +1749,10 @@ export const generateDailyClosingPDF = async (data: {
       doc.setFontSize(6.5);
       doc.setTextColor(40, 60, 120);
       doc.text(`${cat} / Sub Total:`, detailStartX + 3, yPosition + 5);
-      const ctX = detailStartX + detailColWidths[0] + detailColWidths[1] + detailColWidths[2] + detailColWidths[3] + detailColWidths[4];
-      doc.text(formatPkrAmount(catTotal), ctX + detailColWidths[5] - 2, yPosition + 5, { align: 'right' });
-      doc.text(formatPkrAmount(catDoc), ctX + detailColWidths[5] + detailColWidths[6] - 2, yPosition + 5, { align: 'right' });
-      doc.text(formatPkrAmount(catHos), ctX + detailColWidths[5] + detailColWidths[6] + detailColWidths[7] - 2, yPosition + 5, { align: 'right' });
+      const ctX = detailStartX + detailColWidths[0] + detailColWidths[1] + detailColWidths[2] + detailColWidths[3] + detailColWidths[4] + detailColWidths[5];
+      doc.text(formatPkrAmount(catTotal), ctX + detailColWidths[6] - 2, yPosition + 5, { align: 'right' });
+      doc.text(formatPkrAmount(catDoc), ctX + detailColWidths[6] + detailColWidths[7] - 2, yPosition + 5, { align: 'right' });
+      doc.text(formatPkrAmount(catHos), ctX + detailColWidths[6] + detailColWidths[7] + detailColWidths[8] - 2, yPosition + 5, { align: 'right' });
       yPosition += 8;
 
       grandTotal += catTotal;
@@ -1760,10 +1769,10 @@ export const generateDailyClosingPDF = async (data: {
     doc.setFontSize(7);
     doc.setTextColor(255, 255, 255);
     doc.text('GRAND TOTAL:', detailStartX + 3, yPosition + 5.5);
-    const gtX = detailStartX + detailColWidths[0] + detailColWidths[1] + detailColWidths[2] + detailColWidths[3] + detailColWidths[4];
-    doc.text(formatPkrAmount(grandTotal), gtX + detailColWidths[5] - 2, yPosition + 5.5, { align: 'right' });
-    doc.text(formatPkrAmount(grandDocShare), gtX + detailColWidths[5] + detailColWidths[6] - 2, yPosition + 5.5, { align: 'right' });
-    doc.text(formatPkrAmount(grandHosShare), gtX + detailColWidths[5] + detailColWidths[6] + detailColWidths[7] - 2, yPosition + 5.5, { align: 'right' });
+    const gtX = detailStartX + detailColWidths[0] + detailColWidths[1] + detailColWidths[2] + detailColWidths[3] + detailColWidths[4] + detailColWidths[5];
+    doc.text(formatPkrAmount(grandTotal), gtX + detailColWidths[6] - 2, yPosition + 5.5, { align: 'right' });
+    doc.text(formatPkrAmount(grandDocShare), gtX + detailColWidths[6] + detailColWidths[7] - 2, yPosition + 5.5, { align: 'right' });
+    doc.text(formatPkrAmount(grandHosShare), gtX + detailColWidths[6] + detailColWidths[7] + detailColWidths[8] - 2, yPosition + 5.5, { align: 'right' });
     yPosition += 15;
   }
 
@@ -2904,12 +2913,13 @@ export const generateDailyClosingSummaryPDF = async (data: {
   if (expenses.length > 0) {
     drawSectionHeader(`EXPENSES (${expenses.length})`);
     const expRows: string[][] = expenses.map((e: any) => [
+      e.expense_date ? formatInPakistanTime(e.expense_date, 'dd MMM') : '—',
       e.category || '',
       e.description || '',
       formatPkrAmount(e.amount)
     ]);
-    expRows.push(['', 'Total Expenses', formatPkrAmount(totalExp)]);
-    drawTable(['Category', 'Description', 'Amount'], expRows, [40, 80, 40]);
+    expRows.push(['', '', 'Total Expenses', formatPkrAmount(totalExp)]);
+    drawTable(['Date', 'Category', 'Description', 'Amount'], expRows, [20, 30, 70, 40]);
   }
 
   // ========== REFUNDS ==========
@@ -2919,12 +2929,13 @@ export const generateDailyClosingSummaryPDF = async (data: {
   if (refunds.length > 0) {
     drawSectionHeader(`REFUNDS (${refunds.length})`);
     const refRows: string[][] = refunds.map((r: any) => [
+      r.created_at ? formatInPakistanTime(r.created_at, 'dd MMM') : '—',
       (r.refund_type || '').replace(/_/g, ' '),
       r.description || '',
       formatPkrAmount(r.amount)
     ]);
-    refRows.push(['', 'Total Refunds', formatPkrAmount(totalRef)]);
-    drawTable(['Type', 'Description', 'Amount'], refRows, [40, 80, 40]);
+    refRows.push(['', '', 'Total Refunds', formatPkrAmount(totalRef)]);
+    drawTable(['Date', 'Type', 'Description', 'Amount'], refRows, [20, 30, 70, 40]);
   }
 
   // ========== FINANCIAL SUMMARY ==========
