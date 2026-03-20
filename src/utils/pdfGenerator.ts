@@ -1935,7 +1935,8 @@ export const generateDailyClosingPDF = async (data: {
 
   (transactionsData?.labReports || []).forEach((lab: any) => {
     const originalPrice = Number(lab.price) || 0;
-    const finalAmount = Number(lab.amount) || originalPrice;
+    const invoiceAmount = lab.invoices?.amount != null ? Number(lab.invoices.amount) : null;
+    const finalAmount = invoiceAmount != null ? invoiceAmount : originalPrice;
     if (originalPrice > 0 && finalAmount < originalPrice) {
       const p = lab.patients?.profiles;
       discountItems.push({
