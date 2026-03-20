@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { formatPkrAmount } from "@/utils/currency";
 import { CalendarIcon, TrendingUp, Clock, CalendarRange } from "lucide-react";
+import { AnalyticsReportDialog } from "@/components/dialogs/AnalyticsReportDialog";
 import { useState, useEffect } from "react";
 import { format, subMonths } from "date-fns";
 import { Calendar } from "@/components/ui/calendar";
