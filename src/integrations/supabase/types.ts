@@ -529,6 +529,27 @@ export type Database = {
         }
         Relationships: []
       }
+      finance_settings: {
+        Row: {
+          created_at: string
+          id: number
+          overtime_hourly_rate: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: number
+          overtime_hourly_rate?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: number
+          overtime_hourly_rate?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       hospital_closing_balance: {
         Row: {
           closing_balance: number | null
