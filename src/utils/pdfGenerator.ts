@@ -1405,18 +1405,23 @@ export const generateDailyClosingPDF = async (data: {
     });
   });
 
-  // Lab reports
+  // Lab reports - use amount (invoice-level, includes discount) if available, fallback to price
   (transactionsData?.labReports || []).forEach((lab: any) => {
     const p = lab.patients?.profiles;
+    const labAmount = Number(lab.amount) || Number(lab.price) || 0;
+    const hasDiscount = lab.description && lab.description.includes('discount');
+    const procedure = hasDiscount 
+      ? (lab.description || lab.test_name || 'Lab Test')
+      : (lab.test_name || lab.description || 'Lab Test');
     allTxns.push({
       patientName: p ? `${p.first_name || ''} ${p.last_name || ''}`.trim() : 'Unknown',
       time: lab.created_at || lab.test_date,
-      procedure: lab.test_name || 'Lab Test',
+      procedure,
       consultant: '—',
-      amount: Number(lab.price) || 0,
+      amount: labAmount,
       docShare: 0,
-      hosShare: Number(lab.price) || 0,
-      operator: '—',
+      hosShare: labAmount,
+      operator: resolveOperatorName(lab.created_by),
       category: 'Lab',
       shift: getShiftFromTime(lab.created_at || lab.test_date),
     });
