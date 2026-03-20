@@ -955,7 +955,7 @@ const queryTransactionDataForDate = async (closingDate: string, closingTime: str
     
     supabase
       .from('lab_reports')
-      .select('*, patients(id, profiles(first_name, last_name)), invoices:invoice_id(amount, created_by)')
+      .select('*, patients(id, profiles(first_name, last_name))')
       .not('price', 'is', null)
       .gte('created_at', cutoffTime)
       .lte('created_at', upperBound),
@@ -1001,10 +1001,28 @@ const queryTransactionDataForDate = async (closingDate: string, closingTime: str
       .lte('created_at', upperBound)
   ]);
   
+  // Enrich lab reports with invoice amounts (for discount visibility)
+  const labReports = labReportsRes.data || [];
+  const labInvoiceIds = labReports.map((lr: any) => lr.invoice_id).filter(Boolean);
+  let labInvoiceMap = new Map<string, number>();
+  if (labInvoiceIds.length > 0) {
+    const { data: labInvoices } = await supabase
+      .from('invoices')
+      .select('id, amount')
+      .in('id', labInvoiceIds);
+    (labInvoices || []).forEach((inv: any) => {
+      labInvoiceMap.set(inv.id, Number(inv.amount) || 0);
+    });
+  }
+  const enrichedLabReports = labReports.map((lr: any) => ({
+    ...lr,
+    invoice_amount: lr.invoice_id ? labInvoiceMap.get(lr.invoice_id) ?? null : null,
+  }));
+
   return {
     hospitalInvoices: hospitalInvoicesRes.data || [],
     pharmacyInvoices: pharmacyInvoicesRes.data || [],
-    labReports: labReportsRes.data || [],
+    labReports: enrichedLabReports,
     xrayReports: xrayReportsRes.data || [],
     otSchedules: otSchedulesRes.data || [],
     emergencyAppointments: emergencyAppointmentsRes.data || [],
@@ -1456,8 +1474,8 @@ export const generateDailyClosingPDF = async (data: {
   (transactionsData?.labReports || []).forEach((lab: any) => {
     const p = lab.patients?.profiles;
     const originalPrice = Number(lab.price) || 0;
-    // The invoice joined via invoice_id holds the actual paid amount after discount
-    const invoiceAmount = lab.invoices?.amount != null ? Number(lab.invoices.amount) : null;
+    // Use enriched invoice_amount (from separate invoice lookup) for discount visibility
+    const invoiceAmount = lab.invoice_amount != null ? Number(lab.invoice_amount) : null;
     const finalAmount = invoiceAmount != null ? invoiceAmount : originalPrice;
     const discountApplied = originalPrice > 0 && finalAmount < originalPrice ? originalPrice - finalAmount : 0;
     let procedure = lab.test_name || lab.description || 'Lab Test';
@@ -1935,7 +1953,7 @@ export const generateDailyClosingPDF = async (data: {
 
   (transactionsData?.labReports || []).forEach((lab: any) => {
     const originalPrice = Number(lab.price) || 0;
-    const invoiceAmount = lab.invoices?.amount != null ? Number(lab.invoices.amount) : null;
+    const invoiceAmount = lab.invoice_amount != null ? Number(lab.invoice_amount) : null;
     const finalAmount = invoiceAmount != null ? invoiceAmount : originalPrice;
     if (originalPrice > 0 && finalAmount < originalPrice) {
       const p = lab.patients?.profiles;
@@ -2527,7 +2545,7 @@ export const generateDailyClosingSummaryPDF = async (data: {
     inv.invoice_number?.startsWith('EMERGENCY-');
 
   const labReports = transactionsData?.labReports || [];
-  const labRevenue = labReports.reduce((s: number, r: any) => s + (r.invoices?.amount != null ? Number(r.invoices.amount) : (Number(r.price) || 0)), 0);
+  const labRevenue = labReports.reduce((s: number, r: any) => s + (r.invoice_amount != null ? Number(r.invoice_amount) : (Number(r.price) || 0)), 0);
 
   const xrayReports = transactionsData?.xrayReports || [];
   const xrayRevenue = xrayReports.reduce((s: number, r: any) => s + (Number(r.price) || 0), 0);
