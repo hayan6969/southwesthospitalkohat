@@ -194,6 +194,18 @@ export function OvertimeManager() {
     }
   });
 
+  const { data: payrollTemplates } = useQuery({
+    queryKey: ['payroll-templates-for-overtime'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('payroll_templates')
+        .select('employee_id, employee_name, role')
+        .eq('is_active', true);
+      if (error) throw error;
+      return data;
+    }
+  });
+
   const { data: financeSettings } = useQuery({
     queryKey: ['finance-settings'],
     queryFn: async () => {
@@ -546,22 +558,42 @@ export function OvertimeManager() {
                     />
                     {searchQuery && staff && (
                       <div className="mt-1 border rounded-md bg-background max-h-32 overflow-y-auto shadow-lg">
-                        {staff
-                          .filter(emp => `${emp.first_name} ${emp.last_name}`.toLowerCase().includes(searchQuery.toLowerCase()))
-                          .slice(0, 5)
-                          .map(emp => (
+                        {(() => {
+                          const q = searchQuery.toLowerCase();
+                          const staffMatches = staff
+                            .filter(emp => `${emp.first_name} ${emp.last_name}`.toLowerCase().includes(q))
+                            .map(emp => ({
+                              id: emp.id,
+                              name: `${emp.first_name} ${emp.last_name}`,
+                              role: emp.role,
+                              source: 'staff' as const,
+                            }));
+
+                          const staffNameSet = new Set(staffMatches.map(s => s.name.toLowerCase()));
+
+                          const templateMatches = (payrollTemplates || [])
+                            .filter(t => t.employee_name.toLowerCase().includes(q) && !staffNameSet.has(t.employee_name.toLowerCase()))
+                            .map(t => ({
+                              id: t.employee_id,
+                              name: t.employee_name,
+                              role: t.role,
+                              source: 'template' as const,
+                            }));
+
+                          return [...staffMatches, ...templateMatches].slice(0, 8).map(item => (
                             <div
-                              key={emp.id}
+                              key={item.id}
                               className="p-2 hover:bg-muted cursor-pointer text-sm"
                               onClick={() => {
-                                setSelectedEmployeeId(emp.id);
-                                setEmployeeName(`${emp.first_name} ${emp.last_name}`);
+                                setSelectedEmployeeId(item.id);
+                                setEmployeeName(item.name);
                                 setSearchQuery("");
                               }}
                             >
-                              {emp.first_name} {emp.last_name} ({emp.role})
+                              {item.name} <span className="text-muted-foreground">({item.role})</span>
                             </div>
-                          ))}
+                          ));
+                        })()}
                       </div>
                     )}
                   </div>
