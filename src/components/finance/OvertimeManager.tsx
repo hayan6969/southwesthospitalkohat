@@ -574,7 +574,7 @@ export function OvertimeManager() {
                           const templateMatches = (payrollTemplates || [])
                             .filter(t => t.employee_name.toLowerCase().includes(q) && !staffNameSet.has(t.employee_name.toLowerCase()))
                             .map(t => ({
-                              id: t.employee_id,
+                              id: crypto.randomUUID(),
                               name: t.employee_name,
                               role: t.role,
                               source: 'template' as const,
