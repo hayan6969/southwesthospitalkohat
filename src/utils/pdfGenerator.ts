@@ -1511,7 +1511,7 @@ export const generateDailyClosingPDF = async (data: {
 
   // X-ray reports
   (transactionsData?.xrayReports || []).forEach((xray: any) => {
-    const p = (xray as any).patients?.profiles;
+    const p = (xray as any).xray_patient || (xray as any).patients?.profiles;
     const xrayTestName = xray.test_name || xray.xray_tests?.name || 'X-Ray';
     allTxns.push({
       patientName: p ? `${p.first_name || ''} ${p.last_name || ''}`.trim() : 'Unknown',
