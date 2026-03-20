@@ -1733,13 +1733,19 @@ export const generateDailyClosingPDF = async (data: {
   drawSectionHeader('STAFF COLLECTION SUMMARY');
 
   // Aggregate by operator
-  const staffCollectionMap = new Map<string, { name: string; count: number; total: number }>();
+  const staffCollectionMap = new Map<string, { name: string; count: number; total: number; opd: number; lab: number; xray: number; ot: number; emergency: number; misc: number }>();
   allTxns.forEach(txn => {
     const op = txn.operator;
     if (op && op !== '—') {
-      const existing = staffCollectionMap.get(op) || { name: op, count: 0, total: 0 };
+      const existing = staffCollectionMap.get(op) || { name: op, count: 0, total: 0, opd: 0, lab: 0, xray: 0, ot: 0, emergency: 0, misc: 0 };
       existing.count += 1;
       existing.total += txn.amount;
+      if (txn.category === 'OPD') existing.opd += txn.amount;
+      else if (txn.category === 'Lab') existing.lab += txn.amount;
+      else if (txn.category === 'X-Ray') existing.xray += txn.amount;
+      else if (txn.category === 'OT') existing.ot += txn.amount;
+      else if (txn.category === 'Emergency') existing.emergency += txn.amount;
+      else if (txn.category === 'Miscellaneous') existing.misc += txn.amount;
       staffCollectionMap.set(op, existing);
     }
   });
@@ -1747,16 +1753,31 @@ export const generateDailyClosingPDF = async (data: {
   const staffEntries = Array.from(staffCollectionMap.values()).sort((a, b) => b.total - a.total);
 
   if (staffEntries.length > 0) {
-    const staffHeaders = ['Sr#', 'Staff Name', 'Transactions', 'Total Collected'];
-    const staffColWidths = [10, 60, 30, 40];
+    const staffHeaders = ['Sr#', 'Staff Name', 'OPD', 'Lab', 'X-Ray', 'OT', 'Emergency', 'Total'];
+    const staffColWidths = [8, 40, 22, 22, 22, 22, 22, 28];
     const staffRows: string[][] = staffEntries.map((s, i) => [
       String(i + 1),
       s.name,
-      String(s.count),
+      s.opd ? formatPkrAmount(s.opd) : '—',
+      s.lab ? formatPkrAmount(s.lab) : '—',
+      s.xray ? formatPkrAmount(s.xray) : '—',
+      s.ot ? formatPkrAmount(s.ot) : '—',
+      s.emergency ? formatPkrAmount(s.emergency) : '—',
       formatPkrAmount(s.total)
     ]);
-    const staffGrandTotal = staffEntries.reduce((s, e) => s + e.total, 0);
-    staffRows.push(['', 'TOTAL', String(staffEntries.reduce((s, e) => s + e.count, 0)), formatPkrAmount(staffGrandTotal)]);
+    const totals = staffEntries.reduce((acc, e) => ({
+      opd: acc.opd + e.opd, lab: acc.lab + e.lab, xray: acc.xray + e.xray,
+      ot: acc.ot + e.ot, emergency: acc.emergency + e.emergency, total: acc.total + e.total
+    }), { opd: 0, lab: 0, xray: 0, ot: 0, emergency: 0, total: 0 });
+    staffRows.push([
+      '', 'TOTAL',
+      totals.opd ? formatPkrAmount(totals.opd) : '—',
+      totals.lab ? formatPkrAmount(totals.lab) : '—',
+      totals.xray ? formatPkrAmount(totals.xray) : '—',
+      totals.ot ? formatPkrAmount(totals.ot) : '—',
+      totals.emergency ? formatPkrAmount(totals.emergency) : '—',
+      formatPkrAmount(totals.total)
+    ]);
     drawTable(staffHeaders, staffRows, staffColWidths);
   } else {
     doc.setFont('helvetica', 'italic');
