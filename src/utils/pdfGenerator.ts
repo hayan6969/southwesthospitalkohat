@@ -2344,11 +2344,20 @@ export const generateDailyClosingPDF = async (data: {
   // ===========================================
   // STAFF SHIFT CLOSINGS & OVERTIME SECTION
   // ===========================================
-  const { data: staffShiftClosings } = await supabase
+  let staffClosingsQuery = supabase
     .from('staff_shift_closings')
     .select('*')
-    .eq('closing_date', data.closingDate)
     .order('created_at', { ascending: true });
+  
+  if (data.closingEndDate && data.closingEndDate !== data.closingDate) {
+    staffClosingsQuery = staffClosingsQuery
+      .gte('closing_date', data.closingDate)
+      .lte('closing_date', data.closingEndDate);
+  } else {
+    staffClosingsQuery = staffClosingsQuery.eq('closing_date', data.closingDate);
+  }
+  
+  const { data: staffShiftClosings } = await staffClosingsQuery;
 
   if (staffShiftClosings && staffShiftClosings.length > 0) {
     // Fetch staff profiles for names
