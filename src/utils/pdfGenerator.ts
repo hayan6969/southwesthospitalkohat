@@ -1744,7 +1744,7 @@ export const generateDailyClosingPDF = async (data: {
       existing.opdRevenue += Number(inv.amount) || 0;
       // Try to resolve doctor name from description (e.g. "Consultation - Dr. XYZ")
       if (!existing.name && inv.description) {
-        const match = inv.description.match(/(?:Dr\.?\s*)(.+)/i);
+        const match = inv.description.match(/Dr\.?\s*([^-–—]+)/i);
         if (match) existing.name = `Dr. ${match[1].trim()}`;
       }
       doctorRevenueMap.set(doctorId, existing);
