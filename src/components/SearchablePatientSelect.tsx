@@ -45,20 +45,19 @@ export function SearchablePatientSelect({
   const selectedPatient = patients?.find((patient) => patient.id === value);
   const selectedPatientName = selectedPatient ? getPatientName(selectedPatient.id, patientNames || []) : "";
 
-  // Filter patients based on search query
-  const filteredPatients = patients?.filter((patient) => {
-    if (!searchQuery) return true;
-    
-    const patientName = getPatientName(patient.id, patientNames || []).toLowerCase();
-    const patientNumber = (patient.patient_number || '').toLowerCase();
-    const query = searchQuery.toLowerCase();
-    
-    return (
-      patientName.includes(query) ||
-      patientNumber.includes(query) ||
-      patient.id.toLowerCase().includes(query)
-    );
-  }) || [];
+  // Only filter and show when user types a query (min 2 chars) - limits DOM nodes
+  const filteredPatients = searchQuery.length >= 2
+    ? (patients?.filter((patient) => {
+        const patientName = getPatientName(patient.id, patientNames || []).toLowerCase();
+        const patientNumber = (patient.patient_number || '').toLowerCase();
+        const query = searchQuery.toLowerCase();
+        return (
+          patientName.includes(query) ||
+          patientNumber.includes(query) ||
+          patient.id.toLowerCase().includes(query)
+        );
+      }) || []).slice(0, 20)
+    : [];
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
