@@ -15,6 +15,7 @@ import { generatePharmacyInvoicePDF } from "@/utils/pharmacyPdfGenerator";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from '@tanstack/react-query';
+import { getHospitalInvoiceType, hasMatchingOtHospitalInvoice } from "@/utils/invoiceDeduplication";
 
 export function StaffInvoices() {
   const [filterType, setFilterType] = useState("all");
@@ -27,13 +28,14 @@ export function StaffInvoices() {
   const { data: hospitalInvoices, isLoading: hospitalLoading } = useInvoices();
   const { data: patientNames } = usePatientNames();
 
-  // Fetch X-ray reports
+  // Fetch X-ray reports without linked invoices to avoid duplicates in invoice lists
   const { data: xrayReports, isLoading: xrayLoading } = useQuery({
     queryKey: ['xray-reports-staff'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('xray_reports')
         .select('*')
+        .is('invoice_id', null)
         .order('created_at', { ascending: false });
       
       if (error) throw error;
@@ -106,37 +108,22 @@ export function StaffInvoices() {
   // Combine all invoices and categorize by type based on description/context
   const allInvoices = useMemo(() => {
     const combined: any[] = [];
+    const unmatchedOtSchedules =
+      otSchedules?.filter((otSchedule) => !hasMatchingOtHospitalInvoice(otSchedule, hospitalInvoices || [])) || [];
 
     // Process all invoices and categorize them by invoice number prefix
     if (hospitalInvoices) {
       hospitalInvoices.forEach(invoice => {
-        // Check for emergency consultations first (most specific)
-        let type = 'appointments';
-        
-        // Emergency consultation detection - check description, emergency_patient_data, AND invoice number patterns
-        if (invoice.description?.toLowerCase().includes('emergency consultation') || 
-            invoice.description?.toLowerCase().includes('emergency') ||
-            invoice.emergency_patient_data ||
-            invoice.invoice_number?.startsWith('EMG-') ||
-            invoice.invoice_number?.startsWith('EMERGENCY-')) {
-          type = 'emergency';
-        }
-        // Check for other invoice number prefixes
-        else if (invoice.invoice_number?.startsWith('OT-')) {
-          type = 'ot';
-        } else if (invoice.invoice_number?.startsWith('LAB-')) {
-          type = 'lab';
-        } else if (invoice.invoice_number?.startsWith('XRAY-')) {
-          type = 'xray';
-        }
-        
+        const hospitalType = getHospitalInvoiceType(invoice);
+        const type = hospitalType === 'appointment' ? 'appointments' : hospitalType;
+
         combined.push({
           ...invoice,
           type,
           invoice_type: type,
           invoice_date: invoice.created_at,
           patient_name: getPatientName(invoice.patient_id, patientNames || []),
-          patient_id_display: invoice.patient?.patient_number || 'N/A', // Add patient ID for display
+          patient_id_display: invoice.patient?.patient_number || 'N/A',
           display_date: format(new Date(invoice.created_at), 'MMM d, yyyy'),
           display_time: format(new Date(invoice.created_at), 'h:mm a'),
           display_amount: formatPkrAmount(invoice.amount)
@@ -147,15 +134,12 @@ export function StaffInvoices() {
     // Lab reports are already included in hospitalInvoices as LAB- prefixed invoices
     // No need to add them separately since they would create duplicates
 
-    // Add X-ray reports
+    // Add X-ray reports without a linked invoice
     if (xrayReports) {
       xrayReports.forEach(xrayReport => {
-        // Get patient name from patient names using the helper
         const patientName = getPatientName(xrayReport.patient_id, patientNames || []);
-        
-        // Find patient number from allPatients array
         const patient = allPatients?.find(p => p.id === xrayReport.patient_id);
-        
+
         combined.push({
           ...xrayReport,
           type: 'xray',
@@ -167,53 +151,46 @@ export function StaffInvoices() {
           display_time: format(new Date(xrayReport.created_at), 'h:mm a'),
           display_amount: formatPkrAmount(xrayReport.price || 0),
           amount: xrayReport.price || 0,
-          invoice_number: `XRAY-${xrayReport.id.slice(-8).toUpperCase()}`,
+          invoice_number: `XR-${xrayReport.id.slice(-8).toUpperCase()}`,
           description: `X-ray: ${xrayReport.test_name}`,
           status: xrayReport.status === 'completed' ? 'paid' : 'pending'
         });
       });
     }
 
-    // Add OT schedules
-    if (otSchedules) {
-      otSchedules.forEach(otSchedule => {
-        // Get patient name from patient names using the helper
-        const patientName = getPatientName(otSchedule.patient_id, patientNames || []);
-        
-        // Find patient number from allPatients array
-        const patient = allPatients?.find(p => p.id === otSchedule.patient_id);
-        
-        combined.push({
-          ...otSchedule,
-          type: 'ot',
-          invoice_type: 'ot',
-          invoice_date: otSchedule.created_at,
-          patient_name: patientName || 'Unknown Patient',
-          patient_id_display: patient?.patient_number || 'N/A',
-          display_date: format(new Date(otSchedule.created_at), 'MMM d, yyyy'),
-          display_time: format(new Date(otSchedule.created_at), 'h:mm a'),
-          display_amount: formatPkrAmount(otSchedule.total_cost || 0),
-          amount: otSchedule.total_cost || 0,
-          invoice_number: `OT-${otSchedule.id.slice(-8).toUpperCase()}`,
-          description: `Operation Theater Service - ${otSchedule.ot_operations?.[0]?.operation_name || 'Surgery'}`,
-          status: otSchedule.status === 'completed' ? 'paid' : 'pending',
-          // Add fields needed for finance-style PDF
-          displayAmount: otSchedule.total_cost || 0,
-          displayNumber: `OT-${otSchedule.id.slice(-8).toUpperCase()}`,
-          displayDate: otSchedule.created_at,
-          displayStatus: otSchedule.status,
-          operation_date: otSchedule.operation_date || otSchedule.created_at,
-          doctor_name: otSchedule.doctor_name,
-          notes: otSchedule.notes,
-          ot_notes: otSchedule.ot_notes,
-          doctor_expense: otSchedule.doctor_expense,
-          // Include operation details for detailed breakdown
-          operation_name: otSchedule.ot_operations?.operation_name,
-          ot_expenses: otExpenses?.filter(expense => expense.operation_id === otSchedule.operation_id) || [],
-          room_name: otSchedule.ot_rooms?.room_name
-        });
+    // Add OT schedules only when there isn't already a generated OT invoice
+    unmatchedOtSchedules.forEach(otSchedule => {
+      const patientName = getPatientName(otSchedule.patient_id, patientNames || []);
+      const patient = allPatients?.find(p => p.id === otSchedule.patient_id);
+
+      combined.push({
+        ...otSchedule,
+        type: 'ot',
+        invoice_type: 'ot',
+        invoice_date: otSchedule.created_at,
+        patient_name: patientName || 'Unknown Patient',
+        patient_id_display: patient?.patient_number || 'N/A',
+        display_date: format(new Date(otSchedule.created_at), 'MMM d, yyyy'),
+        display_time: format(new Date(otSchedule.created_at), 'h:mm a'),
+        display_amount: formatPkrAmount(otSchedule.total_cost || 0),
+        amount: otSchedule.total_cost || 0,
+        invoice_number: `OT-${otSchedule.id.slice(-8).toUpperCase()}`,
+        description: `Operation Theater Service - ${otSchedule.ot_operations?.[0]?.operation_name || 'Surgery'}`,
+        status: otSchedule.status === 'completed' ? 'paid' : 'pending',
+        displayAmount: otSchedule.total_cost || 0,
+        displayNumber: `OT-${otSchedule.id.slice(-8).toUpperCase()}`,
+        displayDate: otSchedule.created_at,
+        displayStatus: otSchedule.status,
+        operation_date: otSchedule.operation_date || otSchedule.created_at,
+        doctor_name: otSchedule.doctor_name,
+        notes: otSchedule.notes,
+        ot_notes: otSchedule.ot_notes,
+        doctor_expense: otSchedule.doctor_expense,
+        operation_name: otSchedule.ot_operations?.operation_name,
+        ot_expenses: otExpenses?.filter(expense => expense.operation_id === otSchedule.operation_id) || [],
+        room_name: otSchedule.ot_rooms?.room_name
       });
-    }
+    });
 
     return combined.sort((a, b) => new Date(b.invoice_date).getTime() - new Date(a.invoice_date).getTime());
   }, [hospitalInvoices, patientNames, labReports, xrayReports, otSchedules, allPatients, otExpenses]);

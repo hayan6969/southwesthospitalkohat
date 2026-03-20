@@ -17,6 +17,7 @@ import { cn } from "@/lib/utils";
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Search } from "lucide-react";
+import { getHospitalInvoiceType, hasMatchingOtHospitalInvoice } from "@/utils/invoiceDeduplication";
 
 export default function FinanceInvoices() {
   const [filterDate, setFilterDate] = useState<Date | undefined>();
@@ -84,13 +85,14 @@ export default function FinanceInvoices() {
   // created in the 'invoices' table with invoice_number starting with "LAB-"
   // Fetching them separately would cause duplicates
 
-  // Get X-ray reports for invoicing
+  // Get X-ray reports for invoicing (only those without a linked hospital invoice)
   const { data: xrayReports, isLoading: xrayLoading } = useQuery({
     queryKey: ['xray-reports-invoices'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('xray_reports')
         .select('*')
+        .is('invoice_id', null)
         .order('created_at', { ascending: false });
       if (error) throw error;
       return data;
@@ -623,25 +625,23 @@ export default function FinanceInvoices() {
   };
 
   // Combine all invoices into a single array with type information
+  const unmatchedOtSchedules =
+    otSchedules?.filter((ot) => !hasMatchingOtHospitalInvoice(ot, hospitalInvoices || [])) || [];
+
   const allInvoices = [
     ...(hospitalInvoices?.filter(inv => inv.status === 'paid').map(inv => {
-      let type = 'appointment';
-      let typeLabel = 'Appointment';
-      
-      if (inv.invoice_number?.startsWith('OT-')) {
-        type = 'ot';
-        typeLabel = 'Operation Theater';
-      } else if (inv.invoice_number?.startsWith('LAB-')) {
-        type = 'lab';
-        typeLabel = 'Laboratory';
-      } else if (inv.invoice_number?.startsWith('XRAY-')) {
-        type = 'xray';
-        typeLabel = 'X-ray';
-      } else if (inv.description?.toLowerCase().includes('emergency consultation')) {
-        type = 'emergency';
-        typeLabel = 'Emergency Consultation';
-      }
-      
+      const type = getHospitalInvoiceType(inv);
+      const typeLabel =
+        type === 'ot'
+          ? 'Operation Theater'
+          : type === 'lab'
+            ? 'Laboratory'
+            : type === 'xray'
+              ? 'X-ray'
+              : type === 'emergency'
+                ? 'Emergency Consultation'
+                : 'Appointment';
+
       const creatorProfile = (inv as any).creator;
       const createdByName = creatorProfile
         ? `${creatorProfile.first_name || ''} ${creatorProfile.last_name || ''}`.trim()
@@ -676,7 +676,7 @@ export default function FinanceInvoices() {
       displayDate: xray.created_at,
       displayStatus: xray.status
     })) || []),
-    ...(otSchedules?.map(ot => ({
+    ...(unmatchedOtSchedules.map(ot => ({
       ...ot,
       type: 'ot',
       typeLabel: 'Operation Theater',
