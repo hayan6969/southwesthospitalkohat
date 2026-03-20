@@ -907,8 +907,11 @@ export const generateOTPDF = async (data: {
   doc.setTextColor(0, 100, 0);
   doc.text(formatPkrAmount(data.totalAmount), totalsX + 3, yPosition + 12);
 
+  // Created By attribution
+  yPosition = addCreatedByLine(doc, yPosition, createdByName);
+
   // Footer - compact
-  yPosition += 25;
+  yPosition += 15;
   doc.setFontSize(8);
   doc.setFont('helvetica', 'italic');
   doc.setTextColor(100, 100, 100);
