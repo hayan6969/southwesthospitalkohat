@@ -162,7 +162,10 @@ export function OvertimeManager() {
 
   // Pay dialog state
   const [payingGroup, setPayingGroup] = useState<GroupedEmployee | null>(null);
+  const savedRate = localStorage.getItem('overtime_default_rate') || '';
   const [payRate, setPayRate] = useState("");
+  const [showRateSetting, setShowRateSetting] = useState(false);
+  const [defaultRate, setDefaultRate] = useState(savedRate);
 
   // Edit dialog state
   const [editingRecord, setEditingRecord] = useState<OvertimeRecord | null>(null);
