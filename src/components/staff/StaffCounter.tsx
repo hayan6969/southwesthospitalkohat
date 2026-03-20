@@ -331,7 +331,7 @@ export function StaffCounter() {
         console.error('Error fetching patient data:', patientError);
       }
 
-      const doctorName = getDoctorName(currentAppointment.doctor_id, doctorNames || []);
+      const invoiceDoctorName = getDoctorName(currentAppointment.doctor_id, doctorNames || []);
       const consultationDescriptionPattern = `Consultation with ${doctorName} - Patient: ${patientData?.patient_number || 'N/A'}`;
 
       // Check for existing invoice: first by description match, then by patient+doctor+amount+time window
