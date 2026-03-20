@@ -12,7 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { formatPkrAmount } from "@/utils/currency";
 import { format } from "date-fns";
 import { toast } from "sonner";
-import { Users, CheckCircle, XCircle, Eye, Clock, DollarSign } from "lucide-react";
+import { Users, CheckCircle, XCircle, Eye, Clock } from "lucide-react";
 
 export default function FinanceStaffPayments() {
   const { user } = useAuth();
