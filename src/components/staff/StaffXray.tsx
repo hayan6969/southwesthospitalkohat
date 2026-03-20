@@ -131,7 +131,8 @@ export function StaffXray() {
         totalAmount: report.price || 0,
         issueDate: new Date(report.created_at).toLocaleDateString(),
         xrayDate: new Date(report.xray_date || report.created_at).toLocaleDateString(),
-        notes: report.notes
+        notes: report.notes,
+        createdBy: report.created_by
       });
     } catch (error) {
       console.error('Error generating X-ray PDF:', error);

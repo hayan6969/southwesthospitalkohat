@@ -676,7 +676,8 @@ export function StaffInvoices() {
           room: invoice.room_name || 'Unknown Room',
           date: format(new Date(invoice.operation_date || invoice.created_at), 'MMM dd, yyyy'),
           totalAmount: invoice.total_cost || 0,
-          items: items
+          items: items,
+          createdBy: invoice.created_by
         };
 
         await generateOTPDF(otInvoiceData);
