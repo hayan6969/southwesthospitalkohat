@@ -910,22 +910,8 @@ export default function FinanceDaily() {
           </CardContent>
         </Card>}
 
-      {/* Detailed OPD-Style Report */}
-      {detailedData && (
-        <DetailedDailyReport
-          hospitalInvoices={detailedData.hospitalInvoices || []}
-          labReports={detailedData.labReports || []}
-          xrayReports={detailedData.xrayReports || []}
-          otSchedules={detailedData.otSchedules || []}
-          emergencyAppointments={detailedData.emergencyAppointments || []}
-          expenses={detailedData.expenses || []}
-          refunds={detailedData.refunds || []}
-          miscellaneousIncome={detailedData.miscellaneousIncome || []}
-          staffProfiles={staffProfiles || []}
-          staffShiftClosings={detailedData.staffShiftClosings || []}
-          reportDate={format(selectedDate, 'EEEE, MMMM d, yyyy')}
-        />
-      )}
+
+
 
       {/* Daily Closing Dialog */}
       <Dialog open={showClosingDialog} onOpenChange={setShowClosingDialog}>
