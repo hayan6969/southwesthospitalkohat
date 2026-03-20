@@ -266,27 +266,21 @@ export default function DashboardFinance() {
   const totalRevenue = hospitalRevenue + doctorsRevenue + pharmacyRevenue;
   const pharmacyTotalExpenses = pharmacyExpenses?.reduce((sum, exp) => sum + exp.amount, 0) || 0;
 
-  // Per-doctor revenue breakdown
+  // Per-doctor revenue breakdown (using deduped invoices)
   const perDoctorRevenue = doctorProfiles?.map(doctor => {
     const profile = doctor.profiles as any;
     const doctorName = profile ? `Dr. ${profile.first_name} ${profile.last_name}` : 'Unknown';
     
-    const drConsultation = invoices?.filter(inv =>
-      inv.status === 'paid' &&
-      inv.doctor_id === doctor.id &&
-      inv.description?.toLowerCase().includes('consultation') &&
-      !inv.description?.toLowerCase().includes('emergency')
-    ).reduce((sum, inv) => sum + (inv.amount || 0), 0) || 0;
+    const drConsultation = paidInvoices
+      .filter(inv => inv.doctor_id === doctor.id && inv.invoice_number?.startsWith('INV-') && !isEmergencyInv(inv))
+      .reduce((sum, inv) => sum + (inv.amount || 0), 0);
 
     const drOT = otSchedules?.filter(s => s.doctor_id === doctor.id)
       .reduce((sum, s) => sum + (Number(s.doctor_expense) || 0), 0) || 0;
 
-    const appointmentCount = invoices?.filter(inv =>
-      inv.status === 'paid' &&
-      inv.doctor_id === doctor.id &&
-      inv.description?.toLowerCase().includes('consultation') &&
-      !inv.description?.toLowerCase().includes('emergency')
-    ).length || 0;
+    const appointmentCount = paidInvoices
+      .filter(inv => inv.doctor_id === doctor.id && inv.invoice_number?.startsWith('INV-') && !isEmergencyInv(inv))
+      .length;
 
     const otCount = otSchedules?.filter(s => s.doctor_id === doctor.id).length || 0;
 
