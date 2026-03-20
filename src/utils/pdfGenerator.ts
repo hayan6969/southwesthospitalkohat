@@ -555,7 +555,9 @@ export const generateXrayInvoicePDF = async (data: {
   issueDate: string;
   xrayDate: string;
   notes?: string;
+  createdBy?: string;
 }) => {
+  const createdByName = await fetchCreatorName(data.createdBy);
   const doc = new jsPDF();
   const pageWidth = doc.internal.pageSize.width;
 
