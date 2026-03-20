@@ -922,6 +922,7 @@ export default function FinanceDaily() {
           refunds={detailedData.refunds || []}
           miscellaneousIncome={detailedData.miscellaneousIncome || []}
           staffProfiles={staffProfiles || []}
+          staffShiftClosings={detailedData.staffShiftClosings || []}
           reportDate={format(selectedDate, 'EEEE, MMMM d, yyyy')}
         />
       )}
