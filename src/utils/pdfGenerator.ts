@@ -1769,10 +1769,10 @@ export const generateDailyClosingPDF = async (data: {
     doc.setFontSize(7);
     doc.setTextColor(255, 255, 255);
     doc.text('GRAND TOTAL:', detailStartX + 3, yPosition + 5.5);
-    const gtX = detailStartX + detailColWidths[0] + detailColWidths[1] + detailColWidths[2] + detailColWidths[3] + detailColWidths[4];
-    doc.text(formatPkrAmount(grandTotal), gtX + detailColWidths[5] - 2, yPosition + 5.5, { align: 'right' });
-    doc.text(formatPkrAmount(grandDocShare), gtX + detailColWidths[5] + detailColWidths[6] - 2, yPosition + 5.5, { align: 'right' });
-    doc.text(formatPkrAmount(grandHosShare), gtX + detailColWidths[5] + detailColWidths[6] + detailColWidths[7] - 2, yPosition + 5.5, { align: 'right' });
+    const gtX = detailStartX + detailColWidths[0] + detailColWidths[1] + detailColWidths[2] + detailColWidths[3] + detailColWidths[4] + detailColWidths[5];
+    doc.text(formatPkrAmount(grandTotal), gtX + detailColWidths[6] - 2, yPosition + 5.5, { align: 'right' });
+    doc.text(formatPkrAmount(grandDocShare), gtX + detailColWidths[6] + detailColWidths[7] - 2, yPosition + 5.5, { align: 'right' });
+    doc.text(formatPkrAmount(grandHosShare), gtX + detailColWidths[6] + detailColWidths[7] + detailColWidths[8] - 2, yPosition + 5.5, { align: 'right' });
     yPosition += 15;
   }
 
