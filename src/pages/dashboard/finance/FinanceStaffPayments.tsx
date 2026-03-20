@@ -79,7 +79,7 @@ export default function FinanceStaffPayments() {
       toast.success("Shift closing updated");
       queryClient.invalidateQueries({ queryKey: ['all-staff-shift-closings'] });
       setDetailClosing(null);
-      setOvertimeAmount("");
+      
     },
     onError: (err: any) => toast.error(err.message),
   });
