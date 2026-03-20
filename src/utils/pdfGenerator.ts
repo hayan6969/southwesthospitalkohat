@@ -955,7 +955,7 @@ const queryTransactionDataForDate = async (closingDate: string, closingTime: str
     
     supabase
       .from('lab_reports')
-      .select('*, patients(id, profiles(first_name, last_name)), invoices:invoice_id(amount, created_by)')
+      .select('*, patients(id, profiles(first_name, last_name))')
       .not('price', 'is', null)
       .gte('created_at', cutoffTime)
       .lte('created_at', upperBound),
