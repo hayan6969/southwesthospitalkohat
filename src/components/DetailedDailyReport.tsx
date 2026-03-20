@@ -371,9 +371,7 @@ export function DetailedDailyReport({
                     <SelectItem value="all">All Categories</SelectItem>
                     <SelectItem value="OPD">OPD Consultations</SelectItem>
                     <SelectItem value="Emergency">Emergency</SelectItem>
-                    <SelectItem value="Lab">Lab Services</SelectItem>
                     <SelectItem value="X-Ray">X-Ray Services</SelectItem>
-                    <SelectItem value="OT">OT / Surgery</SelectItem>
                     <SelectItem value="Miscellaneous">Miscellaneous</SelectItem>
                   </SelectContent>
                 </Select>
