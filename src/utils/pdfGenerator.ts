@@ -146,7 +146,9 @@ export const generateLabInvoicePDF = async (data: {
     discountApplied: number;
     discountLabel: string | null;
   };
+  createdBy?: string;
 }) => {
+  const createdByName = await fetchCreatorName(data.createdBy);
   const doc = new jsPDF();
   const pageWidth = doc.internal.pageSize.width;
 
