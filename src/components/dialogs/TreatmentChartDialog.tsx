@@ -364,9 +364,10 @@ export function TreatmentChartDialog({
       {/* Add Treatment Entry Dialog */}
       <AddTreatmentEntryDialog
         open={showAddDialog}
-        onOpenChange={setShowAddDialog}
+        onOpenChange={(open) => { setShowAddDialog(open); if (!open) setEditingEntry(null); }}
         otScheduleId={otSchedule?.id || ""}
         onSave={fetchTreatmentEntries}
+        editEntry={editingEntry}
       />
     </>
   );

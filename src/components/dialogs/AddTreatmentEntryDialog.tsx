@@ -190,7 +190,7 @@ export function AddTreatmentEntryDialog({
               className="flex items-center gap-2"
             >
               <Save className="w-4 h-4" />
-              {saving ? 'Saving...' : 'Save Entry'}
+              {saving ? 'Saving...' : editEntry ? 'Update Entry' : 'Save Entry'}
             </Button>
           </div>
         </div>
