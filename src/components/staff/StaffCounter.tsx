@@ -343,7 +343,7 @@ export function StaffCounter() {
         .eq('patient_id', currentAppointment.patient_id)
         .eq('doctor_id', currentAppointment.doctor_id)
         .eq('status', 'paid')
-        .ilike('description', `%Consultation with ${doctorName}%`)
+        .ilike('description', `%Consultation with ${invoiceDoctorName}%`)
         .order('created_at', { ascending: false })
         .limit(1)
         .maybeSingle();
