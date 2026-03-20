@@ -67,7 +67,7 @@ export function OTScheduleDialog() {
   const { data: doctorNames } = useDoctorNames();
   const { data: searchResults } = useSearchPatientsWithNames(searchTerm);
   const { logAction } = useAuditLogger();
-  const { profile } = useAuth();
+  const { profile, user } = useAuth();
 
   useEffect(() => {
     const fetchData = async () => {
@@ -227,7 +227,7 @@ export function OTScheduleDialog() {
         status: "paid",
         description: `OT Procedure: ${selectedOperationDetails.map((op) => op.operation_name).join(", ")}${otDiscount.discountLabel ? ` (${otDiscount.discountLabel}, Original: Rs. ${otDiscount.originalAmount})` : ""}`,
         paid_at: new Date().toISOString(),
-        created_by: profile?.id || null,
+        created_by: user?.id || profile?.id || null,
       });
 
       if (invoiceError) throw invoiceError;

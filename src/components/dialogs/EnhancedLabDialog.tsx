@@ -117,6 +117,8 @@ export function EnhancedLabDialog() {
       return data;
     },
     enabled: !!patientIdForButton,
+    staleTime: 0,
+    refetchOnMount: 'always',
   });
 
   const getDiscountedTotal = () => {
@@ -274,6 +276,7 @@ export function EnhancedLabDialog() {
         selectedTests: selectedLabTests,
         notes: notes.trim() || null,
         totalAmount,
+        created_by: user?.id || null,
         invoiceNumber: `LAB-${Date.now()}`,
         invoiceDescription: `Lab Tests: ${selectedLabTests.map(test => test.name).join(', ')}`
       };
