@@ -962,7 +962,7 @@ const queryTransactionDataForDate = async (closingDate: string, closingTime: str
     
     supabase
       .from('xray_reports')
-      .select('*, patients(id, profiles(first_name, last_name)), xray_tests(name)')
+      .select('*, xray_patient:patient_id(first_name, last_name), xray_tests(name)')
       .not('price', 'is', null)
       .gte('created_at', cutoffTime)
       .lte('created_at', upperBound),
@@ -1511,7 +1511,7 @@ export const generateDailyClosingPDF = async (data: {
 
   // X-ray reports
   (transactionsData?.xrayReports || []).forEach((xray: any) => {
-    const p = (xray as any).patients?.profiles;
+    const p = (xray as any).xray_patient || (xray as any).patients?.profiles;
     const xrayTestName = xray.test_name || xray.xray_tests?.name || 'X-Ray';
     allTxns.push({
       patientName: p ? `${p.first_name || ''} ${p.last_name || ''}`.trim() : 'Unknown',
