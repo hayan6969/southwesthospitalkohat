@@ -495,54 +495,75 @@ export default function DashboardOTA() {
                                     </Badge>
                                   </TableCell>
                                    <TableCell>
-                                     <div className="flex gap-2 flex-wrap">
+                                     <div className="flex gap-1.5 flex-wrap">
+                                       {/* Step 1: Pre-Op Orders - All medical roles */}
                                        <Button 
                                          size="sm" 
                                          variant="outline"
                                          onClick={() => handlePreOpOrders(ot)}
-                                         className="flex items-center gap-1"
+                                         className="flex items-center gap-1 text-xs"
+                                         title="Step 1: Pre-Operation Orders"
                                        >
+                                         <span className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-blue-100 text-blue-700 text-[10px] font-bold shrink-0">1</span>
                                          <ClipboardList className="w-3 h-3" />
-                                         Pre-Op Orders
+                                         Pre-Op
                                        </Button>
-                                       <Button 
-                                         size="sm" 
-                                         variant="outline"
-                                         onClick={() => handleTreatmentChart(ot)}
-                                         className="flex items-center gap-1"
-                                       >
-                                         <FileText className="w-3 h-3" />
-                                         Treatment Chart
-                                       </Button>
-                                       <Button 
-                                         size="sm" 
-                                         variant="outline"
-                                         onClick={() => handleProgress(ot)}
-                                         className="flex items-center gap-1"
-                                       >
-                                         <TrendingUp className="w-3 h-3" />
-                                         POPPR
-                                       </Button>
-                                       <Button 
-                                         size="sm" 
-                                         variant="outline"
-                                         onClick={() => handleAssessment(ot)}
-                                         className="flex items-center gap-1"
-                                       >
-                                         <ClipboardCheck className="w-3 h-3" />
-                                         Assessment
-                                       </Button>
+                                       {/* Step 2: OT Notes - Doctor/OTA/Admin can edit, Nursing view only */}
                                        <Button 
                                          size="sm" 
                                          variant="outline"
                                          onClick={() => handleOTNotes(ot)}
-                                         className="flex items-center gap-1"
+                                         className="flex items-center gap-1 text-xs"
+                                         title="Step 2: OT Notes (Surgical Details)"
                                        >
+                                         <span className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-purple-100 text-purple-700 text-[10px] font-bold shrink-0">2</span>
                                          <Edit className="w-3 h-3" />
                                          {(profile?.role as string) === 'nursing' ? 'View Notes' : 'OT Notes'}
                                        </Button>
+                                       {/* Step 3: Treatment Chart - Doctor/OTA can add */}
+                                       {['doctor', 'ota', 'admin', 'staff', 'nursing'].includes(profile?.role as string) && (
+                                         <Button 
+                                           size="sm" 
+                                           variant="outline"
+                                           onClick={() => handleTreatmentChart(ot)}
+                                           className="flex items-center gap-1 text-xs"
+                                           title="Step 3: Treatment Chart (Dr/OTA can add)"
+                                         >
+                                           <span className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-green-100 text-green-700 text-[10px] font-bold shrink-0">3</span>
+                                           <FileText className="w-3 h-3" />
+                                           Treatment
+                                         </Button>
+                                       )}
+                                       {/* Step 4: Assessment - Nursing/Admin can add */}
+                                       {['nursing', 'admin', 'doctor', 'ota', 'staff'].includes(profile?.role as string) && (
+                                         <Button 
+                                           size="sm" 
+                                           variant="outline"
+                                           onClick={() => handleAssessment(ot)}
+                                           className="flex items-center gap-1 text-xs"
+                                           title="Step 4: Assessment (Nursing adds)"
+                                         >
+                                           <span className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-orange-100 text-orange-700 text-[10px] font-bold shrink-0">4</span>
+                                           <ClipboardCheck className="w-3 h-3" />
+                                           Assessment
+                                         </Button>
+                                       )}
+                                       {/* Step 5: POPPR - Post-Op Progress */}
+                                       {['staff', 'nursing', 'ota', 'doctor', 'admin'].includes(profile?.role as string) && (
+                                         <Button 
+                                           size="sm" 
+                                           variant="outline"
+                                           onClick={() => handleProgress(ot)}
+                                           className="flex items-center gap-1 text-xs"
+                                           title="Step 5: Post-Op Progress (POPPR)"
+                                         >
+                                           <span className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-red-100 text-red-700 text-[10px] font-bold shrink-0">5</span>
+                                           <TrendingUp className="w-3 h-3" />
+                                           POPPR
+                                         </Button>
+                                       )}
                                      </div>
-                                   </TableCell>
+                                    </TableCell>
                                 </TableRow>
                               ))}
                             </TableBody>
@@ -590,7 +611,7 @@ export default function DashboardOTA() {
                                           {format(new Date(ot.operation_date), 'MMM d, yyyy')}
                                         </div>
                                         <div className="text-sm text-gray-500">
-                                          {format(new Date(ot.operation_date), 'h:mm a')}
+                                          {format(new Date(ot.operation_date), 'EEEE')}
                                         </div>
                                       </div>
                                     </div>
@@ -620,54 +641,65 @@ export default function DashboardOTA() {
                                     </Badge>
                                   </TableCell>
                                    <TableCell>
-                                     <div className="flex gap-2 flex-wrap">
+                                     <div className="flex gap-1.5 flex-wrap">
                                        <Button 
                                          size="sm" 
                                          variant="outline"
                                          onClick={() => handlePreOpOrders(ot)}
-                                         className="flex items-center gap-1"
+                                         className="flex items-center gap-1 text-xs"
                                        >
+                                         <span className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-blue-100 text-blue-700 text-[10px] font-bold shrink-0">1</span>
                                          <ClipboardList className="w-3 h-3" />
-                                         Pre-Op Orders
-                                       </Button>
-                                       <Button 
-                                         size="sm" 
-                                         variant="outline"
-                                         onClick={() => handleTreatmentChart(ot)}
-                                         className="flex items-center gap-1"
-                                       >
-                                         <FileText className="w-3 h-3" />
-                                         Treatment Chart
-                                       </Button>
-                                       <Button 
-                                         size="sm" 
-                                         variant="outline"
-                                         onClick={() => handleProgress(ot)}
-                                         className="flex items-center gap-1"
-                                       >
-                                         <TrendingUp className="w-3 h-3" />
-                                         POPPR
-                                       </Button>
-                                       <Button 
-                                         size="sm" 
-                                         variant="outline"
-                                         onClick={() => handleAssessment(ot)}
-                                         className="flex items-center gap-1"
-                                       >
-                                         <ClipboardCheck className="w-3 h-3" />
-                                         Assessment
+                                         Pre-Op
                                        </Button>
                                        <Button 
                                          size="sm" 
                                          variant="outline"
                                          onClick={() => handleOTNotes(ot)}
-                                         className="flex items-center gap-1"
+                                         className="flex items-center gap-1 text-xs"
                                        >
+                                         <span className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-purple-100 text-purple-700 text-[10px] font-bold shrink-0">2</span>
                                          <Edit className="w-3 h-3" />
                                          {(profile?.role as string) === 'nursing' ? 'View Notes' : 'OT Notes'}
                                        </Button>
+                                       {['doctor', 'ota', 'admin', 'staff', 'nursing'].includes(profile?.role as string) && (
+                                         <Button 
+                                           size="sm" 
+                                           variant="outline"
+                                           onClick={() => handleTreatmentChart(ot)}
+                                           className="flex items-center gap-1 text-xs"
+                                         >
+                                           <span className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-green-100 text-green-700 text-[10px] font-bold shrink-0">3</span>
+                                           <FileText className="w-3 h-3" />
+                                           Treatment
+                                         </Button>
+                                       )}
+                                       {['nursing', 'admin', 'doctor', 'ota', 'staff'].includes(profile?.role as string) && (
+                                         <Button 
+                                           size="sm" 
+                                           variant="outline"
+                                           onClick={() => handleAssessment(ot)}
+                                           className="flex items-center gap-1 text-xs"
+                                         >
+                                           <span className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-orange-100 text-orange-700 text-[10px] font-bold shrink-0">4</span>
+                                           <ClipboardCheck className="w-3 h-3" />
+                                           Assessment
+                                         </Button>
+                                       )}
+                                       {['staff', 'nursing', 'ota', 'doctor', 'admin'].includes(profile?.role as string) && (
+                                         <Button 
+                                           size="sm" 
+                                           variant="outline"
+                                           onClick={() => handleProgress(ot)}
+                                           className="flex items-center gap-1 text-xs"
+                                         >
+                                           <span className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-red-100 text-red-700 text-[10px] font-bold shrink-0">5</span>
+                                           <TrendingUp className="w-3 h-3" />
+                                           POPPR
+                                         </Button>
+                                       )}
                                      </div>
-                                   </TableCell>
+                                    </TableCell>
                                 </TableRow>
                               ))}
                             </TableBody>
