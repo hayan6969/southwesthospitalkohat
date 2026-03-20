@@ -1782,19 +1782,17 @@ export const generateDailyClosingPDF = async (data: {
   // Aggregate by operator
   const staffCollectionMap = new Map<string, { name: string; count: number; total: number; opd: number; lab: number; xray: number; ot: number; emergency: number; misc: number }>();
   allTxns.forEach(txn => {
-    const op = txn.operator;
-    if (op && op !== '—') {
-      const existing = staffCollectionMap.get(op) || { name: op, count: 0, total: 0, opd: 0, lab: 0, xray: 0, ot: 0, emergency: 0, misc: 0 };
-      existing.count += 1;
-      existing.total += txn.amount;
-      if (txn.category === 'OPD') existing.opd += txn.amount;
-      else if (txn.category === 'Lab') existing.lab += txn.amount;
-      else if (txn.category === 'X-Ray') existing.xray += txn.amount;
-      else if (txn.category === 'OT') existing.ot += txn.amount;
-      else if (txn.category === 'Emergency') existing.emergency += txn.amount;
-      else if (txn.category === 'Miscellaneous') existing.misc += txn.amount;
-      staffCollectionMap.set(op, existing);
-    }
+    const op = txn.operator && txn.operator !== '—' ? txn.operator : 'Unattributed';
+    const existing = staffCollectionMap.get(op) || { name: op, count: 0, total: 0, opd: 0, lab: 0, xray: 0, ot: 0, emergency: 0, misc: 0 };
+    existing.count += 1;
+    existing.total += txn.amount;
+    if (txn.category === 'OPD') existing.opd += txn.amount;
+    else if (txn.category === 'Lab') existing.lab += txn.amount;
+    else if (txn.category === 'X-Ray') existing.xray += txn.amount;
+    else if (txn.category === 'OT') existing.ot += txn.amount;
+    else if (txn.category === 'Emergency') existing.emergency += txn.amount;
+    else if (txn.category === 'Miscellaneous') existing.misc += txn.amount;
+    staffCollectionMap.set(op, existing);
   });
 
   const staffEntries = Array.from(staffCollectionMap.values()).sort((a, b) => b.total - a.total);
