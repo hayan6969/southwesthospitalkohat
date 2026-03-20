@@ -1348,7 +1348,10 @@ export const generateDailyClosingPDF = async (data: {
     if (value && uuidRegex.test(value)) operatorIdSet.add(value);
   };
 
-  hospitalInvoicesAll.forEach((inv: any) => collectOperatorId(inv.created_by));
+  hospitalInvoicesAll.forEach((inv: any) => {
+    collectOperatorId(inv.created_by);
+    collectOperatorId(inv.doctor_id);
+  });
   (transactionsData?.miscellaneousIncome || []).forEach((misc: any) => collectOperatorId(misc.created_by));
 
   const operatorNamesById = new Map<string, string>();
@@ -1387,6 +1390,11 @@ export const generateDailyClosingPDF = async (data: {
     if (inv.description) {
       const drMatch = inv.description.match(/(?:Consultation with\s+)(Dr\.?\s*[^-–—]+)/i);
       if (drMatch) consultantName = drMatch[1].trim();
+    }
+    // Fallback: resolve from doctor_id if description didn't yield a name
+    if (consultantName === '—' && inv.doctor_id && operatorNamesById.has(inv.doctor_id)) {
+      const name = operatorNamesById.get(inv.doctor_id) || '';
+      if (name) consultantName = name.startsWith('Dr') ? name : `Dr. ${name}`;
     }
     allTxns.push({
       patientName: p ? `${p.first_name || ''} ${p.last_name || ''}`.trim() : 'Unknown',
