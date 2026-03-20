@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MySupplyRequests } from "@/components/inventory/MySupplyRequests";
-import { Calendar, User, Building2, Clock, FileText, Edit, Search, Filter, LogOut, ClipboardList, TrendingUp, ClipboardCheck, TestTube, ShoppingCart } from "lucide-react";
+import { Calendar, Building2, Clock, FileText, Edit, Search, Filter, ClipboardList, TrendingUp, ClipboardCheck, TestTube, ShoppingCart } from "lucide-react";
 import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -17,8 +17,8 @@ import { PostOperativeProgressDialog } from "@/components/dialogs/PostOperativeP
 import { AssessmentDialog } from "@/components/dialogs/AssessmentDialog";
 import { DatePicker } from "@/components/ui/date-picker";
 import { useAuth } from "@/hooks/useAuth";
-import { AdminDashboardNav } from "@/components/AdminDashboardNav";
 import { StaffLabReports } from "@/components/staff/StaffLabReports";
+import AppLayout from "@/layouts/AppLayout";
 
 interface OTScheduleWithDetails {
   id: string;
