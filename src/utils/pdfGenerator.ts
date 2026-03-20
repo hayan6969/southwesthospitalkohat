@@ -1706,7 +1706,7 @@ export const generateDailyClosingPDF = async (data: {
           ];
 
           rowData.forEach((cell, i) => {
-            if (i >= 5 && i <= 7) {
+            if (i >= 6 && i <= 8) {
               doc.text(cell, xPos + detailColWidths[i] - 2, yPosition + 5, { align: 'right' });
             } else {
               doc.text(cell, xPos, yPosition + 5);
