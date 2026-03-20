@@ -43,7 +43,7 @@ interface GroupedEmployee {
 function groupByEmployee(records: OvertimeRecord[]): GroupedEmployee[] {
   const map = new Map<string, GroupedEmployee>();
   records.forEach(r => {
-    const key = r.employee_id;
+    const key = r.employee_name.toLowerCase().trim();
     if (!map.has(key)) {
       map.set(key, {
         employee_id: r.employee_id,
@@ -58,7 +58,6 @@ function groupByEmployee(records: OvertimeRecord[]): GroupedEmployee[] {
     group.records.push(r);
     if (r.status === 'pending') group.status = 'pending';
   });
-  // Sort records within each group by date
   map.forEach(g => g.records.sort((a, b) => a.overtime_date.localeCompare(b.overtime_date)));
   return Array.from(map.values()).sort((a, b) => a.employee_name.localeCompare(b.employee_name));
 }
@@ -213,15 +212,17 @@ export function OvertimeManager() {
   const createMutation = useMutation({
     mutationFn: async () => {
       const hours = parseFloat(overtimeHours) || 0;
-      const empId = selectedEmployeeId || crypto.randomUUID();
+      const name = employeeName.trim();
+      if (!name) throw new Error("Employee name is required");
 
-      const { data: existing } = await supabase
+      const { data: existingRecords } = await supabase
         .from('overtime_records')
         .select('*')
-        .eq('employee_id', empId)
+        .ilike('employee_name', name)
         .eq('overtime_date', overtimeDate)
-        .eq('status', 'pending')
-        .maybeSingle();
+        .eq('status', 'pending');
+
+      const existing = existingRecords?.[0];
 
       if (existing) {
         const newHours = (Number(existing.overtime_hours) || 0) + hours;
@@ -232,11 +233,12 @@ export function OvertimeManager() {
           .eq('id', existing.id);
         if (error) throw error;
       } else {
+        const empId = selectedEmployeeId || crypto.randomUUID();
         const { error } = await supabase
           .from('overtime_records')
           .insert({
             employee_id: empId,
-            employee_name: employeeName,
+            employee_name: name,
             overtime_hours: hours,
             overtime_rate: 0,
             overtime_amount: 0,
@@ -425,20 +427,21 @@ export function OvertimeManager() {
                 </DialogHeader>
                 <div className="space-y-4">
                   <div>
-                    <Label>Search Employee</Label>
+                    <Label>Employee Name (type or search)</Label>
                     <Input
-                      value={searchQuery}
+                      value={employeeName}
                       onChange={(e) => {
+                        setEmployeeName(e.target.value);
                         setSearchQuery(e.target.value);
+                        setSelectedEmployeeId("");
                         const match = staff?.find(emp =>
                           `${emp.first_name} ${emp.last_name}`.toLowerCase() === e.target.value.toLowerCase()
                         );
                         if (match) {
                           setSelectedEmployeeId(match.id);
-                          setEmployeeName(`${match.first_name} ${match.last_name}`);
                         }
                       }}
-                      placeholder="Search staff..."
+                      placeholder="Type employee name..."
                     />
                     {searchQuery && staff && (
                       <div className="mt-1 border rounded-md bg-background max-h-32 overflow-y-auto shadow-lg">
@@ -452,7 +455,7 @@ export function OvertimeManager() {
                               onClick={() => {
                                 setSelectedEmployeeId(emp.id);
                                 setEmployeeName(`${emp.first_name} ${emp.last_name}`);
-                                setSearchQuery(`${emp.first_name} ${emp.last_name}`);
+                                setSearchQuery("");
                               }}
                             >
                               {emp.first_name} {emp.last_name} ({emp.role})
@@ -460,10 +463,6 @@ export function OvertimeManager() {
                           ))}
                       </div>
                     )}
-                  </div>
-                  <div>
-                    <Label>Employee Name</Label>
-                    <Input value={employeeName} onChange={(e) => setEmployeeName(e.target.value)} placeholder="Employee name" />
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
