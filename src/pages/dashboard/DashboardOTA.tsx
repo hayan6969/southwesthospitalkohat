@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MySupplyRequests } from "@/components/inventory/MySupplyRequests";
-import { Calendar, User, Building2, Clock, FileText, Edit, Search, Filter, ClipboardList, TrendingUp, ClipboardCheck, TestTube, ShoppingCart } from "lucide-react";
+import { Calendar, User, Building2, Clock, FileText, Edit, Search, Filter, ClipboardList, TrendingUp, ClipboardCheck, TestTube, ShoppingCart, Printer } from "lucide-react";
 import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -18,6 +18,7 @@ import { AssessmentDialog } from "@/components/dialogs/AssessmentDialog";
 import { DatePicker } from "@/components/ui/date-picker";
 import { useAuth } from "@/hooks/useAuth";
 import { StaffLabReports } from "@/components/staff/StaffLabReports";
+import { DischargeSlipDialog } from "@/components/dialogs/DischargeSlipDialog";
 import AppLayout from "@/layouts/AppLayout";
 
 interface OTScheduleWithDetails {
@@ -71,6 +72,7 @@ export default function DashboardOTA() {
   const [showProgressDialog, setShowProgressDialog] = useState(false);
   const [showAssessmentDialog, setShowAssessmentDialog] = useState(false);
   const [selectedOT, setSelectedOT] = useState<OTScheduleWithDetails | null>(null);
+  const [showDischargeSlipDialog, setShowDischargeSlipDialog] = useState(false);
   const [activeMainTab, setActiveMainTab] = useState("ot-operations");
 
   useEffect(() => {
@@ -251,6 +253,11 @@ export default function DashboardOTA() {
   const handleProgress = (ot: OTScheduleWithDetails) => {
     setSelectedOT(ot);
     setShowProgressDialog(true);
+  };
+
+  const handleDischargeSlip = (ot: OTScheduleWithDetails) => {
+    setSelectedOT(ot);
+    setShowDischargeSlipDialog(true);
   };
 
   const handleAssessment = (ot: OTScheduleWithDetails) => {
@@ -698,6 +705,18 @@ export default function DashboardOTA() {
                                            POPPR
                                          </Button>
                                        )}
+                                       {ot.status === 'completed' && (
+                                         <Button 
+                                           size="sm" 
+                                           variant="default"
+                                           onClick={() => handleDischargeSlip(ot)}
+                                           className="flex items-center gap-1 text-xs"
+                                           title="Print Discharge Slip"
+                                         >
+                                           <Printer className="w-3 h-3" />
+                                           Discharge Slip
+                                         </Button>
+                                       )}
                                      </div>
                                     </TableCell>
                                 </TableRow>
@@ -755,6 +774,14 @@ export default function DashboardOTA() {
           open={showAssessmentDialog}
           onOpenChange={setShowAssessmentDialog}
           otSchedule={selectedOT}
+        />
+
+        {/* Discharge Slip Dialog */}
+        <DischargeSlipDialog
+          open={showDischargeSlipDialog}
+          onOpenChange={setShowDischargeSlipDialog}
+          otSchedule={selectedOT}
+          onDischarge={fetchOTSchedules}
         />
               </TabsContent>
 
