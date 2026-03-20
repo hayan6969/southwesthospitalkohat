@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MySupplyRequests } from "@/components/inventory/MySupplyRequests";
-import { Calendar, User, Building2, Clock, FileText, Edit, Search, Filter, LogOut, ClipboardList, TrendingUp, ClipboardCheck, TestTube, ShoppingCart } from "lucide-react";
+import { Calendar, User, Building2, Clock, FileText, Edit, Search, Filter, ClipboardList, TrendingUp, ClipboardCheck, TestTube, ShoppingCart } from "lucide-react";
 import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -17,8 +17,8 @@ import { PostOperativeProgressDialog } from "@/components/dialogs/PostOperativeP
 import { AssessmentDialog } from "@/components/dialogs/AssessmentDialog";
 import { DatePicker } from "@/components/ui/date-picker";
 import { useAuth } from "@/hooks/useAuth";
-import { AdminDashboardNav } from "@/components/AdminDashboardNav";
 import { StaffLabReports } from "@/components/staff/StaffLabReports";
+import AppLayout from "@/layouts/AppLayout";
 
 interface OTScheduleWithDetails {
   id: string;
@@ -72,14 +72,6 @@ export default function DashboardOTA() {
   const [showAssessmentDialog, setShowAssessmentDialog] = useState(false);
   const [selectedOT, setSelectedOT] = useState<OTScheduleWithDetails | null>(null);
   const [activeMainTab, setActiveMainTab] = useState("ot-operations");
-
-  if (!profile) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
-      </div>
-    );
-  }
 
   useEffect(() => {
     fetchOTRooms();
@@ -259,37 +251,7 @@ export default function DashboardOTA() {
   const pastOTs = otSchedules.filter(ot => ot.status === 'completed' || ot.status === 'cancelled');
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white shadow-sm border-b border-gray-200 px-6 py-4">
-        <div className="flex justify-between items-center">
-          <div className="flex items-center gap-6">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-                <span className="inline-block w-2 h-8 bg-blue-500 rounded-full" />
-                HIMS - OT Operations
-              </h1>
-            </div>
-            {profile?.role === 'admin' && <AdminDashboardNav />}
-          </div>
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2 text-sm text-gray-600">
-              <User className="w-4 h-4" />
-              <span>{profile.first_name} {profile.last_name}</span>
-              <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs">
-                {profile.role}
-              </span>
-            </div>
-            <Button variant="outline" size="sm" onClick={signOut} className="flex items-center gap-2">
-              <LogOut className="w-4 h-4" />
-              Sign Out
-            </Button>
-          </div>
-        </div>
-      </header>
-
-       {/* Main Content */}
-       <main className="p-6">
+    <AppLayout>
          <div className="space-y-6">
            <div>
              <h2 className="text-2xl font-bold tracking-tight">OT Operations & Lab Management</h2>
@@ -762,7 +724,6 @@ export default function DashboardOTA() {
               </TabsContent>
             </Tabs>
           </div>
-        </main>
-      </div>
+    </AppLayout>
     );
   }
