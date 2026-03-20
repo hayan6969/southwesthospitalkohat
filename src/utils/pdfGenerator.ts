@@ -1927,6 +1927,74 @@ export const generateDailyClosingPDF = async (data: {
   }
 
   // ===========================================
+  // DISCOUNTS SECTION
+  // ===========================================
+  const discountItems: { patient: string; service: string; original: number; discounted: number; discount: number }[] = [];
+
+  (transactionsData?.labReports || []).forEach((lab: any) => {
+    const originalPrice = Number(lab.price) || 0;
+    const finalAmount = Number(lab.amount) || originalPrice;
+    if (originalPrice > 0 && finalAmount < originalPrice) {
+      const p = lab.patients?.profiles;
+      discountItems.push({
+        patient: p ? `${p.first_name || ''} ${p.last_name || ''}`.trim() : 'Unknown',
+        service: `Lab - ${lab.test_name || 'Test'}`,
+        original: originalPrice,
+        discounted: finalAmount,
+        discount: originalPrice - finalAmount,
+      });
+    }
+  });
+
+  (transactionsData?.xrayReports || []).forEach((xray: any) => {
+    const originalPrice = Number(xray.price) || 0;
+    const finalAmount = Number(xray.amount) || originalPrice;
+    if (originalPrice > 0 && finalAmount < originalPrice) {
+      const p = (xray as any).patients?.profiles;
+      discountItems.push({
+        patient: p ? `${p.first_name || ''} ${p.last_name || ''}`.trim() : 'Unknown',
+        service: `X-Ray - ${xray.test_name || 'X-Ray'}`,
+        original: originalPrice,
+        discounted: finalAmount,
+        discount: originalPrice - finalAmount,
+      });
+    }
+  });
+
+  hospitalInvoicesAll
+    .filter((inv: any) => inv.invoice_number?.startsWith?.('INV-') && !isEmergencyInv(inv))
+    .forEach((inv: any) => {
+      const originalAmt = Number(inv.original_amount) || 0;
+      const finalAmt = Number(inv.amount) || 0;
+      if (originalAmt > 0 && finalAmt < originalAmt) {
+        discountItems.push({
+          patient: inv.description || 'OPD',
+          service: 'OPD Consultation',
+          original: originalAmt,
+          discounted: finalAmt,
+          discount: originalAmt - finalAmt,
+        });
+      }
+    });
+
+  if (discountItems.length > 0) {
+    drawSectionHeader(`DISCOUNTS APPLIED (${discountItems.length})`);
+    const discountHeaders = ['Sr#', 'Patient', 'Service', 'Original', 'Discount', 'Final Amount'];
+    const discountColWidths = [8, 40, 40, 28, 28, 28];
+    const discountRows: string[][] = discountItems.map((d, i) => [
+      String(i + 1),
+      d.patient,
+      d.service,
+      formatPkrAmount(d.original),
+      `-${formatPkrAmount(d.discount)}`,
+      formatPkrAmount(d.discounted),
+    ]);
+    const totalDiscount = discountItems.reduce((s, d) => s + d.discount, 0);
+    discountRows.push(['', '', '', '', 'Total Discount:', formatPkrAmount(totalDiscount)]);
+    drawTable(discountHeaders, discountRows, discountColWidths);
+  }
+
+  // ===========================================
   // NET SUMMARY SECTION
   // ===========================================
   drawSectionHeader('NET SUMMARY');
