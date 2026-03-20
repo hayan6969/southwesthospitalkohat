@@ -501,15 +501,7 @@ export const generateInvoicePDF = async (invoice: any) => {
   doc.text(formatPkrAmount(invoice.amount), totalsX + 5, yPosition + 12); // Amount below label
 
   // Created By attribution
-  if (createdByName) {
-    yPosition += 10;
-    doc.setFontSize(10);
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(60, 60, 60);
-    doc.text('Created By:', 15, yPosition);
-    doc.setFont('helvetica', 'normal');
-    doc.text(createdByName, 55, yPosition);
-  }
+  yPosition = addCreatedByLine(doc, yPosition, createdByName);
 
   // Footer
   yPosition += 15;
