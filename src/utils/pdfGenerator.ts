@@ -1586,8 +1586,8 @@ export const generateDailyClosingPDF = async (data: {
   const shiftOrder = ['Night', 'Morning', 'Evening'];
 
   // Table column widths for detailed report
-  const detailColWidths = [8, 30, 14, 35, 25, 18, 18, 18, 18];
-  const detailHeaders = ['Sr#', 'Patient', 'Time', 'Procedure', 'Consultant', 'Amount', 'Doc.Share', 'Hos.Share', 'Operator'];
+  const detailColWidths = [8, 14, 28, 14, 32, 22, 18, 16, 16, 16];
+  const detailHeaders = ['Sr#', 'Date', 'Patient', 'Time', 'Procedure', 'Consultant', 'Amount', 'Doc.Share', 'Hos.Share', 'Operator'];
   const totalTableWidth = detailColWidths.reduce((a, b) => a + b, 0);
   const detailStartX = (pageWidth - totalTableWidth) / 2;
 
