@@ -77,7 +77,10 @@ export default function FinanceAnalytics() {
       <div className="flex flex-col gap-4">
         <div className="flex justify-between items-center flex-wrap gap-3">
           <h2 className="text-2xl font-bold">Financial Analytics - {getTitle()}</h2>
-          <Button onClick={() => refetch()} variant="outline" size="sm">Refresh</Button>
+          <div className="flex items-center gap-2">
+            <AnalyticsReportDialog />
+            <Button onClick={() => refetch()} variant="outline" size="sm">Refresh</Button>
+          </div>
         </div>
 
         {/* Filter Mode Tabs */}
