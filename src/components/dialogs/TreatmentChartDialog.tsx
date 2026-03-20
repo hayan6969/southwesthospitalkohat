@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
-import { FileText, User, Calendar, Plus, Printer } from "lucide-react";
+import { FileText, User, Calendar, Plus, Printer, Pencil, Trash2 } from "lucide-react";
 import jsPDF from "jspdf";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -54,6 +54,25 @@ export function TreatmentChartDialog({
   const [treatmentEntries, setTreatmentEntries] = useState<TreatmentEntry[]>([]);
   const [loading, setLoading] = useState(false);
   const [showAddDialog, setShowAddDialog] = useState(false);
+  const [editingEntry, setEditingEntry] = useState<TreatmentEntry | null>(null);
+
+  const canEdit = ['staff', 'nursing', 'ota', 'doctor', 'admin'].includes(profile?.role as string);
+
+  const handleDelete = async (entryId: string) => {
+    if (!confirm('Are you sure you want to delete this entry?')) return;
+    try {
+      const { error } = await supabase
+        .from('treatment_chart_entries')
+        .delete()
+        .eq('id', entryId);
+      if (error) throw error;
+      toast({ title: "Deleted", description: "Treatment entry deleted successfully" });
+      fetchTreatmentEntries();
+    } catch (error) {
+      console.error('Error deleting entry:', error);
+      toast({ title: "Error", description: "Failed to delete entry", variant: "destructive" });
+    }
+  };
 
   useEffect(() => {
     if (open && otSchedule) {
@@ -205,9 +224,9 @@ export function TreatmentChartDialog({
                   <Printer className="w-4 h-4" />
                   Print
                 </Button>
-                {(profile?.role === 'staff' || (profile?.role as string) === 'nursing') && (
+                {canEdit && (
                   <Button 
-                    onClick={() => setShowAddDialog(true)}
+                    onClick={() => { setEditingEntry(null); setShowAddDialog(true); }}
                     className="flex items-center gap-2"
                     size="sm"
                   >
@@ -266,7 +285,8 @@ export function TreatmentChartDialog({
                         <TableHead className="w-40">Date & Time</TableHead>
                         <TableHead className="w-60">Medicine</TableHead>
                         <TableHead className="w-60">Investigation</TableHead>
-                        <TableHead className="w-40">User</TableHead>
+                         <TableHead className="w-40">User</TableHead>
+                         {canEdit && <TableHead className="w-24">Actions</TableHead>}
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -292,6 +312,28 @@ export function TreatmentChartDialog({
                               {entry.user_email}
                             </div>
                           </TableCell>
+                          {canEdit && (
+                            <TableCell className="w-24 align-top">
+                              <div className="flex items-center gap-1">
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-7 w-7"
+                                  onClick={() => { setEditingEntry(entry); setShowAddDialog(true); }}
+                                >
+                                  <Pencil className="w-3.5 h-3.5 text-blue-600" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-7 w-7"
+                                  onClick={() => handleDelete(entry.id)}
+                                >
+                                  <Trash2 className="w-3.5 h-3.5 text-red-600" />
+                                </Button>
+                              </div>
+                            </TableCell>
+                          )}
                         </TableRow>
                       ))}
                     </TableBody>
@@ -322,9 +364,10 @@ export function TreatmentChartDialog({
       {/* Add Treatment Entry Dialog */}
       <AddTreatmentEntryDialog
         open={showAddDialog}
-        onOpenChange={setShowAddDialog}
+        onOpenChange={(open) => { setShowAddDialog(open); if (!open) setEditingEntry(null); }}
         otScheduleId={otSchedule?.id || ""}
         onSave={fetchTreatmentEntries}
+        editEntry={editingEntry}
       />
     </>
   );

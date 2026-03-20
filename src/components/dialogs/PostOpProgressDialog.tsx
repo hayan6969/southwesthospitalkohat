@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { format } from "date-fns";
-import { FileText, Plus, Printer } from "lucide-react";
+import { FileText, Plus, Printer, Pencil, Trash2 } from "lucide-react";
 import jsPDF from "jspdf";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -55,6 +55,25 @@ export function PostOpProgressDialog({
   const [progressEntries, setProgressEntries] = useState<PostOpProgressEntry[]>([]);
   const [loading, setLoading] = useState(false);
   const [showAddDialog, setShowAddDialog] = useState(false);
+  const [editingEntry, setEditingEntry] = useState<PostOpProgressEntry | null>(null);
+
+  const canEdit = ['staff', 'nursing', 'ota', 'doctor', 'admin'].includes(profile?.role as string);
+
+  const handleDelete = async (entryId: string) => {
+    if (!confirm('Are you sure you want to delete this entry?')) return;
+    try {
+      const { error } = await supabase
+        .from('postop_progress_entries')
+        .delete()
+        .eq('id', entryId);
+      if (error) throw error;
+      toast({ title: "Deleted", description: "Progress entry deleted successfully" });
+      fetchProgressEntries();
+    } catch (error) {
+      console.error('Error deleting entry:', error);
+      toast({ title: "Error", description: "Failed to delete entry", variant: "destructive" });
+    }
+  };
 
   useEffect(() => {
     if (open && otSchedule) {
@@ -204,9 +223,9 @@ export function PostOpProgressDialog({
                   <Printer className="w-4 h-4" />
                   Print
                 </Button>
-                {((profile?.role as string) === 'nursing' || profile?.role === 'staff') && (
+                {canEdit && (
                   <Button 
-                    onClick={() => setShowAddDialog(true)}
+                    onClick={() => { setEditingEntry(null); setShowAddDialog(true); }}
                     className="flex items-center gap-2"
                     size="sm"
                   >
@@ -269,8 +288,9 @@ export function PostOpProgressDialog({
                         <TableHead className="w-24">Input</TableHead>
                         <TableHead className="w-24">Output</TableHead>
                         <TableHead className="w-32">Remarks</TableHead>
-                        <TableHead className="w-32">User</TableHead>
-                      </TableRow>
+                         <TableHead className="w-32">User</TableHead>
+                         {canEdit && <TableHead className="w-20">Actions</TableHead>}
+                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {progressEntries.map((entry) => (
@@ -315,6 +335,28 @@ export function PostOpProgressDialog({
                               {entry.user_email}
                             </div>
                           </TableCell>
+                          {canEdit && (
+                            <TableCell className="w-20 align-top">
+                              <div className="flex items-center gap-1">
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-7 w-7"
+                                  onClick={() => { setEditingEntry(entry); setShowAddDialog(true); }}
+                                >
+                                  <Pencil className="w-3.5 h-3.5 text-blue-600" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-7 w-7"
+                                  onClick={() => handleDelete(entry.id)}
+                                >
+                                  <Trash2 className="w-3.5 h-3.5 text-red-600" />
+                                </Button>
+                              </div>
+                            </TableCell>
+                          )}
                         </TableRow>
                       ))}
                     </TableBody>
@@ -345,9 +387,10 @@ export function PostOpProgressDialog({
       {/* Add Progress Entry Dialog */}
       <AddPostOpProgressDialog
         open={showAddDialog}
-        onOpenChange={setShowAddDialog}
+        onOpenChange={(open) => { setShowAddDialog(open); if (!open) setEditingEntry(null); }}
         otScheduleId={otSchedule?.id || ""}
         onSave={fetchProgressEntries}
+        editEntry={editingEntry}
       />
     </>
   );

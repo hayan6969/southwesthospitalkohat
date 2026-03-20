@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,13 +16,15 @@ interface AddPostOpProgressDialogProps {
   onOpenChange: (open: boolean) => void;
   otScheduleId: string;
   onSave: () => void;
+  editEntry?: { id: string; entry_date: string; blood_pressure?: string; pulses?: string; temperature?: string; input_data?: string; output_data?: string; remarks?: string } | null;
 }
 
 export function AddPostOpProgressDialog({ 
   open, 
   onOpenChange, 
   otScheduleId,
-  onSave 
+  onSave,
+  editEntry 
 }: AddPostOpProgressDialogProps) {
   const { toast } = useToast();
   const { profile } = useAuth();
@@ -38,6 +40,32 @@ export function AddPostOpProgressDialog({
     remarks: ""
   });
 
+  useEffect(() => {
+    if (editEntry) {
+      setFormData({
+        entryDate: new Date(editEntry.entry_date),
+        entryTime: getCurrentPakistanTimeString(),
+        bloodPressure: editEntry.blood_pressure || "",
+        pulses: editEntry.pulses || "",
+        temperature: editEntry.temperature || "",
+        input: editEntry.input_data || "",
+        output: editEntry.output_data || "",
+        remarks: editEntry.remarks || ""
+      });
+    } else {
+      setFormData({
+        entryDate: new Date(),
+        entryTime: getCurrentPakistanTimeString(),
+        bloodPressure: "",
+        pulses: "",
+        temperature: "",
+        input: "",
+        output: "",
+        remarks: ""
+      });
+    }
+  }, [editEntry, open]);
+
   const handleSave = async () => {
     if (!profile?.email) {
       toast({
@@ -50,26 +78,38 @@ export function AddPostOpProgressDialog({
 
     setSaving(true);
     try {
-      const { error } = await supabase
-        .from('postop_progress_entries')
-        .insert({
-          ot_schedule_id: otScheduleId,
-          entry_date: formData.entryDate.toISOString().split('T')[0],
-          blood_pressure: formData.bloodPressure,
-          pulses: formData.pulses,
-          temperature: formData.temperature,
-          input_data: formData.input,
-          output_data: formData.output,
-          remarks: formData.remarks,
-          user_email: profile.email
-        });
-
-      if (error) throw error;
-
-      toast({
-        title: "Success",
-        description: "Progress entry added successfully",
-      });
+      if (editEntry) {
+        const { error } = await supabase
+          .from('postop_progress_entries')
+          .update({
+            entry_date: formData.entryDate.toISOString().split('T')[0],
+            blood_pressure: formData.bloodPressure,
+            pulses: formData.pulses,
+            temperature: formData.temperature,
+            input_data: formData.input,
+            output_data: formData.output,
+            remarks: formData.remarks,
+          })
+          .eq('id', editEntry.id);
+        if (error) throw error;
+        toast({ title: "Success", description: "Progress entry updated successfully" });
+      } else {
+        const { error } = await supabase
+          .from('postop_progress_entries')
+          .insert({
+            ot_schedule_id: otScheduleId,
+            entry_date: formData.entryDate.toISOString().split('T')[0],
+            blood_pressure: formData.bloodPressure,
+            pulses: formData.pulses,
+            temperature: formData.temperature,
+            input_data: formData.input,
+            output_data: formData.output,
+            remarks: formData.remarks,
+            user_email: profile.email
+          });
+        if (error) throw error;
+        toast({ title: "Success", description: "Progress entry added successfully" });
+      }
 
       // Reset form
       setFormData({
@@ -103,7 +143,7 @@ export function AddPostOpProgressDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Plus className="w-5 h-5 text-blue-600" />
-            Add Progress Entry
+            {editEntry ? 'Edit Progress Entry' : 'Add Progress Entry'}
           </DialogTitle>
         </DialogHeader>
         
@@ -219,7 +259,7 @@ export function AddPostOpProgressDialog({
               className="flex items-center gap-2"
             >
               <Save className="w-4 h-4" />
-              {saving ? 'Saving...' : 'Save Entry'}
+              {saving ? 'Saving...' : editEntry ? 'Update Entry' : 'Save Entry'}
             </Button>
           </div>
         </div>

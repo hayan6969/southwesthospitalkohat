@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,13 +16,15 @@ interface AddTreatmentEntryDialogProps {
   onOpenChange: (open: boolean) => void;
   otScheduleId: string;
   onSave: () => void;
+  editEntry?: { id: string; entry_date: string; medicine?: string; investigation?: string } | null;
 }
 
 export function AddTreatmentEntryDialog({ 
   open, 
   onOpenChange, 
   otScheduleId,
-  onSave 
+  onSave,
+  editEntry 
 }: AddTreatmentEntryDialogProps) {
   const { toast } = useToast();
   const { profile } = useAuth();
@@ -33,6 +35,24 @@ export function AddTreatmentEntryDialog({
     medicine: "",
     investigation: ""
   });
+
+  useEffect(() => {
+    if (editEntry) {
+      setFormData({
+        entryDate: new Date(editEntry.entry_date),
+        entryTime: getCurrentPakistanTimeString(),
+        medicine: editEntry.medicine || "",
+        investigation: editEntry.investigation || ""
+      });
+    } else {
+      setFormData({
+        entryDate: new Date(),
+        entryTime: getCurrentPakistanTimeString(),
+        medicine: "",
+        investigation: ""
+      });
+    }
+  }, [editEntry, open]);
 
   const handleSave = async () => {
     if (!profile?.email) {
@@ -46,22 +66,30 @@ export function AddTreatmentEntryDialog({
 
     setSaving(true);
     try {
-      const { error } = await supabase
-        .from('treatment_chart_entries')
-        .insert({
-          ot_schedule_id: otScheduleId,
-          entry_date: formData.entryDate.toISOString().split('T')[0],
-          medicine: formData.medicine,
-          investigation: formData.investigation,
-          user_email: profile.email
-        });
-
-      if (error) throw error;
-
-      toast({
-        title: "Success",
-        description: "Treatment entry added successfully",
-      });
+      if (editEntry) {
+        const { error } = await supabase
+          .from('treatment_chart_entries')
+          .update({
+            entry_date: formData.entryDate.toISOString().split('T')[0],
+            medicine: formData.medicine,
+            investigation: formData.investigation,
+          })
+          .eq('id', editEntry.id);
+        if (error) throw error;
+        toast({ title: "Success", description: "Treatment entry updated successfully" });
+      } else {
+        const { error } = await supabase
+          .from('treatment_chart_entries')
+          .insert({
+            ot_schedule_id: otScheduleId,
+            entry_date: formData.entryDate.toISOString().split('T')[0],
+            medicine: formData.medicine,
+            investigation: formData.investigation,
+            user_email: profile.email
+          });
+        if (error) throw error;
+        toast({ title: "Success", description: "Treatment entry added successfully" });
+      }
 
       // Reset form
       setFormData({
@@ -91,7 +119,7 @@ export function AddTreatmentEntryDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Plus className="w-5 h-5 text-green-600" />
-            Add Treatment Entry
+            {editEntry ? 'Edit Treatment Entry' : 'Add Treatment Entry'}
           </DialogTitle>
         </DialogHeader>
         
@@ -162,7 +190,7 @@ export function AddTreatmentEntryDialog({
               className="flex items-center gap-2"
             >
               <Save className="w-4 h-4" />
-              {saving ? 'Saving...' : 'Save Entry'}
+              {saving ? 'Saving...' : editEntry ? 'Update Entry' : 'Save Entry'}
             </Button>
           </div>
         </div>
