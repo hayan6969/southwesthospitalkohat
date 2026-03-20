@@ -97,7 +97,36 @@ const addHospitalHeader = async (doc: jsPDF, title: string) => {
   return yPosition + 15;
 };
 
-// Lab invoice generation
+// Helper to fetch creator name from profile
+const fetchCreatorName = async (createdBy?: string): Promise<string> => {
+  if (!createdBy) return '';
+  try {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('first_name, last_name')
+      .eq('id', createdBy)
+      .single();
+    if (profile) return `${profile.first_name} ${profile.last_name}`.trim();
+  } catch (e) {
+    console.error('Error fetching creator name:', e);
+  }
+  return '';
+};
+
+// Helper to add "Created By" line to any PDF
+const addCreatedByLine = (doc: jsPDF, yPosition: number, createdByName: string): number => {
+  if (createdByName) {
+    yPosition += 10;
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(60, 60, 60);
+    doc.text('Created By:', 15, yPosition);
+    doc.setFont('helvetica', 'normal');
+    doc.text(createdByName, 55, yPosition);
+  }
+  return yPosition;
+};
+
 export const generateLabInvoicePDF = async (data: {
   invoiceNumber: string;
   patientName: string;
