@@ -19,7 +19,7 @@ export default function FinanceStaffPayments() {
   const queryClient = useQueryClient();
   const [statusFilter, setStatusFilter] = useState("pending");
   const [detailClosing, setDetailClosing] = useState<any>(null);
-  const [overtimeAmount, setOvertimeAmount] = useState("");
+  
 
   const { data: closings, isLoading } = useQuery({
     queryKey: ['all-staff-shift-closings', statusFilter],
