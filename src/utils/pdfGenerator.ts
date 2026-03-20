@@ -2913,12 +2913,13 @@ export const generateDailyClosingSummaryPDF = async (data: {
   if (expenses.length > 0) {
     drawSectionHeader(`EXPENSES (${expenses.length})`);
     const expRows: string[][] = expenses.map((e: any) => [
+      e.expense_date ? formatInPakistanTime(e.expense_date, 'dd MMM') : '—',
       e.category || '',
       e.description || '',
       formatPkrAmount(e.amount)
     ]);
-    expRows.push(['', 'Total Expenses', formatPkrAmount(totalExp)]);
-    drawTable(['Category', 'Description', 'Amount'], expRows, [40, 80, 40]);
+    expRows.push(['', '', 'Total Expenses', formatPkrAmount(totalExp)]);
+    drawTable(['Date', 'Category', 'Description', 'Amount'], expRows, [20, 30, 70, 40]);
   }
 
   // ========== REFUNDS ==========
