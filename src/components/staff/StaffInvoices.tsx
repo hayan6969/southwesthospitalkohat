@@ -583,7 +583,8 @@ export function StaffInvoices() {
           totalAmount: invoice.price || 0,
           issueDate: format(new Date(invoice.created_at), 'MMM dd, yyyy'),
           xrayDate: format(new Date(invoice.xray_date || invoice.created_at), 'MMM dd, yyyy'),
-          notes: invoice.notes
+          notes: invoice.notes,
+          createdBy: invoice.created_by
         });
       } else if (invoice.type === 'ot') {
         // For OT invoices, use the exact same PDF generator as when scheduling OT
@@ -675,7 +676,8 @@ export function StaffInvoices() {
           room: invoice.room_name || 'Unknown Room',
           date: format(new Date(invoice.operation_date || invoice.created_at), 'MMM dd, yyyy'),
           totalAmount: invoice.total_cost || 0,
-          items: items
+          items: items,
+          createdBy: invoice.created_by
         };
 
         await generateOTPDF(otInvoiceData);

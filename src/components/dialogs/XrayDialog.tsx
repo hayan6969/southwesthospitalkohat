@@ -308,7 +308,8 @@ export function XrayDialog({ open, onOpenChange, onSuccess }: XrayDialogProps) {
           totalAmount: xrayDiscount.discountedAmount,
           issueDate: new Date().toLocaleDateString(),
           xrayDate: xrayDate ? format(xrayDate, "MMM dd, yyyy") : new Date().toLocaleDateString(),
-          notes: notes.trim()
+          notes: notes.trim(),
+          createdBy: user?.id
         });
       }
 
