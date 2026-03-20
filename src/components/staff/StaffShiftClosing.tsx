@@ -291,8 +291,8 @@ export function StaffShiftClosing() {
                       {isOvertimeMode ? 'Overtime already submitted for today' : 'Shift already closed for today'}
                     </span>
                   </div>
-                  {/* Show overtime option only if regular shift is closed and overtime not yet submitted */}
-                  {!isOvertimeMode && todayRegularClosed && !todayOvertimeClosed && (
+                  {/* Show overtime option when regular shift is closed */}
+                  {!isOvertimeMode && todayRegularClosed && (
                     <Button
                       onClick={() => {
                         setIsOvertimeMode(true);
