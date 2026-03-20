@@ -353,9 +353,16 @@ export function StaffShiftClosing() {
                         {format(new Date(closing.closing_date), 'MMM d, yyyy')}
                       </TableCell>
                       <TableCell>
+                      <div className="flex items-center gap-1">
                         <Badge variant="outline" className="capitalize">
                           {closing.shift}
                         </Badge>
+                        {(closing as any).is_overtime && (
+                          <Badge variant="secondary" className="text-amber-700 bg-amber-100 text-[10px]">
+                            OT
+                          </Badge>
+                        )}
+                      </div>
                       </TableCell>
                       <TableCell className="text-right font-semibold">
                         {formatPkrAmount(Number(closing.total_revenue) || 0)}
