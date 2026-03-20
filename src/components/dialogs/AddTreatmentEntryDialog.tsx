@@ -16,6 +16,7 @@ interface AddTreatmentEntryDialogProps {
   onOpenChange: (open: boolean) => void;
   otScheduleId: string;
   onSave: () => void;
+  editEntry?: { id: string; entry_date: string; medicine?: string; investigation?: string } | null;
 }
 
 export function AddTreatmentEntryDialog({ 
