@@ -775,6 +775,14 @@ export default function DashboardOTA() {
           onOpenChange={setShowAssessmentDialog}
           otSchedule={selectedOT}
         />
+
+        {/* Discharge Slip Dialog */}
+        <DischargeSlipDialog
+          open={showDischargeSlipDialog}
+          onOpenChange={setShowDischargeSlipDialog}
+          otSchedule={selectedOT}
+          onDischarge={fetchOTSchedules}
+        />
               </TabsContent>
 
                <TabsContent value="lab-reports" className="mt-6">
