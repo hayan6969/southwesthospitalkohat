@@ -2075,18 +2075,20 @@ export const generateDailyClosingPDF = async (data: {
   // NET SUMMARY SECTION
   // ===========================================
   drawSectionHeader('NET SUMMARY');
-  const hospitalNetFromDetailed = grandHosShare - detailedTotalExpenses - detailedTotalRefunds;
+  const pharmacyProfitForNet = data.pharmacyProfit || 0;
+  const hospitalNetFromDetailed = grandHosShare + pharmacyProfitForNet - detailedTotalExpenses - detailedTotalRefunds;
 
   drawTable(
-    ['Hos. Share', 'Doc. Share', 'Expenses', 'Refunds', 'Hospital Net Profit'],
+    ['Hos. Share', 'Pharm. Profit', 'Doc. Share', 'Expenses', 'Refunds', 'Hospital Net Profit'],
     [[
       formatPkrAmount(grandHosShare),
+      formatPkrAmount(pharmacyProfitForNet),
       formatPkrAmount(grandDocShare),
       `(${formatPkrAmount(detailedTotalExpenses)})`,
       `(${formatPkrAmount(detailedTotalRefunds)})`,
       formatPkrAmount(hospitalNetFromDetailed)
     ]],
-    [34, 34, 30, 30, 42]
+    [28, 28, 28, 28, 28, 34]
   );
 
   // ===========================================

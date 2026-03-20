@@ -384,8 +384,8 @@ export default function DashboardFinance() {
         </Card>
         <Card className="bg-gradient-to-br from-red-50 to-rose-50 border-red-200">
           <CardContent className="pt-4 pb-3 px-4">
-            <p className="text-[11px] uppercase tracking-wider text-muted-foreground font-medium">Total Expenses</p>
-            <p className="text-xl font-bold text-red-700 mt-1">-{formatPkrAmount(totalExpenses)}</p>
+            <p className="text-[11px] uppercase tracking-wider text-muted-foreground font-medium">Expenses + Refunds</p>
+            <p className="text-xl font-bold text-red-700 mt-1">-{formatPkrAmount(totalExpenses + totalRefunds)}</p>
           </CardContent>
         </Card>
         <Card className="bg-gradient-to-br from-blue-50 to-sky-50 border-blue-200">
