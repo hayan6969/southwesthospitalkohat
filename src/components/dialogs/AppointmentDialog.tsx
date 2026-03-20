@@ -1,7 +1,6 @@
 
 import { useState, useEffect } from "react";
-import { useCreateAppointment, useDoctors, usePatients } from "@/hooks/useDatabase";
-import { usePatientNames, useDoctorNames, getPatientName, getDoctorName } from "@/hooks/useDisplayHelpers";
+import { useCreateAppointment, useDoctors } from "@/hooks/useDatabase";
 import { useDoctorAvailability, useCheckDoctorAvailability } from "@/hooks/useDoctorAvailability";
 import { useAuditLogger } from "@/hooks/useAuditLogger";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -37,9 +36,6 @@ export function AppointmentDialog() {
 
   const createAppointment = useCreateAppointment();
   const { data: doctors } = useDoctors();
-  const { data: patients } = usePatients();
-  const { data: patientNames } = usePatientNames();
-  const { data: doctorNames } = useDoctorNames();
   const { logAction } = useAuditLogger();
   const { checkAvailability } = useCheckDoctorAvailability();
   const { data: availability } = useDoctorAvailability(doctorId, appointmentDate);
