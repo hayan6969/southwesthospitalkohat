@@ -18,6 +18,7 @@ import { AssessmentDialog } from "@/components/dialogs/AssessmentDialog";
 import { DatePicker } from "@/components/ui/date-picker";
 import { useAuth } from "@/hooks/useAuth";
 import { StaffLabReports } from "@/components/staff/StaffLabReports";
+import { DischargeSlipDialog } from "@/components/dialogs/DischargeSlipDialog";
 import AppLayout from "@/layouts/AppLayout";
 
 interface OTScheduleWithDetails {
