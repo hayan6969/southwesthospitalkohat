@@ -51,57 +51,9 @@ export default function FinanceLayout({ children }: FinanceLayoutProps) {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white shadow-sm border-b border-gray-200 px-4 sm:px-6 py-3 sm:py-4">
-        <div className="flex justify-between items-center">
-          <div className="flex items-center gap-3 sm:gap-6">
-            <div>
-              <h1 className="text-lg sm:text-2xl font-bold text-gray-900 flex items-center gap-2">
-                {hospitalSettings?.logo_url ? (
-                  <img 
-                    src={hospitalSettings.logo_url} 
-                    alt="Hospital Logo" 
-                    className="w-6 h-6 sm:w-8 sm:h-8 object-contain"
-                  />
-                ) : (
-                  <span className="inline-block w-2 h-6 sm:h-8 bg-blue-500 rounded-full" />
-                )}
-                <span className="truncate">{hospitalSettings?.hospital_name || "HIMS"}</span>
-              </h1>
-            </div>
-            {profile?.role === 'admin' && (
-              <div className="hidden lg:block">
-                <AdminDashboardNav />
-              </div>
-            )}
-          </div>
-          {profile && (
-            <div className="flex items-center gap-2 sm:gap-4">
-              <div className="hidden sm:flex items-center gap-2 text-sm text-gray-600">
-                <User className="w-4 h-4" />
-                <span>{profile.first_name} {profile.last_name}</span>
-                <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs">
-                  {profile.role}
-                </span>
-              </div>
-              <Button variant="outline" size="sm" onClick={signOut} className="flex items-center gap-2">
-                <LogOut className="w-4 h-4" />
-                <span className="hidden sm:inline">Sign Out</span>
-              </Button>
-            </div>
-          )}
-        </div>
-        {profile?.role === 'admin' && (
-          <div className="lg:hidden mt-3 overflow-x-auto -mx-4 px-4">
-            <AdminDashboardNav />
-          </div>
-        )}
-      </header>
-
-      {/* Main Content */}
-      <main className="p-3 sm:p-6">
-        <div className="mb-4 sm:mb-8">
+    <AppLayout>
+      <div className="space-y-4 sm:space-y-6">
+        <div>
           <p className="text-gray-600 mt-1 text-sm sm:text-base">Comprehensive financial management and reporting</p>
         </div>
 
