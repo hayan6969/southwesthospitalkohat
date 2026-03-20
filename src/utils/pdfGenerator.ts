@@ -2369,9 +2369,35 @@ export const generateDailyClosingPDF = async (data: {
   
   const { data: staffShiftClosings } = await staffClosingsQuery;
 
-  if (staffShiftClosings && staffShiftClosings.length > 0) {
+  // Query overtime records for the same date range
+  let overtimeQuery = supabase
+    .from('overtime_records')
+    .select('*')
+    .order('overtime_date', { ascending: true });
+
+  if (data.closingEndDate && data.closingEndDate !== data.closingDate) {
+    overtimeQuery = overtimeQuery
+      .gte('overtime_date', data.closingDate)
+      .lte('overtime_date', data.closingEndDate);
+  } else {
+    overtimeQuery = overtimeQuery.eq('overtime_date', data.closingDate);
+  }
+
+  const { data: overtimeRecords } = await overtimeQuery;
+
+  // Build overtime totals by employee name
+  const overtimeByName = new Map<string, { hours: number; amount: number }>();
+  (overtimeRecords || []).forEach((ot: any) => {
+    const name = (ot.employee_name || '').toLowerCase().trim();
+    const existing = overtimeByName.get(name) || { hours: 0, amount: 0 };
+    existing.hours += Number(ot.overtime_hours) || 0;
+    existing.amount += Number(ot.overtime_amount) || 0;
+    overtimeByName.set(name, existing);
+  });
+
+  if ((staffShiftClosings && staffShiftClosings.length > 0) || (overtimeRecords && overtimeRecords.length > 0)) {
     // Fetch staff profiles for names
-    const staffIds = [...new Set(staffShiftClosings.map((c: any) => c.staff_id))];
+    const staffIds = [...new Set((staffShiftClosings || []).map((c: any) => c.staff_id))];
     let staffProfilesMap: Record<string, string> = {};
     if (staffIds.length > 0) {
       const { data: profiles } = await supabase
@@ -2414,16 +2440,23 @@ export const generateDailyClosingPDF = async (data: {
 
     let totalOTHours = 0;
     let totalOTAmount = 0;
+    const matchedOvertimeNames = new Set<string>();
 
-    for (const closing of staffShiftClosings) {
+    for (const closing of (staffShiftClosings || [])) {
       if (yPosition > pageHeight - 30) {
         doc.addPage();
         yPosition = 20;
       }
 
       const staffName = staffProfilesMap[closing.staff_id] || 'Unknown';
-      const otHours = Number(closing.overtime_hours) || 0;
-      const otAmount = Number(closing.overtime_amount) || 0;
+      const staffNameKey = staffName.toLowerCase().trim();
+      
+      // Check overtime_records for this staff member
+      const otData = overtimeByName.get(staffNameKey);
+      const otHours = otData ? otData.hours : (Number(closing.overtime_hours) || 0);
+      const otAmount = otData ? otData.amount : (Number(closing.overtime_amount) || 0);
+      if (otData) matchedOvertimeNames.add(staffNameKey);
+      
       totalOTHours += otHours;
       totalOTAmount += otAmount;
 
@@ -2436,13 +2469,34 @@ export const generateDailyClosingPDF = async (data: {
       yPosition += 7;
     }
 
+    // Add overtime-only entries (staff not in shift closings)
+    overtimeByName.forEach((otData, nameKey) => {
+      if (!matchedOvertimeNames.has(nameKey)) {
+        if (yPosition > pageHeight - 30) {
+          doc.addPage();
+          yPosition = 20;
+        }
+        const displayName = (overtimeRecords || []).find((ot: any) => (ot.employee_name || '').toLowerCase().trim() === nameKey)?.employee_name || nameKey;
+        totalOTHours += otData.hours;
+        totalOTAmount += otData.amount;
+
+        doc.text(displayName.substring(0, 16), staffColX[0], yPosition);
+        doc.text('-', staffColX[1], yPosition);
+        doc.text('-', staffColX[2], yPosition);
+        doc.text('-', staffColX[3], yPosition);
+        doc.text(`${otData.hours}h`, staffColX[4], yPosition);
+        doc.text(formatPkrAmount(otData.amount), staffColX[5], yPosition);
+        yPosition += 7;
+      }
+    });
+
     // Totals row
     yPosition += 2;
     doc.setLineWidth(0.5);
     doc.line(20, yPosition, pageWidth - 20, yPosition);
     yPosition += 6;
     doc.setFont('helvetica', 'bold');
-    doc.text(`Total Staff: ${staffShiftClosings.length}`, staffColX[0], yPosition);
+    doc.text(`Total Staff: ${(staffShiftClosings || []).length}`, staffColX[0], yPosition);
     doc.text(`Total OT: ${totalOTHours}h`, staffColX[4], yPosition);
     doc.text(totalOTAmount > 0 ? formatPkrAmount(totalOTAmount) : '-', staffColX[5], yPosition);
     yPosition += 10;
