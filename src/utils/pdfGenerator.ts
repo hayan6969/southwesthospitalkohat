@@ -1455,7 +1455,7 @@ export const generateDailyClosingPDF = async (data: {
       amount: Number(ot.total_cost) || 0,
       docShare: Number(ot.doctor_expense) || 0,
       hosShare: (Number(ot.total_cost) || 0) - (Number(ot.doctor_expense) || 0),
-      operator: '—',
+      operator: resolveOperatorName(ot.created_by),
       category: 'OT',
       shift: getShiftFromTime(ot.created_at),
     });
