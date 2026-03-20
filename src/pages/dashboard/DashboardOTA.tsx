@@ -151,17 +151,28 @@ export default function DashboardOTA() {
       }
 
       if (searchPatientId.trim()) {
-        // Use a simpler approach - just filter by patient number for now
-        const { data: patients } = await supabase
+        const term = searchPatientId.trim();
+        
+        // Search by patient number
+        const { data: byNumber } = await supabase
           .from('patients')
           .select('id')
-          .ilike('patient_number', `%${searchPatientId.trim()}%`);
+          .ilike('patient_number', `%${term}%`);
         
-        if (patients && patients.length > 0) {
-          const patientIds = patients.map(p => p.id);
-          query = query.in('patient_id', patientIds);
+        // Search by patient name in profiles
+        const { data: byName } = await supabase
+          .from('profiles')
+          .select('id')
+          .or(`first_name.ilike.%${term}%,last_name.ilike.%${term}%`);
+        
+        // Combine unique patient IDs from both searches
+        const patientIdSet = new Set<string>();
+        byNumber?.forEach(p => patientIdSet.add(p.id));
+        byName?.forEach(p => patientIdSet.add(p.id));
+        
+        if (patientIdSet.size > 0) {
+          query = query.in('patient_id', Array.from(patientIdSet));
         } else {
-          // No matching patients found, return empty results
           setOtSchedules([]);
           setLoading(false);
           return;
@@ -335,11 +346,11 @@ export default function DashboardOTA() {
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <div className="space-y-2">
-                <label className="text-sm font-medium">Search by Patient ID</label>
+                <label className="text-sm font-medium">Search by Patient ID / Name</label>
                 <div className="relative">
                   <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
                   <Input
-                    placeholder="Enter patient number"
+                    placeholder="Patient number or name..."
                     value={searchPatientId}
                     onChange={(e) => setSearchPatientId(e.target.value)}
                     className="pl-8"
