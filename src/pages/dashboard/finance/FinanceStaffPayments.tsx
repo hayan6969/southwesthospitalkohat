@@ -133,7 +133,7 @@ export default function FinanceStaffPayments() {
                   ))
                 ) : !closings || closings.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                       No shift closings found
                     </TableCell>
                   </TableRow>
