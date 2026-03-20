@@ -149,16 +149,6 @@ export default function FinanceStaffPayments() {
                         {formatPkrAmount(Number(closing.total_revenue) || 0)}
                       </TableCell>
                       <TableCell className="text-center">{closing.total_invoices}</TableCell>
-                      <TableCell className="text-center">
-                        {Number(closing.overtime_hours) > 0 ? (
-                          <Badge variant="secondary" className="bg-amber-100 text-amber-800 font-semibold">
-                            {closing.overtime_hours}h
-                          </Badge>
-                        ) : '-'}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        {Number(closing.overtime_amount) > 0 ? formatPkrAmount(Number(closing.overtime_amount)) : '-'}
-                      </TableCell>
                       <TableCell>
                         <Badge
                           variant={closing.status === 'approved' ? 'default' : closing.status === 'rejected' ? 'destructive' : 'secondary'}
