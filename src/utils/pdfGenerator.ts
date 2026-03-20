@@ -2545,7 +2545,7 @@ export const generateDailyClosingSummaryPDF = async (data: {
     inv.invoice_number?.startsWith('EMERGENCY-');
 
   const labReports = transactionsData?.labReports || [];
-  const labRevenue = labReports.reduce((s: number, r: any) => s + (r.invoices?.amount != null ? Number(r.invoices.amount) : (Number(r.price) || 0)), 0);
+  const labRevenue = labReports.reduce((s: number, r: any) => s + (r.invoice_amount != null ? Number(r.invoice_amount) : (Number(r.price) || 0)), 0);
 
   const xrayReports = transactionsData?.xrayReports || [];
   const xrayRevenue = xrayReports.reduce((s: number, r: any) => s + (Number(r.price) || 0), 0);
