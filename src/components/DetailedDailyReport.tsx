@@ -51,6 +51,7 @@ interface DetailedReportProps {
   refunds: any[];
   miscellaneousIncome: any[];
   staffProfiles: any[];
+  staffShiftClosings?: any[];
   reportDate: string;
   initialCategoryFilter?: string;
   initialViewMode?: string;
