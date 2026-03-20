@@ -1903,7 +1903,7 @@ export const generateDailyClosingPDF = async (data: {
 
   if (expenseCount > 0) {
     const expenseHeaders = ['Sr#', 'Category', 'Description / Bill', 'Date & Time', 'Amount'];
-    const expenseColWidths = [10, 35, 65, 30, 30];
+    const expenseColWidths = [10, 25, 75, 30, 30];
     const expenseRows: string[][] = transactionsData.expenses.map((exp: any, i: number) => [
       String(i + 1),
       exp.category || '—',
