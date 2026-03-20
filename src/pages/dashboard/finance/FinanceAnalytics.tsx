@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { formatPkrAmount } from "@/utils/currency";
 import { CalendarIcon, TrendingUp, Clock, CalendarRange } from "lucide-react";
+import { AnalyticsReportDialog } from "@/components/dialogs/AnalyticsReportDialog";
 import { useState, useEffect } from "react";
 import { format, subMonths } from "date-fns";
 import { Calendar } from "@/components/ui/calendar";
@@ -76,7 +77,10 @@ export default function FinanceAnalytics() {
       <div className="flex flex-col gap-4">
         <div className="flex justify-between items-center flex-wrap gap-3">
           <h2 className="text-2xl font-bold">Financial Analytics - {getTitle()}</h2>
-          <Button onClick={() => refetch()} variant="outline" size="sm">Refresh</Button>
+          <div className="flex items-center gap-2">
+            <AnalyticsReportDialog />
+            <Button onClick={() => refetch()} variant="outline" size="sm">Refresh</Button>
+          </div>
         </div>
 
         {/* Filter Mode Tabs */}
