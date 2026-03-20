@@ -147,6 +147,8 @@ export function XrayDialog({ open, onOpenChange, onSuccess }: XrayDialogProps) {
     .reduce((sum, test) => sum + test.price, 0) || 0;
 
   const handleSubmit = async () => {
+    setIsPreparing(true);
+    try {
     if (selectedTests.length === 0) {
       toast.error("Please select at least one X-ray test");
       return;
