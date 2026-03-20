@@ -127,12 +127,27 @@ export function StaffShiftClosing() {
 
       const allInvoices = [...(byPaidAt || []), ...(byCreatedAt || [])];
       const seen = new Set<string>();
-      const invoices = allInvoices.filter((inv) => {
+      const uniqueById = allInvoices.filter((inv) => {
         const key = inv.id || `${inv.invoice_number}-${inv.created_at}`;
         if (seen.has(key)) return false;
         seen.add(key);
         return true;
       });
+
+      // Deduplicate actual duplicate records (same patient, amount, near-identical timestamps)
+      const DEDUP_WINDOW_MS = 2 * 60 * 1000;
+      const invoices: typeof uniqueById = [];
+      for (const inv of uniqueById) {
+        const amt = Number(inv.amount) || 0;
+        const ts = new Date(inv.created_at || '').getTime();
+        const isDup = invoices.some(
+          (existing) =>
+            Number(existing.amount) === amt &&
+            Math.abs(new Date(existing.created_at || '').getTime() - ts) <= DEDUP_WINDOW_MS &&
+            (existing.invoice_number || '').replace(/\d+$/, '') === (inv.invoice_number || '').replace(/\d+$/, '')
+        );
+        if (!isDup) invoices.push(inv);
+      }
 
       let opd = 0, lab = 0, xray = 0, ot = 0, emergency = 0, misc = 0;
 
