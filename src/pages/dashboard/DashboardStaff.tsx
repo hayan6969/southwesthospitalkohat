@@ -15,7 +15,6 @@ import { StaffShiftClosing } from "@/components/staff/StaffShiftClosing";
 import { PatientSearchDialog } from "@/components/staff/PatientSearchDialog";
 import { Receipt, TestTube, Building2, FileText, Image, Search, ShoppingCart, Clock } from "lucide-react";
 import { useHospitalSettings } from "@/hooks/useHospitalSettings";
-import { AdminDashboardNav } from "@/components/AdminDashboardNav";
 
 export default function DashboardStaff() {
   const [activeTab, setActiveTab] = useState("counter");
