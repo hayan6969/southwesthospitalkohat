@@ -584,8 +584,11 @@ export default function FinancePayroll() {
 
       {/* Payroll Management Tabs */}
       <Tabs defaultValue="records" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-2">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="records">Monthly Payroll</TabsTrigger>
+          <TabsTrigger value="overtime">
+            <Clock className="w-4 h-4 mr-1" /> Overtime
+          </TabsTrigger>
           <TabsTrigger value="templates">Employee Templates</TabsTrigger>
         </TabsList>
 
