@@ -129,6 +129,33 @@ interface PayrollTemplate {
   created_at: string;
 }
 
+interface FinanceSettings {
+  overtime_hourly_rate: number;
+}
+
+interface OvertimeRecordForSync {
+  id: string;
+  employee_id: string;
+  employee_name: string;
+  overtime_hours: number;
+  overtime_rate: number;
+  overtime_amount: number;
+}
+
+const normalizeEmployeeName = (value: string) => value.trim().toLowerCase();
+
+const getOvertimePaymentValues = (record: OvertimeRecordForSync, defaultRate: number) => {
+  const appliedRate = Number(record.overtime_rate) > 0 ? Number(record.overtime_rate) : defaultRate;
+  const appliedAmount = Number(record.overtime_amount) > 0
+    ? Number(record.overtime_amount)
+    : (Number(record.overtime_hours) || 0) * appliedRate;
+
+  return {
+    appliedRate,
+    appliedAmount,
+  };
+};
+
 export default function FinancePayroll() {
   const [isTemplateDialogOpen, setIsTemplateDialogOpen] = useState(false);
   // Initialize with current month and year
@@ -176,6 +203,20 @@ export default function FinancePayroll() {
     }
   });
 
+  const { data: financeSettings } = useQuery({
+    queryKey: ['finance-settings'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('finance_settings')
+        .select('overtime_hourly_rate')
+        .eq('id', 1)
+        .maybeSingle();
+
+      if (error) throw error;
+      return data as FinanceSettings | null;
+    }
+  });
+
   // Combine selected month and year into the format expected by backend
   const selectedMonth = selectedYear && selectedMonthName 
     ? `${selectedYear}-${selectedMonthName.padStart(2, '0')}` 
@@ -200,6 +241,43 @@ export default function FinancePayroll() {
 
   // Use all payroll records since we're only filtering by month/year now
   const payrollRecords = allPayrollRecords;
+
+  const syncPayrollOvertimePayments = async (record: PayrollRecord, paidAt: string) => {
+    const { data, error } = await supabase
+      .from('overtime_records')
+      .select('id, employee_id, employee_name, overtime_hours, overtime_rate, overtime_amount')
+      .eq('status', 'pending')
+      .like('overtime_date', `${record.pay_period}-%`);
+
+    if (error) throw error;
+
+    const matchedOvertimeRecords = (data as OvertimeRecordForSync[] | null)?.filter((overtimeRecord) => {
+      return overtimeRecord.employee_id === record.employee_id
+        || normalizeEmployeeName(overtimeRecord.employee_name) === normalizeEmployeeName(record.employee_name);
+    }) || [];
+
+    if (matchedOvertimeRecords.length === 0) return;
+
+    const defaultRate = Number(financeSettings?.overtime_hourly_rate ?? 0);
+    const updateResults = await Promise.all(
+      matchedOvertimeRecords.map((overtimeRecord) => {
+        const { appliedRate, appliedAmount } = getOvertimePaymentValues(overtimeRecord, defaultRate);
+
+        return supabase
+          .from('overtime_records')
+          .update({
+            status: 'paid',
+            paid_at: paidAt,
+            overtime_rate: appliedRate,
+            overtime_amount: appliedAmount,
+          })
+          .eq('id', overtimeRecord.id);
+      })
+    );
+
+    const failedUpdate = updateResults.find((result) => result.error);
+    if (failedUpdate?.error) throw failedUpdate.error;
+  };
 
   // Create/Update Payroll Template Mutation
   const saveTemplateMutation = useMutation({
@@ -307,17 +385,20 @@ export default function FinancePayroll() {
   const markPaidMutation = useMutation({
     mutationFn: async ({ recordId, record }: { recordId: string; record: PayrollRecord }) => {
       const { data: userData } = await supabase.auth.getUser();
+      const paidAt = new Date().toISOString();
       
       // Update payroll record to paid
       const { error: payrollError } = await supabase
         .from('payroll')
         .update({ 
           status: 'paid', 
-          paid_at: new Date().toISOString() 
+          paid_at: paidAt 
         })
         .eq('id', recordId);
 
       if (payrollError) throw payrollError;
+
+      await syncPayrollOvertimePayments(record, paidAt);
 
       // Add to expenses table
       const { error: expenseError } = await supabase
@@ -336,10 +417,11 @@ export default function FinancePayroll() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['payroll-records'] });
+      queryClient.invalidateQueries({ queryKey: ['overtime-records'] });
       queryClient.invalidateQueries({ queryKey: ['expenses'] });
       toast({
         title: "Success",
-        description: "Payroll marked as paid and added to expenses",
+        description: "Payroll marked as paid and overtime synced",
       });
     },
     onError: () => {
@@ -356,6 +438,7 @@ export default function FinancePayroll() {
     mutationFn: async () => {
       const { data: userData } = await supabase.auth.getUser();
       const pendingRecords = allPayrollRecords?.filter(r => r.status === 'pending') || [];
+      const paidAt = new Date().toISOString();
       
       if (pendingRecords.length === 0) return;
 
@@ -364,12 +447,16 @@ export default function FinancePayroll() {
         .from('payroll')
         .update({ 
           status: 'paid', 
-          paid_at: new Date().toISOString() 
+          paid_at: paidAt 
         })
         .eq('pay_period', selectedMonth)
         .eq('status', 'pending');
 
       if (payrollError) throw payrollError;
+
+      await Promise.all(
+        pendingRecords.map((record) => syncPayrollOvertimePayments(record, paidAt))
+      );
 
       // Add all to expenses table
       const expenseInserts = pendingRecords.map(record => ({
@@ -390,10 +477,11 @@ export default function FinancePayroll() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['payroll-records'] });
+      queryClient.invalidateQueries({ queryKey: ['overtime-records'] });
       queryClient.invalidateQueries({ queryKey: ['expenses'] });
       toast({
         title: "Success",
-        description: "All pending payroll marked as paid and added to expenses",
+        description: "All pending payroll marked as paid and overtime synced",
       });
     },
     onError: () => {
