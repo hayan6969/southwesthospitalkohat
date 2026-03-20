@@ -73,3 +73,44 @@ export const hasMatchingOtHospitalInvoice = (otSchedule: OTScheduleLike, hospita
     );
   });
 };
+
+/**
+ * Remove duplicate hospital invoices.
+ * Two invoices are duplicates when they share the same patient_id,
+ * the same amount, and were created within a short time window.
+ * The invoice with the shorter (older-style) invoice_number is kept.
+ */
+const DUPLICATE_WINDOW_MS = 2 * 60 * 1000; // 2 minutes
+
+export const deduplicateInvoices = <T extends InvoiceLike & { id?: string }>(invoices: T[]): T[] => {
+  const kept: T[] = [];
+  const seen = new Set<string>();
+
+  for (const inv of invoices) {
+    // Build a fuzzy key: patient + rounded amount
+    const amt = toNumber(inv.amount);
+    const ts = toTimestamp(inv.created_at);
+    const patientKey = inv.patient_id || '';
+
+    // Check against already-kept invoices for a near-duplicate
+    let isDuplicate = false;
+    for (const existing of kept) {
+      if (
+        existing.patient_id === patientKey &&
+        toNumber(existing.amount) === amt
+      ) {
+        const existingTs = toTimestamp(existing.created_at);
+        if (ts !== null && existingTs !== null && Math.abs(ts - existingTs) <= DUPLICATE_WINDOW_MS) {
+          isDuplicate = true;
+          break;
+        }
+      }
+    }
+
+    if (!isDuplicate) {
+      kept.push(inv);
+    }
+  }
+
+  return kept;
+};

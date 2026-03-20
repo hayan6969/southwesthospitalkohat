@@ -17,7 +17,7 @@ import { cn } from "@/lib/utils";
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Search } from "lucide-react";
-import { getHospitalInvoiceType, hasMatchingOtHospitalInvoice } from "@/utils/invoiceDeduplication";
+import { getHospitalInvoiceType, hasMatchingOtHospitalInvoice, deduplicateInvoices } from "@/utils/invoiceDeduplication";
 
 export default function FinanceInvoices() {
   const [filterDate, setFilterDate] = useState<Date | undefined>();
@@ -628,8 +628,9 @@ export default function FinanceInvoices() {
   const unmatchedOtSchedules =
     otSchedules?.filter((ot) => !hasMatchingOtHospitalInvoice(ot, hospitalInvoices || [])) || [];
 
+  const dedupedHospitalInvoices = deduplicateInvoices(hospitalInvoices || []);
   const allInvoices = [
-    ...(hospitalInvoices?.filter(inv => inv.status === 'paid').map(inv => {
+    ...(dedupedHospitalInvoices.filter(inv => inv.status === 'paid').map(inv => {
       const type = getHospitalInvoiceType(inv);
       const typeLabel =
         type === 'ot'
