@@ -288,8 +288,9 @@ export function PostOpProgressDialog({
                         <TableHead className="w-24">Input</TableHead>
                         <TableHead className="w-24">Output</TableHead>
                         <TableHead className="w-32">Remarks</TableHead>
-                        <TableHead className="w-32">User</TableHead>
-                      </TableRow>
+                         <TableHead className="w-32">User</TableHead>
+                         {canEdit && <TableHead className="w-20">Actions</TableHead>}
+                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {progressEntries.map((entry) => (
