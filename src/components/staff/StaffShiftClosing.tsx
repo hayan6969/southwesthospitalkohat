@@ -393,12 +393,15 @@ export function StaffShiftClosing() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <AlertTriangle className="w-5 h-5 text-amber-500" />
-              Confirm Shift Closing
+              {isOvertimeMode ? 'Confirm Overtime Submission' : 'Confirm Shift Closing'}
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-3">
             <p className="text-sm text-muted-foreground">
-              Are you sure you want to close your <strong>{staffShift}</strong> shift? This will submit the following summary to finance for approval:
+              {isOvertimeMode 
+                ? <>Are you sure you want to submit your <strong>overtime</strong> closing? This will be sent to finance for approval.</>
+                : <>Are you sure you want to close your <strong>{staffShift}</strong> shift? This will submit the following summary to finance for approval:</>
+              }
             </p>
             <div className="p-3 rounded-lg bg-muted space-y-1">
               <div className="flex justify-between text-sm">
