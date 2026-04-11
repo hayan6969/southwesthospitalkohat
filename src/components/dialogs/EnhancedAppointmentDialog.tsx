@@ -101,6 +101,7 @@ export function EnhancedAppointmentDialog() {
     if (open) {
       setAppointmentDate(getCurrentPakistanDate());
       setAppointmentTime(getCurrentPakistanTimeString());
+      submissionLockRef.current = false;
     }
   }, [open]);
 
