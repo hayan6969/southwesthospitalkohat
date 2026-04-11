@@ -217,6 +217,19 @@ export const useSearchPatientsWithNames = (searchTerm: string) => {
           profileMap.set(profile.id, profile);
         });
 
+        // Fetch missing profiles for patients found by patient_number but not by profile search
+        const missingProfileIds = Array.from(patientMap.keys()).filter((id) => !profileMap.has(id));
+        if (missingProfileIds.length > 0) {
+          const { data: missingProfiles } = await supabase
+            .from('profiles')
+            .select('id, first_name, last_name, phone, email')
+            .in('id', missingProfileIds.slice(0, 10));
+
+          (missingProfiles || []).forEach((profile) => {
+            profileMap.set(profile.id, profile);
+          });
+        }
+
         const combinedData = Array.from(patientMap.values())
           .map((patient) => ({
             ...patient,
