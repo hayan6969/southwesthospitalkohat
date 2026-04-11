@@ -49,7 +49,12 @@ export function AccountManagementDialog() {
       });
 
       if (error) {
-        toast.error("Failed to create account: " + error.message);
+        const msg = error.message || '';
+        if (msg.includes('duplicate key') || msg.includes('already been registered') || msg.includes('unique constraint')) {
+          toast.error("This email is already registered. Please use a different email address.");
+        } else {
+          toast.error("Failed to create account: " + msg);
+        }
       } else {
         toast.success(`${role} account created successfully for ${firstName} ${lastName}`);
         setOpen(false);
