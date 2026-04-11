@@ -175,7 +175,7 @@ export const useSearchPatientsWithNames = (searchTerm: string) => {
 
       const normalizedTerm = term.toLowerCase();
       const cachedResult = patientSearchMemoryCache.get(normalizedTerm);
-      if (cachedResult) return cachedResult;
+      if (cachedResult && cachedResult.some(hasUsablePatientProfile)) return cachedResult;
 
       if (!navigator.onLine) {
         return searchCachedPatients(term);
