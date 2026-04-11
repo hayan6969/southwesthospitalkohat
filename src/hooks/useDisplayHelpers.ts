@@ -4,6 +4,12 @@ import { supabase } from '@/integrations/supabase/client';
 
 const patientSearchMemoryCache = new Map<string, any[]>();
 
+const hasUsablePatientProfile = (patient: any) => {
+  const firstName = patient?.profile?.first_name?.trim?.() || '';
+  const lastName = patient?.profile?.last_name?.trim?.() || '';
+  return Boolean(firstName || lastName);
+};
+
 const cachePatientsForOffline = (combinedData: any[]) => {
   const existingCache = localStorage.getItem('cached_patients');
   let cachedPatients = existingCache ? JSON.parse(existingCache) : [];
@@ -11,7 +17,14 @@ const cachePatientsForOffline = (combinedData: any[]) => {
   combinedData.forEach((newPatient) => {
     const existingIndex = cachedPatients.findIndex((p: any) => p.id === newPatient.id);
     if (existingIndex >= 0) {
-      cachedPatients[existingIndex] = newPatient;
+      const existingPatient = cachedPatients[existingIndex];
+      cachedPatients[existingIndex] = {
+        ...existingPatient,
+        ...newPatient,
+        profile: hasUsablePatientProfile(newPatient)
+          ? newPatient.profile
+          : existingPatient?.profile || newPatient.profile,
+      };
     } else {
       cachedPatients.push(newPatient);
     }
@@ -162,7 +175,7 @@ export const useSearchPatientsWithNames = (searchTerm: string) => {
 
       const normalizedTerm = term.toLowerCase();
       const cachedResult = patientSearchMemoryCache.get(normalizedTerm);
-      if (cachedResult) return cachedResult;
+      if (cachedResult && cachedResult.some(hasUsablePatientProfile)) return cachedResult;
 
       if (!navigator.onLine) {
         return searchCachedPatients(term);
