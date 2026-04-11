@@ -29,6 +29,7 @@ export function StaffShiftClosing() {
 
   const getShiftWindow = () => {
     if (!activeShiftConfig) {
+      // No shift assigned — use full day window so revenue is not hidden
       return { start: startOfDay(today), end: endOfDay(today) };
     }
 
