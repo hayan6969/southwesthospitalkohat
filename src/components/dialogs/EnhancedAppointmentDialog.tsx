@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useCreateAppointmentWithInvoice, useCreatePatientWithProfile, useDoctors } from "@/hooks/useDatabase";
 import { useSearchPatientsWithNames, useDoctorNames } from "@/hooks/useDisplayHelpers";
 import { useDoctorAvailability, useCheckDoctorAvailability } from "@/hooks/useDoctorAvailability";
@@ -101,11 +101,16 @@ export function EnhancedAppointmentDialog() {
     if (open) {
       setAppointmentDate(getCurrentPakistanDate());
       setAppointmentTime(getCurrentPakistanTimeString());
+      submissionLockRef.current = false;
     }
   }, [open]);
 
+  const submissionLockRef = useRef(false);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (submissionLockRef.current) return;
+    submissionLockRef.current = true;
     
     if (!doctorId || !appointmentDate || !appointmentTime || !type.trim()) {
       toast.error("Please fill in all required fields");
@@ -247,6 +252,8 @@ export function EnhancedAppointmentDialog() {
     } catch (error) {
       toast.error("Failed to create appointment");
       console.error("Error creating appointment:", error);
+    } finally {
+      submissionLockRef.current = false;
     }
   };
 
