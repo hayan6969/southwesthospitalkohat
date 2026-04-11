@@ -192,7 +192,7 @@ export default function DashboardPatient() {
                   data={patientInvoices.slice(0, 5).map(invoice => [
                     invoice.invoice_number,
                     format(new Date(invoice.created_at), 'MMM d, yyyy'),
-                    `Rs. ${(invoice.amount * 278).toFixed(2)}`,
+                    `Rs. ${invoice.amount.toLocaleString('en-PK', { minimumFractionDigits: 2 })}`,
                     invoice.status === 'paid' ? 'Paid' : 'Pending'
                   ])}
                 />
@@ -205,7 +205,7 @@ export default function DashboardPatient() {
                       {format(new Date(invoice.created_at), 'MMM d, yyyy')}
                     </div>
                     <div className="flex justify-between items-center mt-1">
-                      <span className="text-sm font-medium">Rs. {(invoice.amount * 278).toFixed(2)}</span>
+                      <span className="text-sm font-medium">Rs. {invoice.amount.toLocaleString('en-PK', { minimumFractionDigits: 2 })}</span>
                       <span className={`px-2 py-1 text-xs rounded-full ${
                         invoice.status === 'paid' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'
                       }`}>
