@@ -84,6 +84,8 @@ export function PatientDialog() {
         toast.error(`This phone number (${phone}) is already registered.`, { duration: 5000 });
       } else if (error.message.includes('USER_CREATION_FAILED')) {
         toast.error(`Failed to create user account: ${error.message.replace('USER_CREATION_FAILED: ', '')}`);
+      } else if (error.message.includes('PROFILE_CREATION_FAILED')) {
+        toast.error(`Failed to create patient profile: ${error.message.replace('PROFILE_CREATION_FAILED: ', '')}`);
       } else if (error.message.includes('PATIENT_CREATION_FAILED')) {
         toast.error(`Failed to create patient record: ${error.message.replace('PATIENT_CREATION_FAILED: ', '')}`);
       } else if (error.message.includes('REGISTRATION_FAILED')) {
