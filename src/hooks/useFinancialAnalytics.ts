@@ -170,102 +170,88 @@ export const useFinancialAnalytics = (selectedMonth?: Date, filterParams?: Filte
         return lab + xray + ot + emergency + misc;
       };
 
-      if (!dailyClosings || dailyClosings.length === 0) {
-        return {
-          pharmacySales: 0, pharmacyProfit: 0, pharmacyReturns: 0,
-          hospitalRevenue: 0, hospitalProfitWithoutPharmacy: 0, hospitalProfitWithPharmacy: 0,
-          operationsRevenue: 0, labRevenue: 0, xrayRevenue: 0,
-          emergencyRevenue: 0, doctorsRevenue: 0, totalExpenses: 0,
-          pharmacyInvoicesCount: 0, pharmacyInvoicesAmount: 0,
-          pharmacyExpensesCount: 0, pharmacyExpensesAmount: 0,
-          totalInvoicesCount: 0, totalInvoicesAmount: 0, totalRefunds: 0,
-          doctorPaymentsPaidCount: 0, doctorPaymentsPaidAmount: 0,
-          recentActivity: [],
-        };
-      }
+      // ===== Compute hospital revenue directly from raw transaction tables =====
+      const labReportsArr = labReportsRes.data || [];
+      const xrayReportsArr = xrayReportsRes.data || [];
+      const otSchedulesArr = otSchedulesRes.data || [];
+      const miscIncomeArr = miscIncomeRes.data || [];
+      const emergencyApptsArr = emergencyApptsRes.data || [];
+      const expensesArr = expensesRes.data || [];
+      const hospitalInvoicesArr = hospitalInvoicesRes.data || [];
+      const pharmacyInvoicesArr = pharmacyInvoicesRes.data || [];
 
-      let totalPharmacySales = 0;
-      let totalPharmacyProfit = 0;
-      let totalPharmacyReturns = 0;
-      let totalHospitalRevenue = 0;
-      let totalExpenses = 0;
-      let totalLabRevenue = 0;
-      let totalXrayRevenue = 0;
-      let totalOperationsRevenue = 0;
-      let totalEmergencyRevenue = 0;
-      let totalDoctorsRevenue = 0;
+      const isEmergencyInv = (inv: any) =>
+        inv?.description?.toLowerCase?.().includes('emergency') ||
+        inv?.emergency_patient_data ||
+        inv?.invoice_number?.startsWith?.('EMG-') ||
+        inv?.invoice_number?.startsWith?.('EMERGENCY-');
 
-      dailyClosings.forEach(closing => {
-        const hospitalRev = computeServicesRevenue(closing.transactions_data) || closing.hospital_revenue;
-        totalHospitalRevenue += hospitalRev;
-        totalPharmacyProfit += Number(closing.pharmacy_profit || 0);
-        totalExpenses += Number(closing.total_expenses || 0);
-        
-        const td = closing.transactions_data as any;
-        if (td?.pharmacyInvoices) {
-          const positiveInvoices = td.pharmacyInvoices.filter((inv: any) => (inv.final_amount || 0) >= 0);
-          const negativeInvoices = td.pharmacyInvoices.filter((inv: any) => (inv.final_amount || 0) < 0);
-          const grossSales = positiveInvoices.reduce((sum: number, inv: any) => 
-            sum + Number(inv.final_amount || 0), 0);
-          const returns = Math.abs(negativeInvoices.reduce((sum: number, inv: any) => 
-            sum + Number(inv.final_amount || 0), 0));
-          totalPharmacySales += (grossSales - returns);
-          totalPharmacyReturns += returns;
-        } else {
-          totalPharmacySales += Number(closing.pharmacy_revenue || 0);
-        }
-        
-        if (td) {
-          totalLabRevenue += (td.labReports || []).reduce((s: number, r: any) => 
-            s + (Number(r.price) || Number(r.amount) || 0), 0);
-          totalXrayRevenue += (td.xrayReports || []).reduce((s: number, r: any) => 
-            s + (Number(r.price) || Number(r.amount) || 0), 0);
-          totalOperationsRevenue += (td.otSchedules || []).reduce((s: number, ot: any) => 
-            s + ((Number(ot.total_cost) || 0) - (Number(ot.doctor_expense) || 0)), 0);
-          
-          const emergencyAppointments = (td.emergencyAppointments || []).reduce((s: number, e: any) => 
-            s + (Number(e.consultation_fee_at_time) || 0), 0);
-          const emergencyInvoices = (td.hospitalInvoices || []).filter((inv: any) =>
-            inv?.description?.toLowerCase?.().includes('emergency') ||
-            inv?.emergency_patient_data
-          );
-          const emergencyInvoiceRevenue = emergencyInvoices.reduce((s: number, inv: any) => 
-            s + (Number(inv.amount) || 0), 0);
-          totalEmergencyRevenue += (emergencyAppointments + emergencyInvoiceRevenue);
+      const totalLabRevenue = labReportsArr.reduce((s: number, r: any) => s + (Number(r.price) || 0), 0);
+      const totalXrayRevenue = xrayReportsArr.reduce((s: number, r: any) => s + (Number(r.price) || 0), 0);
+      const totalOperationsRevenue = otSchedulesArr.reduce((s: number, ot: any) =>
+        s + ((Number(ot.total_cost) || 0) - (Number(ot.doctor_expense) || 0)), 0);
+      const otDoctorExpense = otSchedulesArr.reduce((s: number, ot: any) => s + (Number(ot.doctor_expense) || 0), 0);
+      const miscRevenue = miscIncomeArr.reduce((s: number, m: any) => s + (Number(m.amount) || 0), 0);
+      const emergencyApptRevenue = emergencyApptsArr.reduce((s: number, e: any) => s + (Number(e.consultation_fee_at_time) || 0), 0);
+      const emergencyInvoiceRevenue = hospitalInvoicesArr.filter(isEmergencyInv)
+        .reduce((s: number, inv: any) => s + (Number(inv.amount) || 0), 0);
+      const totalEmergencyRevenue = emergencyApptRevenue + emergencyInvoiceRevenue;
+      const opdConsultationRevenue = hospitalInvoicesArr
+        .filter((inv: any) => inv.invoice_number?.startsWith?.('INV-') && !isEmergencyInv(inv))
+        .reduce((s: number, inv: any) => s + (Number(inv.amount) || 0), 0);
 
-          const isEmergencyInv = (inv: any) =>
-            inv?.description?.toLowerCase?.().includes('emergency') ||
-            inv?.emergency_patient_data ||
-            inv?.invoice_number?.startsWith?.('EMG-') ||
-            inv?.invoice_number?.startsWith?.('EMERGENCY-');
-          const opdConsultation = (td.hospitalInvoices || [])
-            .filter((inv: any) => inv.invoice_number?.startsWith?.('INV-') && !isEmergencyInv(inv))
-            .reduce((s: number, inv: any) => s + (Number(inv.amount) || 0), 0);
-          const otDoctorExp = (td.otSchedules || []).reduce((s: number, ot: any) => s + (Number(ot.doctor_expense) || 0), 0);
-          totalDoctorsRevenue += opdConsultation + otDoctorExp;
-        }
-      });
+      const totalHospitalRevenue = totalLabRevenue + totalXrayRevenue + totalOperationsRevenue + totalEmergencyRevenue + miscRevenue;
+      const totalDoctorsRevenue = opdConsultationRevenue + otDoctorExpense;
+      const totalExpenses = expensesArr.reduce((s: number, e: any) => s + (Number(e.amount) || 0), 0);
+
+      // Pharmacy: sales and profit from raw invoices
+      const positivePharm = pharmacyInvoicesArr.filter((inv: any) => Number(inv.final_amount || 0) >= 0);
+      const negativePharm = pharmacyInvoicesArr.filter((inv: any) => Number(inv.final_amount || 0) < 0);
+      const grossPharmSales = positivePharm.reduce((s: number, inv: any) => s + Number(inv.final_amount || 0), 0);
+      const totalPharmacyReturns = Math.abs(negativePharm.reduce((s: number, inv: any) => s + Number(inv.final_amount || 0), 0));
+      const totalPharmacySales = grossPharmSales - totalPharmacyReturns;
+      const totalPharmacyProfit = positivePharm.reduce((total: number, inv: any) => {
+        return total + ((inv.pharmacy_invoice_items || []).reduce((p: number, item: any) => {
+          if (item.medicines?.selling_price && item.medicines?.purchase_price) {
+            return p + ((Number(item.medicines.selling_price) - Number(item.medicines.purchase_price)) * Number(item.quantity || 0));
+          }
+          return p;
+        }, 0));
+      }, 0);
 
       const hospitalProfitWithoutPharmacy = totalHospitalRevenue - totalExpenses;
       const hospitalProfitWithPharmacy = hospitalProfitWithoutPharmacy + totalPharmacyProfit;
 
       const finalPharmacyInvoicesCount = pharmacyInvoicesCount || 0;
-      const finalPharmacyInvoicesAmount = pharmacyInvoices?.reduce((sum, inv) => sum + (Number(inv.final_amount) || 0), 0) || 0;
+      const finalPharmacyInvoicesAmount = pharmacyInvoicesArr.reduce((sum, inv: any) => sum + (Number(inv.final_amount) || 0), 0);
       const finalPharmacyExpensesCount = pharmacyExpensesCount || 0;
       const finalPharmacyExpensesAmount = pharmacyExpenses?.reduce((sum, exp) => sum + (Number(exp.amount) || 0), 0) || 0;
       const totalInvoicesCount = hospitalInvoicesCount || 0;
-      const totalInvoicesAmount = hospitalInvoices?.reduce((sum, inv) => sum + (Number(inv.amount) || 0), 0) || 0;
+      const totalInvoicesAmount = hospitalInvoicesArr.reduce((sum, inv: any) => sum + (Number(inv.amount) || 0), 0);
       const totalRefunds = refunds?.reduce((sum, r) => sum + (Number(r.amount) || 0), 0) || 0;
       const doctorPaymentsPaidCount = doctorPaymentsCount || 0;
       const doctorPaymentsPaidAmount = doctorPayments?.reduce((sum, dp) => sum + (Number(dp.total_earnings) || 0), 0) || 0;
 
-      const recentActivity = dailyClosings.slice(-10).reverse().map(closing => ({
-        id: closing.id,
-        type: 'Daily Closing',
-        amount: (computeServicesRevenue(closing.transactions_data) || closing.hospital_revenue) + closing.pharmacy_profit,
-        date: closing.closing_time,
-        description: `${closing.day_name} - ${new Date(closing.closing_date).toLocaleDateString()}`
-      }));
+      // Recent activity: prefer daily closings if any, otherwise show recent paid invoices
+      const recentActivity = (dailyClosings && dailyClosings.length > 0)
+        ? dailyClosings.slice(-10).reverse().map(closing => ({
+            id: closing.id,
+            type: 'Daily Closing',
+            amount: (computeServicesRevenue(closing.transactions_data) || closing.hospital_revenue) + (closing.pharmacy_profit || 0),
+            date: closing.closing_time,
+            description: `${closing.day_name} - ${new Date(closing.closing_date).toLocaleDateString()}`,
+          }))
+        : hospitalInvoicesArr
+            .slice()
+            .sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+            .slice(0, 10)
+            .map((inv: any) => ({
+              id: inv.id,
+              type: 'Invoice',
+              amount: Number(inv.amount) || 0,
+              date: inv.created_at,
+              description: inv.invoice_number || inv.description || 'Invoice',
+            }));
 
       return {
         pharmacySales: totalPharmacySales,
