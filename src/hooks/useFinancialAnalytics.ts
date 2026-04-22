@@ -97,17 +97,23 @@ export const useFinancialAnalytics = (selectedMonth?: Date, filterParams?: Filte
       const results = await Promise.all([
         supabase.from('daily_closings').select('*').gte('closing_date', monthStartDate).lte('closing_date', monthEndDate).order('closing_date', { ascending: true }),
         supabase.from('pharmacy_invoices').select('*', { count: 'exact', head: true }).gte('created_at', monthStartISO).lte('created_at', monthEndISO).eq('status', 'completed'),
-        supabase.from('pharmacy_invoices').select('final_amount').gte('created_at', monthStartISO).lte('created_at', monthEndISO).eq('status', 'completed'),
+        supabase.from('pharmacy_invoices').select('final_amount, pharmacy_invoice_items(quantity, medicines(purchase_price, selling_price))').gte('created_at', monthStartISO).lte('created_at', monthEndISO).eq('status', 'completed'),
         supabase.from('pharmacy_expenses').select('*', { count: 'exact', head: true }).gte('expense_date', monthStartDate).lte('expense_date', monthEndDate),
         supabase.from('pharmacy_expenses').select('amount').gte('expense_date', monthStartDate).lte('expense_date', monthEndDate),
         supabase.from('invoices').select('*', { count: 'exact', head: true }).gte('created_at', monthStartISO).lte('created_at', monthEndISO).eq('status', 'paid'),
-        supabase.from('invoices').select('amount').gte('created_at', monthStartISO).lte('created_at', monthEndISO).eq('status', 'paid'),
+        supabase.from('invoices').select('id, amount, description, invoice_number, emergency_patient_data, created_at').gte('created_at', monthStartISO).lte('created_at', monthEndISO).eq('status', 'paid'),
         supabase.from('refunds').select('amount').gte('created_at', monthStartISO).lte('created_at', monthEndISO),
         supabase.from('doctor_payments').select('*', { count: 'exact', head: true }).gte('period_start', monthStartDate).lte('period_end', monthEndDate),
         supabase.from('doctor_payments').select('total_earnings').gte('period_start', monthStartDate).lte('period_end', monthEndDate),
+        supabase.from('lab_reports').select('price').not('price', 'is', null).gte('created_at', monthStartISO).lte('created_at', monthEndISO),
+        supabase.from('xray_reports').select('price').not('price', 'is', null).gte('created_at', monthStartISO).lte('created_at', monthEndISO),
+        supabase.from('ot_schedules').select('total_cost, doctor_expense').gte('created_at', monthStartISO).lte('created_at', monthEndISO),
+        supabase.from('miscellaneous_income').select('amount').gte('income_date', monthStartDate).lte('income_date', monthEndDate),
+        supabase.from('appointments').select('consultation_fee_at_time').eq('type', 'emergency').eq('status', 'completed').gte('appointment_date', monthStartISO).lte('appointment_date', monthEndISO),
+        supabase.from('expenses').select('amount').gte('expense_date', monthStartDate).lte('expense_date', monthEndDate),
       ]);
 
-      const [closingsRes, pharmacyInvoicesCountRes, pharmacyInvoicesRes, pharmacyExpensesCountRes, pharmacyExpensesRes, hospitalInvoicesCountRes, hospitalInvoicesRes, refundsRes, doctorPaymentsCountRes, doctorPaymentsRes] = results;
+      const [closingsRes, pharmacyInvoicesCountRes, pharmacyInvoicesRes, pharmacyExpensesCountRes, pharmacyExpensesRes, hospitalInvoicesCountRes, hospitalInvoicesRes, refundsRes, doctorPaymentsCountRes, doctorPaymentsRes, labReportsRes, xrayReportsRes, otSchedulesRes, miscIncomeRes, emergencyApptsRes, expensesRes] = results;
 
       const dailyClosings = closingsRes.data;
       if (closingsRes.error) throw closingsRes.error;
