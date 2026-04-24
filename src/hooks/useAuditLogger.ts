@@ -1,45 +1,44 @@
 
 import { useCreateAuditLog } from "./useDatabase";
 
-const getUserIP = async (): Promise<string> => {
+// Cache the resolved IP for the session so we don't hit external services
+// on every audit log call (which was causing major slowdowns / hangs after
+// a few rapid entries because the third-party IP APIs would rate-limit).
+let cachedIp: string | null = null;
+let ipPromise: Promise<string> | null = null;
+
+const fetchWithTimeout = async (url: string, ms: number): Promise<Response> => {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), ms);
   try {
-    // Try multiple IP detection services for better reliability
-    const ipServices = [
-      'https://api.ipify.org?format=json',
-      'https://httpbin.org/ip',
-      'https://api.my-ip.io/ip.json'
-    ];
-
-    for (const service of ipServices) {
-      try {
-        const response = await fetch(service, { timeout: 5000 } as any);
-        if (response.ok) {
-          const data = await response.json();
-          
-          // Handle different response formats
-          const ip = data.ip || data.origin || data.query;
-          if (ip && typeof ip === 'string') {
-            return ip;
-          }
-        }
-      } catch (serviceError) {
-        console.warn(`Failed to get IP from ${service}:`, serviceError);
-        continue;
-      }
-    }
-
-    // Fallback: try to get IP from browser's network info (limited)
-    const connection = (navigator as any).connection;
-    if (connection && connection.effectiveType) {
-      console.log('Using fallback IP detection method');
-      return 'Client-side';
-    }
-
-    return 'Unknown';
-  } catch (error) {
-    console.error('Failed to get IP address:', error);
-    return 'Unknown';
+    return await fetch(url, { signal: controller.signal });
+  } finally {
+    clearTimeout(timer);
   }
+};
+
+const getUserIP = async (): Promise<string> => {
+  if (cachedIp) return cachedIp;
+  if (ipPromise) return ipPromise;
+
+  ipPromise = (async () => {
+    try {
+      const response = await fetchWithTimeout('https://api.ipify.org?format=json', 1500);
+      if (response.ok) {
+        const data = await response.json();
+        if (data?.ip && typeof data.ip === 'string') {
+          cachedIp = data.ip;
+          return cachedIp;
+        }
+      }
+    } catch {
+      // ignore – fall through to Unknown
+    }
+    cachedIp = 'Unknown';
+    return cachedIp;
+  })();
+
+  return ipPromise;
 };
 
 export const useAuditLogger = () => {
