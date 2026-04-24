@@ -1345,6 +1345,8 @@ export const useCreateAuditLog = () => {
   const queryClient = useQueryClient();
   
   return useMutation({
+    // Audit logging must never block or retry — it should be best-effort
+    retry: false,
     mutationFn: async (auditLog: any) => {
       const { data, error } = await supabase
         .from('audit_logs')
