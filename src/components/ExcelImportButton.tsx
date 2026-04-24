@@ -411,8 +411,7 @@ export function ExcelImportButton({ type, onImported }: ExcelImportButtonProps) 
                   </TableRow>
                 </TableBody>
               </Table>
-            </div>
-          </ScrollArea>
+          </div>
 
           <div className="text-xs text-muted-foreground bg-muted/50 p-3 rounded-md space-y-1">
             <p>• Accepted file types: <strong>.xlsx, .xls, .csv</strong></p>
