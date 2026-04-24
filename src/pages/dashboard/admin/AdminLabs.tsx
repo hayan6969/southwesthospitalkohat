@@ -288,6 +288,7 @@ export default function AdminLabs() {
             </form>
           </DialogContent>
         </Dialog>
+        </div>
       </div>
 
       <Card>

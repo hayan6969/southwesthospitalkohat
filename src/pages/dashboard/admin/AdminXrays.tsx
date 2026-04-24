@@ -271,6 +271,7 @@ export default function AdminXrays() {
             </form>
           </DialogContent>
         </Dialog>
+        </div>
       </div>
 
       <Card>

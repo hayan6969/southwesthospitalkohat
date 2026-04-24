@@ -329,6 +329,7 @@ export default function PharmacyMedicines() {
               </form>
             </DialogContent>
             </Dialog>
+            </div>
           )}
         </div>
 
