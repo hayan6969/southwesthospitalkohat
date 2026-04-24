@@ -324,10 +324,12 @@ export function ExcelImportButton({ type, onImported }: ExcelImportButtonProps) 
           <p className="text-xs text-muted-foreground -mt-1">
             This is exactly how your Excel sheet should look. The first row is the header
             (column names), and each row below is one record.
+            <span className="block mt-1 text-primary font-medium">
+              ← Swipe sideways to see all columns →
+            </span>
           </p>
 
-          <ScrollArea className="max-h-[45vh] w-full">
-            <div className="rounded-md border border-border overflow-hidden">
+          <div className="max-h-[45vh] w-full overflow-auto rounded-md border border-border">
               <Table>
                 {/* Excel-like header: each column name is a column */}
                 <TableHeader>
@@ -409,8 +411,7 @@ export function ExcelImportButton({ type, onImported }: ExcelImportButtonProps) 
                   </TableRow>
                 </TableBody>
               </Table>
-            </div>
-          </ScrollArea>
+          </div>
 
           <div className="text-xs text-muted-foreground bg-muted/50 p-3 rounded-md space-y-1">
             <p>• Accepted file types: <strong>.xlsx, .xls, .csv</strong></p>
