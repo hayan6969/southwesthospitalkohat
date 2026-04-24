@@ -321,46 +321,92 @@ export function ExcelImportButton({ type, onImported }: ExcelImportButtonProps) 
             </DialogDescription>
           </DialogHeader>
 
-          <ScrollArea className="max-h-[45vh] pr-4">
+          <p className="text-xs text-muted-foreground -mt-1">
+            This is exactly how your Excel sheet should look. The first row is the header
+            (column names), and each row below is one record.
+          </p>
+
+          <ScrollArea className="max-h-[45vh] w-full">
             <div className="rounded-md border border-border overflow-hidden">
               <Table>
+                {/* Excel-like header: each column name is a column */}
                 <TableHeader>
-                  <TableRow className="bg-muted/50">
-                    <TableHead className="w-[28%]">Column Name</TableHead>
-                    <TableHead className="w-[14%]">Required</TableHead>
-                    <TableHead className="w-[12%]">Type</TableHead>
-                    <TableHead className="w-[26%]">Description</TableHead>
-                    <TableHead className="w-[20%]">Example</TableHead>
+                  <TableRow className="bg-primary/10 hover:bg-primary/10">
+                    <TableHead className="w-24 sticky left-0 bg-primary/10 border-r border-border text-xs font-bold text-foreground">
+                      Row
+                    </TableHead>
+                    {schema.fields.map((f) => (
+                      <TableHead
+                        key={f.name}
+                        className="border-r border-border last:border-r-0 whitespace-nowrap text-foreground"
+                      >
+                        <div className="flex flex-col gap-1 py-1">
+                          <code className="text-xs font-bold text-foreground">
+                            {f.name}
+                          </code>
+                          {f.required ? (
+                            <Badge variant="destructive" className="text-[10px] w-fit">
+                              Required
+                            </Badge>
+                          ) : (
+                            <Badge variant="secondary" className="text-[10px] w-fit">
+                              Optional
+                            </Badge>
+                          )}
+                        </div>
+                      </TableHead>
+                    ))}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {schema.fields.map((f) => (
-                    <TableRow key={f.name}>
-                      <TableCell>
-                        <code className="text-xs font-semibold">{f.name}</code>
-                      </TableCell>
-                      <TableCell>
-                        {f.required ? (
-                          <Badge variant="destructive" className="text-xs">Required</Badge>
-                        ) : (
-                          <Badge variant="secondary" className="text-xs">Optional</Badge>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="outline" className="text-xs capitalize">
+                  {/* Type row */}
+                  <TableRow className="bg-muted/30">
+                    <TableCell className="sticky left-0 bg-muted/30 border-r border-border text-xs font-semibold text-muted-foreground">
+                      Type
+                    </TableCell>
+                    {schema.fields.map((f) => (
+                      <TableCell
+                        key={f.name}
+                        className="border-r border-border last:border-r-0"
+                      >
+                        <Badge variant="outline" className="text-[10px] capitalize">
                           {f.type}
                         </Badge>
                       </TableCell>
-                      <TableCell className="text-xs text-muted-foreground">
+                    ))}
+                  </TableRow>
+
+                  {/* Description row */}
+                  <TableRow>
+                    <TableCell className="sticky left-0 bg-background border-r border-border text-xs font-semibold text-muted-foreground">
+                      Description
+                    </TableCell>
+                    {schema.fields.map((f) => (
+                      <TableCell
+                        key={f.name}
+                        className="border-r border-border last:border-r-0 text-xs text-muted-foreground min-w-[140px]"
+                      >
                         {f.description}
                       </TableCell>
-                      <TableCell>
-                        <code className="text-xs bg-muted px-1.5 py-0.5 rounded">
+                    ))}
+                  </TableRow>
+
+                  {/* Example row — looks like real Excel data */}
+                  <TableRow className="bg-muted/30">
+                    <TableCell className="sticky left-0 bg-muted/30 border-r border-border text-xs font-semibold text-muted-foreground">
+                      Example
+                    </TableCell>
+                    {schema.fields.map((f) => (
+                      <TableCell
+                        key={f.name}
+                        className="border-r border-border last:border-r-0"
+                      >
+                        <code className="text-xs bg-background px-1.5 py-0.5 rounded border border-border whitespace-nowrap">
                           {f.example}
                         </code>
                       </TableCell>
-                    </TableRow>
-                  ))}
+                    ))}
+                  </TableRow>
                 </TableBody>
               </Table>
             </div>
