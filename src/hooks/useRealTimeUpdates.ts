@@ -83,6 +83,7 @@ export const useRealTimeUpdates = () => {
         () => {
           // Invalidate related queries when medicines change
           queryClient.invalidateQueries({ queryKey: ['medicines'] });
+          queryClient.invalidateQueries({ queryKey: ['medicines-paginated'] });
           queryClient.invalidateQueries({ queryKey: ['pharmacy-stats'] });
           queryClient.invalidateQueries({ queryKey: ['expiring-medicines'] });
         }
