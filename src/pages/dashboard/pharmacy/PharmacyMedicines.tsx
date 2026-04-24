@@ -107,11 +107,12 @@ export default function PharmacyMedicines() {
     try {
       if (editingMedicine) {
         await updateMedicine.mutateAsync({ id: editingMedicine.id!, ...formData });
-        await logUpdate("Medicine", `Updated medicine: ${formData.name} - Stock: ${formData.stock_quantity}, Price: PKR ${formData.selling_price}`, profile?.id);
+        // Fire-and-forget: don't block UI on audit logging
+        void logUpdate("Medicine", `Updated medicine: ${formData.name} - Stock: ${formData.stock_quantity}, Price: PKR ${formData.selling_price}`, profile?.id);
         toast({ title: "Medicine updated successfully" });
       } else {
         await createMedicine.mutateAsync(formData);
-        await logCreate("Medicine", `Added new medicine: ${formData.name} - Stock: ${formData.stock_quantity}, Price: PKR ${formData.selling_price}`, profile?.id);
+        void logCreate("Medicine", `Added new medicine: ${formData.name} - Stock: ${formData.stock_quantity}, Price: PKR ${formData.selling_price}`, profile?.id);
         toast({ title: "Medicine added successfully" });
       }
       
