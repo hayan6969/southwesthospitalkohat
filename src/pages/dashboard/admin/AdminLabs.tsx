@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { formatPkrAmount } from "@/utils/currency";
+import { ExcelImportButton } from "@/components/ExcelImportButton";
 
 interface LabTest {
   id: string;
@@ -188,6 +189,8 @@ export default function AdminLabs() {
           <p className="text-gray-600">Manage available lab tests and their pricing</p>
         </div>
         
+        <div className="flex items-center gap-2">
+        <ExcelImportButton type="lab" onImported={() => queryClient.invalidateQueries({ queryKey: ['lab-tests'] })} />
         <Dialog open={open} onOpenChange={handleDialogChange}>
           <DialogTrigger asChild>
             <Button className="bg-blue-600 hover:bg-blue-700">
