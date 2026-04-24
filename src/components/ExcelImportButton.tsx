@@ -14,6 +14,14 @@ import {
 } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 type ImportType = "lab" | "pharmacy" | "radiology";
 
@@ -313,35 +321,48 @@ export function ExcelImportButton({ type, onImported }: ExcelImportButtonProps) 
             </DialogDescription>
           </DialogHeader>
 
-          <ScrollArea className="max-h-[50vh] pr-4">
-            <div className="space-y-2">
-              {schema.fields.map((f) => (
-                <div
-                  key={f.name}
-                  className="border border-border rounded-md p-3 bg-card"
-                >
-                  <div className="flex items-center justify-between gap-2 flex-wrap">
-                    <div className="flex items-center gap-2">
-                      <code className="text-sm font-semibold text-foreground">
-                        {f.name}
-                      </code>
-                      {f.required ? (
-                        <Badge variant="destructive" className="text-xs">Required</Badge>
-                      ) : (
-                        <Badge variant="secondary" className="text-xs">Optional</Badge>
-                      )}
-                      <Badge variant="outline" className="text-xs capitalize">
-                        {f.type}
-                      </Badge>
-                    </div>
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-1">{f.description}</p>
-                  <p className="text-xs mt-1">
-                    <span className="text-muted-foreground">Example: </span>
-                    <code className="bg-muted px-1 py-0.5 rounded">{f.example}</code>
-                  </p>
-                </div>
-              ))}
+          <ScrollArea className="max-h-[45vh] pr-4">
+            <div className="rounded-md border border-border overflow-hidden">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-muted/50">
+                    <TableHead className="w-[28%]">Column Name</TableHead>
+                    <TableHead className="w-[14%]">Required</TableHead>
+                    <TableHead className="w-[12%]">Type</TableHead>
+                    <TableHead className="w-[26%]">Description</TableHead>
+                    <TableHead className="w-[20%]">Example</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {schema.fields.map((f) => (
+                    <TableRow key={f.name}>
+                      <TableCell>
+                        <code className="text-xs font-semibold">{f.name}</code>
+                      </TableCell>
+                      <TableCell>
+                        {f.required ? (
+                          <Badge variant="destructive" className="text-xs">Required</Badge>
+                        ) : (
+                          <Badge variant="secondary" className="text-xs">Optional</Badge>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className="text-xs capitalize">
+                          {f.type}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-xs text-muted-foreground">
+                        {f.description}
+                      </TableCell>
+                      <TableCell>
+                        <code className="text-xs bg-muted px-1.5 py-0.5 rounded">
+                          {f.example}
+                        </code>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
             </div>
           </ScrollArea>
 
@@ -351,6 +372,20 @@ export function ExcelImportButton({ type, onImported }: ExcelImportButtonProps) 
             <p>• Numbers must be plain digits — no currency symbols or commas</p>
             <p>• Column names are case-insensitive and spaces become underscores</p>
             <p>• If <strong>any</strong> row is invalid, the entire upload is rejected</p>
+          </div>
+
+          <div className="text-xs bg-primary/5 border border-primary/20 p-3 rounded-md space-y-1">
+            <p className="font-semibold text-foreground flex items-center gap-1.5">
+              <Download className="w-3.5 h-3.5" />
+              About "Download Template"
+            </p>
+            <p className="text-muted-foreground">
+              Click <strong>Download Template</strong> to get a ready-made Excel file with the
+              correct column headers and one sample row already filled in. Open it in Excel,
+              <strong> replace the example row with your own data</strong> (one record per row),
+              save the file, then come back here and click <strong>Choose File</strong> to upload it.
+              You don't need to add or rename any columns — just fill in the rows.
+            </p>
           </div>
 
           <DialogFooter className="gap-2 sm:gap-2">
