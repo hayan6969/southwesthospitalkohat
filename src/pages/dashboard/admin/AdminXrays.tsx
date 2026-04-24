@@ -11,6 +11,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Edit, Trash2 } from "lucide-react";
 import { formatPkrAmount } from "@/utils/currency";
+import { ExcelImportButton } from "@/components/ExcelImportButton";
 
 interface XrayTest {
   id: string;
@@ -188,6 +189,8 @@ export default function AdminXrays() {
           <p className="text-muted-foreground">Manage X-ray tests and pricing</p>
         </div>
         
+        <div className="flex items-center gap-2">
+        <ExcelImportButton type="radiology" onImported={fetchTests} />
         <Dialog open={open} onOpenChange={handleOpenChange}>
           <DialogTrigger asChild>
             <Button>
@@ -268,6 +271,7 @@ export default function AdminXrays() {
             </form>
           </DialogContent>
         </Dialog>
+        </div>
       </div>
 
       <Card>

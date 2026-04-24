@@ -14,6 +14,8 @@ import { Pill, Plus, Edit, Trash2, Search, ChevronLeft, ChevronRight } from "luc
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "@/components/ui/pagination";
 import { useToast } from "@/hooks/use-toast";
 import { formatPkrAmount } from "@/utils/currency";
+import { ExcelImportButton } from "@/components/ExcelImportButton";
+import { useQueryClient } from "@tanstack/react-query";
 
 type Medicine = {
   id?: string;
@@ -54,6 +56,7 @@ export default function PharmacyMedicines() {
   const { canManageMedicines, canViewMedicines } = usePharmacyPermissions();
   const { logCreate, logUpdate, logDelete } = useAuditLogger();
   const { profile } = useAuth();
+  const queryClient = useQueryClient();
 
   if (!canViewMedicines) {
     return (
@@ -171,6 +174,8 @@ export default function PharmacyMedicines() {
           </div>
           
           {canManageMedicines && (
+            <div className="flex items-center gap-2">
+            <ExcelImportButton type="pharmacy" onImported={() => queryClient.invalidateQueries({ queryKey: ['medicines'] })} />
             <Dialog open={isDialogOpen} onOpenChange={(open) => {
               setIsDialogOpen(open);
               if (!open) resetForm();
@@ -324,6 +329,7 @@ export default function PharmacyMedicines() {
               </form>
             </DialogContent>
             </Dialog>
+            </div>
           )}
         </div>
 
