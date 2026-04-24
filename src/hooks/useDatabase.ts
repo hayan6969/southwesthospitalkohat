@@ -1345,6 +1345,8 @@ export const useCreateAuditLog = () => {
   const queryClient = useQueryClient();
   
   return useMutation({
+    // Audit logging must never block or retry — it should be best-effort
+    retry: false,
     mutationFn: async (auditLog: any) => {
       const { data, error } = await supabase
         .from('audit_logs')
@@ -1397,6 +1399,7 @@ export const useCreateMedicine = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['medicines'] });
+      queryClient.invalidateQueries({ queryKey: ['medicines-paginated'] });
       queryClient.invalidateQueries({ queryKey: ['pharmacy-stats'] });
       queryClient.invalidateQueries({ queryKey: ['expiring-medicines'] });
     },
@@ -1599,6 +1602,7 @@ export const useUpdateMedicine = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['medicines'] });
+      queryClient.invalidateQueries({ queryKey: ['medicines-paginated'] });
       queryClient.invalidateQueries({ queryKey: ['pharmacy-stats'] });
       queryClient.invalidateQueries({ queryKey: ['expiring-medicines'] });
     },
@@ -1676,6 +1680,7 @@ export const useDeleteMedicine = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['medicines'] });
+      queryClient.invalidateQueries({ queryKey: ['medicines-paginated'] });
       queryClient.invalidateQueries({ queryKey: ['pharmacy-stats'] });
       queryClient.invalidateQueries({ queryKey: ['expiring-medicines'] });
     },
