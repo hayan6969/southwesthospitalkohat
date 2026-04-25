@@ -28,6 +28,7 @@ export function StickerPrinter() {
 <html>
 <head>
 <title>Sticker</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
 <style>
   @page {
     size: 50mm 25mm;
@@ -38,13 +39,24 @@ export function StickerPrinter() {
     margin: 0;
     padding: 0;
     width: 50mm;
+    height: 25mm;
     font-family: Arial, Helvetica, sans-serif;
     color: #000;
+    background: #fff;
   }
   .sticker {
     width: 50mm;
+    height: 25mm;
     padding: 1.5mm 2mm;
+    overflow: hidden;
     page-break-after: always;
+    break-after: page;
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+  .sticker:last-child {
+    page-break-after: auto;
+    break-after: auto;
   }
   .name {
     font-size: 9pt;
@@ -78,7 +90,7 @@ export function StickerPrinter() {
     white-space: pre-wrap;
   }
   @media print {
-    body { -webkit-print-color-adjust: exact; }
+    body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   }
 </style>
 </head>
