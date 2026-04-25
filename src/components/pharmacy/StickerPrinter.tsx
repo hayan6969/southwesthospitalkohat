@@ -7,11 +7,20 @@ import { Textarea } from "@/components/ui/textarea";
 import { Printer, Tag } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
+const SIZE_OPTIONS = [
+  { value: "50x25", label: '2" × 1" (50 × 25 mm)', width: 50, height: 25 },
+  { value: "38x25", label: '1.5" × 1" (38 × 25 mm)', width: 38, height: 25 },
+  { value: "50x40", label: '2" × 1.6" (50 × 40 mm)', width: 50, height: 40 },
+  { value: "75x50", label: '3" × 2" (75 × 50 mm)', width: 75, height: 50 },
+];
+
 export function StickerPrinter() {
   const [name, setName] = useState("");
   const [medicine, setMedicine] = useState("");
   const [dosage, setDosage] = useState("");
+  const [sizeKey, setSizeKey] = useState("50x25");
   const { toast } = useToast();
+  const size = SIZE_OPTIONS.find((s) => s.value === sizeKey) || SIZE_OPTIONS[0];
 
   const handlePrint = () => {
     if (!name.trim() || !medicine.trim() || !dosage.trim()) {
