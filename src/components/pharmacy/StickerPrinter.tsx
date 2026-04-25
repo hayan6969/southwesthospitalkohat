@@ -144,6 +144,21 @@ export function StickerPrinter() {
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
+            <Label htmlFor="sticker-size">Sticker Size</Label>
+            <select
+              id="sticker-size"
+              value={sizeKey}
+              onChange={(e) => setSizeKey(e.target.value)}
+              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+            >
+              {SIZE_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="space-y-2">
             <Label htmlFor="sticker-name">Patient Name</Label>
             <Input
               id="sticker-name"
@@ -187,9 +202,17 @@ export function StickerPrinter() {
               Clear
             </Button>
           </div>
-          <p className="text-xs text-muted-foreground">
-            Optimized for 2-inch (50mm) thermal sticker rolls.
-          </p>
+          <div className="rounded-md bg-amber-50 border border-amber-200 p-3 text-xs text-amber-900 space-y-1">
+            <p className="font-semibold">⚠️ Important printer setup</p>
+            <p>In the print dialog, set:</p>
+            <ul className="list-disc pl-4 space-y-0.5">
+              <li><b>Paper size</b>: {size.width} × {size.height} mm (or "Custom")</li>
+              <li><b>Margins</b>: None</li>
+              <li><b>Scale</b>: 100% (turn OFF "Fit to page")</li>
+              <li><b>Orientation</b>: Landscape (if width &gt; height)</li>
+            </ul>
+            <p className="pt-1">Also set the same paper size in your printer driver / Windows printer preferences so it cuts after each sticker.</p>
+          </div>
         </CardContent>
       </Card>
 
