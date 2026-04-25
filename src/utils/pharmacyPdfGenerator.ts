@@ -54,10 +54,14 @@ export const generatePharmacyInvoicePDF = async (
   const contentWidth = pageWidth - margin * 2;
   const centerX = pageWidth / 2;
 
-  // Create PDF with a generous initial height; we'll trim to actual content at the end
+  // Estimate page height dynamically based on items
+  const baseHeight = 110;
+  const perItemHeight = 10;
+  const pageHeight = baseHeight + invoiceData.items.length * perItemHeight;
+
   const pdf = new jsPDF({
     unit: 'mm',
-    format: [pageWidth, 600],
+    format: [pageWidth, pageHeight],
   });
 
   let y = 5;
@@ -239,20 +243,6 @@ export const generatePharmacyInvoicePDF = async (
   pdf.text('Thank you for your visit!', centerX, y, { align: 'center' });
   y += 3.2;
   pdf.text('Get well soon.', centerX, y, { align: 'center' });
-
-  // Trim final page to actual content height
-  const finalHeight = Math.max(y + 4, 40);
-  // jsPDF stores pages in internal.pages; resize current page's MediaBox
-  try {
-    // @ts-ignore - access internal pages array
-    const pageInfo = pdf.internal.pages[1];
-    // @ts-ignore
-    pdf.internal.pageSize.height = finalHeight;
-    // @ts-ignore
-    pdf.internal.pageSize.setHeight?.(finalHeight);
-  } catch {
-    // ignore — fallback to default height
-  }
 
   // Open PDF in a new window for printing
   const pdfBlob = pdf.output('blob');
