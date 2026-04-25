@@ -7,11 +7,20 @@ import { Textarea } from "@/components/ui/textarea";
 import { Printer, Tag } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
+const SIZE_OPTIONS = [
+  { value: "50x25", label: '2" × 1" (50 × 25 mm)', width: 50, height: 25 },
+  { value: "38x25", label: '1.5" × 1" (38 × 25 mm)', width: 38, height: 25 },
+  { value: "50x40", label: '2" × 1.6" (50 × 40 mm)', width: 50, height: 40 },
+  { value: "75x50", label: '3" × 2" (75 × 50 mm)', width: 75, height: 50 },
+];
+
 export function StickerPrinter() {
   const [name, setName] = useState("");
   const [medicine, setMedicine] = useState("");
   const [dosage, setDosage] = useState("");
+  const [sizeKey, setSizeKey] = useState("50x25");
   const { toast } = useToast();
+  const size = SIZE_OPTIONS.find((s) => s.value === sizeKey) || SIZE_OPTIONS[0];
 
   const handlePrint = () => {
     if (!name.trim() || !medicine.trim() || !dosage.trim()) {
@@ -28,23 +37,35 @@ export function StickerPrinter() {
 <html>
 <head>
 <title>Sticker</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
 <style>
   @page {
-    size: 50mm 25mm;
+    size: ${size.width}mm ${size.height}mm;
     margin: 0;
   }
   * { box-sizing: border-box; }
   html, body {
     margin: 0;
     padding: 0;
-    width: 50mm;
+    width: ${size.width}mm;
+    height: ${size.height}mm;
     font-family: Arial, Helvetica, sans-serif;
     color: #000;
+    background: #fff;
   }
   .sticker {
-    width: 50mm;
+    width: ${size.width}mm;
+    height: ${size.height}mm;
     padding: 1.5mm 2mm;
+    overflow: hidden;
     page-break-after: always;
+    break-after: page;
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+  .sticker:last-child {
+    page-break-after: auto;
+    break-after: auto;
   }
   .name {
     font-size: 9pt;
@@ -78,7 +99,7 @@ export function StickerPrinter() {
     white-space: pre-wrap;
   }
   @media print {
-    body { -webkit-print-color-adjust: exact; }
+    body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   }
 </style>
 </head>
@@ -123,6 +144,21 @@ export function StickerPrinter() {
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
+            <Label htmlFor="sticker-size">Sticker Size</Label>
+            <select
+              id="sticker-size"
+              value={sizeKey}
+              onChange={(e) => setSizeKey(e.target.value)}
+              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+            >
+              {SIZE_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="space-y-2">
             <Label htmlFor="sticker-name">Patient Name</Label>
             <Input
               id="sticker-name"
@@ -166,9 +202,17 @@ export function StickerPrinter() {
               Clear
             </Button>
           </div>
-          <p className="text-xs text-muted-foreground">
-            Optimized for 2-inch (50mm) thermal sticker rolls.
-          </p>
+          <div className="rounded-md bg-amber-50 border border-amber-200 p-3 text-xs text-amber-900 space-y-1">
+            <p className="font-semibold">⚠️ Important printer setup</p>
+            <p>In the print dialog, set:</p>
+            <ul className="list-disc pl-4 space-y-0.5">
+              <li><b>Paper size</b>: {size.width} × {size.height} mm (or "Custom")</li>
+              <li><b>Margins</b>: None</li>
+              <li><b>Scale</b>: 100% (turn OFF "Fit to page")</li>
+              <li><b>Orientation</b>: Landscape (if width &gt; height)</li>
+            </ul>
+            <p className="pt-1">Also set the same paper size in your printer driver / Windows printer preferences so it cuts after each sticker.</p>
+          </div>
         </CardContent>
       </Card>
 
@@ -179,8 +223,12 @@ export function StickerPrinter() {
         <CardContent>
           <div className="flex justify-center">
             <div
-              className="border-2 border-dashed border-gray-300 bg-white p-2 text-black"
-              style={{ width: "189px", minHeight: "94px", fontFamily: "Arial, sans-serif" }}
+              className="border-2 border-dashed border-gray-300 bg-white p-2 text-black overflow-hidden"
+              style={{
+                width: `${size.width * 3.78}px`,
+                height: `${size.height * 3.78}px`,
+                fontFamily: "Arial, sans-serif",
+              }}
             >
               <div
                 style={{
@@ -208,7 +256,7 @@ export function StickerPrinter() {
             </div>
           </div>
           <p className="text-xs text-muted-foreground text-center mt-4">
-            Approximate preview of 50mm × 25mm sticker
+            Actual size preview: {size.width}mm × {size.height}mm
           </p>
         </CardContent>
       </Card>
