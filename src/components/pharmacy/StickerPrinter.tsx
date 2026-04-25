@@ -223,8 +223,12 @@ export function StickerPrinter() {
         <CardContent>
           <div className="flex justify-center">
             <div
-              className="border-2 border-dashed border-gray-300 bg-white p-2 text-black"
-              style={{ width: "189px", minHeight: "94px", fontFamily: "Arial, sans-serif" }}
+              className="border-2 border-dashed border-gray-300 bg-white p-2 text-black overflow-hidden"
+              style={{
+                width: `${size.width * 3.78}px`,
+                height: `${size.height * 3.78}px`,
+                fontFamily: "Arial, sans-serif",
+              }}
             >
               <div
                 style={{
@@ -252,7 +256,7 @@ export function StickerPrinter() {
             </div>
           </div>
           <p className="text-xs text-muted-foreground text-center mt-4">
-            Approximate preview of 50mm × 25mm sticker
+            Actual size preview: {size.width}mm × {size.height}mm
           </p>
         </CardContent>
       </Card>
