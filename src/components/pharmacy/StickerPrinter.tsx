@@ -40,22 +40,22 @@ export function StickerPrinter() {
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <style>
   @page {
-    size: 50mm 25mm;
+    size: ${size.width}mm ${size.height}mm;
     margin: 0;
   }
   * { box-sizing: border-box; }
   html, body {
     margin: 0;
     padding: 0;
-    width: 50mm;
-    height: 25mm;
+    width: ${size.width}mm;
+    height: ${size.height}mm;
     font-family: Arial, Helvetica, sans-serif;
     color: #000;
     background: #fff;
   }
   .sticker {
-    width: 50mm;
-    height: 25mm;
+    width: ${size.width}mm;
+    height: ${size.height}mm;
     padding: 1.5mm 2mm;
     overflow: hidden;
     page-break-after: always;
