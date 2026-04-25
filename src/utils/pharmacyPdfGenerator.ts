@@ -54,14 +54,10 @@ export const generatePharmacyInvoicePDF = async (
   const contentWidth = pageWidth - margin * 2;
   const centerX = pageWidth / 2;
 
-  // Estimate page height dynamically based on items
-  const baseHeight = 110;
-  const perItemHeight = 10;
-  const pageHeight = baseHeight + invoiceData.items.length * perItemHeight;
-
+  // Create PDF with a generous initial height; we'll trim to actual content at the end
   const pdf = new jsPDF({
     unit: 'mm',
-    format: [pageWidth, pageHeight],
+    format: [pageWidth, 600],
   });
 
   let y = 5;
