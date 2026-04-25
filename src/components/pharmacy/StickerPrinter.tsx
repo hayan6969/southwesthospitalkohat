@@ -8,17 +8,17 @@ import { Printer, Tag } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 const SIZE_OPTIONS = [
-  { value: "50x25", label: '2" × 1" (50 × 25 mm)', width: 50, height: 25 },
-  { value: "38x25", label: '1.5" × 1" (38 × 25 mm)', width: 38, height: 25 },
-  { value: "50x40", label: '2" × 1.6" (50 × 40 mm)', width: 50, height: 40 },
-  { value: "75x50", label: '3" × 2" (75 × 50 mm)', width: 75, height: 50 },
+  { value: "2x1", label: '2" × 1" (50.8 × 25.4 mm)', width: 50.8, height: 25.4 },
+  { value: "1.5x1", label: '1.5" × 1" (38.1 × 25.4 mm)', width: 38.1, height: 25.4 },
+  { value: "2x1.5", label: '2" × 1.5" (50.8 × 38.1 mm)', width: 50.8, height: 38.1 },
+  { value: "3x2", label: '3" × 2" (76.2 × 50.8 mm)', width: 76.2, height: 50.8 },
 ];
 
 export function StickerPrinter() {
   const [name, setName] = useState("");
   const [medicine, setMedicine] = useState("");
   const [dosage, setDosage] = useState("");
-  const [sizeKey, setSizeKey] = useState("50x25");
+  const [sizeKey, setSizeKey] = useState("2x1");
   const { toast } = useToast();
   const size = SIZE_OPTIONS.find((s) => s.value === sizeKey) || SIZE_OPTIONS[0];
 
