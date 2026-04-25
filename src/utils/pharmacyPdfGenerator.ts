@@ -240,12 +240,19 @@ export const generatePharmacyInvoicePDF = async (
   y += 3.2;
   pdf.text('Get well soon.', centerX, y, { align: 'center' });
 
-  // Trim PDF page height to actual used content (+small bottom margin)
-  const finalHeight = y + 4;
-  // @ts-ignore - jsPDF internal API to resize current page
-  pdf.internal.pageSize.height = finalHeight;
-  // @ts-ignore
-  pdf.internal.pageSize.setHeight?.(finalHeight);
+  // Trim final page to actual content height
+  const finalHeight = Math.max(y + 4, 40);
+  // jsPDF stores pages in internal.pages; resize current page's MediaBox
+  try {
+    // @ts-ignore - access internal pages array
+    const pageInfo = pdf.internal.pages[1];
+    // @ts-ignore
+    pdf.internal.pageSize.height = finalHeight;
+    // @ts-ignore
+    pdf.internal.pageSize.setHeight?.(finalHeight);
+  } catch {
+    // ignore — fallback to default height
+  }
 
   // Open PDF in a new window for printing
   const pdfBlob = pdf.output('blob');
