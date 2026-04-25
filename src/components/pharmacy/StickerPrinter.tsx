@@ -32,6 +32,9 @@ export function StickerPrinter() {
       return;
     }
 
+    // Page is 80mm wide (printer driver requirement). Sticker sits at top-left.
+    const PAGE_WIDTH = 80;
+    const PAGE_HEIGHT = size.height; // feed only as much as the sticker needs
     const html = `
 <!DOCTYPE html>
 <html>
@@ -40,15 +43,15 @@ export function StickerPrinter() {
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <style>
   @page {
-    size: ${size.width}mm ${size.height}mm;
+    size: ${PAGE_WIDTH}mm ${PAGE_HEIGHT}mm;
     margin: 0;
   }
   * { box-sizing: border-box; }
   html, body {
     margin: 0;
     padding: 0;
-    width: ${size.width}mm;
-    height: ${size.height}mm;
+    width: ${PAGE_WIDTH}mm;
+    height: ${PAGE_HEIGHT}mm;
     font-family: Arial, Helvetica, sans-serif;
     color: #000;
     background: #fff;
