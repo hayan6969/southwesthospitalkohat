@@ -240,6 +240,13 @@ export const generatePharmacyInvoicePDF = async (
   y += 3.2;
   pdf.text('Get well soon.', centerX, y, { align: 'center' });
 
+  // Trim PDF page height to actual used content (+small bottom margin)
+  const finalHeight = y + 4;
+  // @ts-ignore - jsPDF internal API to resize current page
+  pdf.internal.pageSize.height = finalHeight;
+  // @ts-ignore
+  pdf.internal.pageSize.setHeight?.(finalHeight);
+
   // Open PDF in a new window for printing
   const pdfBlob = pdf.output('blob');
   const pdfUrl = URL.createObjectURL(pdfBlob);
