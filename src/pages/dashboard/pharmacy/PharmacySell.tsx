@@ -22,6 +22,23 @@ type CartItem = {
   quantity: number;
   totalPrice: number;
   stockAvailable: number;
+  expiryDate?: string | null;
+};
+
+const formatExpiry = (date?: string | null) => {
+  if (!date) return "—";
+  const d = new Date(date);
+  if (isNaN(d.getTime())) return date;
+  return d.toLocaleDateString("en-GB", { month: "short", year: "numeric" });
+};
+
+const isExpiringSoon = (date?: string | null) => {
+  if (!date) return false;
+  const d = new Date(date);
+  if (isNaN(d.getTime())) return false;
+  const now = new Date();
+  const diffDays = (d.getTime() - now.getTime()) / (1000 * 60 * 60 * 24);
+  return diffDays <= 90;
 };
 
 export default function PharmacySell() {
@@ -77,7 +94,8 @@ export default function PharmacySell() {
         unitPrice: medicine.selling_price,
         quantity,
         totalPrice: quantity * medicine.selling_price,
-        stockAvailable: medicine.stock_quantity
+        stockAvailable: medicine.stock_quantity,
+        expiryDate: medicine.expiry_date
       };
       setCart([...cart, newItem]);
     }
@@ -216,6 +234,15 @@ export default function PharmacySell() {
                   isLoading={isLoading}
                   onSearchChange={setSearchTerm}
                 />
+                {selectedMedicineId && (() => {
+                  const m = medicines?.find(x => x.id === selectedMedicineId);
+                  if (!m) return null;
+                  return (
+                    <p className={`text-xs mt-1 ${isExpiringSoon(m.expiry_date) ? "text-destructive font-medium" : "text-muted-foreground"}`}>
+                      Expiry: {formatExpiry(m.expiry_date)} · Stock: {m.stock_quantity}
+                    </p>
+                  );
+                })()}
               </div>
 
               <div>
@@ -297,6 +324,9 @@ export default function PharmacySell() {
                       <h4 className="font-medium">{item.name}</h4>
                       <p className="text-sm text-gray-600">
                         {formatPkrAmount(item.unitPrice)} × {item.quantity} = {formatPkrAmount(item.totalPrice)}
+                      </p>
+                      <p className={`text-xs mt-0.5 ${isExpiringSoon(item.expiryDate) ? "text-destructive font-medium" : "text-gray-500"}`}>
+                        Expiry: {formatExpiry(item.expiryDate)}
                       </p>
                     </div>
                     <div className="flex items-center gap-2">
