@@ -1,11 +1,13 @@
-import { useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
 import { Printer, Tag } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useSearchPatientsWithNames } from "@/hooks/useDisplayHelpers";
+import { supabase } from "@/integrations/supabase/client";
+import { useQuery } from "@tanstack/react-query";
 
 const SIZE_OPTIONS = [
   { value: "2x1", label: '2" × 1" (50.8 × 25.4 mm)', width: 50.8, height: 25.4 },
@@ -14,27 +16,114 @@ const SIZE_OPTIONS = [
   { value: "3x2", label: '3" × 2" (76.2 × 50.8 mm)', width: 76.2, height: 50.8 },
 ];
 
+const DOSAGE_PRESETS = ["OD", "BD", "TDS", "QID", "SOS", "Custom"];
+const CATEGORY_OPTIONS = ["", "IV", "IM", "PO", "SC", "Topical"];
+
+// Hook to search medicines by name (autocomplete)
+function useMedicineSearch(term: string) {
+  const trimmed = term.trim();
+  const [debounced, setDebounced] = useState(trimmed);
+  useEffect(() => {
+    const t = setTimeout(() => setDebounced(trimmed), 200);
+    return () => clearTimeout(t);
+  }, [trimmed]);
+
+  return useQuery({
+    queryKey: ["sticker-medicine-search", debounced],
+    queryFn: async () => {
+      if (debounced.length < 2) return [];
+      const safe = debounced.replace(/[,%()]/g, " ").trim();
+      const { data, error } = await supabase
+        .from("medicines")
+        .select("id, name, formula, expiry_date")
+        .ilike("name", `%${safe}%`)
+        .limit(8);
+      if (error) return [];
+      return data || [];
+    },
+    enabled: debounced.length >= 2,
+  });
+}
+
 export function StickerPrinter() {
-  const [name, setName] = useState("");
-  const [medicine, setMedicine] = useState("");
-  const [dosage, setDosage] = useState("");
-  const [sizeKey, setSizeKey] = useState("2x1");
   const { toast } = useToast();
+
+  // Patient
+  const [patientId, setPatientId] = useState("");
+  const [patientName, setPatientName] = useState("");
+  const [patientQuery, setPatientQuery] = useState("");
+  const [showPatientSuggest, setShowPatientSuggest] = useState(false);
+  const { data: patientResults = [] } = useSearchPatientsWithNames(patientQuery);
+
+  // Medicine
+  const [medicineName, setMedicineName] = useState("");
+  const [showMedSuggest, setShowMedSuggest] = useState(false);
+  const { data: medResults = [] } = useMedicineSearch(medicineName);
+
+  // Dosage
+  const [dosagePreset, setDosagePreset] = useState("OD");
+  const [dosageCustom, setDosageCustom] = useState("");
+
+  // Other
+  const [expDate, setExpDate] = useState("");
+  const [category, setCategory] = useState("");
+  const [sizeKey, setSizeKey] = useState("2x1");
+
   const size = SIZE_OPTIONS.find((s) => s.value === sizeKey) || SIZE_OPTIONS[0];
+  const finalDosage = dosagePreset === "Custom" ? dosageCustom.trim() : dosagePreset;
+
+  const patientBoxRef = useRef<HTMLDivElement>(null);
+  const medBoxRef = useRef<HTMLDivElement>(null);
+
+  // Close suggestions on outside click
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (patientBoxRef.current && !patientBoxRef.current.contains(e.target as Node)) {
+        setShowPatientSuggest(false);
+      }
+      if (medBoxRef.current && !medBoxRef.current.contains(e.target as Node)) {
+        setShowMedSuggest(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  const patientSuggestions = useMemo(() => {
+    return (patientResults as any[]).filter((p) => p?.profile);
+  }, [patientResults]);
+
+  const handleClear = () => {
+    setPatientId("");
+    setPatientName("");
+    setPatientQuery("");
+    setMedicineName("");
+    setDosagePreset("OD");
+    setDosageCustom("");
+    setExpDate("");
+    setCategory("");
+  };
 
   const handlePrint = () => {
-    if (!name.trim() || !medicine.trim() || !dosage.trim()) {
-      toast({
-        title: "Missing fields",
-        description: "Please fill in name, medicine and dosage.",
-        variant: "destructive",
-      });
+    if (!patientId.trim() && !patientName.trim()) {
+      toast({ title: "Missing patient", description: "Enter patient ID or name.", variant: "destructive" });
+      return;
+    }
+    if (!medicineName.trim()) {
+      toast({ title: "Missing medicine", description: "Enter the medicine name.", variant: "destructive" });
+      return;
+    }
+    if (!finalDosage) {
+      toast({ title: "Missing dosage", description: "Choose or enter a dosage.", variant: "destructive" });
       return;
     }
 
-    // Page is 80mm wide (printer driver requirement). Sticker sits at top-left.
     const PAGE_WIDTH = 80;
-    const PAGE_HEIGHT = size.height; // feed only as much as the sticker needs
+    const PAGE_HEIGHT = size.height;
+    const expLine = expDate ? `Exp: ${escapeHtml(expDate)}` : "";
+    const catLine = category ? escapeHtml(category) : "";
+    const idLine = patientId ? `ID: ${escapeHtml(patientId)}` : "";
+
     const html = `
 <!DOCTYPE html>
 <html>
@@ -42,76 +131,46 @@ export function StickerPrinter() {
 <title>Sticker</title>
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <style>
-  @page {
-    size: ${PAGE_WIDTH}mm ${PAGE_HEIGHT}mm;
-    margin: 0;
-  }
+  @page { size: ${PAGE_WIDTH}mm ${PAGE_HEIGHT}mm; margin: 0; }
   * { box-sizing: border-box; }
   html, body {
-    margin: 0;
-    padding: 0;
-    width: ${PAGE_WIDTH}mm;
-    height: ${PAGE_HEIGHT}mm;
-    font-family: Arial, Helvetica, sans-serif;
-    color: #000;
-    background: #fff;
+    margin: 0; padding: 0;
+    width: ${PAGE_WIDTH}mm; height: ${PAGE_HEIGHT}mm;
+    font-family: Arial, Helvetica, sans-serif; color: #000; background: #fff;
   }
   .sticker {
-    width: ${size.width}mm;
-    height: ${size.height}mm;
-    padding: 1.5mm 2mm;
-    overflow: hidden;
-    page-break-after: always;
-    break-after: page;
-    page-break-inside: avoid;
-    break-inside: avoid;
+    width: ${size.width}mm; height: ${size.height}mm;
+    padding: 1.2mm 1.8mm; overflow: hidden;
+    page-break-after: always; break-after: page;
+    page-break-inside: avoid; break-inside: avoid;
   }
-  .sticker:last-child {
-    page-break-after: auto;
-    break-after: auto;
-  }
-  .name {
-    font-size: 9pt;
-    font-weight: bold;
-    line-height: 1.1;
-    margin-bottom: 1mm;
-    border-bottom: 0.3mm solid #000;
-    padding-bottom: 0.5mm;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-  .medicine {
-    font-size: 8pt;
-    font-weight: 600;
-    line-height: 1.15;
-    margin-bottom: 1mm;
-    word-wrap: break-word;
-  }
-  .dosage-label {
-    font-size: 6pt;
-    text-transform: uppercase;
-    letter-spacing: 0.3pt;
-    color: #333;
-  }
-  .dosage {
-    font-size: 8pt;
-    font-weight: bold;
-    line-height: 1.15;
-    word-wrap: break-word;
-    white-space: pre-wrap;
-  }
-  @media print {
-    body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-  }
+  .sticker:last-child { page-break-after: auto; break-after: auto; }
+  .row1 { display: flex; justify-content: space-between; align-items: baseline; gap: 1mm;
+          font-size: 7pt; line-height: 1.1; margin-bottom: 0.3mm; }
+  .pid { font-weight: 600; }
+  .cat { font-weight: bold; }
+  .pname { font-size: 9pt; font-weight: bold; line-height: 1.1; margin-bottom: 0.8mm;
+           border-bottom: 0.3mm solid #000; padding-bottom: 0.5mm;
+           white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .med { font-size: 9pt; font-weight: 700; line-height: 1.15; margin-bottom: 0.5mm; word-wrap: break-word; }
+  .dose-row { display: flex; justify-content: space-between; align-items: baseline; gap: 1mm; }
+  .dose { font-size: 9pt; font-weight: bold; }
+  .exp { font-size: 6.5pt; color: #333; }
+  @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
 </style>
 </head>
 <body>
   <div class="sticker">
-    <div class="name">${escapeHtml(name)}</div>
-    <div class="medicine">${escapeHtml(medicine)}</div>
-    <div class="dosage-label">Dosage</div>
-    <div class="dosage">${escapeHtml(dosage)}</div>
+    <div class="row1">
+      <span class="pid">${idLine}</span>
+      <span class="cat">${catLine}</span>
+    </div>
+    <div class="pname">${escapeHtml(patientName || "—")}</div>
+    <div class="med">${escapeHtml(medicineName)}</div>
+    <div class="dose-row">
+      <span class="dose">${escapeHtml(finalDosage)}</span>
+      <span class="exp">${expLine}</span>
+    </div>
   </div>
   <script>
     window.onload = function() {
@@ -124,11 +183,7 @@ export function StickerPrinter() {
 
     const printWindow = window.open("", "_blank", "width=400,height=300");
     if (!printWindow) {
-      toast({
-        title: "Popup blocked",
-        description: "Please allow popups to print stickers.",
-        variant: "destructive",
-      });
+      toast({ title: "Popup blocked", description: "Please allow popups to print stickers.", variant: "destructive" });
       return;
     }
     printWindow.document.open();
@@ -146,6 +201,152 @@ export function StickerPrinter() {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
+          {/* Patient ID with autocomplete */}
+          <div className="space-y-2 relative" ref={patientBoxRef}>
+            <Label htmlFor="sticker-pid">Patient ID</Label>
+            <Input
+              id="sticker-pid"
+              value={patientId}
+              onChange={(e) => {
+                const v = e.target.value;
+                setPatientId(v);
+                setPatientQuery(v);
+                setShowPatientSuggest(true);
+              }}
+              onFocus={() => setShowPatientSuggest(true)}
+              placeholder="Type patient ID or name (e.g. P-00001)"
+              autoComplete="off"
+            />
+            {showPatientSuggest && patientSuggestions.length > 0 && (
+              <div className="absolute z-50 left-0 right-0 mt-1 bg-popover border border-border rounded-md shadow-lg max-h-56 overflow-y-auto">
+                {patientSuggestions.slice(0, 8).map((p: any) => {
+                  const fullName = `${p.profile?.first_name || ""} ${p.profile?.last_name || ""}`.trim() || "Unknown";
+                  return (
+                    <button
+                      type="button"
+                      key={p.id}
+                      onClick={() => {
+                        setPatientId(p.patient_number || "");
+                        setPatientName(fullName);
+                        setPatientQuery("");
+                        setShowPatientSuggest(false);
+                      }}
+                      className="w-full text-left px-3 py-2 hover:bg-accent text-sm border-b border-border last:border-b-0"
+                    >
+                      <div className="font-medium">{p.patient_number || "—"} · {fullName}</div>
+                      {p.profile?.phone && (
+                        <div className="text-xs text-muted-foreground">{p.profile.phone}</div>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* Patient Name */}
+          <div className="space-y-2">
+            <Label htmlFor="sticker-pname">Patient Name</Label>
+            <Input
+              id="sticker-pname"
+              value={patientName}
+              onChange={(e) => setPatientName(e.target.value)}
+              placeholder="Patient full name"
+            />
+          </div>
+
+          {/* Medicine with autocomplete */}
+          <div className="space-y-2 relative" ref={medBoxRef}>
+            <Label htmlFor="sticker-med">Medicine Name</Label>
+            <Input
+              id="sticker-med"
+              value={medicineName}
+              onChange={(e) => {
+                setMedicineName(e.target.value);
+                setShowMedSuggest(true);
+              }}
+              onFocus={() => setShowMedSuggest(true)}
+              placeholder="e.g. Panadol 500mg"
+              autoComplete="off"
+            />
+            {showMedSuggest && (medResults as any[]).length > 0 && (
+              <div className="absolute z-50 left-0 right-0 mt-1 bg-popover border border-border rounded-md shadow-lg max-h-56 overflow-y-auto">
+                {(medResults as any[]).map((m) => (
+                  <button
+                    type="button"
+                    key={m.id}
+                    onClick={() => {
+                      setMedicineName(m.name);
+                      if (m.expiry_date && !expDate) setExpDate(m.expiry_date);
+                      setShowMedSuggest(false);
+                    }}
+                    className="w-full text-left px-3 py-2 hover:bg-accent text-sm border-b border-border last:border-b-0"
+                  >
+                    <div className="font-medium">{m.name}</div>
+                    {(m.formula || m.expiry_date) && (
+                      <div className="text-xs text-muted-foreground">
+                        {m.formula || ""}{m.formula && m.expiry_date ? " · " : ""}{m.expiry_date ? `Exp: ${m.expiry_date}` : ""}
+                      </div>
+                    )}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Dosage */}
+          <div className="space-y-2">
+            <Label>Dosage</Label>
+            <div className="flex flex-wrap gap-2">
+              {DOSAGE_PRESETS.map((d) => (
+                <Button
+                  key={d}
+                  type="button"
+                  size="sm"
+                  variant={dosagePreset === d ? "default" : "outline"}
+                  onClick={() => setDosagePreset(d)}
+                >
+                  {d}
+                </Button>
+              ))}
+            </div>
+            {dosagePreset === "Custom" && (
+              <Input
+                value={dosageCustom}
+                onChange={(e) => setDosageCustom(e.target.value)}
+                placeholder="e.g. 1 tab every 6 hours"
+                className="mt-2"
+              />
+            )}
+          </div>
+
+          {/* Exp date + Category */}
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-2">
+              <Label htmlFor="sticker-exp">Expiry Date (optional)</Label>
+              <Input
+                id="sticker-exp"
+                type="date"
+                value={expDate}
+                onChange={(e) => setExpDate(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="sticker-cat">Category</Label>
+              <select
+                id="sticker-cat"
+                value={category}
+                onChange={(e) => setCategory(e.target.value)}
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+              >
+                {CATEGORY_OPTIONS.map((c) => (
+                  <option key={c} value={c}>{c || "— None —"}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {/* Size */}
           <div className="space-y-2">
             <Label htmlFor="sticker-size">Sticker Size</Label>
             <select
@@ -155,71 +356,22 @@ export function StickerPrinter() {
               className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
             >
               {SIZE_OPTIONS.map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </option>
+                <option key={opt.value} value={opt.value}>{opt.label}</option>
               ))}
             </select>
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="sticker-name">Patient Name</Label>
-            <Input
-              id="sticker-name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="e.g. Ahmed Khan"
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="sticker-medicine">Medicine</Label>
-            <Input
-              id="sticker-medicine"
-              value={medicine}
-              onChange={(e) => setMedicine(e.target.value)}
-              placeholder="e.g. Panadol 500mg"
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="sticker-dosage">Dosage</Label>
-            <Textarea
-              id="sticker-dosage"
-              value={dosage}
-              onChange={(e) => setDosage(e.target.value)}
-              placeholder="e.g. 1 tablet 3x daily after meals"
-              rows={3}
-            />
-          </div>
+
           <div className="flex gap-2">
             <Button onClick={handlePrint} className="flex-1">
               <Printer className="w-4 h-4 mr-2" />
               Print Sticker
             </Button>
-            <Button
-              variant="outline"
-              onClick={() => {
-                setName("");
-                setMedicine("");
-                setDosage("");
-              }}
-            >
-              Clear
-            </Button>
-          </div>
-          <div className="rounded-md bg-amber-50 border border-amber-200 p-3 text-xs text-amber-900 space-y-1">
-            <p className="font-semibold">⚠️ Printer setup (POS-80 / 80mm thermal)</p>
-            <p>In the print dialog, set:</p>
-            <ul className="list-disc pl-4 space-y-0.5">
-              <li><b>Paper size</b>: ZPrinter Paper (80 × 210mm) — smallest available</li>
-              <li><b>Margins</b>: None (or Default)</li>
-              <li><b>Scale</b>: 100% (turn OFF "Fit to page")</li>
-              <li><b>Headers/footers</b>: Off</li>
-            </ul>
-            <p className="pt-1">The sticker ({size.width}×{size.height}mm) prints at the top of the label. The printer feeds and cuts after each sticker automatically.</p>
-            <p className="pt-1"><b>Tip:</b> If extra blank space feeds after each sticker, lower the "Page Height" in your printer driver's Advanced settings to match the sticker height ({size.height}mm).</p>
+            <Button variant="outline" onClick={handleClear}>Clear</Button>
           </div>
         </CardContent>
       </Card>
 
+      {/* Live Preview */}
       <Card>
         <CardHeader>
           <CardTitle>Live Preview</CardTitle>
@@ -227,35 +379,38 @@ export function StickerPrinter() {
         <CardContent>
           <div className="flex justify-center">
             <div
-              className="border-2 border-dashed border-gray-300 bg-white p-2 text-black overflow-hidden"
+              className="border-2 border-dashed border-gray-300 bg-white text-black overflow-hidden"
               style={{
                 width: `${size.width * 3.78}px`,
                 height: `${size.height * 3.78}px`,
                 fontFamily: "Arial, sans-serif",
+                padding: "5px 7px",
               }}
             >
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: "9px", marginBottom: "1px" }}>
+                <span style={{ fontWeight: 600 }}>{patientId ? `ID: ${patientId}` : ""}</span>
+                <span style={{ fontWeight: "bold" }}>{category}</span>
+              </div>
               <div
                 style={{
-                  fontSize: "12px",
-                  fontWeight: "bold",
+                  fontSize: "12px", fontWeight: "bold",
                   borderBottom: "1px solid #000",
-                  paddingBottom: "2px",
-                  marginBottom: "3px",
-                  whiteSpace: "nowrap",
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
+                  paddingBottom: "2px", marginBottom: "3px",
+                  whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
                 }}
               >
-                {name || "Patient Name"}
+                {patientName || "Patient Name"}
               </div>
-              <div style={{ fontSize: "11px", fontWeight: 600, marginBottom: "3px" }}>
-                {medicine || "Medicine name"}
+              <div style={{ fontSize: "12px", fontWeight: 700, marginBottom: "2px" }}>
+                {medicineName || "Medicine name"}
               </div>
-              <div style={{ fontSize: "8px", textTransform: "uppercase", color: "#333" }}>
-                Dosage
-              </div>
-              <div style={{ fontSize: "11px", fontWeight: "bold", whiteSpace: "pre-wrap" }}>
-                {dosage || "Dosage instructions"}
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+                <span style={{ fontSize: "12px", fontWeight: "bold" }}>
+                  {finalDosage || "Dosage"}
+                </span>
+                <span style={{ fontSize: "9px", color: "#333" }}>
+                  {expDate ? `Exp: ${expDate}` : ""}
+                </span>
               </div>
             </div>
           </div>
