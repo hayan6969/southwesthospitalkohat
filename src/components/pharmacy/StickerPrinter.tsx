@@ -67,7 +67,7 @@ export function StickerPrinter() {
   // Other
   const [expDate, setExpDate] = useState("");
   const [category, setCategory] = useState("");
-  const [sizeKey, setSizeKey] = useState("2x1");
+  const [sizeKey, setSizeKey] = useState("1.5x1");
 
   const size = SIZE_OPTIONS.find((s) => s.value === sizeKey) || SIZE_OPTIONS[0];
   const finalDosage = dosagePreset === "Custom" ? dosageCustom.trim() : dosagePreset;
