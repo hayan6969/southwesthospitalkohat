@@ -47,6 +47,7 @@ function useMedicineSearch(term: string) {
 
 export function StickerPrinter() {
   const { toast } = useToast();
+  const [isPrinting, setIsPrinting] = useState(false);
 
   // Patient
   const [patientId, setPatientId] = useState("");
@@ -74,6 +75,8 @@ export function StickerPrinter() {
 
   const patientBoxRef = useRef<HTMLDivElement>(null);
   const medBoxRef = useRef<HTMLDivElement>(null);
+  const printJobRef = useRef(0);
+  const printCleanupRef = useRef<number | null>(null);
 
   // Close suggestions on outside click
   useEffect(() => {
@@ -87,6 +90,13 @@ export function StickerPrinter() {
     };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (printCleanupRef.current) window.clearTimeout(printCleanupRef.current);
+      document.querySelectorAll('[data-sticker-print-frame="true"]').forEach((frame) => frame.remove());
+    };
   }, []);
 
   const patientSuggestions = useMemo(() => {
@@ -105,6 +115,11 @@ export function StickerPrinter() {
   };
 
   const handlePrint = () => {
+    if (isPrinting) {
+      toast({ title: "Print already open", description: "Close or cancel the current print window before printing again." });
+      return;
+    }
+
     if (!patientId.trim() && !patientName.trim()) {
       toast({ title: "Missing patient", description: "Enter patient ID or name.", variant: "destructive" });
       return;
@@ -120,6 +135,9 @@ export function StickerPrinter() {
 
     const PAGE_WIDTH = size.width;
     const PAGE_HEIGHT = size.height;
+    const printJobId = Date.now();
+    printJobRef.current = printJobId;
+    setIsPrinting(true);
     const expLine = expDate ? `Exp: ${escapeHtml(expDate)}` : "";
     const catLine = category ? escapeHtml(category) : "";
     const idLine = patientId ? `ID: ${escapeHtml(patientId)}` : "";
@@ -182,25 +200,28 @@ export function StickerPrinter() {
 </body>
 </html>`;
 
-    // Use a hidden iframe so each print is fresh and never reuses a previous window/tab
-    const existing = document.getElementById("sticker-print-frame");
-    if (existing) existing.remove();
+    // Use one fresh iframe per print and remove all previous frames to avoid cached/duplicate labels
+    if (printCleanupRef.current) window.clearTimeout(printCleanupRef.current);
+    document.querySelectorAll('[data-sticker-print-frame="true"]').forEach((frame) => frame.remove());
 
     const iframe = document.createElement("iframe");
-    iframe.id = "sticker-print-frame";
+    iframe.id = `sticker-print-frame-${printJobId}`;
+    iframe.dataset.stickerPrintFrame = "true";
     iframe.style.position = "fixed";
-    iframe.style.right = "0";
-    iframe.style.bottom = "0";
-    iframe.style.width = "0";
-    iframe.style.height = "0";
+    iframe.style.left = "-10000px";
+    iframe.style.top = "0";
+    iframe.style.width = `${PAGE_WIDTH}mm`;
+    iframe.style.height = `${PAGE_HEIGHT}mm`;
     iframe.style.border = "0";
-    iframe.style.visibility = "hidden";
+    iframe.style.opacity = "0";
+    iframe.style.pointerEvents = "none";
     document.body.appendChild(iframe);
 
     const doc = iframe.contentWindow?.document;
     if (!doc) {
       toast({ title: "Print failed", description: "Unable to open print frame.", variant: "destructive" });
       iframe.remove();
+      setIsPrinting(false);
       return;
     }
 
@@ -210,15 +231,24 @@ export function StickerPrinter() {
     doc.write(cleanHtml);
     doc.close();
 
+    const finishPrint = () => {
+      if (printJobRef.current !== printJobId) return;
+      iframe.remove();
+      setIsPrinting(false);
+    };
+
     const triggerPrint = () => {
+      if (printJobRef.current !== printJobId) return;
       try {
         iframe.contentWindow?.focus();
         iframe.contentWindow?.print();
       } catch (e) {
         console.error("Print error:", e);
+        finishPrint();
+        return;
       }
-      // Remove iframe after print dialog closes
-      setTimeout(() => iframe.remove(), 1000);
+      iframe.contentWindow?.addEventListener("afterprint", finishPrint, { once: true });
+      printCleanupRef.current = window.setTimeout(finishPrint, 8000);
     };
 
     if (iframe.contentWindow?.document.readyState === "complete") {
