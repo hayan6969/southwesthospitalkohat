@@ -103,7 +103,7 @@ export function StickerPrinter() {
     return (patientResults as any[]).filter((p) => p?.profile);
   }, [patientResults]);
 
-  const handleClear = () => {
+  const resetFields = () => {
     setPatientId("");
     setPatientName("");
     setPatientQuery("");
@@ -112,6 +112,10 @@ export function StickerPrinter() {
     setDosageCustom("");
     setExpDate("");
     setCategory("");
+  };
+
+  const handleClear = () => {
+    resetFields();
   };
 
   const handlePrint = () => {
@@ -233,12 +237,22 @@ export function StickerPrinter() {
 
     const finishPrint = () => {
       if (printJobRef.current !== printJobId) return;
+      printJobRef.current = 0;
+      if (printCleanupRef.current) {
+        window.clearTimeout(printCleanupRef.current);
+        printCleanupRef.current = null;
+      }
       iframe.remove();
       setIsPrinting(false);
+      // Auto-reset fields after print so the next sticker starts fresh
+      resetFields();
     };
 
+    let printTriggered = false;
     const triggerPrint = () => {
       if (printJobRef.current !== printJobId) return;
+      if (printTriggered) return;
+      printTriggered = true;
       try {
         iframe.contentWindow?.focus();
         iframe.contentWindow?.print();
@@ -251,10 +265,11 @@ export function StickerPrinter() {
       printCleanupRef.current = window.setTimeout(finishPrint, 8000);
     };
 
+    iframe.onload = () => {
+      window.setTimeout(triggerPrint, 50);
+    };
     if (iframe.contentWindow?.document.readyState === "complete") {
-      setTimeout(triggerPrint, 50);
-    } else {
-      iframe.onload = () => setTimeout(triggerPrint, 50);
+      window.setTimeout(triggerPrint, 50);
     }
   };
 
