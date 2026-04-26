@@ -1,6 +1,6 @@
 
 import { NavLink, useLocation } from "react-router-dom";
-import { User, Users, Calendar, FileText, Inbox, Info, Activity, Building2, Shield, Pill, Clock, TestTube, CreditCard, Calculator, Receipt, Settings, ChartBar, UserPlus, Stethoscope, Upload, CheckCircle, RotateCcw, FlaskConical, Menu, X, Package, Warehouse } from "lucide-react";
+import { User, Users, Calendar, FileText, Inbox, Info, Activity, Building2, Shield, Pill, Clock, TestTube, CreditCard, Calculator, Receipt, Settings, ChartBar, UserPlus, Stethoscope, Upload, CheckCircle, RotateCcw, FlaskConical, Menu, X, Package, Warehouse, Tag } from "lucide-react";
 import { useState } from "react";
 import { useIsMobile } from "@/hooks/use-mobile";
 
@@ -56,6 +56,7 @@ const navsByRole: Record<string, { label: string; to: string; icon: React.Elemen
     { label: "Stock Tracking", to: "/dashboard/pharmacy/stock", icon: CheckCircle },
     { label: "Expiry Tracker", to: "/dashboard/pharmacy/expiry", icon: Calendar },
     { label: "Lab Reports", to: "/dashboard/pharmacy/lab-reports", icon: FlaskConical },
+    { label: "Sticker Printer", to: "/dashboard/pharmacy/stickers", icon: Tag },
     { label: "Analytics", to: "/dashboard/pharmacy/analytics", icon: Activity },
   ],
   assistant_pharmacist: [
@@ -67,6 +68,7 @@ const navsByRole: Record<string, { label: string; to: string; icon: React.Elemen
     { label: "Stock Tracking", to: "/dashboard/pharmacy/stock", icon: CheckCircle },
     { label: "Expiry Tracker", to: "/dashboard/pharmacy/expiry", icon: Calendar },
     { label: "Lab Reports", to: "/dashboard/pharmacy/lab-reports", icon: FlaskConical },
+    { label: "Sticker Printer", to: "/dashboard/pharmacy/stickers", icon: Tag },
     { label: "Analytics", to: "/dashboard/pharmacy/analytics", icon: Activity },
   ],
   salesman_pharmacist: [

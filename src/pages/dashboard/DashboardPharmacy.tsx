@@ -4,7 +4,7 @@ import AppLayout from "@/layouts/AppLayout";
 import { StatsCard } from "@/components/StatsCard";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MySupplyRequests } from "@/components/inventory/MySupplyRequests";
-import { StickerPrinter } from "@/components/pharmacy/StickerPrinter";
+
 import { Button } from "@/components/ui/button";
 import { usePharmacyStats, useExpiringMedicines, usePharmacyInvoices } from "@/hooks/useDatabase";
 import { Pill, ShoppingCart, Banknote, AlertTriangle, TrendingUp, FileText, WifiOff } from "lucide-react";
@@ -146,7 +146,6 @@ export default function DashboardPharmacy() {
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="invoices">Recent Invoices</TabsTrigger>
             <TabsTrigger value="supplies">Supplies</TabsTrigger>
-            <TabsTrigger value="stickers">Sticker</TabsTrigger>
           </TabsList>
 
           <TabsContent value="overview" className="space-y-6">
@@ -290,9 +289,6 @@ export default function DashboardPharmacy() {
           </TabsContent>
           <TabsContent value="supplies" className="space-y-6">
             <MySupplyRequests />
-          </TabsContent>
-          <TabsContent value="stickers" className="space-y-6">
-            <StickerPrinter />
           </TabsContent>
         </Tabs>
 
