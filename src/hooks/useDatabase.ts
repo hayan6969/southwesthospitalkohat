@@ -472,7 +472,9 @@ export const useSearchableMedicines = (searchTerm: string = '') => {
       let query = supabase
         .from('medicines')
         .select('*')
-        .order('name', { ascending: true }); // Order by name for better search experience
+        // FIFO: oldest batch (earliest entry) first, then by expiry as tiebreaker
+        .order('created_at', { ascending: true })
+        .order('expiry_date', { ascending: true });
 
       // Apply search filter if provided
       if (searchTerm.trim()) {
