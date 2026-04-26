@@ -163,11 +163,10 @@ export function StickerPrinter() {
   .sticker {
     width: ${PAGE_WIDTH}mm; height: ${PAGE_HEIGHT}mm;
     padding: 1.5mm 2mm; overflow: hidden;
-    page-break-after: always; break-after: page;
+    page-break-after: avoid; break-after: avoid;
     page-break-inside: avoid; break-inside: avoid;
     display: flex; flex-direction: column; justify-content: space-between;
   }
-  .sticker:last-child { page-break-after: auto; break-after: auto; }
   .row1 { display: flex; justify-content: space-between; align-items: baseline; gap: 1mm;
           font-size: 8pt; line-height: 1.1; margin-bottom: 0.5mm; }
   .pid { font-weight: 600; }
@@ -268,9 +267,6 @@ export function StickerPrinter() {
     iframe.onload = () => {
       window.setTimeout(triggerPrint, 50);
     };
-    if (iframe.contentWindow?.document.readyState === "complete") {
-      window.setTimeout(triggerPrint, 50);
-    }
   };
 
   return (
