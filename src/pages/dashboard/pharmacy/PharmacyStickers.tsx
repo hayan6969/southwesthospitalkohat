@@ -3,7 +3,7 @@ import { StickerPrinter } from "@/components/pharmacy/StickerPrinter";
 
 export default function PharmacyStickers() {
   return (
-    <AppLayout>
+    <AppLayout sidebarRole="head_pharmacist">
       <div className="space-y-6">
         <div>
           <h1 className="text-2xl font-bold">Sticker Printer</h1>
