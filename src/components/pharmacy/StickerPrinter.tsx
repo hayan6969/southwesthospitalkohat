@@ -182,14 +182,50 @@ export function StickerPrinter() {
 </body>
 </html>`;
 
-    const printWindow = window.open("", "_blank", "width=400,height=300");
-    if (!printWindow) {
-      toast({ title: "Popup blocked", description: "Please allow popups to print stickers.", variant: "destructive" });
+    // Use a hidden iframe so each print is fresh and never reuses a previous window/tab
+    const existing = document.getElementById("sticker-print-frame");
+    if (existing) existing.remove();
+
+    const iframe = document.createElement("iframe");
+    iframe.id = "sticker-print-frame";
+    iframe.style.position = "fixed";
+    iframe.style.right = "0";
+    iframe.style.bottom = "0";
+    iframe.style.width = "0";
+    iframe.style.height = "0";
+    iframe.style.border = "0";
+    iframe.style.visibility = "hidden";
+    document.body.appendChild(iframe);
+
+    const doc = iframe.contentWindow?.document;
+    if (!doc) {
+      toast({ title: "Print failed", description: "Unable to open print frame.", variant: "destructive" });
+      iframe.remove();
       return;
     }
-    printWindow.document.open();
-    printWindow.document.write(html);
-    printWindow.document.close();
+
+    // Strip the auto-print script from the html (we'll trigger it from parent)
+    const cleanHtml = html.replace(/<script[\s\S]*?<\/script>/gi, "");
+    doc.open();
+    doc.write(cleanHtml);
+    doc.close();
+
+    const triggerPrint = () => {
+      try {
+        iframe.contentWindow?.focus();
+        iframe.contentWindow?.print();
+      } catch (e) {
+        console.error("Print error:", e);
+      }
+      // Remove iframe after print dialog closes
+      setTimeout(() => iframe.remove(), 1000);
+    };
+
+    if (iframe.contentWindow?.document.readyState === "complete") {
+      setTimeout(triggerPrint, 50);
+    } else {
+      iframe.onload = () => setTimeout(triggerPrint, 50);
+    }
   };
 
   return (
