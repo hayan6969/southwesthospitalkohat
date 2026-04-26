@@ -244,8 +244,6 @@ export function StickerPrinter() {
       }
       iframe.remove();
       setIsPrinting(false);
-      // Auto-reset fields after print so the next sticker starts fresh
-      resetFields();
     };
 
     let printTriggered = false;
@@ -261,6 +259,8 @@ export function StickerPrinter() {
         finishPrint();
         return;
       }
+      // Reset fields right after the print dialog opens so the form is ready immediately
+      resetFields();
       iframe.contentWindow?.addEventListener("afterprint", finishPrint, { once: true });
       printCleanupRef.current = window.setTimeout(finishPrint, 8000);
     };
