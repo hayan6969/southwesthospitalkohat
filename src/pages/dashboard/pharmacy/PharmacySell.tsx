@@ -234,6 +234,15 @@ export default function PharmacySell() {
                   isLoading={isLoading}
                   onSearchChange={setSearchTerm}
                 />
+                {selectedMedicineId && (() => {
+                  const m = medicines?.find(x => x.id === selectedMedicineId);
+                  if (!m) return null;
+                  return (
+                    <p className={`text-xs mt-1 ${isExpiringSoon(m.expiry_date) ? "text-destructive font-medium" : "text-muted-foreground"}`}>
+                      Expiry: {formatExpiry(m.expiry_date)} · Stock: {m.stock_quantity}
+                    </p>
+                  );
+                })()}
               </div>
 
               <div>
