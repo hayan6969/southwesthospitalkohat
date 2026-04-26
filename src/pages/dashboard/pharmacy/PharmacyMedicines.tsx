@@ -160,7 +160,7 @@ export default function PharmacyMedicines() {
         );
         if (confirmZero) {
           try {
-            await updateMedicine.mutateAsync({ id, data: { stock_quantity: 0 } });
+            await updateMedicine.mutateAsync({ id, stock_quantity: 0 });
             toast({ title: "Stock set to 0", description: `${medicine.name} is now out of stock.` });
           } catch (e: any) {
             toast({ title: "Error", description: e?.message || "Failed to update stock", variant: "destructive" });
