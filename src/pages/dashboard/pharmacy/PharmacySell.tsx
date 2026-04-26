@@ -62,47 +62,75 @@ export default function PharmacySell() {
       return;
     }
 
-    const medicine = medicines?.find(m => m.id === selectedMedicineId);
-    if (!medicine) {
+    const selected = medicines?.find(m => m.id === selectedMedicineId);
+    if (!selected) {
       toast.error("Medicine not found");
       return;
     }
 
-    if (quantity > medicine.stock_quantity) {
-      toast.error(`Only ${medicine.stock_quantity} units available in stock`);
+    // FIFO: gather all batches with the same name, oldest first (medicines are
+    // already ordered by created_at asc from the hook).
+    const batches = (medicines || [])
+      .filter(m => m.name === selected.name)
+      .sort((a, b) => {
+        const ta = a.created_at ? new Date(a.created_at).getTime() : 0;
+        const tb = b.created_at ? new Date(b.created_at).getTime() : 0;
+        if (ta !== tb) return ta - tb;
+        const ea = a.expiry_date ? new Date(a.expiry_date).getTime() : Infinity;
+        const eb = b.expiry_date ? new Date(b.expiry_date).getTime() : Infinity;
+        return ea - eb;
+      });
+
+    // Compute remaining capacity per batch after what's already in the cart
+    const cartByBatch = new Map<string, number>();
+    cart.forEach(c => cartByBatch.set(c.medicineId, (cartByBatch.get(c.medicineId) || 0) + c.quantity));
+
+    const totalAvailable = batches.reduce(
+      (sum, b) => sum + Math.max(0, b.stock_quantity - (cartByBatch.get(b.id) || 0)),
+      0
+    );
+    if (quantity > totalAvailable) {
+      toast.error(`Only ${totalAvailable} units available across all batches`);
       return;
     }
 
-    const existingItem = cart.find(item => item.medicineId === selectedMedicineId);
-    
-    if (existingItem) {
-      const newQuantity = existingItem.quantity + quantity;
-      if (newQuantity > medicine.stock_quantity) {
-        toast.error(`Only ${medicine.stock_quantity} units available in stock`);
-        return;
+    let remaining = quantity;
+    const newCart = [...cart];
+
+    for (const batch of batches) {
+      if (remaining <= 0) break;
+      const alreadyInCart = cartByBatch.get(batch.id) || 0;
+      const free = batch.stock_quantity - alreadyInCart;
+      if (free <= 0) continue;
+      const take = Math.min(free, remaining);
+
+      const existingIdx = newCart.findIndex(item => item.medicineId === batch.id);
+      if (existingIdx >= 0) {
+        const ex = newCart[existingIdx];
+        const newQty = ex.quantity + take;
+        newCart[existingIdx] = { ...ex, quantity: newQty, totalPrice: newQty * ex.unitPrice };
+      } else {
+        newCart.push({
+          medicineId: batch.id,
+          name: batch.name,
+          unitPrice: batch.selling_price,
+          quantity: take,
+          totalPrice: take * batch.selling_price,
+          stockAvailable: batch.stock_quantity,
+          expiryDate: batch.expiry_date,
+        });
       }
-      
-      setCart(cart.map(item => 
-        item.medicineId === selectedMedicineId 
-          ? { ...item, quantity: newQuantity, totalPrice: newQuantity * item.unitPrice }
-          : item
-      ));
-    } else {
-      const newItem: CartItem = {
-        medicineId: selectedMedicineId,
-        name: medicine.name,
-        unitPrice: medicine.selling_price,
-        quantity,
-        totalPrice: quantity * medicine.selling_price,
-        stockAvailable: medicine.stock_quantity,
-        expiryDate: medicine.expiry_date
-      };
-      setCart([...cart, newItem]);
+      remaining -= take;
     }
 
+    setCart(newCart);
     setSelectedMedicineId("");
     setQuantity(1);
-    toast.success("Item added to cart");
+    toast.success(
+      batches.length > 1
+        ? "Added to cart (oldest batch first)"
+        : "Item added to cart"
+    );
   };
 
   const removeFromCart = (medicineId: string) => {
