@@ -118,7 +118,7 @@ export function StickerPrinter() {
       return;
     }
 
-    const PAGE_WIDTH = 80;
+    const PAGE_WIDTH = size.width;
     const PAGE_HEIGHT = size.height;
     const expLine = expDate ? `Exp: ${escapeHtml(expDate)}` : "";
     const catLine = category ? escapeHtml(category) : "";
@@ -139,23 +139,24 @@ export function StickerPrinter() {
     font-family: Arial, Helvetica, sans-serif; color: #000; background: #fff;
   }
   .sticker {
-    width: ${size.width}mm; height: ${size.height}mm;
-    padding: 1.2mm 1.8mm; overflow: hidden;
+    width: ${PAGE_WIDTH}mm; height: ${PAGE_HEIGHT}mm;
+    padding: 1.5mm 2mm; overflow: hidden;
     page-break-after: always; break-after: page;
     page-break-inside: avoid; break-inside: avoid;
+    display: flex; flex-direction: column; justify-content: space-between;
   }
   .sticker:last-child { page-break-after: auto; break-after: auto; }
   .row1 { display: flex; justify-content: space-between; align-items: baseline; gap: 1mm;
-          font-size: 7pt; line-height: 1.1; margin-bottom: 0.3mm; }
+          font-size: 8pt; line-height: 1.1; margin-bottom: 0.5mm; }
   .pid { font-weight: 600; }
-  .cat { font-weight: bold; }
-  .pname { font-size: 9pt; font-weight: bold; line-height: 1.1; margin-bottom: 0.8mm;
-           border-bottom: 0.3mm solid #000; padding-bottom: 0.5mm;
+  .cat { font-weight: bold; font-size: 9pt; }
+  .pname { font-size: 10pt; font-weight: bold; line-height: 1.1; margin-bottom: 1mm;
+           border-bottom: 0.3mm solid #000; padding-bottom: 0.6mm;
            white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .med { font-size: 9pt; font-weight: 700; line-height: 1.15; margin-bottom: 0.5mm; word-wrap: break-word; }
-  .dose-row { display: flex; justify-content: space-between; align-items: baseline; gap: 1mm; }
-  .dose { font-size: 9pt; font-weight: bold; }
-  .exp { font-size: 6.5pt; color: #333; }
+  .med { font-size: 10pt; font-weight: 700; line-height: 1.15; margin-bottom: 0.8mm; word-wrap: break-word; }
+  .dose-row { display: flex; justify-content: space-between; align-items: baseline; gap: 1mm; margin-top: auto; }
+  .dose { font-size: 10pt; font-weight: bold; }
+  .exp { font-size: 7pt; color: #000; }
   @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
 </style>
 </head>
