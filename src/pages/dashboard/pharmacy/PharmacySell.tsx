@@ -94,7 +94,8 @@ export default function PharmacySell() {
         unitPrice: medicine.selling_price,
         quantity,
         totalPrice: quantity * medicine.selling_price,
-        stockAvailable: medicine.stock_quantity
+        stockAvailable: medicine.stock_quantity,
+        expiryDate: medicine.expiry_date
       };
       setCart([...cart, newItem]);
     }
