@@ -277,7 +277,7 @@ export function StickerPrinter() {
                     key={m.id}
                     onClick={() => {
                       setMedicineName(m.name);
-                      if (m.expiry_date && !expDate) setExpDate(m.expiry_date);
+                      if (m.expiry_date) setExpDate(m.expiry_date);
                       setShowMedSuggest(false);
                     }}
                     className="w-full text-left px-3 py-2 hover:bg-accent text-sm border-b border-border last:border-b-0"
