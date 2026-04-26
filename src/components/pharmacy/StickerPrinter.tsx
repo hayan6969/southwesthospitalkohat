@@ -267,9 +267,6 @@ export function StickerPrinter() {
     iframe.onload = () => {
       window.setTimeout(triggerPrint, 50);
     };
-    if (iframe.contentWindow?.document.readyState === "complete") {
-      window.setTimeout(triggerPrint, 50);
-    }
   };
 
   return (
