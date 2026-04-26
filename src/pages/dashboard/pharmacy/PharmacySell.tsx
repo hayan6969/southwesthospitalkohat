@@ -325,6 +325,9 @@ export default function PharmacySell() {
                       <p className="text-sm text-gray-600">
                         {formatPkrAmount(item.unitPrice)} × {item.quantity} = {formatPkrAmount(item.totalPrice)}
                       </p>
+                      <p className={`text-xs mt-0.5 ${isExpiringSoon(item.expiryDate) ? "text-destructive font-medium" : "text-gray-500"}`}>
+                        Expiry: {formatExpiry(item.expiryDate)}
+                      </p>
                     </div>
                     <div className="flex items-center gap-2">
                       <Input
