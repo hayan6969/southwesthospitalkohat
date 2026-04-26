@@ -22,6 +22,23 @@ type CartItem = {
   quantity: number;
   totalPrice: number;
   stockAvailable: number;
+  expiryDate?: string | null;
+};
+
+const formatExpiry = (date?: string | null) => {
+  if (!date) return "—";
+  const d = new Date(date);
+  if (isNaN(d.getTime())) return date;
+  return d.toLocaleDateString("en-GB", { month: "short", year: "numeric" });
+};
+
+const isExpiringSoon = (date?: string | null) => {
+  if (!date) return false;
+  const d = new Date(date);
+  if (isNaN(d.getTime())) return false;
+  const now = new Date();
+  const diffDays = (d.getTime() - now.getTime()) / (1000 * 60 * 60 * 24);
+  return diffDays <= 90;
 };
 
 export default function PharmacySell() {
