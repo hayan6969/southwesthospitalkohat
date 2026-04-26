@@ -146,16 +146,31 @@ export default function PharmacyMedicines() {
   };
 
   const handleDelete = async (id: string, medicine: any) => {
-    if (window.confirm("Are you sure you want to delete this medicine?")) {
-      try {
-        await deleteMedicine.mutateAsync(id);
-        await logDelete("Medicine", `Deleted medicine: ${medicine.name}`, profile?.id);
-        toast({ title: "Medicine deleted successfully" });
-      } catch (error) {
-        toast({ 
-          title: "Error", 
-          description: "Failed to delete medicine",
-          variant: "destructive"
+    if (!window.confirm("Are you sure you want to delete this medicine?")) return;
+    try {
+      await deleteMedicine.mutateAsync(id);
+      await logDelete("Medicine", `Deleted medicine: ${medicine.name}`, profile?.id);
+      toast({ title: "Medicine deleted successfully" });
+    } catch (error: any) {
+      const msg = error?.message || "";
+      const isFkViolation = error?.code === "23503" || msg.toLowerCase().includes("foreign key") || msg.toLowerCase().includes("violates");
+      if (isFkViolation) {
+        const confirmZero = window.confirm(
+          `"${medicine.name}" has past sales records and cannot be deleted (this would break invoice history).\n\nWould you like to set its stock to 0 instead so it stops appearing in sales?`
+        );
+        if (confirmZero) {
+          try {
+            await updateMedicine.mutateAsync({ id, stock_quantity: 0 });
+            toast({ title: "Stock set to 0", description: `${medicine.name} is now out of stock.` });
+          } catch (e: any) {
+            toast({ title: "Error", description: e?.message || "Failed to update stock", variant: "destructive" });
+          }
+        }
+      } else {
+        toast({
+          title: "Error",
+          description: msg || "Failed to delete medicine",
+          variant: "destructive",
         });
       }
     }
