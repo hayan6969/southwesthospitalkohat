@@ -1,0 +1,2 @@
+ALTER TABLE public.pharmacy_invoice_items DROP CONSTRAINT IF EXISTS pharmacy_invoice_items_medicine_id_fkey;
+ALTER TABLE public.pharmacy_invoice_items ADD CONSTRAINT pharmacy_invoice_items_medicine_id_fkey FOREIGN KEY (medicine_id) REFERENCES public.medicines(id) ON DELETE SET NULL;
