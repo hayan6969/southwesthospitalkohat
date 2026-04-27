@@ -156,26 +156,27 @@ export function StickerPrinter() {
   @page { size: ${PAGE_WIDTH}mm ${PAGE_HEIGHT}mm; margin: 0; }
   * { box-sizing: border-box; }
   html, body {
-    margin: 0; padding: 0;
+    margin: 0 !important; padding: 0 !important;
     width: ${PAGE_WIDTH}mm; height: ${PAGE_HEIGHT}mm;
     font-family: Arial, Helvetica, sans-serif; color: #000; background: #fff;
+    overflow: hidden;
   }
   .sticker {
     width: ${PAGE_WIDTH}mm; height: ${PAGE_HEIGHT}mm;
-    padding: 1.5mm 2mm; overflow: hidden;
+    padding: 1mm 2mm 0.5mm 2mm; overflow: hidden;
     page-break-after: avoid; break-after: avoid;
     page-break-inside: avoid; break-inside: avoid;
-    display: flex; flex-direction: column; justify-content: space-between;
+    display: block;
   }
   .row1 { display: flex; justify-content: space-between; align-items: baseline; gap: 1mm;
-          font-size: 8pt; line-height: 1.1; margin-bottom: 0.5mm; }
+          font-size: 8pt; line-height: 1.1; margin: 0 0 0.4mm 0; }
   .pid { font-weight: 600; }
   .cat { font-weight: bold; font-size: 9pt; }
-  .pname { font-size: 10pt; font-weight: bold; line-height: 1.1; margin-bottom: 1mm;
-           border-bottom: 0.3mm solid #000; padding-bottom: 0.6mm;
+  .pname { font-size: 10pt; font-weight: bold; line-height: 1.1; margin: 0 0 0.8mm 0;
+           border-bottom: 0.3mm solid #000; padding-bottom: 0.4mm;
            white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .med { font-size: 10pt; font-weight: 700; line-height: 1.15; margin-bottom: 0.8mm; word-wrap: break-word; }
-  .dose-row { display: flex; justify-content: space-between; align-items: baseline; gap: 1mm; margin-top: auto; }
+  .med { font-size: 10pt; font-weight: 700; line-height: 1.1; margin: 0 0 0.6mm 0; word-wrap: break-word; }
+  .dose-row { display: flex; justify-content: space-between; align-items: baseline; gap: 1mm; margin: 0; }
   .dose { font-size: 10pt; font-weight: bold; }
   .exp { font-size: 7pt; color: #000; }
   @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
