@@ -952,7 +952,22 @@ export const useCreatePatientWithProfile = () => {
 
       try {
         const phone = patientData.phone.trim();
-        const { data: accountResult, error: accountError } = await (supabase.rpc as any)('create_patient_account', {
+        const createPatientAccount = supabase.rpc as unknown as (
+          fn: 'create_patient_account',
+          args: {
+            p_phone: string;
+            p_cnic: string;
+            p_first_name: string;
+            p_last_name: string;
+            p_province: string | null;
+            p_city: string | null;
+          }
+        ) => Promise<{
+          data: { user_id?: string; patient_number?: string; phone?: string } | null;
+          error: { message?: string; code?: string } | null;
+        }>;
+
+        const { data: accountResult, error: accountError } = await createPatientAccount('create_patient_account', {
           p_phone: phone,
           p_cnic: patientData.cnic,
           p_first_name: patientData.first_name,
