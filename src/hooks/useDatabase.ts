@@ -952,42 +952,93 @@ export const useCreatePatientWithProfile = () => {
 
       // Check for existing profile with same phone number (username should be unique)
       const email = `${patientData.phone}@patient.local`;
-      
-      // Try to check for duplicates, but don't block registration on network errors
-      // Database constraints will catch actual duplicates during insertion
+
+      // Look for an existing profile by phone or by email pattern.
+      // If found but no patient record exists, treat it as an orphaned/incomplete
+      // registration and resume by completing the patient row instead of blocking.
       try {
-        // Check by phone number
-        const { data: byPhone, error: phoneCheckError } = await supabase
+        let existingProfileId: string | null = null;
+
+        const { data: byPhone } = await supabase
           .from('profiles')
           .select('id')
           .eq('phone', patientData.phone)
           .maybeSingle();
-        
-        // Only throw if we successfully checked and found a duplicate
-        if (byPhone) {
-          console.log('Phone number already exists:', patientData.phone);
-          throw new Error('DUPLICATE_PHONE');
+        if (byPhone?.id) existingProfileId = byPhone.id;
+
+        if (!existingProfileId) {
+          const { data: byEmail } = await supabase
+            .from('profiles')
+            .select('id')
+            .eq('email', email)
+            .maybeSingle();
+          if (byEmail?.id) existingProfileId = byEmail.id;
         }
 
-        // Check by email pattern
-        const { data: byEmail, error: emailCheckError } = await supabase
-          .from('profiles')
-          .select('id')
-          .eq('email', email)
-          .maybeSingle();
-        
-        // Only throw if we successfully checked and found a duplicate
-        if (byEmail) {
-          console.log('Email pattern already exists:', email);
-          throw new Error('DUPLICATE_PHONE');
+        if (existingProfileId) {
+          // Check if a patient row already exists for this profile
+          const { data: existingPatient } = await supabase
+            .from('patients')
+            .select('id, patient_number')
+            .eq('id', existingProfileId)
+            .maybeSingle();
+
+          if (existingPatient) {
+            // Real duplicate: profile + patient already exist
+            console.log('Phone number already fully registered:', patientData.phone);
+            throw new Error('DUPLICATE_PHONE');
+          }
+
+          // Orphaned profile - resume registration by inserting the missing patient row
+          console.log('Resuming registration for orphaned profile:', existingProfileId);
+
+          // Make sure the profile data matches what was just entered
+          await supabase
+            .from('profiles')
+            .update({
+              first_name: patientData.first_name,
+              last_name: patientData.last_name,
+              phone: patientData.phone,
+              email,
+              role: 'patient',
+            })
+            .eq('id', existingProfileId);
+
+          const { data: resumedPatient, error: resumeError } = await supabase
+            .from('patients')
+            .insert({
+              id: existingProfileId,
+              cnic: patientData.cnic,
+              province: patientData.province || null,
+              city: patientData.city || null,
+            })
+            .select()
+            .single();
+
+          if (resumeError) {
+            console.error('Failed to resume orphaned registration:', resumeError);
+            throw new Error(`PATIENT_CREATION_FAILED: ${resumeError.message}`);
+          }
+
+          const { data: fullResumed } = await supabase
+            .from('patients')
+            .select('*, profiles:id(first_name, last_name, phone, email)')
+            .eq('id', existingProfileId)
+            .single();
+
+          return {
+            patient: fullResumed || resumedPatient,
+            user: { id: existingProfileId },
+            patientNumber: (fullResumed as any)?.patient_number,
+            phone: patientData.phone,
+          };
         }
       } catch (checkError: any) {
-        // If it's a duplicate error, rethrow it
-        if (checkError.message === 'DUPLICATE_PHONE') {
+        if (checkError.message === 'DUPLICATE_PHONE' || checkError.message?.startsWith('PATIENT_CREATION_FAILED')) {
           throw checkError;
         }
-        // For network errors or other issues, log and continue
-        // Database constraints will catch any actual duplicates
+        // For network or unexpected errors, log and continue;
+        // DB constraints will still catch real duplicates.
         console.warn('Could not verify duplicate status, proceeding with registration:', checkError.message);
       }
 
