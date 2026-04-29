@@ -287,7 +287,7 @@ export const useInvoices = () => {
         .from('invoices')
         .select(`
           *,
-          patient:patients(*,profiles(first_name, last_name, phone, email))
+          patient:patients(*,profiles!patients_id_fkey(first_name, last_name, phone, email))
         `)
         .neq('status', 'cancelled')
         .order('created_at', { ascending: false });
@@ -351,7 +351,7 @@ export const usePaginatedInvoices = (page: number = 1, pageSize: number = 20, se
         .from('invoices')
         .select(`
           *,
-          patient:patients(*,profiles(first_name, last_name, phone, email))
+          patient:patients(*,profiles!patients_id_fkey(first_name, last_name, phone, email))
         `, { count: 'exact' })
         .order('created_at', { ascending: false });
 
