@@ -1069,13 +1069,15 @@ export const useCreatePatientWithProfile = () => {
 
         const { error: profileError } = await supabase
           .from('profiles')
-          .insert({
+          .upsert({
             id: userId,
             email,
             first_name: patientData.first_name,
             last_name: patientData.last_name,
             role: 'patient',
             phone: patientData.phone,
+          }, {
+            onConflict: 'id',
           });
 
         if (profileError) {
