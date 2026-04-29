@@ -374,7 +374,7 @@ export function StaffOT() {
           <div className="relative">
             <Search className="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" />
             <Input
-              placeholder="Search OTs (patient name, ID, doctor...)"
+              placeholder="Search OTs (patient name, ID, phone, doctor...)"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="pl-10 w-80"
