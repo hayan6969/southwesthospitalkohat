@@ -950,145 +950,43 @@ export const useCreatePatientWithProfile = () => {
         };
       }
 
-      // Check for existing profile with same phone number (username should be unique)
-      const email = `${patientData.phone}@patient.local`;
-
-      // Look for an existing profile by phone or by email pattern.
-      // If found but no patient record exists, treat it as an orphaned/incomplete
-      // registration and resume by completing the patient row instead of blocking.
       try {
-        let existingProfileId: string | null = null;
-
-        const { data: byPhone } = await supabase
-          .from('profiles')
-          .select('id')
-          .eq('phone', patientData.phone)
-          .maybeSingle();
-        if (byPhone?.id) existingProfileId = byPhone.id;
-
-        if (!existingProfileId) {
-          const { data: byEmail } = await supabase
-            .from('profiles')
-            .select('id')
-            .eq('email', email)
-            .maybeSingle();
-          if (byEmail?.id) existingProfileId = byEmail.id;
-        }
-
-        if (existingProfileId) {
-          // Check if a patient row already exists for this profile
-          const { data: existingPatient } = await supabase
-            .from('patients')
-            .select('id, patient_number')
-            .eq('id', existingProfileId)
-            .maybeSingle();
-
-          if (existingPatient) {
-            // Real duplicate: profile + patient already exist
-            console.log('Phone number already fully registered:', patientData.phone);
-            throw new Error('DUPLICATE_PHONE');
+        const phone = patientData.phone.trim();
+        const createPatientAccount = supabase.rpc as unknown as (
+          fn: 'create_patient_account',
+          args: {
+            p_phone: string;
+            p_cnic: string;
+            p_first_name: string;
+            p_last_name: string;
+            p_province: string | null;
+            p_city: string | null;
           }
+        ) => Promise<{
+          data: { user_id?: string; patient_number?: string; phone?: string } | null;
+          error: { message?: string; code?: string } | null;
+        }>;
 
-          // Orphaned profile - resume registration by inserting the missing patient row
-          console.log('Resuming registration for orphaned profile:', existingProfileId);
-
-          // Make sure the profile data matches what was just entered
-          await supabase
-            .from('profiles')
-            .update({
-              first_name: patientData.first_name,
-              last_name: patientData.last_name,
-              phone: patientData.phone,
-              email,
-              role: 'patient',
-            })
-            .eq('id', existingProfileId);
-
-          const { data: resumedPatient, error: resumeError } = await supabase
-            .from('patients')
-            .insert({
-              id: existingProfileId,
-              cnic: patientData.cnic,
-              province: patientData.province || null,
-              city: patientData.city || null,
-            })
-            .select()
-            .single();
-
-          if (resumeError) {
-            console.error('Failed to resume orphaned registration:', resumeError);
-            throw new Error(`PATIENT_CREATION_FAILED: ${resumeError.message}`);
-          }
-
-          const { data: fullResumed } = await supabase
-            .from('patients')
-            .select('*, profiles:id(first_name, last_name, phone, email)')
-            .eq('id', existingProfileId)
-            .single();
-
-          return {
-            patient: fullResumed || resumedPatient,
-            user: { id: existingProfileId },
-            patientNumber: (fullResumed as any)?.patient_number,
-            phone: patientData.phone,
-          };
-        }
-      } catch (checkError: any) {
-        if (checkError.message === 'DUPLICATE_PHONE' || checkError.message?.startsWith('PATIENT_CREATION_FAILED')) {
-          throw checkError;
-        }
-        // For network or unexpected errors, log and continue;
-        // DB constraints will still catch real duplicates.
-        console.warn('Could not verify duplicate status, proceeding with registration:', checkError.message);
-      }
-
-      // Use the database function to create user without affecting current session
-      console.log('Creating new patient with email:', email);
-
-      try {
-        // Use the create_user_account function to avoid session switching
-        const { data: userId, error: userError } = await supabase.rpc('create_user_account', {
-          p_email: email,
-          p_password: patientData.cnic,
+        const { data: accountResult, error: accountError } = await createPatientAccount('create_patient_account', {
+          p_phone: phone,
+          p_cnic: patientData.cnic,
           p_first_name: patientData.first_name,
           p_last_name: patientData.last_name,
-          p_role: 'patient'
+          p_province: patientData.province || null,
+          p_city: patientData.city || null,
         });
 
-        if (userError) {
-          console.error('User creation error:', userError);
-          if (userError.message.includes('already exists') || userError.message.includes('duplicate')) {
+        if (accountError) {
+          console.error('Patient account creation error:', accountError);
+          if (accountError.message?.includes('DUPLICATE_PHONE') || accountError.message?.includes('duplicate')) {
             throw new Error('DUPLICATE_PHONE');
           }
-          throw new Error(`USER_CREATION_FAILED: ${userError.message}`);
+          throw new Error(`USER_CREATION_FAILED: ${accountError.message}`);
         }
 
+        const userId = accountResult?.user_id;
         if (!userId) {
           throw new Error('USER_CREATION_FAILED: No user ID returned');
-        }
-
-        // The profile is created by the database trigger when the account is created.
-        // Do not insert it again here, otherwise an incomplete-but-valid profile can be
-        // mistaken for a duplicate phone registration.
-
-        // Create patient record
-        const { data: patient, error: patientError } = await supabase
-          .from('patients')
-          .insert({
-            id: userId,
-            cnic: patientData.cnic,
-            province: patientData.province || null,
-            city: patientData.city || null,
-          })
-          .select()
-          .single();
-
-        if (patientError) {
-          console.error('Patient creation error:', patientError);
-          if (patientError.code === '23505') { // Unique constraint violation
-            throw new Error('DUPLICATE_PHONE');
-          }
-          throw new Error(`PATIENT_CREATION_FAILED: ${patientError.message}`);
         }
 
         // Fetch the complete patient data with profile to get patient_number
@@ -1100,14 +998,14 @@ export const useCreatePatientWithProfile = () => {
 
         if (fetchError) {
           console.error('Error fetching patient data:', fetchError);
+          throw new Error(`PATIENT_CREATION_FAILED: ${fetchError.message}`);
         }
 
-        // Profile will be created automatically by the trigger
         return { 
-          patient: fullPatient || patient, 
+          patient: fullPatient, 
           user: { id: userId },
-          patientNumber: fullPatient?.patient_number,
-          phone: patientData.phone
+          patientNumber: accountResult?.patient_number || fullPatient?.patient_number,
+          phone
         };
         
       } catch (error: any) {

@@ -2317,6 +2317,17 @@ export type Database = {
         }
         Returns: string
       }
+      create_patient_account: {
+        Args: {
+          p_city?: string
+          p_cnic: string
+          p_first_name: string
+          p_last_name: string
+          p_phone: string
+          p_province?: string
+        }
+        Returns: Json
+      }
       create_user_account: {
         Args: {
           p_email: string
