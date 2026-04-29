@@ -957,13 +957,18 @@ export const useCreatePatientWithProfile = () => {
       // Try to check for duplicates, but don't block registration on network errors
       // Database constraints will catch actual duplicates during insertion
       try {
-        // Check by phone number
-        const { data: byPhone, error: phoneCheckError } = await supabase
+        const { data: byPhone } = await supabase
           .from('profiles')
           .select('id')
           .eq('phone', patientData.phone)
           .maybeSingle();
-        
+
+        const { data: byEmail } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('email', email)
+          .maybeSingle();
+
         const duplicateProfile = byPhone || byEmail;
         if (duplicateProfile?.id) {
           const { data: existingPatient, error: existingPatientError } = await supabase
@@ -982,23 +987,6 @@ export const useCreatePatientWithProfile = () => {
           }
 
           existingProfileId = duplicateProfile.id;
-        }
-
-        // Only throw if we successfully checked and found a duplicate
-        if (byPhone) {
-          return;
-        }
-
-        // Check by email pattern
-        const { data: byEmail, error: emailCheckError } = await supabase
-          .from('profiles')
-          .select('id')
-          .eq('email', email)
-          .maybeSingle();
-        
-        // Only throw if we successfully checked and found a duplicate
-        if (byEmail) {
-          return;
         }
       } catch (checkError: any) {
         // If it's a duplicate error, rethrow it
