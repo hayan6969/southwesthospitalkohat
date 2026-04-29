@@ -952,6 +952,7 @@ export const useCreatePatientWithProfile = () => {
 
       // Check for existing profile with same phone number (username should be unique)
       const email = `${patientData.phone}@patient.local`;
+      let existingProfileId: string | null = null;
       
       // Try to check for duplicates, but don't block registration on network errors
       // Database constraints will catch actual duplicates during insertion
@@ -963,10 +964,29 @@ export const useCreatePatientWithProfile = () => {
           .eq('phone', patientData.phone)
           .maybeSingle();
         
+        const duplicateProfile = byPhone || byEmail;
+        if (duplicateProfile?.id) {
+          const { data: existingPatient, error: existingPatientError } = await supabase
+            .from('patients')
+            .select('id')
+            .eq('id', duplicateProfile.id)
+            .maybeSingle();
+
+          if (existingPatientError) {
+            throw existingPatientError;
+          }
+
+          if (existingPatient) {
+            console.log('Phone number already exists:', patientData.phone);
+            throw new Error('DUPLICATE_PHONE');
+          }
+
+          existingProfileId = duplicateProfile.id;
+        }
+
         // Only throw if we successfully checked and found a duplicate
         if (byPhone) {
-          console.log('Phone number already exists:', patientData.phone);
-          throw new Error('DUPLICATE_PHONE');
+          return;
         }
 
         // Check by email pattern
@@ -978,8 +998,7 @@ export const useCreatePatientWithProfile = () => {
         
         // Only throw if we successfully checked and found a duplicate
         if (byEmail) {
-          console.log('Email pattern already exists:', email);
-          throw new Error('DUPLICATE_PHONE');
+          return;
         }
       } catch (checkError: any) {
         // If it's a duplicate error, rethrow it
@@ -995,21 +1014,28 @@ export const useCreatePatientWithProfile = () => {
       console.log('Creating new patient with email:', email);
 
       try {
-        // Use the create_user_account function to avoid session switching
-        const { data: userId, error: userError } = await supabase.rpc('create_user_account', {
-          p_email: email,
-          p_password: patientData.cnic,
-          p_first_name: patientData.first_name,
-          p_last_name: patientData.last_name,
-          p_role: 'patient'
-        });
+        let userId = existingProfileId;
 
-        if (userError) {
-          console.error('User creation error:', userError);
-          if (userError.message.includes('already exists') || userError.message.includes('duplicate')) {
-            throw new Error('DUPLICATE_PHONE');
+        if (!userId) {
+          // Use the create_user_account function to avoid session switching.
+          // The database trigger creates the profile automatically.
+          const { data: createdUserId, error: userError } = await supabase.rpc('create_user_account', {
+            p_email: email,
+            p_password: patientData.cnic,
+            p_first_name: patientData.first_name,
+            p_last_name: patientData.last_name,
+            p_role: 'patient'
+          });
+
+          if (userError) {
+            console.error('User creation error:', userError);
+            if (userError.message.includes('already exists') || userError.message.includes('duplicate')) {
+              throw new Error('DUPLICATE_PHONE');
+            }
+            throw new Error(`USER_CREATION_FAILED: ${userError.message}`);
           }
-          throw new Error(`USER_CREATION_FAILED: ${userError.message}`);
+
+          userId = createdUserId;
         }
 
         if (!userId) {
@@ -1018,14 +1044,13 @@ export const useCreatePatientWithProfile = () => {
 
         const { error: profileError } = await supabase
           .from('profiles')
-          .insert({
-            id: userId,
-            email,
+          .update({
             first_name: patientData.first_name,
             last_name: patientData.last_name,
             role: 'patient',
             phone: patientData.phone,
-          });
+          })
+          .eq('id', userId);
 
         if (profileError) {
           console.error('Profile creation error:', profileError);
