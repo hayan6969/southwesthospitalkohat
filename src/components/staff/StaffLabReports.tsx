@@ -83,6 +83,27 @@ export function StaffLabReports() {
         }
       }
 
+      // 2b) If still not found, try matching profiles.phone directly
+      if (!patients || patients.length === 0) {
+        const { data: profileMatches } = await supabase
+          .from("profiles")
+          .select("id")
+          .eq("role", "patient")
+          .ilike("phone", `%${term}%`)
+          .limit(5);
+
+        const ids = (profileMatches || []).map((p: any) => p.id);
+        if (ids.length > 0) {
+          const { data: byPhoneField } = await supabase
+            .from("patients")
+            .select("id, patient_number, profile:profiles!patients_id_fkey(first_name, last_name, email)")
+            .in("id", ids);
+          if (byPhoneField && byPhoneField.length > 0) {
+            patients = byPhoneField;
+          }
+        }
+      }
+
       // 3) If still not found, try by UUID
       if (!patients || patients.length === 0) {
         if (term.includes("-") && term.length > 30) {
