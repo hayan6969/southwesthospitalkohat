@@ -151,12 +151,17 @@ export function StaffOT() {
       const searchLower = search.toLowerCase();
       filtered = filtered.filter(ot => {
         const patientName = getPatientName(ot.patient_id, patientNames || []).toLowerCase();
+        const patientProfile = patientNames?.find((p: any) => p.id === ot.patient_id);
+        const phone = (patientProfile?.phone || '').toLowerCase();
+        const emailPhone = patientProfile?.email?.match(/^(\d+)@patient\.local$/)?.[1] || '';
         return (
           patientName.includes(searchLower) ||
           ot.patient_id.toLowerCase().includes(searchLower) ||
           ot.doctor_name.toLowerCase().includes(searchLower) ||
           ot.operation?.operation_name?.toLowerCase().includes(searchLower) ||
-          ot.room?.room_name?.toLowerCase().includes(searchLower)
+          ot.room?.room_name?.toLowerCase().includes(searchLower) ||
+          phone.includes(searchLower) ||
+          emailPhone.includes(searchLower)
         );
       });
     }
