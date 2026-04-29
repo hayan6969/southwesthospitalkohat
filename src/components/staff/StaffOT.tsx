@@ -151,12 +151,17 @@ export function StaffOT() {
       const searchLower = search.toLowerCase();
       filtered = filtered.filter(ot => {
         const patientName = getPatientName(ot.patient_id, patientNames || []).toLowerCase();
+        const patientProfile = patientNames?.find((p: any) => p.id === ot.patient_id);
+        const phone = (patientProfile?.phone || '').toLowerCase();
+        const emailPhone = patientProfile?.email?.match(/^(\d+)@patient\.local$/)?.[1] || '';
         return (
           patientName.includes(searchLower) ||
           ot.patient_id.toLowerCase().includes(searchLower) ||
           ot.doctor_name.toLowerCase().includes(searchLower) ||
           ot.operation?.operation_name?.toLowerCase().includes(searchLower) ||
-          ot.room?.room_name?.toLowerCase().includes(searchLower)
+          ot.room?.room_name?.toLowerCase().includes(searchLower) ||
+          phone.includes(searchLower) ||
+          emailPhone.includes(searchLower)
         );
       });
     }
@@ -369,7 +374,7 @@ export function StaffOT() {
           <div className="relative">
             <Search className="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" />
             <Input
-              placeholder="Search OTs (patient name, ID, doctor...)"
+              placeholder="Search OTs (patient name, ID, phone, doctor...)"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="pl-10 w-80"

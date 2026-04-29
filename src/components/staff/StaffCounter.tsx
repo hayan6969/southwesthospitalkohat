@@ -630,7 +630,7 @@ export function StaffCounter() {
         <CardContent>
           <div className="flex flex-col md:flex-row gap-4">
             <Input
-              placeholder="Search by patient name, patient number, doctor name, or patient ID..."
+              placeholder="Search by patient name, patient number, phone, doctor name, or patient ID..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="flex-1"

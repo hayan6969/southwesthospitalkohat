@@ -163,7 +163,7 @@ export function StaffXray() {
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
           <Input
-            placeholder="Search by patient, doctor, or test..."
+            placeholder="Search by patient name, ID, phone, doctor, or test..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="pl-10 pr-10"
