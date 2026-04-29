@@ -287,7 +287,7 @@ export const useInvoices = () => {
         .from('invoices')
         .select(`
           *,
-          patient:patients(*,profiles(first_name, last_name, phone, email))
+          patient:patients(*,profiles!patients_id_fkey(first_name, last_name, phone, email))
         `)
         .neq('status', 'cancelled')
         .order('created_at', { ascending: false });
@@ -351,7 +351,7 @@ export const usePaginatedInvoices = (page: number = 1, pageSize: number = 20, se
         .from('invoices')
         .select(`
           *,
-          patient:patients(*,profiles(first_name, last_name, phone, email))
+          patient:patients(*,profiles!patients_id_fkey(first_name, last_name, phone, email))
         `, { count: 'exact' })
         .order('created_at', { ascending: false });
 
@@ -974,17 +974,33 @@ export const useCreatePatientWithProfile = () => {
           throw new Error('USER_CREATION_FAILED: No user ID returned');
         }
 
-        // Fetch the complete patient data with profile to get patient_number
-        const { data: fullPatient, error: fetchError } = await supabase
-          .from('patients')
-          .select('*, profiles:id(first_name, last_name, phone, email)')
-          .eq('id', userId)
-          .single();
+        // Fetch patient/profile separately to avoid ambiguous patient-profile embed relationships
+        const [patientResponse, profileResponse] = await Promise.all([
+          supabase
+            .from('patients')
+            .select('*')
+            .eq('id', userId)
+            .single(),
+          supabase
+            .from('profiles')
+            .select('first_name, last_name, phone, email')
+            .eq('id', userId)
+            .single(),
+        ]);
 
-        if (fetchError) {
-          console.error('Error fetching patient data:', fetchError);
-          throw new Error(`PATIENT_CREATION_FAILED: ${fetchError.message}`);
+        if (patientResponse.error) {
+          console.error('Error fetching patient data:', patientResponse.error);
+          throw new Error(`PATIENT_CREATION_FAILED: ${patientResponse.error.message}`);
         }
+
+        if (profileResponse.error) {
+          console.warn('Patient profile was created but could not be fetched immediately:', profileResponse.error);
+        }
+
+        const fullPatient = {
+          ...patientResponse.data,
+          profile: profileResponse.data || null,
+        };
 
         return { 
           patient: fullPatient, 
