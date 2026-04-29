@@ -1067,24 +1067,9 @@ export const useCreatePatientWithProfile = () => {
           throw new Error('USER_CREATION_FAILED: No user ID returned');
         }
 
-        const { error: profileError } = await supabase
-          .from('profiles')
-          .insert({
-            id: userId,
-            email,
-            first_name: patientData.first_name,
-            last_name: patientData.last_name,
-            role: 'patient',
-            phone: patientData.phone,
-          });
-
-        if (profileError) {
-          console.error('Profile creation error:', profileError);
-          if (profileError.code === '23505' || profileError.message?.includes('duplicate')) {
-            throw new Error('DUPLICATE_PHONE');
-          }
-          throw new Error(`PROFILE_CREATION_FAILED: ${profileError.message}`);
-        }
+        // The profile is created by the database trigger when the account is created.
+        // Do not insert it again here, otherwise an incomplete-but-valid profile can be
+        // mistaken for a duplicate phone registration.
 
         // Create patient record
         const { data: patient, error: patientError } = await supabase
