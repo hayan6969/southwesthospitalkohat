@@ -156,30 +156,26 @@ export function StickerPrinter() {
   @page { size: ${PAGE_WIDTH}mm ${PAGE_HEIGHT}mm; margin: 0; }
   * { box-sizing: border-box; }
   html, body {
-    margin: 0 !important; padding: 0 !important;
+    margin: 0; padding: 0;
     width: ${PAGE_WIDTH}mm; height: ${PAGE_HEIGHT}mm;
     font-family: Arial, Helvetica, sans-serif; color: #000; background: #fff;
-    overflow: hidden;
   }
   .sticker {
     width: ${PAGE_WIDTH}mm; height: ${PAGE_HEIGHT}mm;
-    padding: 1mm 2mm 0.5mm 2mm; overflow: hidden;
+    padding: 1.5mm 2mm; overflow: hidden;
     page-break-after: avoid; break-after: avoid;
     page-break-inside: avoid; break-inside: avoid;
-    display: block;
-    text-align: center;
+    display: flex; flex-direction: column; justify-content: space-between;
   }
   .row1 { display: flex; justify-content: space-between; align-items: baseline; gap: 1mm;
-          font-size: 8pt; line-height: 1.1; margin: 0 0 0.4mm 0; }
+          font-size: 8pt; line-height: 1.1; margin-bottom: 0.5mm; }
   .pid { font-weight: 600; }
   .cat { font-weight: bold; font-size: 9pt; }
-  .pname { font-size: 10pt; font-weight: bold; line-height: 1.1; margin: 0 0 0.8mm 0;
-           border-bottom: 0.3mm solid #000; padding-bottom: 0.4mm;
-           white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-           text-align: center; }
-  .med { font-size: 10pt; font-weight: 700; line-height: 1.1; margin: 0 0 0.6mm 0; word-wrap: break-word;
-         text-align: center; }
-  .dose-row { display: flex; justify-content: center; align-items: baseline; gap: 3mm; margin: 0; }
+  .pname { font-size: 10pt; font-weight: bold; line-height: 1.1; margin-bottom: 1mm;
+           border-bottom: 0.3mm solid #000; padding-bottom: 0.6mm;
+           white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .med { font-size: 10pt; font-weight: 700; line-height: 1.15; margin-bottom: 0.8mm; word-wrap: break-word; }
+  .dose-row { display: flex; justify-content: space-between; align-items: baseline; gap: 1mm; margin-top: auto; }
   .dose { font-size: 10pt; font-weight: bold; }
   .exp { font-size: 7pt; color: #000; }
   @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
