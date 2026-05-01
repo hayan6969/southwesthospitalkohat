@@ -70,6 +70,10 @@ export default function DashboardLab() {
           <PathologyReportWizard />
         </TabsContent>
 
+        <TabsContent value="pathology-history">
+          <PathologyReportHistory />
+        </TabsContent>
+
         <TabsContent value="inventory">
           <LabItemSupply />
         </TabsContent>
