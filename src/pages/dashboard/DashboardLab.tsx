@@ -42,7 +42,11 @@ export default function DashboardLab() {
           </TabsTrigger>
           <TabsTrigger value="pathology" className="flex items-center gap-1.5 text-xs sm:text-sm">
             <Microscope className="w-3.5 h-3.5" />
-            <span>Pathology</span>
+            <span>New Pathology</span>
+          </TabsTrigger>
+          <TabsTrigger value="pathology-history" className="flex items-center gap-1.5 text-xs sm:text-sm">
+            <History className="w-3.5 h-3.5" />
+            <span>Report History</span>
           </TabsTrigger>
           <TabsTrigger value="inventory" className="flex items-center gap-1.5 text-xs sm:text-sm">
             <FlaskConical className="w-3.5 h-3.5" />
