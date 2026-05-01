@@ -199,7 +199,7 @@ async function loadFullReport(reportId: string): Promise<PathologyPdfData | null
           unit: p.unit,
           ref_display: p.ref_display,
           result_value: res?.result_value ?? null,
-          flag: res?.flag ?? null,
+          flag: (res?.flag ?? null) as "Low" | "High" | "Borderline" | null,
           subrange_used: res?.subrange_used ?? null,
         };
       }),
