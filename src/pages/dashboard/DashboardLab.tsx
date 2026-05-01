@@ -7,7 +7,8 @@ import { StaffLabReports } from "@/components/staff/StaffLabReports";
 import { MySupplyRequests } from "@/components/inventory/MySupplyRequests";
 import { LabItemSupply } from "@/components/inventory/LabItemSupply";
 import { PathologyReportWizard } from "@/components/lab/PathologyReportWizard";
-import { TestTube, FileText, ShoppingCart, FlaskConical, Microscope } from "lucide-react";
+import { PathologyReportHistory } from "@/components/lab/PathologyReportHistory";
+import { TestTube, FileText, ShoppingCart, FlaskConical, Microscope, History } from "lucide-react";
 import AppLayout from "@/layouts/AppLayout";
 
 export default function DashboardLab() {
