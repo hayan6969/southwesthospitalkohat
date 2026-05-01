@@ -843,6 +843,203 @@ export type Database = {
         }
         Relationships: []
       }
+      lab_parameter_subranges: {
+        Row: {
+          created_at: string
+          id: string
+          label: string
+          parameter_id: string
+          ref_display: string | null
+          ref_max: number | null
+          ref_min: number | null
+          sort_order: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          label: string
+          parameter_id: string
+          ref_display?: string | null
+          ref_max?: number | null
+          ref_min?: number | null
+          sort_order?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          label?: string
+          parameter_id?: string
+          ref_display?: string | null
+          ref_max?: number | null
+          ref_min?: number | null
+          sort_order?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lab_parameter_subranges_parameter_id_fkey"
+            columns: ["parameter_id"]
+            isOneToOne: false
+            referencedRelation: "lab_test_parameters"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lab_pathology_report_results: {
+        Row: {
+          created_at: string
+          flag: string | null
+          id: string
+          parameter_id: string
+          report_id: string
+          result_value: string | null
+          subrange_id: string | null
+          subrange_used: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          flag?: string | null
+          id?: string
+          parameter_id: string
+          report_id: string
+          result_value?: string | null
+          subrange_id?: string | null
+          subrange_used?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          flag?: string | null
+          id?: string
+          parameter_id?: string
+          report_id?: string
+          result_value?: string | null
+          subrange_id?: string | null
+          subrange_used?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lab_pathology_report_results_parameter_id_fkey"
+            columns: ["parameter_id"]
+            isOneToOne: false
+            referencedRelation: "lab_test_parameters"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lab_pathology_report_results_report_id_fkey"
+            columns: ["report_id"]
+            isOneToOne: false
+            referencedRelation: "lab_pathology_reports"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lab_pathology_report_test_types: {
+        Row: {
+          created_at: string
+          id: string
+          report_id: string
+          sort_order: number
+          test_type_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          report_id: string
+          sort_order?: number
+          test_type_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          report_id?: string
+          sort_order?: number
+          test_type_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lab_pathology_report_test_types_report_id_fkey"
+            columns: ["report_id"]
+            isOneToOne: false
+            referencedRelation: "lab_pathology_reports"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lab_pathology_report_test_types_test_type_id_fkey"
+            columns: ["test_type_id"]
+            isOneToOne: false
+            referencedRelation: "lab_test_types"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lab_pathology_reports: {
+        Row: {
+          collected_at: string | null
+          collection_address: string | null
+          created_at: string
+          created_by: string | null
+          id: string
+          instrument: string | null
+          interpretation: string | null
+          invoice_id: string | null
+          patient_age_snapshot: number | null
+          patient_id: string
+          patient_name_snapshot: string | null
+          patient_sex_snapshot: string | null
+          referred_by: string | null
+          registered_at: string | null
+          report_number: string
+          reported_at: string | null
+          sample_type: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          collected_at?: string | null
+          collection_address?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          instrument?: string | null
+          interpretation?: string | null
+          invoice_id?: string | null
+          patient_age_snapshot?: number | null
+          patient_id: string
+          patient_name_snapshot?: string | null
+          patient_sex_snapshot?: string | null
+          referred_by?: string | null
+          registered_at?: string | null
+          report_number: string
+          reported_at?: string | null
+          sample_type?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          collected_at?: string | null
+          collection_address?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          instrument?: string | null
+          interpretation?: string | null
+          invoice_id?: string | null
+          patient_age_snapshot?: number | null
+          patient_id?: string
+          patient_name_snapshot?: string | null
+          patient_sex_snapshot?: string | null
+          referred_by?: string | null
+          registered_at?: string | null
+          report_number?: string
+          reported_at?: string | null
+          sample_type?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       lab_reports: {
         Row: {
           created_at: string | null
@@ -940,6 +1137,98 @@ export type Database = {
           notes?: string | null
           quantity_used?: number
           used_by?: string
+        }
+        Relationships: []
+      }
+      lab_test_parameters: {
+        Row: {
+          category_heading: string | null
+          created_at: string
+          has_subranges: boolean
+          id: string
+          is_optional: boolean
+          parameter_name: string
+          ref_display: string | null
+          ref_max: number | null
+          ref_min: number | null
+          sort_order: number
+          test_type_id: string
+          unit: string | null
+          updated_at: string
+        }
+        Insert: {
+          category_heading?: string | null
+          created_at?: string
+          has_subranges?: boolean
+          id?: string
+          is_optional?: boolean
+          parameter_name: string
+          ref_display?: string | null
+          ref_max?: number | null
+          ref_min?: number | null
+          sort_order?: number
+          test_type_id: string
+          unit?: string | null
+          updated_at?: string
+        }
+        Update: {
+          category_heading?: string | null
+          created_at?: string
+          has_subranges?: boolean
+          id?: string
+          is_optional?: boolean
+          parameter_name?: string
+          ref_display?: string | null
+          ref_max?: number | null
+          ref_min?: number | null
+          sort_order?: number
+          test_type_id?: string
+          unit?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lab_test_parameters_test_type_id_fkey"
+            columns: ["test_type_id"]
+            isOneToOne: false
+            referencedRelation: "lab_test_types"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lab_test_types: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          method: string | null
+          name: string
+          notes: string | null
+          report_category: string | null
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          method?: string | null
+          name: string
+          notes?: string | null
+          report_category?: string | null
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          method?: string | null
+          name?: string
+          notes?: string | null
+          report_category?: string | null
+          sort_order?: number
+          updated_at?: string
         }
         Relationships: []
       }
