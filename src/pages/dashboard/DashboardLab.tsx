@@ -7,7 +7,8 @@ import { StaffLabReports } from "@/components/staff/StaffLabReports";
 import { MySupplyRequests } from "@/components/inventory/MySupplyRequests";
 import { LabItemSupply } from "@/components/inventory/LabItemSupply";
 import { PathologyReportWizard } from "@/components/lab/PathologyReportWizard";
-import { TestTube, FileText, ShoppingCart, FlaskConical, Microscope } from "lucide-react";
+import { PathologyReportHistory } from "@/components/lab/PathologyReportHistory";
+import { TestTube, FileText, ShoppingCart, FlaskConical, Microscope, History } from "lucide-react";
 import AppLayout from "@/layouts/AppLayout";
 
 export default function DashboardLab() {
@@ -41,7 +42,11 @@ export default function DashboardLab() {
           </TabsTrigger>
           <TabsTrigger value="pathology" className="flex items-center gap-1.5 text-xs sm:text-sm">
             <Microscope className="w-3.5 h-3.5" />
-            <span>Pathology</span>
+            <span>New Pathology</span>
+          </TabsTrigger>
+          <TabsTrigger value="pathology-history" className="flex items-center gap-1.5 text-xs sm:text-sm">
+            <History className="w-3.5 h-3.5" />
+            <span>Report History</span>
           </TabsTrigger>
           <TabsTrigger value="inventory" className="flex items-center gap-1.5 text-xs sm:text-sm">
             <FlaskConical className="w-3.5 h-3.5" />
@@ -63,6 +68,10 @@ export default function DashboardLab() {
 
         <TabsContent value="pathology">
           <PathologyReportWizard />
+        </TabsContent>
+
+        <TabsContent value="pathology-history">
+          <PathologyReportHistory />
         </TabsContent>
 
         <TabsContent value="inventory">
