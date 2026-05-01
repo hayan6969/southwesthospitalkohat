@@ -6,7 +6,8 @@ import { StaffLab } from "@/components/staff/StaffLab";
 import { StaffLabReports } from "@/components/staff/StaffLabReports";
 import { MySupplyRequests } from "@/components/inventory/MySupplyRequests";
 import { LabItemSupply } from "@/components/inventory/LabItemSupply";
-import { TestTube, FileText, ShoppingCart, FlaskConical } from "lucide-react";
+import { PathologyReportWizard } from "@/components/lab/PathologyReportWizard";
+import { TestTube, FileText, ShoppingCart, FlaskConical, Microscope } from "lucide-react";
 import AppLayout from "@/layouts/AppLayout";
 
 export default function DashboardLab() {
@@ -38,6 +39,10 @@ export default function DashboardLab() {
             <FileText className="w-3.5 h-3.5" />
             <span>Lab Reports</span>
           </TabsTrigger>
+          <TabsTrigger value="pathology" className="flex items-center gap-1.5 text-xs sm:text-sm">
+            <Microscope className="w-3.5 h-3.5" />
+            <span>Pathology</span>
+          </TabsTrigger>
           <TabsTrigger value="inventory" className="flex items-center gap-1.5 text-xs sm:text-sm">
             <FlaskConical className="w-3.5 h-3.5" />
             <span>Lab Item Supply</span>
@@ -54,6 +59,10 @@ export default function DashboardLab() {
 
         <TabsContent value="reports">
           <StaffLabReports />
+        </TabsContent>
+
+        <TabsContent value="pathology">
+          <PathologyReportWizard />
         </TabsContent>
 
         <TabsContent value="inventory">
