@@ -46,7 +46,7 @@ interface Subrange {
   sort_order: number;
 }
 
-const emptyTest: Partial<TestType> = { name: "", report_category: "", method: "", notes: "", is_active: true, sort_order: 100 };
+const emptyTest: Partial<TestType> = { name: "", report_category: "", method: "", notes: "", is_active: true, sort_order: 100, price: 0 };
 
 export function PathologyTestTypeManager() {
   const qc = useQueryClient();
