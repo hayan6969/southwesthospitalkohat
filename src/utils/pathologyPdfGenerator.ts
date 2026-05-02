@@ -10,6 +10,7 @@ export interface PathologyPdfParameter {
   result_value: string | null;
   flag: 'Low' | 'High' | 'Borderline' | null;
   subrange_used?: string | null;
+  parameter_id?: string | null;
 }
 
 export interface PathologyPdfTestType {
