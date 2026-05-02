@@ -102,13 +102,18 @@ export function PathologyReportWizard() {
     const order = readyOrders?.find((o) => o.id === orderId);
     if (!order) return;
     setSelectedOrderId(orderId);
-    // Fetch patient
+    // Fetch patient + profile separately
     const { data: pat } = await supabase
       .from("patients")
-      .select("*, profile:profiles!patients_id_fkey(*)")
+      .select("*")
       .eq("id", order.patient_id)
-      .single();
-    if (pat) setSelectedPatient(pat);
+      .maybeSingle();
+    const { data: prof } = await supabase
+      .from("profiles")
+      .select("*")
+      .eq("id", order.patient_id)
+      .maybeSingle();
+    if (pat) setSelectedPatient({ ...pat, profile: prof });
     setSelectedTestIds((order.lab_pathology_order_items ?? []).map((i: any) => i.test_type_id));
     setMeta((m) => ({
       ...m,
