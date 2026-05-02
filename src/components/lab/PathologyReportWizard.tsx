@@ -75,11 +75,48 @@ export function PathologyReportWizard() {
   const [step, setStep] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedPatient, setSelectedPatient] = useState<any>(null);
+  const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
   const [meta, setMeta] = useState(initialMeta());
   const [selectedTestIds, setSelectedTestIds] = useState<string[]>([]);
   const [results, setResults] = useState<Record<string, ResultRow>>({});
   const [interpretation, setInterpretation] = useState("");
   const [submitting, setSubmitting] = useState(false);
+
+  // ===== Paid orders ready for lab =====
+  const { data: readyOrders, refetch: refetchOrders } = useQuery({
+    queryKey: ["pathology_orders_ready"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("lab_pathology_orders")
+        .select("*, lab_pathology_order_items(*)")
+        .eq("payment_status", "paid")
+        .in("lab_status", ["ready", "in_progress"])
+        .order("created_at", { ascending: false })
+        .limit(50);
+      if (error) throw error;
+      return data as any[];
+    },
+  });
+
+  const pickOrder = async (orderId: string) => {
+    const order = readyOrders?.find((o) => o.id === orderId);
+    if (!order) return;
+    setSelectedOrderId(orderId);
+    // Fetch patient
+    const { data: pat } = await supabase
+      .from("patients")
+      .select("*, profile:profiles!patients_id_fkey(*)")
+      .eq("id", order.patient_id)
+      .single();
+    if (pat) setSelectedPatient(pat);
+    setSelectedTestIds((order.lab_pathology_order_items ?? []).map((i: any) => i.test_type_id));
+    setMeta((m) => ({
+      ...m,
+      referred_by: order.referred_by ?? "",
+      sample_type: order.sample_type ?? m.sample_type,
+      report_number: order.order_number,
+    }));
+  };
 
   // ===== Queries =====
   const { data: searchedPatients } = useSearchPatientsWithNames(searchTerm);
