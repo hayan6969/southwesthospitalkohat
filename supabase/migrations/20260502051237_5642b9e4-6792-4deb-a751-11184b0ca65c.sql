@@ -1,0 +1,2 @@
+ALTER TABLE public.lab_pathology_reports DROP CONSTRAINT lab_pathology_reports_status_check;
+ALTER TABLE public.lab_pathology_reports ADD CONSTRAINT lab_pathology_reports_status_check CHECK (status = ANY (ARRAY['draft'::text, 'partial'::text, 'final'::text]));
