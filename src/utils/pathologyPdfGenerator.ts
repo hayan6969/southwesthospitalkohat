@@ -219,6 +219,7 @@ export async function generatePathologyReportPDF(data: PathologyPdfData) {
     }
 
     // Header row
+    const headerY = y;
     doc.setFillColor(245, 245, 245);
     doc.rect(marginX, y - 3.5, contentWidth, 6, 'F');
     doc.setFont('helvetica', 'bold');
@@ -228,9 +229,13 @@ export async function generatePathologyReportPDF(data: PathologyPdfData) {
     doc.text('Reference Value', colX.ref, y);
     doc.text('Unit', colX.unit, y);
     y += 4;
-    doc.setDrawColor(220, 220, 220);
+    doc.setDrawColor(200, 200, 200);
     doc.line(marginX, y - 1, pageWidth - marginX, y - 1);
     y += 1;
+
+    const bodyTop = y - 4.5; // top of data area for vertical dividers
+    const tableLeft = marginX;
+    const tableRight = pageWidth - marginX;
 
     // Rows
     doc.setFont('helvetica', 'normal');
@@ -289,6 +294,22 @@ export async function generatePathologyReportPDF(data: PathologyPdfData) {
       const lineCount = Math.max(nameLines.length, refLines.length, 1);
       y += 4.5 * lineCount;
     }
+
+    // Draw table borders (outer box + vertical column dividers + bottom)
+    const bodyBottom = y;
+    doc.setDrawColor(200, 200, 200);
+    // bottom of body
+    doc.line(tableLeft, bodyBottom, tableRight, bodyBottom);
+    // outer left/right
+    doc.line(tableLeft, headerY - 3.5, tableLeft, bodyBottom);
+    doc.line(tableRight, headerY - 3.5, tableRight, bodyBottom);
+    // top of header
+    doc.line(tableLeft, headerY - 3.5, tableRight, headerY - 3.5);
+    // vertical column dividers
+    [colX.result - 2, colX.ref - 2, colX.unit - 2].forEach((vx) => {
+      doc.line(vx, headerY - 3.5, vx, bodyBottom);
+    });
+    y = bodyBottom + 1;
 
     // Method / Instrument / Notes
     y += 1;
