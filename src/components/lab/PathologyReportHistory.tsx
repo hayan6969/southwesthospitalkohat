@@ -220,6 +220,43 @@ function ReportViewer({ reportId, onClose }: { reportId: string | null; onClose:
     queryFn: () => loadFullReport(reportId!),
   });
 
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+
+  // Default = all tests that have at least one filled result
+  useMemo(() => {
+    if (!data) return;
+    const def = new Set<string>();
+    data.testTypes.forEach((tt) => {
+      const hasResult = tt.parameters.some((p) => p.result_value !== null && p.result_value !== "");
+      if (hasResult) def.add(tt.name);
+    });
+    setSelected(def);
+  }, [data]);
+
+  const toggle = (name: string) => {
+    setSelected((s) => {
+      const n = new Set(s);
+      if (n.has(name)) n.delete(name);
+      else n.add(name);
+      return n;
+    });
+  };
+
+  const printSelected = async () => {
+    if (!data) return;
+    if (selected.size === 0) { toast.error("Select at least one test"); return; }
+    const filtered: PathologyPdfData = { ...data, testTypes: data.testTypes.filter((t) => selected.has(t.name)) };
+    await generatePathologyReportPDF(filtered);
+  };
+
+  const printCombined = async () => {
+    if (!data) return;
+    // Combined = only tests that have results
+    const ready = data.testTypes.filter((t) => t.parameters.some((p) => p.result_value !== null && p.result_value !== ""));
+    if (ready.length === 0) { toast.error("No completed tests to print"); return; }
+    await generatePathologyReportPDF({ ...data, testTypes: ready });
+  };
+
   return (
     <Dialog open={!!reportId} onOpenChange={(o) => { if (!o) onClose(); }}>
       <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto z-[9999]">
@@ -235,33 +272,49 @@ function ReportViewer({ reportId, onClose }: { reportId: string | null; onClose:
               <div><b>Status:</b> {data.status}</div>
               <div><b>Reported:</b> {data.reportedAt ? format(new Date(data.reportedAt), "dd MMM yyyy HH:mm") : "—"}</div>
             </div>
-            {data.testTypes.map((tt, i) => (
-              <div key={i} className="border rounded-lg p-3">
-                <div className="font-bold text-blue-700 mb-1">{tt.name}{tt.report_category ? ` — ${tt.report_category}` : ""}</div>
-                <table className="w-full text-xs">
-                  <thead><tr className="border-b"><th className="text-left py-1">Parameter</th><th>Result</th><th>Unit</th><th>Reference</th><th>Flag</th></tr></thead>
-                  <tbody>
-                    {tt.parameters.map((p, j) => (
-                      p.category_heading ? (
-                        <tr key={j}><td colSpan={5} className="font-semibold pt-2 text-amber-800">{p.category_heading}</td></tr>
-                      ) : (
-                        <tr key={j} className="border-b last:border-b-0">
-                          <td className="py-1">{p.parameter_name}</td>
-                          <td className="text-center font-medium">{p.result_value ?? "—"}</td>
-                          <td className="text-center">{p.unit ?? "—"}</td>
-                          <td className="text-xs">{p.ref_display ?? "—"}{p.subrange_used ? ` (${p.subrange_used})` : ""}</td>
-                          <td className="text-center">{p.flag ?? ""}</td>
-                        </tr>
-                      )
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            ))}
+            <div className="rounded-lg border bg-blue-50/40 p-3 text-xs">
+              <b>Tip:</b> Tick the tests below to print just those, or use <b>Combined PDF</b> to print all completed tests at once.
+            </div>
+            {data.testTypes.map((tt, i) => {
+              const hasResult = tt.parameters.some((p) => p.result_value !== null && p.result_value !== "");
+              return (
+                <div key={i} className="border rounded-lg p-3">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="font-bold text-blue-700">
+                      {tt.name}{tt.report_category ? ` — ${tt.report_category}` : ""}
+                      {!hasResult && <Badge variant="outline" className="ml-2 border-amber-500 text-amber-700">Pending</Badge>}
+                    </div>
+                    <label className="flex items-center gap-2 text-xs cursor-pointer">
+                      <input type="checkbox" checked={selected.has(tt.name)} onChange={() => toggle(tt.name)} disabled={!hasResult} />
+                      Include in PDF
+                    </label>
+                  </div>
+                  <table className="w-full text-xs">
+                    <thead><tr className="border-b"><th className="text-left py-1">Parameter</th><th>Result</th><th>Unit</th><th>Reference</th><th>Flag</th></tr></thead>
+                    <tbody>
+                      {tt.parameters.map((p, j) => (
+                        p.category_heading ? (
+                          <tr key={j}><td colSpan={5} className="font-semibold pt-2 text-amber-800">{p.category_heading}</td></tr>
+                        ) : (
+                          <tr key={j} className="border-b last:border-b-0">
+                            <td className="py-1">{p.parameter_name}</td>
+                            <td className="text-center font-medium">{p.result_value ?? "—"}</td>
+                            <td className="text-center">{p.unit ?? "—"}</td>
+                            <td className="text-xs">{p.ref_display ?? "—"}{p.subrange_used ? ` (${p.subrange_used})` : ""}</td>
+                            <td className="text-center">{p.flag ?? ""}</td>
+                          </tr>
+                        )
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              );
+            })}
             {data.interpretation && <div><b>Interpretation:</b> <div className="whitespace-pre-wrap text-muted-foreground">{data.interpretation}</div></div>}
-            <div className="flex justify-end gap-2 pt-2 border-t">
+            <div className="flex justify-end gap-2 pt-2 border-t flex-wrap">
               <Button variant="outline" onClick={onClose}>Close</Button>
-              <Button onClick={() => generatePathologyReportPDF(data)}><Printer className="w-4 h-4 mr-1" /> Reprint PDF</Button>
+              <Button variant="outline" onClick={printSelected}><Printer className="w-4 h-4 mr-1" /> Print Selected ({selected.size})</Button>
+              <Button onClick={printCombined}><Printer className="w-4 h-4 mr-1" /> Combined PDF (all completed)</Button>
             </div>
           </div>
         )}
