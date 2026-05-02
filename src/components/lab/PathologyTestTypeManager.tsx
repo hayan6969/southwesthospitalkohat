@@ -229,40 +229,38 @@ function NewTestDialog({
   const [params, setParams] = useState<InlineParam[]>([]);
   const [saving, setSaving] = useState(false);
 
-  // Hydrate form when editing changes
-  useState(() => {});
-  // Use effect-like pattern via key reset
-  if (open && editing && form.id !== editing.id && (editing.id || form.name !== "")) {
-    // Will reset below via the effect
-  }
-
-  // Load on open
-  useEffectOnOpen(open, async () => {
-    if (!editing) return;
+  // Hydrate form + parameters when dialog opens
+  useEffect(() => {
+    if (!open || !editing) return;
     setForm({ ...emptyTest, ...editing });
     if (editing.id) {
-      const { data } = await supabase
-        .from("lab_test_parameters")
-        .select("*")
-        .eq("test_type_id", editing.id)
-        .order("sort_order");
-      setParams(
-        (data ?? []).map((p: any) => ({
-          id: p.id,
-          parameter_name: p.parameter_name ?? "",
-          category_heading: p.category_heading ?? "",
-          unit: p.unit ?? "",
-          ref_min: p.ref_min == null ? "" : String(p.ref_min),
-          ref_max: p.ref_max == null ? "" : String(p.ref_max),
-          ref_display: p.ref_display ?? "",
-          is_optional: !!p.is_optional,
-          sort_order: p.sort_order ?? 100,
-        }))
-      );
+      (async () => {
+        const { data } = await supabase
+          .from("lab_test_parameters")
+          .select("*")
+          .eq("test_type_id", editing.id)
+          .order("sort_order");
+        setParams(
+          (data ?? []).map((p: any) => ({
+            id: p.id,
+            parameter_name: p.parameter_name ?? "",
+            category_heading: p.category_heading ?? "",
+            unit: p.unit ?? "",
+            ref_min: p.ref_min == null ? "" : String(p.ref_min),
+            ref_max: p.ref_max == null ? "" : String(p.ref_max),
+            ref_display: p.ref_display ?? "",
+            is_optional: !!p.is_optional,
+            sort_order: p.sort_order ?? 100,
+          }))
+        );
+      })();
     } else {
       setParams([
         { parameter_name: "", category_heading: "", unit: "", ref_min: "", ref_max: "", ref_display: "", is_optional: false, sort_order: 100 },
       ]);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, editing?.id]);
     }
   });
 
