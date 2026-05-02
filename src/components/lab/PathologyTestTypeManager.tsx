@@ -48,7 +48,7 @@ interface Subrange {
 
 const emptyTest: Partial<TestType> = { name: "", report_category: "", method: "", notes: "", is_active: true, sort_order: 100, price: 0 };
 
-export function PathologyTestTypeManager() {
+export function PathologyTestTypeManager({ priceEditable = true }: { priceEditable?: boolean } = {}) {
   const qc = useQueryClient();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [showTestDialog, setShowTestDialog] = useState(false);
