@@ -34,6 +34,18 @@ export function PathologyReportHistory() {
   const { data: reports, isLoading } = useQuery({
     queryKey: ["pathology_reports", search, status, from, to, testTypeFilter],
     queryFn: async () => {
+      // If search looks like a patient ID, resolve matching patient UUIDs first
+      let patientIdMatches: string[] | null = null;
+      const trimmed = search.trim();
+      if (trimmed) {
+        const { data: pats } = await supabase
+          .from("patients")
+          .select("id")
+          .ilike("patient_number", `%${trimmed}%`)
+          .limit(50);
+        if (pats && pats.length > 0) patientIdMatches = pats.map((p: any) => p.id);
+      }
+
       let q = supabase
         .from("lab_pathology_reports")
         .select("id, report_number, patient_id, patient_name_snapshot, patient_age_snapshot, patient_sex_snapshot, referred_by, status, reported_at, created_at, lab_pathology_report_test_types(test_type_id, lab_test_types(name)), lab_pathology_report_results(result_value, lab_test_parameters(test_type_id))")
@@ -50,11 +62,13 @@ export function PathologyReportHistory() {
       if (error) throw error;
 
       let filtered = data as any[];
-      if (search.trim()) {
-        const s = search.toLowerCase();
+      if (trimmed) {
+        const s = trimmed.toLowerCase();
+        const idSet = new Set(patientIdMatches ?? []);
         filtered = filtered.filter((r) =>
           (r.report_number || "").toLowerCase().includes(s) ||
-          (r.patient_name_snapshot || "").toLowerCase().includes(s)
+          (r.patient_name_snapshot || "").toLowerCase().includes(s) ||
+          (r.patient_id && idSet.has(r.patient_id))
         );
       }
       if (testTypeFilter !== "all") {
@@ -88,7 +102,7 @@ export function PathologyReportHistory() {
         <CardContent className="space-y-3">
           <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
             <div className="md:col-span-2">
-              <Label>Search (Report # or Patient)</Label>
+              <Label>Search (Report #, Patient ID or Name)</Label>
               <div className="relative"><Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input className="pl-10" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Type to search..." />
               </div>
