@@ -98,8 +98,9 @@ const navsByRole: Record<string, { label: string; to: string; icon: React.Elemen
   ],
   lab: [
     { label: "Dashboard", to: "/dashboard/lab", icon: Info },
-    { label: "Lab Orders", to: "/dashboard/lab?tab=lab", icon: TestTube },
-    { label: "Lab Reports", to: "/dashboard/lab?tab=reports", icon: FileText },
+    { label: "Pathology", to: "/dashboard/lab?tab=pathology", icon: TestTube },
+    { label: "Pathology History", to: "/dashboard/lab?tab=pathology-history", icon: FileText },
+    { label: "Manage Tests", to: "/dashboard/lab?tab=manage-tests", icon: FlaskConical },
     { label: "Lab Item Supply", to: "/dashboard/lab?tab=inventory", icon: FlaskConical },
     { label: "Request Supplies", to: "/dashboard/lab?tab=supplies", icon: Package },
   ],
