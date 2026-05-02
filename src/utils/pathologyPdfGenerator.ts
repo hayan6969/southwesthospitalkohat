@@ -343,6 +343,25 @@ export async function generatePathologyReportPDF(data: PathologyPdfData) {
 
       const lineCount = Math.max(nameLines.length, refLines.length, 1);
       y += 5 * lineCount;
+
+      // Previous results (last up to 3) for trend comparison
+      const prev = p.parameter_id ? previousByParam.get(p.parameter_id) : undefined;
+      if (prev && prev.length > 0) {
+        doc.setFont('helvetica', 'italic');
+        doc.setFontSize(7.5);
+        doc.setTextColor(110, 110, 110);
+        const parts = prev.map((pr) => {
+          const d = pr.date ? formatInPakistanTime(pr.date, 'dd MMM yy') : '—';
+          return `${d}: ${pr.value}`;
+        });
+        const prevText = `Previous — ${parts.join('   |   ')}`;
+        const prevLines = doc.splitTextToSize(prevText, contentWidth - cellPad * 2);
+        doc.text(prevLines, colX.name, y);
+        y += prevLines.length * 3.2 + 1;
+        doc.setTextColor(0, 0, 0);
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(9);
+      }
     }
 
     // Add bottom padding inside table
