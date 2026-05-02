@@ -443,6 +443,57 @@ export function PathologyReportWizard() {
         {/* ===== STEP 1: Patient ===== */}
         {step === 1 && (
           <div className="space-y-4">
+            {/* Paid orders ready for lab */}
+            <Card className="border-blue-200 bg-blue-50/40">
+              <CardHeader className="py-3">
+                <CardTitle className="text-sm flex items-center gap-2">
+                  <Receipt className="w-4 h-4 text-blue-600" /> Paid Orders Ready for Lab
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {(!readyOrders || readyOrders.length === 0) ? (
+                  <div className="text-sm text-muted-foreground py-2">
+                    No paid pathology orders waiting. Ask the counter to create one — or use manual patient search below.
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2 max-h-72 overflow-y-auto">
+                    {readyOrders.map((o: any) => {
+                      const isSelected = selectedOrderId === o.id;
+                      const tests = (o.lab_pathology_order_items ?? [])
+                        .map((i: any) => i.test_name_snapshot)
+                        .join(", ");
+                      return (
+                        <button
+                          key={o.id}
+                          type="button"
+                          onClick={() => pickOrder(o.id)}
+                          className={`text-left p-3 border rounded-lg transition ${
+                            isSelected
+                              ? "border-blue-600 bg-blue-100"
+                              : "bg-white hover:border-blue-400"
+                          }`}
+                        >
+                          <div className="flex items-center justify-between">
+                            <span className="font-mono text-sm font-semibold">{o.order_number}</span>
+                            <Badge variant="outline" className="text-[10px]">
+                              {o.lab_status}
+                            </Badge>
+                          </div>
+                          <div className="text-xs text-muted-foreground mt-1 line-clamp-2">{tests}</div>
+                          <div className="text-xs mt-1">
+                            {format(new Date(o.created_at), "dd-MMM-yy hh:mm a")}
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            <div className="text-xs uppercase tracking-wide text-muted-foreground border-t pt-3">
+              Or search patient manually
+            </div>
             <div>
               <Label>Search Patient (Patient ID, Name, Phone)</Label>
               <div className="relative mt-1">
