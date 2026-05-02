@@ -25,6 +25,8 @@ export interface PathologyPdfData {
   reportNumber: string;
   patientName: string;
   patientId: string;
+  patientDbId?: string | null;
+  currentReportId?: string | null;
   patientAge: number | string | null;
   patientSex: string | null;
   phone: string | null;
