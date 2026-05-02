@@ -12,7 +12,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Search, ChevronLeft, ChevronRight, FileText, Printer, Save, X, History, FlaskConical, Receipt } from "lucide-react";
+import { Search, ChevronLeft, ChevronRight, FileText, Printer, Save, X, History, FlaskConical, Receipt, CheckCircle } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { getFlag, flagBadgeClass, type PathologyFlag } from "@/utils/pathologyFlag";
@@ -448,90 +448,102 @@ export function PathologyReportWizard() {
         {/* ===== STEP 1: Patient ===== */}
         {step === 1 && (
           <div className="space-y-4">
-            {/* Paid orders ready for lab */}
             <Card className="border-blue-200 bg-blue-50/40">
               <CardHeader className="py-3">
                 <CardTitle className="text-sm flex items-center gap-2">
-                  <Receipt className="w-4 h-4 text-blue-600" /> Paid Orders Ready for Lab
+                  <Receipt className="w-4 h-4 text-blue-600" /> Enter Patient ID
                 </CardTitle>
               </CardHeader>
-              <CardContent>
-                {(!readyOrders || readyOrders.length === 0) ? (
-                  <div className="text-sm text-muted-foreground py-2">
-                    No paid pathology orders waiting. Ask the counter to create one — or use manual patient search below.
+              <CardContent className="space-y-3">
+                <div>
+                  <Label>Patient ID *</Label>
+                  <div className="relative mt-1">
+                    <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      className="pl-10"
+                      placeholder="P-XXXXX"
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value.toUpperCase())}
+                    />
                   </div>
-                ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2 max-h-72 overflow-y-auto">
-                    {readyOrders.map((o: any) => {
-                      const isSelected = selectedOrderId === o.id;
-                      const tests = (o.lab_pathology_order_items ?? [])
-                        .map((i: any) => i.test_name_snapshot)
-                        .join(", ");
-                      return (
-                        <button
-                          key={o.id}
-                          type="button"
-                          onClick={() => pickOrder(o.id)}
-                          className={`text-left p-3 border rounded-lg transition ${
-                            isSelected
-                              ? "border-blue-600 bg-blue-100"
-                              : "bg-white hover:border-blue-400"
-                          }`}
-                        >
-                          <div className="flex items-center justify-between">
-                            <span className="font-mono text-sm font-semibold">{o.order_number}</span>
-                            <Badge variant="outline" className="text-[10px]">
-                              {o.lab_status}
-                            </Badge>
-                          </div>
-                          <div className="text-xs text-muted-foreground mt-1 line-clamp-2">{tests}</div>
-                          <div className="text-xs mt-1">
-                            {format(new Date(o.created_at), "dd-MMM-yy hh:mm a")}
-                          </div>
-                        </button>
-                      );
-                    })}
-                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Enter the patient ID issued at billing. Only paid pathology orders for this patient will be shown.
+                  </p>
+                </div>
+
+                {searchTerm.trim().length >= 2 && (
+                  <>
+                    {searchedPatients && searchedPatients.length > 0 ? (
+                      <div className="space-y-2">
+                        {searchedPatients.slice(0, 5).map((p: any) => {
+                          const patientOrders = (readyOrders ?? []).filter(
+                            (o: any) => o.patient_id === p.id
+                          );
+                          return (
+                            <div key={p.id} className="border rounded-lg bg-white p-3">
+                              <div className="flex items-center justify-between">
+                                <div>
+                                  <div className="font-medium">
+                                    {p.profile?.first_name} {p.profile?.last_name}
+                                  </div>
+                                  <div className="text-xs text-muted-foreground">
+                                    ID: {p.patient_number || "—"} · Phone: {p.profile?.phone || "—"}
+                                  </div>
+                                </div>
+                                <Badge variant="outline" className="text-[10px]">
+                                  {patientOrders.length} paid order{patientOrders.length === 1 ? "" : "s"}
+                                </Badge>
+                              </div>
+                              {patientOrders.length === 0 ? (
+                                <div className="text-xs text-amber-700 mt-2 bg-amber-50 border border-amber-200 rounded p-2">
+                                  No paid pathology orders for this patient. Ask the counter to bill the tests first.
+                                </div>
+                              ) : (
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mt-3">
+                                  {patientOrders.map((o: any) => {
+                                    const isSelected = selectedOrderId === o.id;
+                                    const tests = (o.lab_pathology_order_items ?? [])
+                                      .map((i: any) => i.test_name_snapshot)
+                                      .join(", ");
+                                    return (
+                                      <button
+                                        key={o.id}
+                                        type="button"
+                                        onClick={() => pickOrder(o.id)}
+                                        className={`text-left p-3 border rounded-lg transition ${
+                                          isSelected
+                                            ? "border-blue-600 bg-blue-100"
+                                            : "bg-white hover:border-blue-400"
+                                        }`}
+                                      >
+                                        <div className="flex items-center justify-between">
+                                          <span className="font-mono text-sm font-semibold">{o.order_number}</span>
+                                          <Badge variant="outline" className="text-[10px]">
+                                            {o.lab_status}
+                                          </Badge>
+                                        </div>
+                                        <div className="text-xs text-muted-foreground mt-1 line-clamp-2">{tests}</div>
+                                        <div className="text-xs mt-1">
+                                          {format(new Date(o.created_at), "dd-MMM-yy hh:mm a")}
+                                        </div>
+                                      </button>
+                                    );
+                                  })}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <div className="text-sm text-muted-foreground py-2">
+                        No patient found for "{searchTerm}".
+                      </div>
+                    )}
+                  </>
                 )}
               </CardContent>
             </Card>
-
-            <div className="text-xs uppercase tracking-wide text-muted-foreground border-t pt-3">
-              Or search patient manually
-            </div>
-            <div>
-              <Label>Search Patient (Patient ID, Name, Phone)</Label>
-              <div className="relative mt-1">
-                <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input
-                  className="pl-10"
-                  placeholder="P-XXXXX, name, or phone..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
-              </div>
-              {searchedPatients && searchedPatients.length > 0 && !selectedPatient && (
-                <div className="mt-2 border rounded-lg max-h-56 overflow-y-auto bg-white">
-                  {searchedPatients.map((p: any) => (
-                    <div
-                      key={p.id}
-                      className="p-3 border-b last:border-b-0 hover:bg-blue-50 cursor-pointer"
-                      onClick={() => {
-                        setSelectedPatient(p);
-                        setSearchTerm("");
-                      }}
-                    >
-                      <div className="font-medium">
-                        {p.profile?.first_name} {p.profile?.last_name}
-                      </div>
-                      <div className="text-xs text-muted-foreground">
-                        ID: {p.patient_number || "—"} · Phone: {p.profile?.phone || "—"}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
 
             {selectedPatient && (
               <div className="p-4 border-2 border-blue-500 bg-blue-50 rounded-lg flex items-center justify-between">
@@ -543,7 +555,15 @@ export function PathologyReportWizard() {
                     ID: {selectedPatient.patient_number || "—"} · Phone: {selectedPatient.profile?.phone || "—"}
                   </div>
                 </div>
-                <Button variant="ghost" size="sm" onClick={() => setSelectedPatient(null)}>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setSelectedPatient(null);
+                    setSelectedOrderId(null);
+                    setSelectedTestIds([]);
+                  }}
+                >
                   <X className="w-4 h-4" />
                 </Button>
               </div>
@@ -659,45 +679,29 @@ export function PathologyReportWizard() {
         {step === 2 && (
           <div className="space-y-4">
             <div>
-              <Label className="text-base font-semibold">Select Test(s)</Label>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mt-2">
-                {testTypes?.map((t) => {
-                  const checked = selectedTestIds.includes(t.id);
-                  return (
-                    <label
-                      key={t.id}
-                      className={`flex items-start gap-2 p-3 border rounded-lg cursor-pointer ${
-                        checked ? "border-blue-500 bg-blue-50" : "hover:bg-muted/40"
-                      }`}
-                    >
-                      <Checkbox
-                        checked={checked}
-                        onCheckedChange={(v) =>
-                          setSelectedTestIds((prev) =>
-                            v ? [...prev, t.id] : prev.filter((x) => x !== t.id)
-                          )
-                        }
-                      />
-                      <div>
-                        <div className="font-medium text-sm">{t.name}</div>
-                        <div className="text-xs text-muted-foreground">{t.report_category}</div>
-                      </div>
-                    </label>
-                  );
-                })}
-              </div>
-              {selectedTestIds.length > 0 && (
-                <div className="flex flex-wrap gap-2 mt-3">
+              <Label className="text-base font-semibold">Tests from Billed Order</Label>
+              <p className="text-xs text-muted-foreground mb-2">
+                These tests were billed by the counter for this patient. They cannot be changed here — to add or remove tests, raise a new order at billing.
+              </p>
+              {selectedTestIds.length === 0 ? (
+                <div className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded p-3">
+                  No tests linked to this order. Go back and pick a paid order.
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                   {selectedTestIds.map((id) => {
                     const t = testTypes?.find((x) => x.id === id);
                     return (
-                      <Badge key={id} variant="secondary" className="gap-1">
-                        {t?.name}
-                        <X
-                          className="w-3 h-3 cursor-pointer"
-                          onClick={() => setSelectedTestIds((p) => p.filter((x) => x !== id))}
-                        />
-                      </Badge>
+                      <div
+                        key={id}
+                        className="flex items-start gap-2 p-3 border-2 border-blue-500 bg-blue-50 rounded-lg"
+                      >
+                        <CheckCircle className="w-4 h-4 text-blue-600 mt-0.5" />
+                        <div>
+                          <div className="font-medium text-sm">{t?.name ?? "—"}</div>
+                          <div className="text-xs text-muted-foreground">{t?.report_category}</div>
+                        </div>
+                      </div>
                     );
                   })}
                 </div>
