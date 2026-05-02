@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -187,43 +187,307 @@ export function PathologyTestTypeManager() {
         />
       )}
 
-      <Dialog open={showTestDialog} onOpenChange={(o) => { if (!o) { setShowTestDialog(false); setEditingTest(null); } }}>
-        <DialogContent className="max-h-[85vh] overflow-y-auto z-[9999]">
-          <DialogHeader><DialogTitle>{editingTest?.id ? "Edit Test Type" : "New Test Type"}</DialogTitle></DialogHeader>
-          {editingTest && (
-            <div className="space-y-3">
-              <div><Label>Name *</Label><Input value={editingTest.name ?? ""} onChange={(e) => setEditingTest({ ...editingTest, name: e.target.value })} /></div>
-              <div><Label>Report Category</Label><Input placeholder="e.g. ENDOCRINOLOGY REPORT" value={editingTest.report_category ?? ""} onChange={(e) => setEditingTest({ ...editingTest, report_category: e.target.value })} /></div>
-              <div><Label>Method</Label><Input value={editingTest.method ?? ""} onChange={(e) => setEditingTest({ ...editingTest, method: e.target.value })} /></div>
-              <div><Label>Notes</Label><Textarea rows={2} value={editingTest.notes ?? ""} onChange={(e) => setEditingTest({ ...editingTest, notes: e.target.value })} /></div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <Label>Price (PKR) *</Label>
-                  <Input
-                    type="number"
-                    min="0"
-                    step="any"
-                    value={editingTest.price ?? 0}
-                    onFocus={(e) => { if (Number(e.target.value) === 0) e.target.select(); }}
-                    onChange={(e) => setEditingTest({ ...editingTest, price: e.target.value === "" ? 0 : Number(e.target.value) })}
-                  />
-                </div>
-                <div><Label>Sort Order</Label><Input type="number" value={editingTest.sort_order ?? 100} onChange={(e) => setEditingTest({ ...editingTest, sort_order: Number(e.target.value) })} /></div>
-              </div>
-              <div className="flex items-end gap-2"><Switch checked={editingTest.is_active ?? true} onCheckedChange={(v) => setEditingTest({ ...editingTest, is_active: v })} /><Label>Active</Label></div>
-            </div>
-          )}
-          <DialogFooter>
-            <Button variant="outline" onClick={() => { setShowTestDialog(false); setEditingTest(null); }}><X className="w-4 h-4 mr-1" /> Cancel</Button>
-            <Button onClick={() => editingTest && saveTest.mutate(editingTest)} disabled={!editingTest?.name?.trim() || saveTest.isPending}>
-              <Save className="w-4 h-4 mr-1" /> Save
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <NewTestDialog
+        open={showTestDialog}
+        editing={editingTest}
+        onOpenChange={(o) => { if (!o) { setShowTestDialog(false); setEditingTest(null); } }}
+        onSaved={() => {
+          qc.invalidateQueries({ queryKey: ["lab_test_types_admin"] });
+          qc.invalidateQueries({ queryKey: ["lab_test_types"] });
+          qc.invalidateQueries({ queryKey: ["lab_test_parameters_admin"] });
+          setShowTestDialog(false);
+          setEditingTest(null);
+        }}
+      />
     </div>
   );
 }
+
+// ===== Inline New/Edit Test Dialog with Parameters =====
+interface InlineParam {
+  id?: string;
+  parameter_name: string;
+  category_heading: string;
+  unit: string;
+  ref_min: string;
+  ref_max: string;
+  ref_display: string;
+  is_optional: boolean;
+  sort_order: number;
+  _delete?: boolean;
+}
+
+function NewTestDialog({
+  open, editing, onOpenChange, onSaved,
+}: {
+  open: boolean;
+  editing: Partial<TestType> | null;
+  onOpenChange: (o: boolean) => void;
+  onSaved: () => void;
+}) {
+  const [form, setForm] = useState<Partial<TestType>>({ ...emptyTest });
+  const [params, setParams] = useState<InlineParam[]>([]);
+  const [saving, setSaving] = useState(false);
+
+  // Hydrate form + parameters when dialog opens
+  useEffect(() => {
+    if (!open || !editing) return;
+    setForm({ ...emptyTest, ...editing });
+    if (editing.id) {
+      (async () => {
+        const { data } = await supabase
+          .from("lab_test_parameters")
+          .select("*")
+          .eq("test_type_id", editing.id)
+          .order("sort_order");
+        setParams(
+          (data ?? []).map((p: any) => ({
+            id: p.id,
+            parameter_name: p.parameter_name ?? "",
+            category_heading: p.category_heading ?? "",
+            unit: p.unit ?? "",
+            ref_min: p.ref_min == null ? "" : String(p.ref_min),
+            ref_max: p.ref_max == null ? "" : String(p.ref_max),
+            ref_display: p.ref_display ?? "",
+            is_optional: !!p.is_optional,
+            sort_order: p.sort_order ?? 100,
+          }))
+        );
+      })();
+    } else {
+      setParams([
+        { parameter_name: "", category_heading: "", unit: "", ref_min: "", ref_max: "", ref_display: "", is_optional: false, sort_order: 100 },
+      ]);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, editing?.id]);
+
+  const addRow = () => setParams((prev) => [
+    ...prev,
+    { parameter_name: "", category_heading: "", unit: "", ref_min: "", ref_max: "", ref_display: "", is_optional: false, sort_order: (prev.length + 1) * 10 },
+  ]);
+
+  const updateRow = (idx: number, patch: Partial<InlineParam>) =>
+    setParams((prev) => prev.map((r, i) => (i === idx ? { ...r, ...patch } : r)));
+
+  const removeRow = (idx: number) =>
+    setParams((prev) => {
+      const r = prev[idx];
+      if (r.id) return prev.map((x, i) => (i === idx ? { ...x, _delete: true } : x));
+      return prev.filter((_, i) => i !== idx);
+    });
+
+  const handleSave = async () => {
+    if (!form.name?.trim()) return toast.error("Test name is required");
+    setSaving(true);
+    try {
+      let testId = form.id as string | undefined;
+      const testPayload = {
+        name: form.name!.trim(),
+        report_category: form.report_category || null,
+        method: form.method || null,
+        notes: form.notes || null,
+        is_active: form.is_active ?? true,
+        sort_order: form.sort_order ?? 100,
+        price: Number(form.price ?? 0),
+      };
+      if (testId) {
+        const { error } = await supabase.from("lab_test_types").update(testPayload).eq("id", testId);
+        if (error) throw error;
+      } else {
+        const { data, error } = await supabase.from("lab_test_types").insert(testPayload).select().single();
+        if (error) throw error;
+        testId = data.id;
+      }
+
+      // Persist parameters
+      for (let i = 0; i < params.length; i++) {
+        const p = params[i];
+        if (p._delete && p.id) {
+          await supabase.from("lab_test_parameters").delete().eq("id", p.id);
+          continue;
+        }
+        if (!p.parameter_name.trim() && !p.category_heading.trim()) continue;
+        const payload = {
+          test_type_id: testId!,
+          parameter_name: p.parameter_name.trim() || "—",
+          category_heading: p.category_heading.trim() || null,
+          unit: p.unit.trim() || null,
+          ref_min: p.ref_min === "" ? null : Number(p.ref_min),
+          ref_max: p.ref_max === "" ? null : Number(p.ref_max),
+          ref_display: p.ref_display.trim() || null,
+          is_optional: p.is_optional,
+          has_subranges: false,
+          sort_order: (i + 1) * 10,
+        };
+        if (p.id) {
+          await supabase.from("lab_test_parameters").update(payload).eq("id", p.id);
+        } else {
+          await supabase.from("lab_test_parameters").insert(payload);
+        }
+      }
+
+      toast.success(form.id ? "Test updated" : "Test created");
+      onSaved();
+    } catch (e: any) {
+      toast.error(e.message || "Failed to save");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto z-[9999]">
+        <DialogHeader><DialogTitle>{form?.id ? "Edit Test" : "New Test"}</DialogTitle></DialogHeader>
+
+        <div className="space-y-4">
+          {/* Top row: Name + Description (notes) */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div>
+              <Label>Test Name *</Label>
+              <Input
+                placeholder="e.g. Lipid Profile"
+                value={form.name ?? ""}
+                onChange={(e) => setForm({ ...form, name: e.target.value })}
+              />
+            </div>
+            <div>
+              <Label>Description</Label>
+              <Input
+                placeholder="Optional"
+                value={form.notes ?? ""}
+                onChange={(e) => setForm({ ...form, notes: e.target.value })}
+              />
+            </div>
+          </div>
+
+          {/* Pricing + meta (compact, optional) */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+            <div>
+              <Label>Price (PKR) *</Label>
+              <Input
+                type="number" min="0" step="any"
+                value={form.price ?? 0}
+                onFocus={(e) => { if (Number(e.target.value) === 0) e.target.select(); }}
+                onChange={(e) => setForm({ ...form, price: e.target.value === "" ? 0 : Number(e.target.value) })}
+              />
+            </div>
+            <div>
+              <Label>Report Category</Label>
+              <Input
+                placeholder="Optional"
+                value={form.report_category ?? ""}
+                onChange={(e) => setForm({ ...form, report_category: e.target.value })}
+              />
+            </div>
+            <div>
+              <Label>Method</Label>
+              <Input
+                placeholder="Optional"
+                value={form.method ?? ""}
+                onChange={(e) => setForm({ ...form, method: e.target.value })}
+              />
+            </div>
+            <div className="flex items-end gap-2">
+              <Switch checked={form.is_active ?? true} onCheckedChange={(v) => setForm({ ...form, is_active: v })} />
+              <Label>Active</Label>
+            </div>
+          </div>
+
+          {/* Parameters table */}
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <Label className="text-base">Parameters</Label>
+              <Button type="button" variant="outline" size="sm" onClick={addRow}>
+                <Plus className="w-4 h-4 mr-1" /> Add
+              </Button>
+            </div>
+
+            <div className="border rounded-lg overflow-hidden">
+              <div className="grid grid-cols-12 gap-2 px-3 py-2 bg-muted/50 text-xs font-semibold">
+                <div className="col-span-3">Parameter *</div>
+                <div className="col-span-2">Category</div>
+                <div className="col-span-2">Unit</div>
+                <div className="col-span-1">Ref Min</div>
+                <div className="col-span-1">Ref Max</div>
+                <div className="col-span-2">Ref Display</div>
+                <div className="col-span-1 text-right">—</div>
+              </div>
+              <div className="divide-y">
+                {params.filter((p) => !p._delete).length === 0 && (
+                  <div className="p-4 text-center text-sm text-muted-foreground">
+                    No parameters. Click "Add" to create one.
+                  </div>
+                )}
+                {params.map((p, i) =>
+                  p._delete ? null : (
+                    <div key={p.id ?? `new-${i}`} className="grid grid-cols-12 gap-2 px-3 py-2 items-center">
+                      <Input
+                        className="col-span-3"
+                        placeholder="Hemoglobin"
+                        value={p.parameter_name}
+                        onChange={(e) => updateRow(i, { parameter_name: e.target.value })}
+                      />
+                      <Input
+                        className="col-span-2"
+                        placeholder="PRIMARY"
+                        value={p.category_heading}
+                        onChange={(e) => updateRow(i, { category_heading: e.target.value })}
+                      />
+                      <Input
+                        className="col-span-2"
+                        placeholder="g/dL"
+                        value={p.unit}
+                        onChange={(e) => updateRow(i, { unit: e.target.value })}
+                      />
+                      <Input
+                        className="col-span-1"
+                        type="number" step="any"
+                        value={p.ref_min}
+                        onChange={(e) => updateRow(i, { ref_min: e.target.value })}
+                      />
+                      <Input
+                        className="col-span-1"
+                        type="number" step="any"
+                        value={p.ref_max}
+                        onChange={(e) => updateRow(i, { ref_max: e.target.value })}
+                      />
+                      <Input
+                        className="col-span-2"
+                        placeholder="13.0 - 17.0"
+                        value={p.ref_display}
+                        onChange={(e) => updateRow(i, { ref_display: e.target.value })}
+                      />
+                      <div className="col-span-1 flex justify-end">
+                        <Button type="button" size="sm" variant="ghost" onClick={() => removeRow(i)}>
+                          <Trash2 className="w-4 h-4 text-destructive" />
+                        </Button>
+                      </div>
+                    </div>
+                  )
+                )}
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground mt-2">
+              Tip: Group parameters under sections by entering the same Category (e.g. "PRIMARY", "DIFFERENTIAL", "INDICES").
+              All fields except Parameter name are optional.
+            </p>
+          </div>
+        </div>
+
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>Cancel</Button>
+          <Button onClick={handleSave} disabled={saving || !form.name?.trim()}>
+            <Save className="w-4 h-4 mr-1" /> {saving ? "Saving..." : (form?.id ? "Save Changes" : "Create Test")}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+
 
 // ===== Parameters editor =====
 function ParametersEditor({ testTypeId, testName, parameters, subranges, onClose }: {
