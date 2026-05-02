@@ -21,6 +21,7 @@ interface TestType {
   notes: string | null;
   is_active: boolean;
   sort_order: number;
+  price: number;
 }
 interface Parameter {
   id: string;
