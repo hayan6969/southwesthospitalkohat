@@ -219,12 +219,13 @@ interface InlineParam {
 }
 
 function NewTestDialog({
-  open, editing, onOpenChange, onSaved,
+  open, editing, onOpenChange, onSaved, priceEditable = true,
 }: {
   open: boolean;
   editing: Partial<TestType> | null;
   onOpenChange: (o: boolean) => void;
   onSaved: () => void;
+  priceEditable?: boolean;
 }) {
   const [form, setForm] = useState<Partial<TestType>>({ ...emptyTest });
   const [params, setParams] = useState<InlineParam[]>([]);
