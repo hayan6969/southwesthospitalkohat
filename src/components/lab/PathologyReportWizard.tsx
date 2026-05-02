@@ -147,10 +147,27 @@ export function PathologyReportWizard() {
     const order = readyOrders?.find((o) => o.id === orderId);
     if (!order) return;
     setSelectedOrderId(orderId);
-    setExistingReportId(null);
+
     const { data: pat } = await supabase.from("patients").select("*").eq("id", order.patient_id).maybeSingle();
     const { data: prof } = await supabase.from("profiles").select("*").eq("id", order.patient_id).maybeSingle();
     if (pat) setSelectedPatient({ ...pat, profile: prof });
+
+    // If a partial report already exists for this patient, resume it instead of starting fresh
+    const { data: existingPartial } = await supabase
+      .from("lab_pathology_reports")
+      .select("id")
+      .eq("patient_id", order.patient_id)
+      .eq("status", "partial")
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (existingPartial?.id) {
+      await resumePartial(existingPartial.id);
+      return;
+    }
+
+    setExistingReportId(null);
     setSelectedTestIds((order.lab_pathology_order_items ?? []).map((i: any) => i.test_type_id));
     setPendingTestIds(new Set());
     setCompletedTestIds(new Set());
