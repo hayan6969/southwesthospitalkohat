@@ -102,7 +102,7 @@ export function PathologyReportHistory() {
         <CardContent className="space-y-3">
           <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
             <div className="md:col-span-2">
-              <Label>Search (Report # or Patient)</Label>
+              <Label>Search (Report #, Patient ID or Name)</Label>
               <div className="relative"><Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input className="pl-10" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Type to search..." />
               </div>
