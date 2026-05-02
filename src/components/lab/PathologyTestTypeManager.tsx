@@ -142,6 +142,7 @@ export function PathologyTestTypeManager() {
                   <TableHead>Name</TableHead>
                   <TableHead>Category</TableHead>
                   <TableHead>Method</TableHead>
+                  <TableHead>Price (PKR)</TableHead>
                   <TableHead>Active</TableHead>
                   <TableHead>Sort</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
@@ -153,6 +154,7 @@ export function PathologyTestTypeManager() {
                     <TableCell className="font-medium">{t.name}</TableCell>
                     <TableCell>{t.report_category || "—"}</TableCell>
                     <TableCell className="text-xs text-muted-foreground">{t.method || "—"}</TableCell>
+                    <TableCell className="font-semibold text-blue-700">{Number(t.price ?? 0).toLocaleString()}</TableCell>
                     <TableCell><Badge variant={t.is_active ? "default" : "secondary"}>{t.is_active ? "Active" : "Inactive"}</Badge></TableCell>
                     <TableCell>{t.sort_order}</TableCell>
                     <TableCell className="text-right space-x-1">
@@ -168,7 +170,7 @@ export function PathologyTestTypeManager() {
                     </TableCell>
                   </TableRow>
                 ))}
-                {testTypes?.length === 0 && <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-6">No test types yet.</TableCell></TableRow>}
+                {testTypes?.length === 0 && <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-6">No test types yet.</TableCell></TableRow>}
               </TableBody>
             </Table>
           </div>
