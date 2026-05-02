@@ -251,7 +251,7 @@ export function PathologyReportWizard() {
   };
 
   // ===== Step navigation guards =====
-  const canNextFromStep1 = !!selectedPatient && !!meta.age && !!meta.sex;
+  const canNextFromStep1 = !!selectedPatient && !!meta.sex;
   const canNextFromStep2 = selectedTestIds.length > 0 && !!meta.report_number.trim();
   const canSave = (() => {
     if (!parameters) return false;
@@ -572,11 +572,12 @@ export function PathologyReportWizard() {
             {selectedPatient && (
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                 <div>
-                  <Label>Age *</Label>
+                  <Label>Age</Label>
                   <Input
                     type="number"
                     value={meta.age}
                     onChange={(e) => setMeta((m) => ({ ...m, age: e.target.value }))}
+                    placeholder="Optional"
                   />
                 </div>
                 <div>
