@@ -227,22 +227,24 @@ export async function generatePathologyReportPDF(data: PathologyPdfData) {
       y += 4;
     }
 
-    // Header row
-    const headerY = y;
+    // Header row — taller with vertical padding
+    const headerHeight = 8;
+    const headerTop = y;
+    const headerTextY = y + 5.5; // baseline with ~5.5mm above for breathing room
     doc.setFillColor(245, 245, 245);
-    doc.rect(marginX, y - 3.5, contentWidth, 6, 'F');
+    doc.rect(marginX, headerTop, contentWidth, headerHeight, 'F');
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(9);
-    doc.text('Investigation', colX.name, y);
-    doc.text('Result', colX.result, y);
-    doc.text('Reference Value', colX.ref, y);
-    doc.text('Unit', colX.unit, y);
-    y += 4;
+    doc.text('Investigation', colX.name, headerTextY);
+    doc.text('Result', colX.result, headerTextY);
+    doc.text('Reference Value', colX.ref, headerTextY);
+    doc.text('Unit', colX.unit, headerTextY);
+    const headerY = headerTop + headerHeight; // bottom of header row
     doc.setDrawColor(200, 200, 200);
-    doc.line(marginX, y - 1, pageWidth - marginX, y - 1);
-    y += 1;
+    doc.line(marginX, headerY, pageWidth - marginX, headerY);
+    // start body with top padding
+    y = headerY + 5;
 
-    const bodyTop = y - 4.5; // top of data area for vertical dividers
     const tableLeft = marginX;
     const tableRight = pageWidth - marginX;
 
@@ -257,7 +259,7 @@ export async function generatePathologyReportPDF(data: PathologyPdfData) {
         doc.setTextColor(15, 76, 129);
         doc.text(p.category_heading, colX.name, y);
         doc.setTextColor(0, 0, 0);
-        y += 4.5;
+        y += 5;
         doc.setFont('helvetica', 'normal');
         continue;
       }
@@ -301,8 +303,11 @@ export async function generatePathologyReportPDF(data: PathologyPdfData) {
       doc.text(p.unit || '—', colX.unit, y);
 
       const lineCount = Math.max(nameLines.length, refLines.length, 1);
-      y += 4.5 * lineCount;
+      y += 5 * lineCount;
     }
+
+    // Add bottom padding inside table
+    y += 2;
 
     // Draw table borders (outer box + vertical column dividers + bottom)
     const bodyBottom = y;
@@ -310,13 +315,13 @@ export async function generatePathologyReportPDF(data: PathologyPdfData) {
     // bottom of body
     doc.line(tableLeft, bodyBottom, tableRight, bodyBottom);
     // outer left/right
-    doc.line(tableLeft, headerY - 3.5, tableLeft, bodyBottom);
-    doc.line(tableRight, headerY - 3.5, tableRight, bodyBottom);
+    doc.line(tableLeft, headerTop, tableLeft, bodyBottom);
+    doc.line(tableRight, headerTop, tableRight, bodyBottom);
     // top of header
-    doc.line(tableLeft, headerY - 3.5, tableRight, headerY - 3.5);
+    doc.line(tableLeft, headerTop, tableRight, headerTop);
     // vertical column dividers — sit `cellPad` before each column's text start
     [colX.result - cellPad, colX.ref - cellPad, colX.unit - cellPad].forEach((vx) => {
-      doc.line(vx, headerY - 3.5, vx, bodyBottom);
+      doc.line(vx, headerTop, vx, bodyBottom);
     });
     y = bodyBottom + 1;
 
