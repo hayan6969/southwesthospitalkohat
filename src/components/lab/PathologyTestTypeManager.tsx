@@ -48,7 +48,7 @@ interface Subrange {
 
 const emptyTest: Partial<TestType> = { name: "", report_category: "", method: "", notes: "", is_active: true, sort_order: 100, price: 0 };
 
-export function PathologyTestTypeManager() {
+export function PathologyTestTypeManager({ priceEditable = true }: { priceEditable?: boolean } = {}) {
   const qc = useQueryClient();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [showTestDialog, setShowTestDialog] = useState(false);
@@ -190,6 +190,7 @@ export function PathologyTestTypeManager() {
       <NewTestDialog
         open={showTestDialog}
         editing={editingTest}
+        priceEditable={priceEditable}
         onOpenChange={(o) => { if (!o) { setShowTestDialog(false); setEditingTest(null); } }}
         onSaved={() => {
           qc.invalidateQueries({ queryKey: ["lab_test_types_admin"] });
@@ -218,12 +219,13 @@ interface InlineParam {
 }
 
 function NewTestDialog({
-  open, editing, onOpenChange, onSaved,
+  open, editing, onOpenChange, onSaved, priceEditable = true,
 }: {
   open: boolean;
   editing: Partial<TestType> | null;
   onOpenChange: (o: boolean) => void;
   onSaved: () => void;
+  priceEditable?: boolean;
 }) {
   const [form, setForm] = useState<Partial<TestType>>({ ...emptyTest });
   const [params, setParams] = useState<InlineParam[]>([]);
@@ -365,10 +367,11 @@ function NewTestDialog({
           {/* Pricing + meta (compact, optional) */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
             <div>
-              <Label>Price (PKR) *</Label>
+              <Label>Price (PKR) {priceEditable ? "*" : <span className="text-xs font-normal text-muted-foreground">(set by admin)</span>}</Label>
               <Input
                 type="number" min="0" step="any"
                 value={form.price ?? 0}
+                disabled={!priceEditable}
                 onFocus={(e) => { if (Number(e.target.value) === 0) e.target.select(); }}
                 onChange={(e) => setForm({ ...form, price: e.target.value === "" ? 0 : Number(e.target.value) })}
               />

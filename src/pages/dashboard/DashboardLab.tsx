@@ -6,7 +6,8 @@ import { MySupplyRequests } from "@/components/inventory/MySupplyRequests";
 import { LabItemSupply } from "@/components/inventory/LabItemSupply";
 import { PathologyReportWizard } from "@/components/lab/PathologyReportWizard";
 import { PathologyReportHistory } from "@/components/lab/PathologyReportHistory";
-import { ShoppingCart, FlaskConical, Microscope, History } from "lucide-react";
+import { PathologyTestTypeManager } from "@/components/lab/PathologyTestTypeManager";
+import { ShoppingCart, FlaskConical, Microscope, History, Settings2 } from "lucide-react";
 import AppLayout from "@/layouts/AppLayout";
 
 export default function DashboardLab() {
@@ -38,6 +39,10 @@ export default function DashboardLab() {
             <History className="w-3.5 h-3.5" />
             <span>Report History</span>
           </TabsTrigger>
+          <TabsTrigger value="manage-tests" className="flex items-center gap-1.5 text-xs sm:text-sm">
+            <Settings2 className="w-3.5 h-3.5" />
+            <span>Manage Tests</span>
+          </TabsTrigger>
           <TabsTrigger value="inventory" className="flex items-center gap-1.5 text-xs sm:text-sm">
             <FlaskConical className="w-3.5 h-3.5" />
             <span>Lab Item Supply</span>
@@ -54,6 +59,10 @@ export default function DashboardLab() {
 
         <TabsContent value="pathology-history">
           <PathologyReportHistory />
+        </TabsContent>
+
+        <TabsContent value="manage-tests">
+          <PathologyTestTypeManager priceEditable={false} />
         </TabsContent>
 
         <TabsContent value="inventory">
