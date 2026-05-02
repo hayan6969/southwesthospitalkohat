@@ -487,22 +487,7 @@ function NewTestDialog({
   );
 }
 
-// Helper: run async on dialog open transition
-function useEffectOnOpen(open: boolean, fn: () => void) {
-  const wasOpen = useRefBool(false);
-  if (open && !wasOpen.current) {
-    wasOpen.current = true;
-    fn();
-  } else if (!open && wasOpen.current) {
-    wasOpen.current = false;
-  }
-}
-function useRefBool(initial: boolean) {
-  const [, setTick] = useState(0);
-  const ref = (useRefBool as any)._cache ?? ((useRefBool as any)._cache = new WeakMap());
-  void setTick;
-  return { current: initial } as { current: boolean };
-}
+
 
 // ===== Parameters editor =====
 function ParametersEditor({ testTypeId, testName, parameters, subranges, onClose }: {
