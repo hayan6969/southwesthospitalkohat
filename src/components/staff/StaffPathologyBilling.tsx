@@ -113,7 +113,7 @@ export function StaffPathologyBilling() {
           patient_id: selectedPatient.id,
           invoice_number: invoiceNumber,
           amount: total,
-          description: `Pathology: ${testNames}`,
+          description: `Lab: ${testNames}`,
           status: "paid",
           paid_at: new Date().toISOString(),
           created_by: user?.id ?? null,
@@ -172,7 +172,7 @@ export function StaffPathologyBilling() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <FlaskConical className="w-5 h-5 text-blue-600" />
-            Create Pathology Order & Invoice
+            Create Lab Order & Invoice
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -296,7 +296,7 @@ export function StaffPathologyBilling() {
       {/* Recent orders */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Recent Pathology Orders</CardTitle>
+          <CardTitle className="text-base">Recent Lab Orders</CardTitle>
         </CardHeader>
         <CardContent className="overflow-x-auto">
           <Table>

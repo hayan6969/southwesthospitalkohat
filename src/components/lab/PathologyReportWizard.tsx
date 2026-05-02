@@ -428,7 +428,7 @@ export function PathologyReportWizard() {
         <div className="flex items-center justify-between flex-wrap gap-2">
           <CardTitle className="flex items-center gap-2">
             <FlaskConical className="w-5 h-5 text-blue-600" />
-            New Pathology Report
+            New Lab Report
           </CardTitle>
           <div className="flex items-center gap-2 text-sm">
             {[1, 2, 3, 4].map((n) => (

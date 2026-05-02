@@ -357,5 +357,5 @@ export async function generatePathologyReportPDF(data: PathologyPdfData) {
   );
   doc.text('Computer-generated report', pageWidth - marginX, pageHeight - 3, { align: 'right' });
 
-  doc.save(`Pathology_${data.reportNumber}.pdf`);
+  doc.save(`Lab_${data.reportNumber}.pdf`);
 }
