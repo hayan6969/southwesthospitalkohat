@@ -21,6 +21,7 @@ interface TestType {
   notes: string | null;
   is_active: boolean;
   sort_order: number;
+  price: number;
 }
 interface Parameter {
   id: string;
@@ -45,7 +46,7 @@ interface Subrange {
   sort_order: number;
 }
 
-const emptyTest: Partial<TestType> = { name: "", report_category: "", method: "", notes: "", is_active: true, sort_order: 100 };
+const emptyTest: Partial<TestType> = { name: "", report_category: "", method: "", notes: "", is_active: true, sort_order: 100, price: 0 };
 
 export function PathologyTestTypeManager() {
   const qc = useQueryClient();
@@ -89,12 +90,14 @@ export function PathologyTestTypeManager() {
         const { error } = await supabase.from("lab_test_types").update({
           name: t.name, report_category: t.report_category || null, method: t.method || null,
           notes: t.notes || null, is_active: t.is_active, sort_order: t.sort_order,
+          price: Number(t.price ?? 0),
         }).eq("id", t.id);
         if (error) throw error;
       } else {
         const { error } = await supabase.from("lab_test_types").insert({
           name: t.name!, report_category: t.report_category || null, method: t.method || null,
           notes: t.notes || null, is_active: t.is_active ?? true, sort_order: t.sort_order ?? 100,
+          price: Number(t.price ?? 0),
         });
         if (error) throw error;
       }
@@ -139,6 +142,7 @@ export function PathologyTestTypeManager() {
                   <TableHead>Name</TableHead>
                   <TableHead>Category</TableHead>
                   <TableHead>Method</TableHead>
+                  <TableHead>Price (PKR)</TableHead>
                   <TableHead>Active</TableHead>
                   <TableHead>Sort</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
@@ -150,6 +154,7 @@ export function PathologyTestTypeManager() {
                     <TableCell className="font-medium">{t.name}</TableCell>
                     <TableCell>{t.report_category || "—"}</TableCell>
                     <TableCell className="text-xs text-muted-foreground">{t.method || "—"}</TableCell>
+                    <TableCell className="font-semibold text-blue-700">{Number(t.price ?? 0).toLocaleString()}</TableCell>
                     <TableCell><Badge variant={t.is_active ? "default" : "secondary"}>{t.is_active ? "Active" : "Inactive"}</Badge></TableCell>
                     <TableCell>{t.sort_order}</TableCell>
                     <TableCell className="text-right space-x-1">
@@ -165,7 +170,7 @@ export function PathologyTestTypeManager() {
                     </TableCell>
                   </TableRow>
                 ))}
-                {testTypes?.length === 0 && <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-6">No test types yet.</TableCell></TableRow>}
+                {testTypes?.length === 0 && <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-6">No test types yet.</TableCell></TableRow>}
               </TableBody>
             </Table>
           </div>
@@ -192,9 +197,20 @@ export function PathologyTestTypeManager() {
               <div><Label>Method</Label><Input value={editingTest.method ?? ""} onChange={(e) => setEditingTest({ ...editingTest, method: e.target.value })} /></div>
               <div><Label>Notes</Label><Textarea rows={2} value={editingTest.notes ?? ""} onChange={(e) => setEditingTest({ ...editingTest, notes: e.target.value })} /></div>
               <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label>Price (PKR) *</Label>
+                  <Input
+                    type="number"
+                    min="0"
+                    step="any"
+                    value={editingTest.price ?? 0}
+                    onFocus={(e) => { if (Number(e.target.value) === 0) e.target.select(); }}
+                    onChange={(e) => setEditingTest({ ...editingTest, price: e.target.value === "" ? 0 : Number(e.target.value) })}
+                  />
+                </div>
                 <div><Label>Sort Order</Label><Input type="number" value={editingTest.sort_order ?? 100} onChange={(e) => setEditingTest({ ...editingTest, sort_order: Number(e.target.value) })} /></div>
-                <div className="flex items-end gap-2"><Switch checked={editingTest.is_active ?? true} onCheckedChange={(v) => setEditingTest({ ...editingTest, is_active: v })} /><Label>Active</Label></div>
               </div>
+              <div className="flex items-end gap-2"><Switch checked={editingTest.is_active ?? true} onCheckedChange={(v) => setEditingTest({ ...editingTest, is_active: v })} /><Label>Active</Label></div>
             </div>
           )}
           <DialogFooter>

@@ -884,6 +884,92 @@ export type Database = {
           },
         ]
       }
+      lab_pathology_order_items: {
+        Row: {
+          created_at: string
+          id: string
+          order_id: string
+          price: number
+          test_name_snapshot: string
+          test_type_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          order_id: string
+          price?: number
+          test_name_snapshot: string
+          test_type_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          order_id?: string
+          price?: number
+          test_name_snapshot?: string
+          test_type_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lab_pathology_order_items_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "lab_pathology_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lab_pathology_orders: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          invoice_id: string | null
+          lab_status: string
+          notes: string | null
+          order_number: string
+          patient_id: string
+          payment_status: string
+          referred_by: string | null
+          report_id: string | null
+          sample_type: string | null
+          total_amount: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          invoice_id?: string | null
+          lab_status?: string
+          notes?: string | null
+          order_number: string
+          patient_id: string
+          payment_status?: string
+          referred_by?: string | null
+          report_id?: string | null
+          sample_type?: string | null
+          total_amount?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          invoice_id?: string | null
+          lab_status?: string
+          notes?: string | null
+          order_number?: string
+          patient_id?: string
+          payment_status?: string
+          referred_by?: string | null
+          report_id?: string | null
+          sample_type?: string | null
+          total_amount?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       lab_pathology_report_results: {
         Row: {
           created_at: string
@@ -1204,6 +1290,7 @@ export type Database = {
           method: string | null
           name: string
           notes: string | null
+          price: number
           report_category: string | null
           sort_order: number
           updated_at: string
@@ -1215,6 +1302,7 @@ export type Database = {
           method?: string | null
           name: string
           notes?: string | null
+          price?: number
           report_category?: string | null
           sort_order?: number
           updated_at?: string
@@ -1226,6 +1314,7 @@ export type Database = {
           method?: string | null
           name?: string
           notes?: string | null
+          price?: number
           report_category?: string | null
           sort_order?: number
           updated_at?: string
@@ -2636,6 +2725,7 @@ export type Database = {
         Args: { target_month: string }
         Returns: number
       }
+      generate_pathology_order_number: { Args: never; Returns: string }
       generate_patient_number: { Args: never; Returns: string }
       get_current_user_role: { Args: never; Returns: string }
       get_last_daily_closing: {

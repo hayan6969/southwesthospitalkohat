@@ -13,8 +13,9 @@ import { StaffLabReports } from "@/components/staff/StaffLabReports";
 import { StaffXray } from "@/components/staff/StaffXray";
 import { StaffRevenueBreakdown } from "@/components/staff/StaffRevenueBreakdown";
 import { StaffShiftClosing } from "@/components/staff/StaffShiftClosing";
+import { StaffPathologyBilling } from "@/components/staff/StaffPathologyBilling";
 import { PatientSearchDialog } from "@/components/staff/PatientSearchDialog";
-import { Receipt, TestTube, Building2, FileText, Image, Search, ShoppingCart, Clock } from "lucide-react";
+import { Receipt, TestTube, Building2, FileText, Image, Search, ShoppingCart, Clock, Microscope } from "lucide-react";
 import { useHospitalSettings } from "@/hooks/useHospitalSettings";
 import { AdminDashboardNav } from "@/components/AdminDashboardNav";
 
@@ -90,7 +91,7 @@ export default function DashboardStaff() {
 
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <div className="overflow-x-auto -mx-3 px-3 sm:mx-0 sm:px-0">
-              <TabsList className="inline-flex w-auto min-w-full sm:grid sm:w-full sm:grid-cols-8">
+              <TabsList className="inline-flex w-auto min-w-full sm:grid sm:w-full sm:grid-cols-9">
                 <TabsTrigger value="counter" className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm whitespace-nowrap">
                   <Receipt className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                   Counter
@@ -98,6 +99,10 @@ export default function DashboardStaff() {
                 <TabsTrigger value="lab" className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm whitespace-nowrap">
                   <TestTube className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                   Lab
+                </TabsTrigger>
+                <TabsTrigger value="pathology-billing" className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm whitespace-nowrap">
+                  <Microscope className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                  Pathology
                 </TabsTrigger>
                 <TabsTrigger value="lab-reports" className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm whitespace-nowrap">
                   <Search className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
@@ -132,6 +137,9 @@ export default function DashboardStaff() {
             </TabsContent>
             <TabsContent value="lab" className="mt-4 sm:mt-6">
               <StaffLab />
+            </TabsContent>
+            <TabsContent value="pathology-billing" className="mt-4 sm:mt-6">
+              <StaffPathologyBilling />
             </TabsContent>
             <TabsContent value="lab-reports" className="mt-4 sm:mt-6">
               <StaffLabReports />

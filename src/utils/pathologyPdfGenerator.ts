@@ -23,7 +23,7 @@ export interface PathologyPdfTestType {
 export interface PathologyPdfData {
   reportNumber: string;
   patientName: string;
-  patientId: string;       // patient_number e.g. P-00001
+  patientId: string;
   patientAge: number | string | null;
   patientSex: string | null;
   phone: string | null;
@@ -51,9 +51,23 @@ const fetchHospital = async () => {
 const fmt = (iso: string | null | undefined) => {
   if (!iso) return '—';
   try {
-    return formatInPakistanTime(iso, 'dd-MMM-yyyy hh:mm a');
+    return formatInPakistanTime(iso, 'dd MMM yyyy, hh:mm a');
   } catch {
     return iso;
+  }
+};
+
+const loadImageDataUrl = async (url: string): Promise<string | null> => {
+  try {
+    const res = await fetch(url);
+    const blob = await res.blob();
+    return await new Promise<string>((resolve) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result as string);
+      reader.readAsDataURL(blob);
+    });
+  } catch {
+    return null;
   }
 };
 
@@ -62,198 +76,286 @@ export async function generatePathologyReportPDF(data: PathologyPdfData) {
   const doc = new jsPDF({ unit: 'mm', format: 'a4' });
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
-  const marginX = 12;
-  let y = 12;
+  const marginX = 10;
+  const contentWidth = pageWidth - marginX * 2;
 
-  // ===== Header =====
+  // ============== HEADER BAND (blue) ==============
+  doc.setFillColor(15, 76, 129); // deep blue
+  doc.rect(0, 0, pageWidth, 22, 'F');
+
+  // Logo
   if (hospital?.logo_url) {
-    try {
-      // jsPDF accepts data URLs directly
-      const res = await fetch(hospital.logo_url);
-      const blob = await res.blob();
-      const reader = new FileReader();
-      const dataUrl: string = await new Promise((resolve) => {
-        reader.onloadend = () => resolve(reader.result as string);
-        reader.readAsDataURL(blob);
-      });
-      doc.addImage(dataUrl, 'PNG', marginX, y, 22, 22);
-    } catch {
-      /* ignore logo errors */
+    const dataUrl = await loadImageDataUrl(hospital.logo_url);
+    if (dataUrl) {
+      try {
+        doc.addImage(dataUrl, 'PNG', marginX, 4, 14, 14);
+      } catch { /* ignore */ }
     }
   }
 
+  // Hospital name centered
+  doc.setTextColor(255, 255, 255);
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(18);
-  doc.text(hospital?.hospital_name || 'Hospital', pageWidth / 2, y + 6, { align: 'center' });
+  doc.setFontSize(20);
+  doc.text((hospital?.hospital_name || 'Hospital').toUpperCase(), pageWidth / 2, 11, { align: 'center' });
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(9);
-  doc.text(hospital?.hospital_address || '', pageWidth / 2, y + 12, { align: 'center' });
-  doc.text(`Phone: ${hospital?.contact_number || ''}`, pageWidth / 2, y + 17, { align: 'center' });
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(11);
-  doc.text('PATHOLOGY LABORATORY REPORT', pageWidth / 2, y + 24, { align: 'center' });
-  y += 28;
-  doc.setLineWidth(0.4);
-  doc.line(marginX, y, pageWidth - marginX, y);
-  y += 4;
+  doc.text('Accurate  |  Caring  |  Instant', pageWidth / 2, 17, { align: 'center' });
 
-  // ===== Patient/Report Info Block =====
-  doc.setFontSize(9);
+  // Right-side phone
+  doc.setFontSize(8);
+  doc.text(hospital?.contact_number || '', pageWidth - marginX, 9, { align: 'right' });
+
+  // Address strip
+  doc.setFillColor(240, 240, 240);
+  doc.rect(0, 22, pageWidth, 6, 'F');
+  doc.setTextColor(60, 60, 60);
+  doc.setFontSize(8);
+  doc.text(hospital?.hospital_address || '', pageWidth / 2, 26, { align: 'center' });
+
+  // Thin accent line
+  doc.setDrawColor(15, 76, 129);
+  doc.setLineWidth(0.6);
+  doc.line(marginX, 30, pageWidth - marginX, 30);
+
+  doc.setTextColor(0, 0, 0);
+  let y = 34;
+
+  // ============== PATIENT BLOCK (2 columns) ==============
   const leftX = marginX;
   const rightX = pageWidth / 2 + 4;
-  const labelStyle = (l: string, x: number, yy: number) => {
+  const labelKV = (label: string, value: string, x: number, yy: number, valueX = x + 24) => {
     doc.setFont('helvetica', 'bold');
-    doc.text(l, x, yy);
-  };
-  const valueStyle = (v: string, x: number, yy: number) => {
+    doc.setFontSize(9);
+    doc.text(label, x, yy);
     doc.setFont('helvetica', 'normal');
-    doc.text(v, x, yy);
+    doc.text(value || '—', valueX, yy);
   };
 
-  let infoY = y;
-  labelStyle('Patient Name :', leftX, infoY); valueStyle(data.patientName || '—', leftX + 30, infoY);
-  labelStyle('Report No :', rightX, infoY); valueStyle(data.reportNumber, rightX + 24, infoY);
-  infoY += 5;
-  labelStyle('Patient ID :', leftX, infoY); valueStyle(data.patientId || '—', leftX + 30, infoY);
-  labelStyle('Sample Type :', rightX, infoY); valueStyle(data.sampleType || '—', rightX + 24, infoY);
-  infoY += 5;
-  labelStyle('Age / Sex :', leftX, infoY); valueStyle(`${data.patientAge ?? '—'} / ${data.patientSex || '—'}`, leftX + 30, infoY);
-  labelStyle('Instrument :', rightX, infoY); valueStyle(data.instrument || '—', rightX + 24, infoY);
-  infoY += 5;
-  labelStyle('Phone :', leftX, infoY); valueStyle(data.phone || '—', leftX + 30, infoY);
-  labelStyle('Registered :', rightX, infoY); valueStyle(fmt(data.registeredAt), rightX + 24, infoY);
-  infoY += 5;
-  labelStyle('Referred By :', leftX, infoY); valueStyle(data.referredBy || '—', leftX + 30, infoY);
-  labelStyle('Collected :', rightX, infoY); valueStyle(fmt(data.collectedAt), rightX + 24, infoY);
-  infoY += 5;
-  labelStyle('Collection :', leftX, infoY); valueStyle(data.collectionAddress || '—', leftX + 30, infoY);
-  labelStyle('Reported :', rightX, infoY); valueStyle(fmt(data.reportedAt), rightX + 24, infoY);
-  infoY += 5;
+  // Big patient name + meta
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(13);
+  doc.text(data.patientName?.toUpperCase() || '—', leftX, y);
+  // Right header — sample collected at
+  doc.setFontSize(9);
+  doc.text('Sample Collected At:', rightX, y - 1);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(8);
+  const collectionLines = doc.splitTextToSize(
+    data.collectionAddress || hospital?.hospital_address || '—',
+    pageWidth - rightX - marginX
+  );
+  doc.text(collectionLines, rightX, y + 3.5);
 
-  y = infoY + 2;
-  doc.line(marginX, y, pageWidth - marginX, y);
+  y += 6;
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(9);
+  const ageSex = `Age: ${data.patientAge ?? '—'} Years    Sex: ${data.patientSex || '—'}`;
+  doc.text(ageSex, leftX, y);
   y += 4;
+  doc.text(`PID: ${data.patientId || '—'}`, leftX, y);
+  y += 4;
+  doc.text(`Ref. By: ${data.referredBy || '—'}`, leftX, y);
 
-  // ===== Tests =====
+  // Right column — registered/collected/reported (align with top of right block)
+  let yr = y - 8;
+  doc.setFontSize(8);
+  doc.setFont('helvetica', 'bold');
+  doc.text('Registered on:', pageWidth - marginX - 55, yr);
+  doc.setFont('helvetica', 'normal');
+  doc.text(fmt(data.registeredAt), pageWidth - marginX, yr, { align: 'right' });
+  yr += 4;
+  doc.setFont('helvetica', 'bold');
+  doc.text('Collected on:', pageWidth - marginX - 55, yr);
+  doc.setFont('helvetica', 'normal');
+  doc.text(fmt(data.collectedAt), pageWidth - marginX, yr, { align: 'right' });
+  yr += 4;
+  doc.setFont('helvetica', 'bold');
+  doc.text('Reported on:', pageWidth - marginX - 55, yr);
+  doc.setFont('helvetica', 'normal');
+  doc.text(fmt(data.reportedAt), pageWidth - marginX, yr, { align: 'right' });
+  yr += 4;
+  doc.setFont('helvetica', 'bold');
+  doc.text('Report No:', pageWidth - marginX - 55, yr);
+  doc.setFont('helvetica', 'normal');
+  doc.text(data.reportNumber, pageWidth - marginX, yr, { align: 'right' });
+
+  y = Math.max(y, yr) + 4;
+  doc.setDrawColor(180, 180, 180);
+  doc.setLineWidth(0.3);
+  doc.line(marginX, y, pageWidth - marginX, y);
+  y += 5;
+
+  // ============== TESTS ==============
+  const colX = { name: marginX + 1, result: marginX + 78, ref: marginX + 115, unit: marginX + 165 };
+
   for (const tt of data.testTypes) {
-    if (y > pageHeight - 40) {
-      doc.addPage();
-      y = 15;
-    }
+    if (y > pageHeight - 50) { doc.addPage(); y = 18; }
 
-    if (tt.report_category) {
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(10);
-      doc.text(tt.report_category, pageWidth / 2, y, { align: 'center' });
-      y += 5;
-    }
+    // Test type title — centered
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(11);
-    doc.text(tt.name.toUpperCase(), marginX, y);
+    doc.setFontSize(12);
+    doc.text(tt.name.toUpperCase(), pageWidth / 2, y, { align: 'center' });
     y += 5;
-    if (tt.method) {
-      doc.setFont('helvetica', 'italic');
+
+    // Report category sub-title
+    if (tt.report_category) {
+      doc.setFont('helvetica', 'normal');
       doc.setFontSize(8);
-      doc.text(`Method: ${tt.method}`, marginX, y);
+      doc.setTextColor(100, 100, 100);
+      doc.text(tt.report_category, pageWidth / 2, y, { align: 'center' });
+      doc.setTextColor(0, 0, 0);
       y += 4;
     }
 
-    // Table header
-    const colX = { name: marginX, result: 95, unit: 130, ref: 155 };
+    // Sample type strip
+    if (data.sampleType) {
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(9);
+      doc.text('Primary Sample Type :', marginX, y);
+      doc.setFont('helvetica', 'normal');
+      doc.text(data.sampleType, marginX + 38, y);
+      y += 4;
+    }
+
+    // Header row
+    doc.setFillColor(245, 245, 245);
+    doc.rect(marginX, y - 3.5, contentWidth, 6, 'F');
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(9);
-    doc.setFillColor(235, 235, 235);
-    doc.rect(marginX, y - 3.5, pageWidth - marginX * 2, 5, 'F');
-    doc.text('Parameter', colX.name + 1, y);
+    doc.text('Investigation', colX.name, y);
     doc.text('Result', colX.result, y);
+    doc.text('Reference Value', colX.ref, y);
     doc.text('Unit', colX.unit, y);
-    doc.text('Reference Range', colX.ref, y);
-    y += 5;
+    y += 4;
+    doc.setDrawColor(220, 220, 220);
+    doc.line(marginX, y - 1, pageWidth - marginX, y - 1);
+    y += 1;
 
+    // Rows
     doc.setFont('helvetica', 'normal');
     for (const p of tt.parameters) {
-      if (y > pageHeight - 25) {
-        doc.addPage();
-        y = 15;
-      }
+      if (y > pageHeight - 30) { doc.addPage(); y = 18; }
+
       if (p.category_heading) {
         doc.setFont('helvetica', 'bold');
         doc.setFontSize(9);
-        doc.text(p.category_heading, marginX, y);
+        doc.setTextColor(15, 76, 129);
+        doc.text(p.category_heading, colX.name, y);
+        doc.setTextColor(0, 0, 0);
         y += 4.5;
         doc.setFont('helvetica', 'normal');
+        continue;
       }
 
-      const flagSuffix = p.flag ? `  (${p.flag})` : '';
-      const result = (p.result_value ?? '—') + flagSuffix;
-      // Bold result if flagged
-      doc.setFont('helvetica', p.flag ? 'bold' : 'normal');
-      doc.setTextColor(
-        p.flag === 'High' ? 200 : p.flag === 'Low' ? 30 : p.flag === 'Borderline' ? 200 : 0,
-        p.flag === 'High' ? 30 : p.flag === 'Low' ? 64 : p.flag === 'Borderline' ? 120 : 0,
-        p.flag === 'High' ? 30 : p.flag === 'Low' ? 175 : p.flag === 'Borderline' ? 30 : 0
-      );
+      const flag = p.flag;
+      const resultText = (p.result_value ?? '—');
+      const flagLabel = flag ? `  ${flag}` : '';
 
-      doc.text(doc.splitTextToSize(p.parameter_name, 78), colX.name + 1, y);
-      doc.text(result, colX.result, y);
+      // Parameter name
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(9);
+      const nameLines = doc.splitTextToSize(p.parameter_name, colX.result - colX.name - 2);
+      doc.text(nameLines, colX.name, y);
+
+      // Result (bold + colored if flagged)
+      if (flag === 'High') doc.setTextColor(200, 30, 30);
+      else if (flag === 'Low') doc.setTextColor(30, 64, 175);
+      else if (flag === 'Borderline') doc.setTextColor(200, 120, 30);
+      else doc.setTextColor(0, 0, 0);
+      doc.setFont('helvetica', flag ? 'bold' : 'normal');
+      doc.text(resultText, colX.result, y);
+      // small flag tag right after value
+      if (flag) {
+        const valW = doc.getTextWidth(resultText);
+        doc.setFont('helvetica', 'italic');
+        doc.setFontSize(8);
+        doc.text(flagLabel, colX.result + valW, y);
+        doc.setFontSize(9);
+      }
       doc.setTextColor(0, 0, 0);
       doc.setFont('helvetica', 'normal');
-      doc.text(p.unit || '—', colX.unit, y);
+
+      // Reference
       const refText = p.subrange_used
         ? `${p.subrange_used}: ${p.ref_display || '—'}`
         : (p.ref_display || '—');
-      doc.text(doc.splitTextToSize(refText, 50), colX.ref, y);
-      y += 5;
+      const refLines = doc.splitTextToSize(refText, colX.unit - colX.ref - 2);
+      doc.text(refLines, colX.ref, y);
+
+      // Unit
+      doc.text(p.unit || '—', colX.unit, y);
+
+      const lineCount = Math.max(nameLines.length, refLines.length, 1);
+      y += 4.5 * lineCount;
     }
 
+    // Method / Instrument / Notes
+    y += 1;
+    if (tt.method || data.instrument) {
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(8);
+      const segs: string[] = [];
+      if (data.instrument) segs.push(`Instruments: ${data.instrument}`);
+      if (tt.method) segs.push(`Method: ${tt.method}`);
+      doc.text(segs.join('   |   '), marginX, y);
+      y += 4;
+    }
     if (tt.notes) {
-      y += 2;
       doc.setFont('helvetica', 'italic');
       doc.setFontSize(8);
-      const noteLines = doc.splitTextToSize(tt.notes, pageWidth - marginX * 2);
+      const noteLines = doc.splitTextToSize(tt.notes, contentWidth);
       doc.text(noteLines, marginX, y);
-      y += noteLines.length * 3.5 + 2;
+      y += noteLines.length * 3.5;
     }
     y += 3;
-    doc.setLineWidth(0.2);
-    doc.setDrawColor(180, 180, 180);
-    doc.line(marginX, y, pageWidth - marginX, y);
-    doc.setDrawColor(0, 0, 0);
-    y += 4;
   }
 
-  // ===== Interpretation =====
+  // Interpretation
   if (data.interpretation) {
-    if (y > pageHeight - 40) {
-      doc.addPage();
-      y = 15;
-    }
+    if (y > pageHeight - 40) { doc.addPage(); y = 18; }
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(10);
-    doc.text('Interpretation / Notes:', marginX, y);
-    y += 5;
-    doc.setFont('helvetica', 'normal');
     doc.setFontSize(9);
-    const lines = doc.splitTextToSize(data.interpretation, pageWidth - marginX * 2);
-    doc.text(lines, marginX, y);
+    doc.text('Interpretation:', marginX, y);
+    doc.setFont('helvetica', 'normal');
+    const lines = doc.splitTextToSize(data.interpretation, contentWidth - 25);
+    doc.text(lines, marginX + 25, y);
     y += lines.length * 4 + 2;
   }
 
-  // ===== Footer =====
-  const footerY = pageHeight - 18;
-  doc.setLineWidth(0.4);
-  doc.line(marginX, footerY, pageWidth - marginX, footerY);
-  doc.setFont('helvetica', 'italic');
-  doc.setFontSize(8);
-  doc.text(
-    `Status: ${data.status === 'final' ? 'FINAL' : 'DRAFT'}   |   Generated: ${formatInPakistanTime(new Date().toISOString(), 'dd-MMM-yyyy hh:mm a')}`,
-    marginX,
-    footerY + 5
-  );
-  doc.text('This is a computer-generated report.', pageWidth - marginX, footerY + 5, { align: 'right' });
+  // End of report
+  if (y > pageHeight - 35) { doc.addPage(); y = 18; }
+  y += 4;
   doc.setFont('helvetica', 'bold');
-  doc.text('Authorised Signatory', pageWidth - marginX, footerY + 11, { align: 'right' });
+  doc.setFontSize(9);
+  doc.text('****End of Report****', pageWidth / 2, y, { align: 'center' });
+  y += 8;
 
-  const filename = `Pathology_${data.reportNumber}.pdf`;
-  doc.save(filename);
+  // Signatures
+  const sigY = Math.min(pageHeight - 22, y + 4);
+  const sigCols = [marginX + 10, pageWidth / 2 - 20, pageWidth - marginX - 50];
+  doc.setDrawColor(80, 80, 80);
+  for (const sx of sigCols) {
+    doc.line(sx, sigY, sx + 40, sigY);
+  }
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(8);
+  doc.text('Medical Lab Technician', sigCols[0], sigY + 4);
+  doc.text('Pathologist', sigCols[1], sigY + 4);
+  doc.text('Authorised Signatory', sigCols[2], sigY + 4);
+
+  // Footer band
+  doc.setFillColor(15, 76, 129);
+  doc.rect(0, pageHeight - 8, pageWidth, 8, 'F');
+  doc.setTextColor(255, 255, 255);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(7);
+  doc.text(
+    `${data.status === 'final' ? 'FINAL REPORT' : 'DRAFT'}  ·  Generated: ${formatInPakistanTime(new Date().toISOString(), 'dd-MMM-yyyy hh:mm a')}`,
+    marginX,
+    pageHeight - 3
+  );
+  doc.text('Computer-generated report', pageWidth - marginX, pageHeight - 3, { align: 'right' });
+
+  doc.save(`Pathology_${data.reportNumber}.pdf`);
 }
