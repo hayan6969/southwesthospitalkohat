@@ -93,18 +93,25 @@ export async function generatePathologyReportPDF(data: PathologyPdfData) {
     }
   }
 
-  // Hospital name centered
+  // Hospital name centered (auto-shrink so it doesn't overlap right-side phone)
   doc.setTextColor(255, 255, 255);
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(20);
-  doc.text((hospital?.hospital_name || 'Hospital').toUpperCase(), pageWidth / 2, 11, { align: 'center' });
+  const hospitalName = (hospital?.hospital_name || 'Hospital').toUpperCase();
+  let titleSize = 18;
+  doc.setFontSize(titleSize);
+  const maxTitleWidth = pageWidth - 60; // leave room for logo + phone
+  while (doc.getTextWidth(hospitalName) > maxTitleWidth && titleSize > 10) {
+    titleSize -= 1;
+    doc.setFontSize(titleSize);
+  }
+  doc.text(hospitalName, pageWidth / 2, 11, { align: 'center' });
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(9);
   doc.text('Accurate  |  Caring  |  Instant', pageWidth / 2, 17, { align: 'center' });
 
   // Right-side phone
   doc.setFontSize(8);
-  doc.text(hospital?.contact_number || '', pageWidth - marginX, 9, { align: 'right' });
+  doc.text(hospital?.contact_number || '', pageWidth - marginX, 17, { align: 'right' });
 
   // Address strip
   doc.setFillColor(240, 240, 240);
