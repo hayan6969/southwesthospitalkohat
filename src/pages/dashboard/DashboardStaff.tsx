@@ -138,6 +138,9 @@ export default function DashboardStaff() {
             <TabsContent value="lab" className="mt-4 sm:mt-6">
               <StaffLab />
             </TabsContent>
+            <TabsContent value="pathology-billing" className="mt-4 sm:mt-6">
+              <StaffPathologyBilling />
+            </TabsContent>
             <TabsContent value="lab-reports" className="mt-4 sm:mt-6">
               <StaffLabReports />
             </TabsContent>
