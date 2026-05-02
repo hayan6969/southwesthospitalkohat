@@ -307,8 +307,8 @@ export async function generatePathologyReportPDF(data: PathologyPdfData) {
     doc.line(tableRight, headerY - 3.5, tableRight, bodyBottom);
     // top of header
     doc.line(tableLeft, headerY - 3.5, tableRight, headerY - 3.5);
-    // vertical column dividers
-    [colX.result - 2, colX.ref - 2, colX.unit - 2].forEach((vx) => {
+    // vertical column dividers — sit `cellPad` before each column's text start
+    [colX.result - cellPad, colX.ref - cellPad, colX.unit - cellPad].forEach((vx) => {
       doc.line(vx, headerY - 3.5, vx, bodyBottom);
     });
     y = bodyBottom + 1;
