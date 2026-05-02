@@ -12,6 +12,7 @@ import { StaffXray } from "@/components/staff/StaffXray";
 import { StaffRevenueBreakdown } from "@/components/staff/StaffRevenueBreakdown";
 import { StaffShiftClosing } from "@/components/staff/StaffShiftClosing";
 import { StaffPathologyBilling } from "@/components/staff/StaffPathologyBilling";
+import { PathologyReportHistory } from "@/components/lab/PathologyReportHistory";
 import { PatientSearchDialog } from "@/components/staff/PatientSearchDialog";
 import { Receipt, TestTube, Building2, FileText, Image, Search, ShoppingCart, Clock, Microscope } from "lucide-react";
 import { useHospitalSettings } from "@/hooks/useHospitalSettings";
@@ -126,7 +127,24 @@ export default function DashboardStaff() {
               <StaffRevenueBreakdown />
             </TabsContent>
             <TabsContent value="pathology-billing" className="mt-4 sm:mt-6">
-              <StaffPathologyBilling />
+              <Tabs defaultValue="new-order" className="w-full">
+                <TabsList className="grid w-full grid-cols-2 max-w-md">
+                  <TabsTrigger value="new-order" className="flex items-center gap-1.5 text-xs sm:text-sm">
+                    <Microscope className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                    New Lab Order
+                  </TabsTrigger>
+                  <TabsTrigger value="reports" className="flex items-center gap-1.5 text-xs sm:text-sm">
+                    <FileText className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                    Lab Reports
+                  </TabsTrigger>
+                </TabsList>
+                <TabsContent value="new-order" className="mt-4">
+                  <StaffPathologyBilling />
+                </TabsContent>
+                <TabsContent value="reports" className="mt-4">
+                  <PathologyReportHistory />
+                </TabsContent>
+              </Tabs>
             </TabsContent>
             <TabsContent value="xray" className="mt-4 sm:mt-6">
               <StaffXray />
