@@ -223,7 +223,7 @@ function ReportViewer({ reportId, onClose }: { reportId: string | null; onClose:
   const [selected, setSelected] = useState<Set<string>>(new Set());
 
   // Default = all tests that have at least one filled result
-  useMemo(() => {
+  useEffect(() => {
     if (!data) return;
     const def = new Set<string>();
     data.testTypes.forEach((tt) => {
