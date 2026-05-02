@@ -951,11 +951,13 @@ export function PathologyReportWizard() {
             <div className="flex gap-2">
               {step === 3 && (
                 <>
-                  <Button variant="outline" disabled={submitting || (!canSave && fillingTestIds.length > 0)} onClick={() => saveReport("partial")}>
-                    <Save className="w-4 h-4 mr-1" /> Save {pendingTestIds.size > 0 ? "Partial" : "& Print"}
-                  </Button>
+                  {pendingTestIds.size > 0 && (
+                    <Button variant="outline" disabled={submitting || (!canSave && fillingTestIds.length > 0)} onClick={() => saveReport("partial")}>
+                      <Save className="w-4 h-4 mr-1" /> Save Partial
+                    </Button>
+                  )}
                   <Button disabled={submitting || pendingTestIds.size > 0 || !canSave} onClick={() => saveReport("final")}>
-                    <FileText className="w-4 h-4 mr-1" /> Generate Final Report
+                    <Save className="w-4 h-4 mr-1" /> Save
                   </Button>
                 </>
               )}
