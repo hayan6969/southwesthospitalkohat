@@ -100,6 +100,10 @@ export default function DashboardStaff() {
                   <TestTube className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                   Lab
                 </TabsTrigger>
+                <TabsTrigger value="pathology-billing" className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm whitespace-nowrap">
+                  <Microscope className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                  Pathology
+                </TabsTrigger>
                 <TabsTrigger value="lab-reports" className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm whitespace-nowrap">
                   <Search className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                   Lab Reports
