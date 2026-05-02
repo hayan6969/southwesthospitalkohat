@@ -83,7 +83,7 @@ export async function generatePathologyReportPDF(data: PathologyPdfData) {
     const paramIds: string[] = [];
     for (const tt of data.testTypes) {
       for (const p of tt.parameters) {
-        if (p.parameter_id && !p.category_heading) paramIds.push(p.parameter_id);
+        if (p.parameter_id) paramIds.push(p.parameter_id);
       }
     }
     if (data.patientDbId && paramIds.length > 0) {
