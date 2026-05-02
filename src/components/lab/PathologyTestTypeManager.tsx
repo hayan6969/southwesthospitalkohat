@@ -261,8 +261,6 @@ function NewTestDialog({
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, editing?.id]);
-    }
-  });
 
   const addRow = () => setParams((prev) => [
     ...prev,
