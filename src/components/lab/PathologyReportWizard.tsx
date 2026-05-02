@@ -327,6 +327,19 @@ export function PathologyReportWizard() {
       toast.success(`Report ${status === "final" ? "finalized" : "saved as draft"}`);
       queryClient.invalidateQueries({ queryKey: ["pathology_reports"] });
 
+      // Link to source order
+      if (selectedOrderId) {
+        await supabase
+          .from("lab_pathology_orders")
+          .update({
+            report_id: report.id,
+            lab_status: status === "final" ? "reported" : "in_progress",
+          })
+          .eq("id", selectedOrderId);
+        queryClient.invalidateQueries({ queryKey: ["pathology_orders_ready"] });
+        queryClient.invalidateQueries({ queryKey: ["pathology_orders_recent"] });
+      }
+
       if (status === "final") {
         await downloadPdf(report.id);
         resetWizard();
