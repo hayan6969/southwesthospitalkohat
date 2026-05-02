@@ -230,6 +230,15 @@ function NewTestDialog({
   const [form, setForm] = useState<Partial<TestType>>({ ...emptyTest });
   const [params, setParams] = useState<InlineParam[]>([]);
   const [saving, setSaving] = useState(false);
+  const defaultHeadings = {
+    parameter_name: "Parameter *",
+    category_heading: "Category",
+    unit: "Unit",
+    ref_min: "Ref Min",
+    ref_max: "Ref Max",
+    ref_display: "Ref Display",
+  };
+  const [headings, setHeadings] = useState({ ...defaultHeadings });
 
   // Hydrate form + parameters when dialog opens
   useEffect(() => {
