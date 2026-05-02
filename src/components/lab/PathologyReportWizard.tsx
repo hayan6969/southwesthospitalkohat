@@ -82,6 +82,27 @@ export function PathologyReportWizard() {
   const [interpretation, setInterpretation] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
+  // Auto-generate next sequential report number (LAB-XXXXX)
+  useEffect(() => {
+    if (meta.report_number) return;
+    (async () => {
+      const { data } = await supabase
+        .from("lab_pathology_reports")
+        .select("report_number")
+        .ilike("report_number", "LAB-%")
+        .order("created_at", { ascending: false })
+        .limit(1);
+      let next = 1;
+      const last = data?.[0]?.report_number as string | undefined;
+      if (last) {
+        const m = last.match(/LAB-(\d+)/i);
+        if (m) next = parseInt(m[1], 10) + 1;
+      }
+      const formatted = `LAB-${String(next).padStart(5, "0")}`;
+      setMeta((m) => (m.report_number ? m : { ...m, report_number: formatted }));
+    })();
+  }, [meta.report_number]);
+
   // ===== Paid orders ready for lab =====
   const { data: readyOrders, refetch: refetchOrders } = useQuery({
     queryKey: ["pathology_orders_ready"],
