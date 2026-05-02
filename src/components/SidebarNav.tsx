@@ -117,8 +117,14 @@ export function SidebarNav({ role }: SidebarNavProps) {
   const isItemActive = (item: { to: string }) => {
     const [itemPath, itemSearch] = item.to.split("?");
     if (itemSearch) {
-      // Query-param based: match path + query param
-      return location.pathname === itemPath && location.search.includes(itemSearch);
+      // Query-param based: match path + exact query param value
+      if (location.pathname !== itemPath) return false;
+      const itemParams = new URLSearchParams(itemSearch);
+      const currentParams = new URLSearchParams(location.search);
+      for (const [k, v] of itemParams.entries()) {
+        if (currentParams.get(k) !== v) return false;
+      }
+      return true;
     }
     // For dashboard root links, exact match
     if (item.to === `/dashboard/${role}` || item.to === "/dashboard/pharmacy" || item.to === "/dashboard/finance" || item.to === "/dashboard/store" || item.to === "/dashboard/lab") {
