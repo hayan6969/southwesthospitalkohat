@@ -262,7 +262,7 @@ export async function generatePathologyReportPDF(data: PathologyPdfData) {
       // Parameter name
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(9);
-      const nameLines = doc.splitTextToSize(p.parameter_name, colX.result - colX.name - 2);
+      const nameLines = doc.splitTextToSize(p.parameter_name, colX.result - cellPad - colX.name);
       doc.text(nameLines, colX.name, y);
 
       // Result (bold + colored if flagged)
