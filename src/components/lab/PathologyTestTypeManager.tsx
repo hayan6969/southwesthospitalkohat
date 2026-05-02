@@ -303,6 +303,7 @@ function NewTestDialog({
         is_active: form.is_active ?? true,
         sort_order: form.sort_order ?? 100,
         price: Number(form.price ?? 0),
+        column_headings: headings,
       };
       if (testId) {
         const { error } = await supabase.from("lab_test_types").update(testPayload).eq("id", testId);
