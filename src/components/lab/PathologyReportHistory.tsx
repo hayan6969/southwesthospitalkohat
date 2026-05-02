@@ -36,7 +36,7 @@ export function PathologyReportHistory() {
     queryFn: async () => {
       let q = supabase
         .from("lab_pathology_reports")
-        .select("id, report_number, patient_id, patient_name_snapshot, patient_age_snapshot, patient_sex_snapshot, referred_by, status, reported_at, created_at, lab_pathology_report_test_types(test_type_id, lab_test_types(name))")
+        .select("id, report_number, patient_id, patient_name_snapshot, patient_age_snapshot, patient_sex_snapshot, referred_by, status, reported_at, created_at, lab_pathology_report_test_types(test_type_id, lab_test_types(name)), lab_pathology_report_results(result_value, lab_test_parameters(test_type_id))")
         .order("created_at", { ascending: false })
         .limit(200);
 
@@ -65,6 +65,19 @@ export function PathologyReportHistory() {
       return filtered;
     },
   });
+
+  const getTestStatuses = (r: any): { name: string; done: boolean }[] => {
+    const tts = r.lab_pathology_report_test_types || [];
+    const results = r.lab_pathology_report_results || [];
+    return tts.map((tt: any) => {
+      const ttId = tt.test_type_id;
+      const hasResult = results.some((res: any) =>
+        res.lab_test_parameters?.test_type_id === ttId &&
+        res.result_value !== null && res.result_value !== ""
+      );
+      return { name: tt.lab_test_types?.name ?? "—", done: hasResult };
+    });
+  };
 
   return (
     <div className="space-y-4">
