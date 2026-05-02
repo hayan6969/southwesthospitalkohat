@@ -802,14 +802,7 @@ export default function DashboardAdmin() {
             </TabsContent>
 
             <TabsContent value="lab">
-              <Tabs defaultValue="catalog" className="space-y-4">
-                <TabsList>
-                  <TabsTrigger value="catalog">Lab Test Catalog</TabsTrigger>
-                  <TabsTrigger value="pathology">Pathology Test Types</TabsTrigger>
-                </TabsList>
-                <TabsContent value="catalog"><AdminLabs /></TabsContent>
-                <TabsContent value="pathology"><PathologyTestTypeManager /></TabsContent>
-              </Tabs>
+              <PathologyTestTypeManager />
             </TabsContent>
 
             <TabsContent value="xray">
