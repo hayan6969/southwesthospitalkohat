@@ -89,22 +89,14 @@ export default function DashboardStaff() {
 
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <div className="overflow-x-auto -mx-3 px-3 sm:mx-0 sm:px-0">
-              <TabsList className="inline-flex w-auto min-w-full sm:grid sm:w-full sm:grid-cols-9">
+              <TabsList className="inline-flex w-auto min-w-full sm:grid sm:w-full sm:grid-cols-7">
                 <TabsTrigger value="counter" className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm whitespace-nowrap">
                   <Receipt className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                   Counter
                 </TabsTrigger>
-                <TabsTrigger value="lab" className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm whitespace-nowrap">
-                  <TestTube className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                  Lab
-                </TabsTrigger>
                 <TabsTrigger value="pathology-billing" className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm whitespace-nowrap">
                   <Microscope className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                  Pathology
-                </TabsTrigger>
-                <TabsTrigger value="lab-reports" className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm whitespace-nowrap">
-                  <Search className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                  Lab Reports
+                  Lab / Pathology
                 </TabsTrigger>
                 <TabsTrigger value="xray" className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm whitespace-nowrap">
                   <Image className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
@@ -133,14 +125,8 @@ export default function DashboardStaff() {
               <StaffCounter />
               <StaffRevenueBreakdown />
             </TabsContent>
-            <TabsContent value="lab" className="mt-4 sm:mt-6">
-              <StaffLab />
-            </TabsContent>
             <TabsContent value="pathology-billing" className="mt-4 sm:mt-6">
               <StaffPathologyBilling />
-            </TabsContent>
-            <TabsContent value="lab-reports" className="mt-4 sm:mt-6">
-              <StaffLabReports />
             </TabsContent>
             <TabsContent value="xray" className="mt-4 sm:mt-6">
               <StaffXray />
