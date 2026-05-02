@@ -420,14 +420,38 @@ function NewTestDialog({
             </div>
 
             <div className="border rounded-lg overflow-hidden">
-              <div className="grid grid-cols-12 gap-2 px-3 py-2 bg-muted/50 text-xs font-semibold">
-                <div className="col-span-3">Parameter *</div>
-                <div className="col-span-2">Category</div>
-                <div className="col-span-2">Unit</div>
-                <div className="col-span-1">Ref Min</div>
-                <div className="col-span-1">Ref Max</div>
-                <div className="col-span-2">Ref Display</div>
-                <div className="col-span-1 text-right">—</div>
+              <div className="grid grid-cols-12 gap-2 px-3 py-2 bg-muted/50 text-xs font-semibold items-center">
+                <Input
+                  className="col-span-3 h-8 text-xs font-semibold bg-background"
+                  value={headings.parameter_name}
+                  onChange={(e) => setHeadings({ ...headings, parameter_name: e.target.value })}
+                />
+                <Input
+                  className="col-span-2 h-8 text-xs font-semibold bg-background"
+                  value={headings.category_heading}
+                  onChange={(e) => setHeadings({ ...headings, category_heading: e.target.value })}
+                />
+                <Input
+                  className="col-span-2 h-8 text-xs font-semibold bg-background"
+                  value={headings.unit}
+                  onChange={(e) => setHeadings({ ...headings, unit: e.target.value })}
+                />
+                <Input
+                  className="col-span-1 h-8 text-xs font-semibold bg-background"
+                  value={headings.ref_min}
+                  onChange={(e) => setHeadings({ ...headings, ref_min: e.target.value })}
+                />
+                <Input
+                  className="col-span-1 h-8 text-xs font-semibold bg-background"
+                  value={headings.ref_max}
+                  onChange={(e) => setHeadings({ ...headings, ref_max: e.target.value })}
+                />
+                <Input
+                  className="col-span-2 h-8 text-xs font-semibold bg-background"
+                  value={headings.ref_display}
+                  onChange={(e) => setHeadings({ ...headings, ref_display: e.target.value })}
+                />
+                <div className="col-span-1 text-right text-muted-foreground">—</div>
               </div>
               <div className="divide-y">
                 {params.filter((p) => !p._delete).length === 0 && (
