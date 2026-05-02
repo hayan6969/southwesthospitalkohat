@@ -83,7 +83,7 @@ export async function generatePathologyReportPDF(data: PathologyPdfData) {
     const paramIds: string[] = [];
     for (const tt of data.testTypes) {
       for (const p of tt.parameters) {
-        if (p.parameter_id && !p.category_heading) paramIds.push(p.parameter_id);
+        if (p.parameter_id) paramIds.push(p.parameter_id);
       }
     }
     if (data.patientDbId && paramIds.length > 0) {
@@ -289,10 +289,12 @@ export async function generatePathologyReportPDF(data: PathologyPdfData) {
 
     // Rows
     doc.setFont('helvetica', 'normal');
+    let lastHeading: string | null = null;
     for (const p of tt.parameters) {
       if (y > pageHeight - 30) { doc.addPage(); y = 18; }
 
-      if (p.category_heading) {
+      // Print group heading only when it changes
+      if (p.category_heading && p.category_heading !== lastHeading) {
         doc.setFont('helvetica', 'bold');
         doc.setFontSize(9);
         doc.setTextColor(15, 76, 129);
@@ -300,7 +302,7 @@ export async function generatePathologyReportPDF(data: PathologyPdfData) {
         doc.setTextColor(0, 0, 0);
         y += 5;
         doc.setFont('helvetica', 'normal');
-        continue;
+        lastHeading = p.category_heading;
       }
 
       const flag = p.flag;
