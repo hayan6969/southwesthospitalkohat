@@ -244,6 +244,8 @@ function NewTestDialog({
   useEffect(() => {
     if (!open || !editing) return;
     setForm({ ...emptyTest, ...editing });
+    const ch = (editing as any).column_headings;
+    setHeadings({ ...defaultHeadings, ...(ch && typeof ch === "object" ? ch : {}) });
     if (editing.id) {
       (async () => {
         const { data } = await supabase
