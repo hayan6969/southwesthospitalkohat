@@ -33,7 +33,6 @@ import { useQuery } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { toast } from "sonner";
 import { PathologyTestTypeManager } from "@/components/lab/PathologyTestTypeManager";
-import { PathologyTestTypeManager } from "@/components/lab/PathologyTestTypeManager";
 import { AdminOT } from "./admin/AdminOT";
 import AdminXrays from "./admin/AdminXrays";
 import { AdminFinanceAnalytics } from "@/components/AdminFinanceAnalytics";
