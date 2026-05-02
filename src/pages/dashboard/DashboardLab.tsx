@@ -2,18 +2,16 @@
 import { useAuth } from "@/hooks/useAuth";
 import { useSearchParams } from "react-router-dom";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { StaffLab } from "@/components/staff/StaffLab";
-import { StaffLabReports } from "@/components/staff/StaffLabReports";
 import { MySupplyRequests } from "@/components/inventory/MySupplyRequests";
 import { LabItemSupply } from "@/components/inventory/LabItemSupply";
 import { PathologyReportWizard } from "@/components/lab/PathologyReportWizard";
 import { PathologyReportHistory } from "@/components/lab/PathologyReportHistory";
-import { TestTube, FileText, ShoppingCart, FlaskConical, Microscope, History } from "lucide-react";
+import { ShoppingCart, FlaskConical, Microscope, History } from "lucide-react";
 import AppLayout from "@/layouts/AppLayout";
 
 export default function DashboardLab() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const activeTab = searchParams.get("tab") || "lab";
+  const activeTab = searchParams.get("tab") || "pathology";
   const { profile } = useAuth();
 
   const handleTabChange = (value: string) => {
@@ -32,14 +30,6 @@ export default function DashboardLab() {
     <AppLayout sidebarRole="lab">
       <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-4">
         <TabsList className="flex flex-wrap gap-1">
-          <TabsTrigger value="lab" className="flex items-center gap-1.5 text-xs sm:text-sm">
-            <TestTube className="w-3.5 h-3.5" />
-            <span>Lab Orders</span>
-          </TabsTrigger>
-          <TabsTrigger value="reports" className="flex items-center gap-1.5 text-xs sm:text-sm">
-            <FileText className="w-3.5 h-3.5" />
-            <span>Lab Reports</span>
-          </TabsTrigger>
           <TabsTrigger value="pathology" className="flex items-center gap-1.5 text-xs sm:text-sm">
             <Microscope className="w-3.5 h-3.5" />
             <span>New Pathology</span>
@@ -57,14 +47,6 @@ export default function DashboardLab() {
             <span>Request Supplies</span>
           </TabsTrigger>
         </TabsList>
-
-        <TabsContent value="lab">
-          <StaffLab />
-        </TabsContent>
-
-        <TabsContent value="reports">
-          <StaffLabReports />
-        </TabsContent>
 
         <TabsContent value="pathology">
           <PathologyReportWizard />
