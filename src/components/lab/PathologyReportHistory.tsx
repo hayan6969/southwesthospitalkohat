@@ -36,7 +36,7 @@ export function PathologyReportHistory() {
     queryFn: async () => {
       let q = supabase
         .from("lab_pathology_reports")
-        .select("id, report_number, patient_id, patient_name_snapshot, patient_age_snapshot, patient_sex_snapshot, referred_by, status, reported_at, created_at, lab_pathology_report_test_types(test_type_id, lab_test_types(name))")
+        .select("id, report_number, patient_id, patient_name_snapshot, patient_age_snapshot, patient_sex_snapshot, referred_by, status, reported_at, created_at, lab_pathology_report_test_types(test_type_id, lab_test_types(name)), lab_pathology_report_results(result_value, lab_test_parameters(test_type_id))")
         .order("created_at", { ascending: false })
         .limit(200);
 
@@ -65,6 +65,19 @@ export function PathologyReportHistory() {
       return filtered;
     },
   });
+
+  const getTestStatuses = (r: any): { name: string; done: boolean }[] => {
+    const tts = r.lab_pathology_report_test_types || [];
+    const results = r.lab_pathology_report_results || [];
+    return tts.map((tt: any) => {
+      const ttId = tt.test_type_id;
+      const hasResult = results.some((res: any) =>
+        res.lab_test_parameters?.test_type_id === ttId &&
+        res.result_value !== null && res.result_value !== ""
+      );
+      return { name: tt.lab_test_types?.name ?? "—", done: hasResult };
+    });
+  };
 
   return (
     <div className="space-y-4">
@@ -138,8 +151,21 @@ export function PathologyReportHistory() {
                     <TableCell className="font-mono text-xs">{r.report_number}</TableCell>
                     <TableCell>{r.patient_name_snapshot || "—"}</TableCell>
                     <TableCell className="text-xs">{r.patient_age_snapshot ?? "—"} / {r.patient_sex_snapshot ?? "—"}</TableCell>
-                    <TableCell className="text-xs max-w-[220px] truncate" title={(r.lab_pathology_report_test_types || []).map((t: any) => t.lab_test_types?.name).join(", ")}>
-                      {(r.lab_pathology_report_test_types || []).map((t: any) => t.lab_test_types?.name).filter(Boolean).join(", ") || "—"}
+                    <TableCell className="text-xs max-w-[260px]">
+                      <div className="flex flex-wrap gap-1">
+                        {getTestStatuses(r).map((t, i) => (
+                          <Badge
+                            key={i}
+                            variant="outline"
+                            className={t.done
+                              ? "border-green-500 text-green-700 bg-green-50"
+                              : "border-amber-500 text-amber-700 bg-amber-50"}
+                          >
+                            {t.name} · {t.done ? "Done" : "Pending"}
+                          </Badge>
+                        ))}
+                        {getTestStatuses(r).length === 0 && "—"}
+                      </div>
                     </TableCell>
                     <TableCell className="text-xs">{r.referred_by || "—"}</TableCell>
                     <TableCell className="text-xs">{r.created_at ? format(new Date(r.created_at), "dd MMM yyyy") : "—"}</TableCell>
