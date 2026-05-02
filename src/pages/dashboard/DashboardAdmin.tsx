@@ -32,7 +32,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { toast } from "sonner";
-import AdminLabs from "./admin/AdminLabs";
 import { PathologyTestTypeManager } from "@/components/lab/PathologyTestTypeManager";
 import { AdminOT } from "./admin/AdminOT";
 import AdminXrays from "./admin/AdminXrays";
@@ -802,14 +801,7 @@ export default function DashboardAdmin() {
             </TabsContent>
 
             <TabsContent value="lab">
-              <Tabs defaultValue="catalog" className="space-y-4">
-                <TabsList>
-                  <TabsTrigger value="catalog">Lab Test Catalog</TabsTrigger>
-                  <TabsTrigger value="pathology">Pathology Test Types</TabsTrigger>
-                </TabsList>
-                <TabsContent value="catalog"><AdminLabs /></TabsContent>
-                <TabsContent value="pathology"><PathologyTestTypeManager /></TabsContent>
-              </Tabs>
+              <PathologyTestTypeManager />
             </TabsContent>
 
             <TabsContent value="xray">
