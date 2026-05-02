@@ -227,22 +227,24 @@ export async function generatePathologyReportPDF(data: PathologyPdfData) {
       y += 4;
     }
 
-    // Header row
-    const headerY = y;
+    // Header row — taller with vertical padding
+    const headerHeight = 8;
+    const headerTop = y;
+    const headerTextY = y + 5.5; // baseline with ~5.5mm above for breathing room
     doc.setFillColor(245, 245, 245);
-    doc.rect(marginX, y - 3.5, contentWidth, 6, 'F');
+    doc.rect(marginX, headerTop, contentWidth, headerHeight, 'F');
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(9);
-    doc.text('Investigation', colX.name, y);
-    doc.text('Result', colX.result, y);
-    doc.text('Reference Value', colX.ref, y);
-    doc.text('Unit', colX.unit, y);
-    y += 4;
+    doc.text('Investigation', colX.name, headerTextY);
+    doc.text('Result', colX.result, headerTextY);
+    doc.text('Reference Value', colX.ref, headerTextY);
+    doc.text('Unit', colX.unit, headerTextY);
+    const headerY = headerTop + headerHeight; // bottom of header row
     doc.setDrawColor(200, 200, 200);
-    doc.line(marginX, y - 1, pageWidth - marginX, y - 1);
-    y += 1;
+    doc.line(marginX, headerY, pageWidth - marginX, headerY);
+    // start body with top padding
+    y = headerY + 5;
 
-    const bodyTop = y - 4.5; // top of data area for vertical dividers
     const tableLeft = marginX;
     const tableRight = pageWidth - marginX;
 
@@ -257,7 +259,7 @@ export async function generatePathologyReportPDF(data: PathologyPdfData) {
         doc.setTextColor(15, 76, 129);
         doc.text(p.category_heading, colX.name, y);
         doc.setTextColor(0, 0, 0);
-        y += 4.5;
+        y += 5;
         doc.setFont('helvetica', 'normal');
         continue;
       }
