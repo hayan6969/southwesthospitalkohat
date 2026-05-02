@@ -408,10 +408,12 @@ export function PathologyReportWizard() {
     setStep(1);
     setSearchTerm("");
     setSelectedPatient(null);
+    setSelectedOrderId(null);
     setMeta(initialMeta());
     setSelectedTestIds([]);
     setResults({});
     setInterpretation("");
+    refetchOrders();
   };
 
   // ===== Render =====
