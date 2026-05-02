@@ -76,6 +76,39 @@ const loadImageDataUrl = async (url: string): Promise<string | null> => {
 
 export async function generatePathologyReportPDF(data: PathologyPdfData) {
   const hospital = await fetchHospital();
+
+  // Fetch up to last 3 prior results per parameter for this patient (for trend comparison)
+  const previousByParam = new Map<string, Array<{ value: string; date: string }>>();
+  try {
+    const paramIds: string[] = [];
+    for (const tt of data.testTypes) {
+      for (const p of tt.parameters) {
+        if (p.parameter_id && !p.category_heading) paramIds.push(p.parameter_id);
+      }
+    }
+    if (data.patientDbId && paramIds.length > 0) {
+      const { data: priorRows } = await supabase
+        .from('lab_pathology_report_results')
+        .select('parameter_id, result_value, report_id, lab_pathology_reports!inner(patient_id, reported_at, created_at, id)')
+        .in('parameter_id', paramIds)
+        .eq('lab_pathology_reports.patient_id', data.patientDbId);
+      const grouped = new Map<string, Array<{ value: string; date: string; rid: string }>>();
+      for (const row of (priorRows ?? []) as any[]) {
+        if (data.currentReportId && row.report_id === data.currentReportId) continue;
+        if (!row.result_value) continue;
+        const rep = row.lab_pathology_reports;
+        const date = rep?.reported_at || rep?.created_at || '';
+        const arr = grouped.get(row.parameter_id) ?? [];
+        arr.push({ value: String(row.result_value), date, rid: row.report_id });
+        grouped.set(row.parameter_id, arr);
+      }
+      grouped.forEach((arr, k) => {
+        arr.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+        previousByParam.set(k, arr.slice(0, 3).map((x) => ({ value: x.value, date: x.date })));
+      });
+    }
+  } catch { /* best-effort */ }
+
   const doc = new jsPDF({ unit: 'mm', format: 'a4' });
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
