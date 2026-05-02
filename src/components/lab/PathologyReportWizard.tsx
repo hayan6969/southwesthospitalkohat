@@ -119,7 +119,6 @@ export function PathologyReportWizard() {
       ...m,
       referred_by: order.referred_by ?? "",
       sample_type: order.sample_type ?? m.sample_type,
-      report_number: order.order_number,
     }));
   };
 
@@ -711,11 +710,12 @@ export function PathologyReportWizard() {
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
               <div>
-                <Label>Report Number *</Label>
+                <Label>Report Number (auto)</Label>
                 <Input
                   value={meta.report_number}
-                  onChange={(e) => setMeta((m) => ({ ...m, report_number: e.target.value }))}
-                  placeholder="HML-KT-21"
+                  readOnly
+                  className="bg-muted font-mono"
+                  placeholder="Auto-generated"
                 />
               </div>
               <div>
