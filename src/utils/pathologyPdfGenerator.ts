@@ -287,7 +287,7 @@ export async function generatePathologyReportPDF(data: PathologyPdfData) {
       const refText = p.subrange_used
         ? `${p.subrange_used}: ${p.ref_display || '—'}`
         : (p.ref_display || '—');
-      const refLines = doc.splitTextToSize(refText, colX.unit - colX.ref - 2);
+      const refLines = doc.splitTextToSize(refText, colX.unit - cellPad - colX.ref);
       doc.text(refLines, colX.ref, y);
 
       // Unit
