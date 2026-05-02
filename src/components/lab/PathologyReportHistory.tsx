@@ -143,7 +143,7 @@ export function PathologyReportHistory() {
                     </TableCell>
                     <TableCell className="text-xs">{r.referred_by || "—"}</TableCell>
                     <TableCell className="text-xs">{r.created_at ? format(new Date(r.created_at), "dd MMM yyyy") : "—"}</TableCell>
-                    <TableCell><Badge variant={r.status === "final" ? "default" : "secondary"}>{r.status}</Badge></TableCell>
+                    <TableCell><Badge variant={r.status === "final" ? "default" : r.status === "partial" ? "outline" : "secondary"} className={r.status === "partial" ? "border-amber-500 text-amber-700" : ""}>{r.status}</Badge></TableCell>
                     <TableCell className="text-right space-x-1">
                       <Button size="sm" variant="ghost" onClick={() => setViewingId(r.id)}><Eye className="w-3.5 h-3.5" /></Button>
                       <Button size="sm" variant="outline" onClick={() => reprintReport(r.id)}><Printer className="w-3.5 h-3.5" /></Button>
