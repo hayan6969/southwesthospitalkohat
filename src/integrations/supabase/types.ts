@@ -1284,6 +1284,7 @@ export type Database = {
       }
       lab_test_types: {
         Row: {
+          column_headings: Json | null
           created_at: string
           id: string
           is_active: boolean
@@ -1296,6 +1297,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          column_headings?: Json | null
           created_at?: string
           id?: string
           is_active?: boolean
@@ -1308,6 +1310,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          column_headings?: Json | null
           created_at?: string
           id?: string
           is_active?: boolean

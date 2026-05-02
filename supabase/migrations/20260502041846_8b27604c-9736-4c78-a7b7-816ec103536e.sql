@@ -1,0 +1,1 @@
+ALTER TABLE public.lab_test_types ADD COLUMN IF NOT EXISTS column_headings jsonb;
