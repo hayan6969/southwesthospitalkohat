@@ -93,18 +93,25 @@ export async function generatePathologyReportPDF(data: PathologyPdfData) {
     }
   }
 
-  // Hospital name centered
+  // Hospital name centered (auto-shrink so it doesn't overlap right-side phone)
   doc.setTextColor(255, 255, 255);
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(20);
-  doc.text((hospital?.hospital_name || 'Hospital').toUpperCase(), pageWidth / 2, 11, { align: 'center' });
+  const hospitalName = (hospital?.hospital_name || 'Hospital').toUpperCase();
+  let titleSize = 18;
+  doc.setFontSize(titleSize);
+  const maxTitleWidth = pageWidth - 60; // leave room for logo + phone
+  while (doc.getTextWidth(hospitalName) > maxTitleWidth && titleSize > 10) {
+    titleSize -= 1;
+    doc.setFontSize(titleSize);
+  }
+  doc.text(hospitalName, pageWidth / 2, 11, { align: 'center' });
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(9);
   doc.text('Accurate  |  Caring  |  Instant', pageWidth / 2, 17, { align: 'center' });
 
   // Right-side phone
   doc.setFontSize(8);
-  doc.text(hospital?.contact_number || '', pageWidth - marginX, 9, { align: 'right' });
+  doc.text(hospital?.contact_number || '', pageWidth - marginX, 17, { align: 'right' });
 
   // Address strip
   doc.setFillColor(240, 240, 240);
@@ -187,7 +194,9 @@ export async function generatePathologyReportPDF(data: PathologyPdfData) {
   y += 5;
 
   // ============== TESTS ==============
-  const colX = { name: marginX + 1, result: marginX + 78, ref: marginX + 115, unit: marginX + 165 };
+  // Column x-positions (text start). Dividers sit 3mm before text for left padding.
+  const cellPad = 3;
+  const colX = { name: marginX + cellPad, result: marginX + 80, ref: marginX + 117, unit: marginX + 165 };
 
   for (const tt of data.testTypes) {
     if (y > pageHeight - 50) { doc.addPage(); y = 18; }
@@ -260,7 +269,7 @@ export async function generatePathologyReportPDF(data: PathologyPdfData) {
       // Parameter name
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(9);
-      const nameLines = doc.splitTextToSize(p.parameter_name, colX.result - colX.name - 2);
+      const nameLines = doc.splitTextToSize(p.parameter_name, colX.result - cellPad - colX.name);
       doc.text(nameLines, colX.name, y);
 
       // Result (bold + colored if flagged)
@@ -285,7 +294,7 @@ export async function generatePathologyReportPDF(data: PathologyPdfData) {
       const refText = p.subrange_used
         ? `${p.subrange_used}: ${p.ref_display || '—'}`
         : (p.ref_display || '—');
-      const refLines = doc.splitTextToSize(refText, colX.unit - colX.ref - 2);
+      const refLines = doc.splitTextToSize(refText, colX.unit - cellPad - colX.ref);
       doc.text(refLines, colX.ref, y);
 
       // Unit
@@ -305,8 +314,8 @@ export async function generatePathologyReportPDF(data: PathologyPdfData) {
     doc.line(tableRight, headerY - 3.5, tableRight, bodyBottom);
     // top of header
     doc.line(tableLeft, headerY - 3.5, tableRight, headerY - 3.5);
-    // vertical column dividers
-    [colX.result - 2, colX.ref - 2, colX.unit - 2].forEach((vx) => {
+    // vertical column dividers — sit `cellPad` before each column's text start
+    [colX.result - cellPad, colX.ref - cellPad, colX.unit - cellPad].forEach((vx) => {
       doc.line(vx, headerY - 3.5, vx, bodyBottom);
     });
     y = bodyBottom + 1;
