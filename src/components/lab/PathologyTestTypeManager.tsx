@@ -190,6 +190,7 @@ export function PathologyTestTypeManager({ priceEditable = true }: { priceEditab
       <NewTestDialog
         open={showTestDialog}
         editing={editingTest}
+        priceEditable={priceEditable}
         onOpenChange={(o) => { if (!o) { setShowTestDialog(false); setEditingTest(null); } }}
         onSaved={() => {
           qc.invalidateQueries({ queryKey: ["lab_test_types_admin"] });
