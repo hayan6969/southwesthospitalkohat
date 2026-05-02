@@ -187,7 +187,9 @@ export async function generatePathologyReportPDF(data: PathologyPdfData) {
   y += 5;
 
   // ============== TESTS ==============
-  const colX = { name: marginX + 1, result: marginX + 78, ref: marginX + 115, unit: marginX + 165 };
+  // Column x-positions (text start). Dividers sit 3mm before text for left padding.
+  const cellPad = 3;
+  const colX = { name: marginX + cellPad, result: marginX + 80, ref: marginX + 117, unit: marginX + 165 };
 
   for (const tt of data.testTypes) {
     if (y > pageHeight - 50) { doc.addPage(); y = 18; }
