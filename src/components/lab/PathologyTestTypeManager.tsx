@@ -367,10 +367,11 @@ function NewTestDialog({
           {/* Pricing + meta (compact, optional) */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
             <div>
-              <Label>Price (PKR) *</Label>
+              <Label>Price (PKR) {priceEditable ? "*" : <span className="text-xs font-normal text-muted-foreground">(set by admin)</span>}</Label>
               <Input
                 type="number" min="0" step="any"
                 value={form.price ?? 0}
+                disabled={!priceEditable}
                 onFocus={(e) => { if (Number(e.target.value) === 0) e.target.select(); }}
                 onChange={(e) => setForm({ ...form, price: e.target.value === "" ? 0 : Number(e.target.value) })}
               />
