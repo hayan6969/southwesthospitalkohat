@@ -496,6 +496,13 @@ export function PathologyReportWizard() {
         }).eq("id", selectedOrderId);
         queryClient.invalidateQueries({ queryKey: ["pathology_orders_ready"] });
         queryClient.invalidateQueries({ queryKey: ["pathology_orders_recent"] });
+      } else if (isFinal && reportId) {
+        // Resumed partial report: mark any orders linked to this report as reported
+        await supabase.from("lab_pathology_orders").update({
+          lab_status: "reported",
+        }).eq("report_id", reportId);
+        queryClient.invalidateQueries({ queryKey: ["pathology_orders_ready"] });
+        queryClient.invalidateQueries({ queryKey: ["pathology_orders_recent"] });
       }
 
       // Generate PDF for selected tests (combined)
