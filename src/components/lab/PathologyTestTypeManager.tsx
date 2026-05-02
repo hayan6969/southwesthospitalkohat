@@ -90,12 +90,14 @@ export function PathologyTestTypeManager() {
         const { error } = await supabase.from("lab_test_types").update({
           name: t.name, report_category: t.report_category || null, method: t.method || null,
           notes: t.notes || null, is_active: t.is_active, sort_order: t.sort_order,
+          price: Number(t.price ?? 0),
         }).eq("id", t.id);
         if (error) throw error;
       } else {
         const { error } = await supabase.from("lab_test_types").insert({
           name: t.name!, report_category: t.report_category || null, method: t.method || null,
           notes: t.notes || null, is_active: t.is_active ?? true, sort_order: t.sort_order ?? 100,
+          price: Number(t.price ?? 0),
         });
         if (error) throw error;
       }
