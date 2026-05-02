@@ -126,11 +126,13 @@ export async function generatePathologyReportPDF(data: PathologyPdfData) {
   doc.line(marginX, 30, pageWidth - marginX, 30);
 
   doc.setTextColor(0, 0, 0);
-  let y = 34;
+  let y = 36;
 
   // ============== PATIENT BLOCK (2 columns) ==============
   const leftX = marginX;
   const rightX = pageWidth / 2 + 4;
+  const rightLabelX = pageWidth - marginX - 58;
+  const rightValueX = pageWidth - marginX;
   const labelKV = (label: string, value: string, x: number, yy: number, valueX = x + 24) => {
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(9);
@@ -145,49 +147,50 @@ export async function generatePathologyReportPDF(data: PathologyPdfData) {
   doc.text(data.patientName?.toUpperCase() || '—', leftX, y);
   // Right header — sample collected at
   doc.setFontSize(9);
-  doc.text('Sample Collected At:', rightX, y - 1);
+  doc.text('Sample Collected At:', rightX, y);
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(8);
   const collectionLines = doc.splitTextToSize(
     data.collectionAddress || hospital?.hospital_address || '—',
-    pageWidth - rightX - marginX
+    rightLabelX - rightX - 4
   );
-  doc.text(collectionLines, rightX, y + 3.5);
+  doc.text(collectionLines, rightX, y + 5);
 
-  y += 6;
+  y += 8;
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(9);
   const ageSex = `Age: ${data.patientAge ?? '—'} Years    Sex: ${data.patientSex || '—'}`;
   doc.text(ageSex, leftX, y);
-  y += 4;
+  y += 5;
   doc.text(`PID: ${data.patientId || '—'}`, leftX, y);
-  y += 4;
+  y += 5;
   doc.text(`Ref. By: ${data.referredBy || '—'}`, leftX, y);
+  const leftBlockBottom = y;
 
-  // Right column — registered/collected/reported (align with top of right block)
-  let yr = y - 8;
+  // Right column — registered/collected/reported, always below collection address
+  let yr = Math.max(42, 36 + 5 + collectionLines.length * 4 + 4);
   doc.setFontSize(8);
   doc.setFont('helvetica', 'bold');
-  doc.text('Registered on:', pageWidth - marginX - 55, yr);
+  doc.text('Registered on:', rightLabelX, yr);
   doc.setFont('helvetica', 'normal');
-  doc.text(fmt(data.registeredAt), pageWidth - marginX, yr, { align: 'right' });
-  yr += 4;
+  doc.text(fmt(data.registeredAt), rightValueX, yr, { align: 'right' });
+  yr += 5;
   doc.setFont('helvetica', 'bold');
-  doc.text('Collected on:', pageWidth - marginX - 55, yr);
+  doc.text('Collected on:', rightLabelX, yr);
   doc.setFont('helvetica', 'normal');
-  doc.text(fmt(data.collectedAt), pageWidth - marginX, yr, { align: 'right' });
-  yr += 4;
+  doc.text(fmt(data.collectedAt), rightValueX, yr, { align: 'right' });
+  yr += 5;
   doc.setFont('helvetica', 'bold');
-  doc.text('Reported on:', pageWidth - marginX - 55, yr);
+  doc.text('Reported on:', rightLabelX, yr);
   doc.setFont('helvetica', 'normal');
-  doc.text(fmt(data.reportedAt), pageWidth - marginX, yr, { align: 'right' });
-  yr += 4;
+  doc.text(fmt(data.reportedAt), rightValueX, yr, { align: 'right' });
+  yr += 5;
   doc.setFont('helvetica', 'bold');
-  doc.text('Report No:', pageWidth - marginX - 55, yr);
+  doc.text('Report No:', rightLabelX, yr);
   doc.setFont('helvetica', 'normal');
-  doc.text(data.reportNumber, pageWidth - marginX, yr, { align: 'right' });
+  doc.text(data.reportNumber, rightValueX, yr, { align: 'right' });
 
-  y = Math.max(y, yr) + 4;
+  y = Math.max(leftBlockBottom, yr) + 7;
   doc.setDrawColor(180, 180, 180);
   doc.setLineWidth(0.3);
   doc.line(marginX, y, pageWidth - marginX, y);
