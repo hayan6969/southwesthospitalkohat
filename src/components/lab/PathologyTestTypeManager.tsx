@@ -129,7 +129,7 @@ export function PathologyTestTypeManager({ priceEditable = true }: { priceEditab
     <div className="space-y-4">
       <Card>
         <CardHeader className="flex-row items-center justify-between">
-          <CardTitle className="flex items-center gap-2"><FlaskConical className="w-5 h-5 text-blue-600" /> Pathology Test Types</CardTitle>
+          <CardTitle className="flex items-center gap-2"><FlaskConical className="w-5 h-5 text-blue-600" /> Lab Test Types</CardTitle>
           <Button onClick={() => { setEditingTest({ ...emptyTest }); setShowTestDialog(true); }}>
             <Plus className="w-4 h-4 mr-1" /> New Test Type
           </Button>

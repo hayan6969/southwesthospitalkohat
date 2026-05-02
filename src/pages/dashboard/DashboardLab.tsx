@@ -33,7 +33,7 @@ export default function DashboardLab() {
         <TabsList className="flex flex-wrap gap-1">
           <TabsTrigger value="pathology" className="flex items-center gap-1.5 text-xs sm:text-sm">
             <Microscope className="w-3.5 h-3.5" />
-            <span>New Pathology</span>
+            <span>New Lab Report</span>
           </TabsTrigger>
           <TabsTrigger value="pathology-history" className="flex items-center gap-1.5 text-xs sm:text-sm">
             <History className="w-3.5 h-3.5" />

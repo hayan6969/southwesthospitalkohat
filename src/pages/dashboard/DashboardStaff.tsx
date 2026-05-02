@@ -96,7 +96,7 @@ export default function DashboardStaff() {
                 </TabsTrigger>
                 <TabsTrigger value="pathology-billing" className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm whitespace-nowrap">
                   <Microscope className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                  Lab / Pathology
+                  Lab
                 </TabsTrigger>
                 <TabsTrigger value="xray" className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm whitespace-nowrap">
                   <Image className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
