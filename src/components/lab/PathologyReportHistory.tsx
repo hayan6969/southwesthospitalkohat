@@ -151,8 +151,21 @@ export function PathologyReportHistory() {
                     <TableCell className="font-mono text-xs">{r.report_number}</TableCell>
                     <TableCell>{r.patient_name_snapshot || "—"}</TableCell>
                     <TableCell className="text-xs">{r.patient_age_snapshot ?? "—"} / {r.patient_sex_snapshot ?? "—"}</TableCell>
-                    <TableCell className="text-xs max-w-[220px] truncate" title={(r.lab_pathology_report_test_types || []).map((t: any) => t.lab_test_types?.name).join(", ")}>
-                      {(r.lab_pathology_report_test_types || []).map((t: any) => t.lab_test_types?.name).filter(Boolean).join(", ") || "—"}
+                    <TableCell className="text-xs max-w-[260px]">
+                      <div className="flex flex-wrap gap-1">
+                        {getTestStatuses(r).map((t, i) => (
+                          <Badge
+                            key={i}
+                            variant="outline"
+                            className={t.done
+                              ? "border-green-500 text-green-700 bg-green-50"
+                              : "border-amber-500 text-amber-700 bg-amber-50"}
+                          >
+                            {t.name} · {t.done ? "Done" : "Pending"}
+                          </Badge>
+                        ))}
+                        {getTestStatuses(r).length === 0 && "—"}
+                      </div>
                     </TableCell>
                     <TableCell className="text-xs">{r.referred_by || "—"}</TableCell>
                     <TableCell className="text-xs">{r.created_at ? format(new Date(r.created_at), "dd MMM yyyy") : "—"}</TableCell>
