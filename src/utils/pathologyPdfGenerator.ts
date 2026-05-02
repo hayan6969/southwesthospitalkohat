@@ -10,6 +10,7 @@ export interface PathologyPdfParameter {
   result_value: string | null;
   flag: 'Low' | 'High' | 'Borderline' | null;
   subrange_used?: string | null;
+  parameter_id?: string | null;
 }
 
 export interface PathologyPdfTestType {
@@ -24,6 +25,8 @@ export interface PathologyPdfData {
   reportNumber: string;
   patientName: string;
   patientId: string;
+  patientDbId?: string | null;
+  currentReportId?: string | null;
   patientAge: number | string | null;
   patientSex: string | null;
   phone: string | null;
@@ -73,6 +76,39 @@ const loadImageDataUrl = async (url: string): Promise<string | null> => {
 
 export async function generatePathologyReportPDF(data: PathologyPdfData) {
   const hospital = await fetchHospital();
+
+  // Fetch up to last 3 prior results per parameter for this patient (for trend comparison)
+  const previousByParam = new Map<string, Array<{ value: string; date: string }>>();
+  try {
+    const paramIds: string[] = [];
+    for (const tt of data.testTypes) {
+      for (const p of tt.parameters) {
+        if (p.parameter_id && !p.category_heading) paramIds.push(p.parameter_id);
+      }
+    }
+    if (data.patientDbId && paramIds.length > 0) {
+      const { data: priorRows } = await supabase
+        .from('lab_pathology_report_results')
+        .select('parameter_id, result_value, report_id, lab_pathology_reports!inner(patient_id, reported_at, created_at, id)')
+        .in('parameter_id', paramIds)
+        .eq('lab_pathology_reports.patient_id', data.patientDbId);
+      const grouped = new Map<string, Array<{ value: string; date: string; rid: string }>>();
+      for (const row of (priorRows ?? []) as any[]) {
+        if (data.currentReportId && row.report_id === data.currentReportId) continue;
+        if (!row.result_value) continue;
+        const rep = row.lab_pathology_reports;
+        const date = rep?.reported_at || rep?.created_at || '';
+        const arr = grouped.get(row.parameter_id) ?? [];
+        arr.push({ value: String(row.result_value), date, rid: row.report_id });
+        grouped.set(row.parameter_id, arr);
+      }
+      grouped.forEach((arr, k) => {
+        arr.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+        previousByParam.set(k, arr.slice(0, 3).map((x) => ({ value: x.value, date: x.date })));
+      });
+    }
+  } catch { /* best-effort */ }
+
   const doc = new jsPDF({ unit: 'mm', format: 'a4' });
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
@@ -307,6 +343,25 @@ export async function generatePathologyReportPDF(data: PathologyPdfData) {
 
       const lineCount = Math.max(nameLines.length, refLines.length, 1);
       y += 5 * lineCount;
+
+      // Previous results (last up to 3) for trend comparison
+      const prev = p.parameter_id ? previousByParam.get(p.parameter_id) : undefined;
+      if (prev && prev.length > 0) {
+        doc.setFont('helvetica', 'italic');
+        doc.setFontSize(7.5);
+        doc.setTextColor(110, 110, 110);
+        const parts = prev.map((pr) => {
+          const d = pr.date ? formatInPakistanTime(pr.date, 'dd MMM yy') : '—';
+          return `${d}: ${pr.value}`;
+        });
+        const prevText = `Previous — ${parts.join('   |   ')}`;
+        const prevLines = doc.splitTextToSize(prevText, contentWidth - cellPad * 2);
+        doc.text(prevLines, colX.name, y);
+        y += prevLines.length * 3.2 + 1;
+        doc.setTextColor(0, 0, 0);
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(9);
+      }
     }
 
     // Add bottom padding inside table

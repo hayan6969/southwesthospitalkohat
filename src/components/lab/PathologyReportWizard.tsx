@@ -541,6 +541,8 @@ export function PathologyReportWizard() {
       reportNumber: r.report_number,
       patientName: r.patient_name_snapshot ?? "",
       patientId: pat?.patient_number ?? "—",
+      patientDbId: r.patient_id,
+      currentReportId: r.id,
       patientAge: r.patient_age_snapshot,
       patientSex: r.patient_sex_snapshot,
       phone,
@@ -568,6 +570,7 @@ export function PathologyReportWizard() {
             result_value: res?.result_value ?? null,
             flag: (res?.flag ?? null) as "Low" | "High" | "Borderline" | null,
             subrange_used: res?.subrange_used ?? null,
+            parameter_id: p.id,
           };
         }),
       })),
