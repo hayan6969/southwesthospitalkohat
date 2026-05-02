@@ -303,8 +303,11 @@ export async function generatePathologyReportPDF(data: PathologyPdfData) {
       doc.text(p.unit || '—', colX.unit, y);
 
       const lineCount = Math.max(nameLines.length, refLines.length, 1);
-      y += 4.5 * lineCount;
+      y += 5 * lineCount;
     }
+
+    // Add bottom padding inside table
+    y += 2;
 
     // Draw table borders (outer box + vertical column dividers + bottom)
     const bodyBottom = y;
@@ -312,13 +315,13 @@ export async function generatePathologyReportPDF(data: PathologyPdfData) {
     // bottom of body
     doc.line(tableLeft, bodyBottom, tableRight, bodyBottom);
     // outer left/right
-    doc.line(tableLeft, headerY - 3.5, tableLeft, bodyBottom);
-    doc.line(tableRight, headerY - 3.5, tableRight, bodyBottom);
+    doc.line(tableLeft, headerTop, tableLeft, bodyBottom);
+    doc.line(tableRight, headerTop, tableRight, bodyBottom);
     // top of header
-    doc.line(tableLeft, headerY - 3.5, tableRight, headerY - 3.5);
+    doc.line(tableLeft, headerTop, tableRight, headerTop);
     // vertical column dividers — sit `cellPad` before each column's text start
     [colX.result - cellPad, colX.ref - cellPad, colX.unit - cellPad].forEach((vx) => {
-      doc.line(vx, headerY - 3.5, vx, bodyBottom);
+      doc.line(vx, headerTop, vx, bodyBottom);
     });
     y = bodyBottom + 1;
 
