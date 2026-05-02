@@ -679,45 +679,29 @@ export function PathologyReportWizard() {
         {step === 2 && (
           <div className="space-y-4">
             <div>
-              <Label className="text-base font-semibold">Select Test(s)</Label>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mt-2">
-                {testTypes?.map((t) => {
-                  const checked = selectedTestIds.includes(t.id);
-                  return (
-                    <label
-                      key={t.id}
-                      className={`flex items-start gap-2 p-3 border rounded-lg cursor-pointer ${
-                        checked ? "border-blue-500 bg-blue-50" : "hover:bg-muted/40"
-                      }`}
-                    >
-                      <Checkbox
-                        checked={checked}
-                        onCheckedChange={(v) =>
-                          setSelectedTestIds((prev) =>
-                            v ? [...prev, t.id] : prev.filter((x) => x !== t.id)
-                          )
-                        }
-                      />
-                      <div>
-                        <div className="font-medium text-sm">{t.name}</div>
-                        <div className="text-xs text-muted-foreground">{t.report_category}</div>
-                      </div>
-                    </label>
-                  );
-                })}
-              </div>
-              {selectedTestIds.length > 0 && (
-                <div className="flex flex-wrap gap-2 mt-3">
+              <Label className="text-base font-semibold">Tests from Billed Order</Label>
+              <p className="text-xs text-muted-foreground mb-2">
+                These tests were billed by the counter for this patient. They cannot be changed here — to add or remove tests, raise a new order at billing.
+              </p>
+              {selectedTestIds.length === 0 ? (
+                <div className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded p-3">
+                  No tests linked to this order. Go back and pick a paid order.
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                   {selectedTestIds.map((id) => {
                     const t = testTypes?.find((x) => x.id === id);
                     return (
-                      <Badge key={id} variant="secondary" className="gap-1">
-                        {t?.name}
-                        <X
-                          className="w-3 h-3 cursor-pointer"
-                          onClick={() => setSelectedTestIds((p) => p.filter((x) => x !== id))}
-                        />
-                      </Badge>
+                      <div
+                        key={id}
+                        className="flex items-start gap-2 p-3 border-2 border-blue-500 bg-blue-50 rounded-lg"
+                      >
+                        <CheckCircle className="w-4 h-4 text-blue-600 mt-0.5" />
+                        <div>
+                          <div className="font-medium text-sm">{t?.name ?? "—"}</div>
+                          <div className="text-xs text-muted-foreground">{t?.report_category}</div>
+                        </div>
+                      </div>
                     );
                   })}
                 </div>
