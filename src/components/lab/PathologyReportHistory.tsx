@@ -86,6 +86,7 @@ export function PathologyReportHistory() {
                 <SelectContent className="z-[10000]">
                   <SelectItem value="all">All</SelectItem>
                   <SelectItem value="draft">Draft</SelectItem>
+                  <SelectItem value="partial">Partial</SelectItem>
                   <SelectItem value="final">Final</SelectItem>
                 </SelectContent>
               </Select>
