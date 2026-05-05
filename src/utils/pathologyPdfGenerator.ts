@@ -344,10 +344,12 @@ export async function generatePathologyReportPDF(data: PathologyPdfData) {
       doc.setTextColor(0, 0, 0);
       doc.setFont('helvetica', 'normal');
 
-      // Reference
-      const refText = p.subrange_used
-        ? `${p.subrange_used}: ${p.ref_display || '—'}`
-        : (p.ref_display || '—');
+      // Reference — for multi-range params, main row says "( See Below )"
+      const refText = p.display_all_subranges
+        ? (p.ref_display || '( See Below )')
+        : (p.subrange_used
+            ? `${p.subrange_used}: ${p.ref_display || '—'}`
+            : (p.ref_display || '—'));
       const refLines = doc.splitTextToSize(refText, colX.unit - cellPad - colX.ref);
       doc.text(refLines, colX.ref, y);
 
@@ -356,6 +358,36 @@ export async function generatePathologyReportPDF(data: PathologyPdfData) {
 
       const lineCount = Math.max(nameLines.length, refLines.length, 1);
       y += 5 * lineCount;
+
+      // For multi-range parameters: render all subranges as display-only indented rows
+      if (p.display_all_subranges && p.subranges && p.subranges.length > 0) {
+        for (const sr of p.subranges) {
+          if (y > pageHeight - 30) { doc.addPage(); y = 18; }
+          const isSelected =
+            (p.subrange_id && sr.id === p.subrange_id) ||
+            (!p.subrange_id && p.subrange_used && sr.label === p.subrange_used);
+          if (isSelected) {
+            // light yellow highlight across the row
+            doc.setFillColor(255, 249, 196);
+            doc.rect(marginX + 0.3, y - 3.5, contentWidth - 0.6, 4.6, 'F');
+          }
+          doc.setFont('helvetica', isSelected ? 'bold' : 'normal');
+          doc.setFontSize(8);
+          doc.setTextColor(70, 70, 70);
+          // Indented label in name column
+          doc.text(sr.label, colX.name + 4, y);
+          // Range in reference column
+          const srRef = sr.ref_display || (sr.ref_min != null && sr.ref_max != null ? `${sr.ref_min} - ${sr.ref_max}` : '—');
+          doc.text(srRef, colX.ref, y);
+          // Unit repeated for readability
+          doc.text(p.unit || '', colX.unit, y);
+          doc.setTextColor(0, 0, 0);
+          doc.setFont('helvetica', 'normal');
+          doc.setFontSize(9);
+          y += 4;
+        }
+        y += 1;
+      }
 
       // Previous results (last up to 3) for trend comparison
       const prev = p.parameter_id ? previousByParam.get(p.parameter_id) : undefined;
