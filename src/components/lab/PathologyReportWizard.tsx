@@ -918,13 +918,20 @@ export function PathologyReportWizard() {
                                 <TableRow key={p.id}>
                                   <TableCell>
                                     <div className="font-medium">{p.parameter_name}</div>
-                                    {p.has_subranges && (
-                                      <Select value={row.subrange_id ?? ""} onValueChange={(v) => updateResult(p.id, { subrange_id: v })}>
-                                        <SelectTrigger className="h-7 mt-1 text-xs"><SelectValue placeholder="Select sub-range" /></SelectTrigger>
-                                        <SelectContent className="z-[10000]">
-                                          {subs.map((s) => <SelectItem key={s.id} value={s.id}>{s.label} ({s.ref_display})</SelectItem>)}
-                                        </SelectContent>
-                                      </Select>
+                                    {p.has_subranges && subs.length > 0 && (
+                                      <RadioGroup
+                                        value={row.subrange_id ?? ""}
+                                        onValueChange={(v) => updateResult(p.id, { subrange_id: v })}
+                                        className="mt-2 gap-1"
+                                      >
+                                        {subs.map((s) => (
+                                          <label key={s.id} htmlFor={`sr-${p.id}-${s.id}`} className="flex items-center gap-2 text-xs cursor-pointer">
+                                            <RadioGroupItem value={s.id} id={`sr-${p.id}-${s.id}`} />
+                                            <span className="font-medium">{s.label}</span>
+                                            <span className="text-muted-foreground">{s.ref_display ?? `${s.ref_min ?? ''} - ${s.ref_max ?? ''}`}</span>
+                                          </label>
+                                        ))}
+                                      </RadioGroup>
                                     )}
                                     {p.is_optional && !isCompleted && (
                                       <label className="flex items-center gap-1 mt-1 text-xs text-muted-foreground">
