@@ -2,6 +2,14 @@ import jsPDF from 'jspdf';
 import { supabase } from '@/integrations/supabase/client';
 import { formatInPakistanTime } from './timezone';
 
+export interface PathologyPdfSubrange {
+  id: string;
+  label: string;
+  ref_min: number | null;
+  ref_max: number | null;
+  ref_display: string | null;
+}
+
 export interface PathologyPdfParameter {
   category_heading: string | null;
   parameter_name: string;
@@ -10,6 +18,9 @@ export interface PathologyPdfParameter {
   result_value: string | null;
   flag: 'Low' | 'High' | 'Borderline' | null;
   subrange_used?: string | null;
+  subrange_id?: string | null;
+  display_all_subranges?: boolean;
+  subranges?: PathologyPdfSubrange[];
   parameter_id?: string | null;
 }
 
