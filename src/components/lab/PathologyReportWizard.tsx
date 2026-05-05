@@ -12,6 +12,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Search, ChevronLeft, ChevronRight, FileText, Printer, Save, X, History, FlaskConical, Receipt, CheckCircle, Clock } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
