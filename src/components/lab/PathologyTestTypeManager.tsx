@@ -33,6 +33,7 @@ interface Parameter {
   ref_min: number | null;
   ref_max: number | null;
   has_subranges: boolean;
+  display_all_subranges?: boolean;
   is_optional: boolean;
   sort_order: number;
 }
