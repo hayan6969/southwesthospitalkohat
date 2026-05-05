@@ -540,21 +540,19 @@ function ParametersEditor({ testTypeId, testName, parameters, subranges, onClose
   const refresh = () => qc.invalidateQueries({ queryKey: ["lab_test_parameters_admin", testTypeId] });
   const refreshSr = () => qc.invalidateQueries({ queryKey: ["lab_parameter_subranges_admin"] });
 
-  const saveParam = async (p: Partial<Parameter>) => {
+  const saveParam = async (p: Partial<Parameter> & { display_all_subranges?: boolean }) => {
     try {
+      const payload: any = {
+        category_heading: p.category_heading || null, parameter_name: p.parameter_name!, unit: p.unit || null,
+        ref_display: p.ref_display || null, ref_min: p.ref_min ?? null, ref_max: p.ref_max ?? null,
+        has_subranges: p.has_subranges ?? false, is_optional: p.is_optional ?? false, sort_order: p.sort_order ?? 100,
+        display_all_subranges: p.display_all_subranges ?? false,
+      };
       if (p.id) {
-        const { error } = await supabase.from("lab_test_parameters").update({
-          category_heading: p.category_heading || null, parameter_name: p.parameter_name!, unit: p.unit || null,
-          ref_display: p.ref_display || null, ref_min: p.ref_min ?? null, ref_max: p.ref_max ?? null,
-          has_subranges: p.has_subranges ?? false, is_optional: p.is_optional ?? false, sort_order: p.sort_order ?? 100,
-        }).eq("id", p.id);
+        const { error } = await supabase.from("lab_test_parameters").update(payload).eq("id", p.id);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from("lab_test_parameters").insert({
-          test_type_id: testTypeId, category_heading: p.category_heading || null, parameter_name: p.parameter_name!,
-          unit: p.unit || null, ref_display: p.ref_display || null, ref_min: p.ref_min ?? null, ref_max: p.ref_max ?? null,
-          has_subranges: p.has_subranges ?? false, is_optional: p.is_optional ?? false, sort_order: p.sort_order ?? 100,
-        });
+        const { error } = await supabase.from("lab_test_parameters").insert({ test_type_id: testTypeId, ...payload });
         if (error) throw error;
       }
       toast.success("Parameter saved"); setShowDialog(false); setEditing(null); refresh();
