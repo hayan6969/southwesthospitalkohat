@@ -12,6 +12,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Search, ChevronLeft, ChevronRight, FileText, Printer, Save, X, History, FlaskConical, Receipt, CheckCircle, Clock } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -35,6 +36,7 @@ interface Parameter {
   ref_min: number | null;
   ref_max: number | null;
   has_subranges: boolean;
+  display_all_subranges?: boolean;
   is_optional: boolean;
   sort_order: number;
 }
@@ -45,6 +47,7 @@ interface Subrange {
   ref_min: number | null;
   ref_max: number | null;
   ref_display: string | null;
+  is_result_row?: boolean;
 }
 
 interface ResultRow {
@@ -539,6 +542,10 @@ export function PathologyReportWizard() {
     const ttsFiltered = (tts ?? []).filter((t: any) => filterIds.includes(t.test_type_id));
     const { data: params } = await supabase
       .from("lab_test_parameters").select("*").in("test_type_id", filterIds).order("sort_order");
+    const paramIdsAll = (params ?? []).map((p: any) => p.id);
+    const { data: subrangesAll } = paramIdsAll.length > 0
+      ? await supabase.from("lab_parameter_subranges").select("*").in("parameter_id", paramIdsAll).order("sort_order")
+      : { data: [] as any[] } as any;
     const { data: resultsDb } = await supabase
       .from("lab_pathology_report_results").select("*").eq("report_id", reportId);
     const phone = (await supabase.from("profiles").select("phone").eq("id", r.patient_id).single()).data?.phone ?? null;
@@ -569,6 +576,7 @@ export function PathologyReportWizard() {
         notes: tt.lab_test_types?.notes ?? null,
         parameters: (params ?? []).filter((p: any) => p.test_type_id === tt.test_type_id).map((p: any) => {
           const res = (resultsDb ?? []).find((rr: any) => rr.parameter_id === p.id);
+          const psubs = (subrangesAll ?? []).filter((s: any) => s.parameter_id === p.id);
           return {
             category_heading: p.category_heading,
             parameter_name: p.parameter_name,
@@ -577,6 +585,15 @@ export function PathologyReportWizard() {
             result_value: res?.result_value ?? null,
             flag: (res?.flag ?? null) as "Low" | "High" | "Borderline" | null,
             subrange_used: res?.subrange_used ?? null,
+            subrange_id: res?.subrange_id ?? null,
+            display_all_subranges: !!p.display_all_subranges,
+            subranges: psubs.map((s: any) => ({
+              id: s.id,
+              label: s.label,
+              ref_min: s.ref_min,
+              ref_max: s.ref_max,
+              ref_display: s.ref_display,
+            })),
             parameter_id: p.id,
           };
         }),
@@ -915,13 +932,20 @@ export function PathologyReportWizard() {
                                 <TableRow key={p.id}>
                                   <TableCell>
                                     <div className="font-medium">{p.parameter_name}</div>
-                                    {p.has_subranges && (
-                                      <Select value={row.subrange_id ?? ""} onValueChange={(v) => updateResult(p.id, { subrange_id: v })}>
-                                        <SelectTrigger className="h-7 mt-1 text-xs"><SelectValue placeholder="Select sub-range" /></SelectTrigger>
-                                        <SelectContent className="z-[10000]">
-                                          {subs.map((s) => <SelectItem key={s.id} value={s.id}>{s.label} ({s.ref_display})</SelectItem>)}
-                                        </SelectContent>
-                                      </Select>
+                                    {p.has_subranges && subs.length > 0 && (
+                                      <RadioGroup
+                                        value={row.subrange_id ?? ""}
+                                        onValueChange={(v) => updateResult(p.id, { subrange_id: v })}
+                                        className="mt-2 gap-1"
+                                      >
+                                        {subs.map((s) => (
+                                          <label key={s.id} htmlFor={`sr-${p.id}-${s.id}`} className="flex items-center gap-2 text-xs cursor-pointer">
+                                            <RadioGroupItem value={s.id} id={`sr-${p.id}-${s.id}`} />
+                                            <span className="font-medium">{s.label}</span>
+                                            <span className="text-muted-foreground">{s.ref_display ?? `${s.ref_min ?? ''} - ${s.ref_max ?? ''}`}</span>
+                                          </label>
+                                        ))}
+                                      </RadioGroup>
                                     )}
                                     {p.is_optional && !isCompleted && (
                                       <label className="flex items-center gap-1 mt-1 text-xs text-muted-foreground">

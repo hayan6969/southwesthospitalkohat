@@ -33,6 +33,7 @@ interface Parameter {
   ref_min: number | null;
   ref_max: number | null;
   has_subranges: boolean;
+  display_all_subranges?: boolean;
   is_optional: boolean;
   sort_order: number;
 }
@@ -540,21 +541,19 @@ function ParametersEditor({ testTypeId, testName, parameters, subranges, onClose
   const refresh = () => qc.invalidateQueries({ queryKey: ["lab_test_parameters_admin", testTypeId] });
   const refreshSr = () => qc.invalidateQueries({ queryKey: ["lab_parameter_subranges_admin"] });
 
-  const saveParam = async (p: Partial<Parameter>) => {
+  const saveParam = async (p: Partial<Parameter> & { display_all_subranges?: boolean }) => {
     try {
+      const payload: any = {
+        category_heading: p.category_heading || null, parameter_name: p.parameter_name!, unit: p.unit || null,
+        ref_display: p.ref_display || null, ref_min: p.ref_min ?? null, ref_max: p.ref_max ?? null,
+        has_subranges: p.has_subranges ?? false, is_optional: p.is_optional ?? false, sort_order: p.sort_order ?? 100,
+        display_all_subranges: p.display_all_subranges ?? false,
+      };
       if (p.id) {
-        const { error } = await supabase.from("lab_test_parameters").update({
-          category_heading: p.category_heading || null, parameter_name: p.parameter_name!, unit: p.unit || null,
-          ref_display: p.ref_display || null, ref_min: p.ref_min ?? null, ref_max: p.ref_max ?? null,
-          has_subranges: p.has_subranges ?? false, is_optional: p.is_optional ?? false, sort_order: p.sort_order ?? 100,
-        }).eq("id", p.id);
+        const { error } = await supabase.from("lab_test_parameters").update(payload).eq("id", p.id);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from("lab_test_parameters").insert({
-          test_type_id: testTypeId, category_heading: p.category_heading || null, parameter_name: p.parameter_name!,
-          unit: p.unit || null, ref_display: p.ref_display || null, ref_min: p.ref_min ?? null, ref_max: p.ref_max ?? null,
-          has_subranges: p.has_subranges ?? false, is_optional: p.is_optional ?? false, sort_order: p.sort_order ?? 100,
-        });
+        const { error } = await supabase.from("lab_test_parameters").insert({ test_type_id: testTypeId, ...payload });
         if (error) throw error;
       }
       toast.success("Parameter saved"); setShowDialog(false); setEditing(null); refresh();
@@ -686,8 +685,9 @@ function ParametersEditor({ testTypeId, testName, parameters, subranges, onClose
                 <div><Label>Max</Label><Input type="number" step="any" value={editing.ref_max ?? ""} onChange={(e) => setEditing({ ...editing, ref_max: e.target.value === "" ? null : Number(e.target.value) })} /></div>
               </div>
               <div><Label>Sort Order</Label><Input type="number" value={editing.sort_order ?? 100} onChange={(e) => setEditing({ ...editing, sort_order: Number(e.target.value) })} /></div>
-              <div className="flex gap-6 pt-1">
+              <div className="flex flex-wrap gap-6 pt-1">
                 <div className="flex items-center gap-2"><Switch checked={editing.has_subranges ?? false} onCheckedChange={(v) => setEditing({ ...editing, has_subranges: v })} /><Label>Has sub-ranges (gender / phase / age)</Label></div>
+                <div className="flex items-center gap-2"><Switch checked={(editing as any).display_all_subranges ?? false} onCheckedChange={(v) => setEditing({ ...editing, display_all_subranges: v } as any)} /><Label>Display all sub-ranges in report</Label></div>
                 <div className="flex items-center gap-2"><Switch checked={editing.is_optional ?? false} onCheckedChange={(v) => setEditing({ ...editing, is_optional: v })} /><Label>Optional</Label></div>
               </div>
             </div>
