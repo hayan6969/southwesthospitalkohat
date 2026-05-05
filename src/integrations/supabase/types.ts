@@ -847,6 +847,7 @@ export type Database = {
         Row: {
           created_at: string
           id: string
+          is_result_row: boolean
           label: string
           parameter_id: string
           ref_display: string | null
@@ -857,6 +858,7 @@ export type Database = {
         Insert: {
           created_at?: string
           id?: string
+          is_result_row?: boolean
           label: string
           parameter_id: string
           ref_display?: string | null
@@ -867,6 +869,7 @@ export type Database = {
         Update: {
           created_at?: string
           id?: string
+          is_result_row?: boolean
           label?: string
           parameter_id?: string
           ref_display?: string | null
@@ -1230,6 +1233,7 @@ export type Database = {
         Row: {
           category_heading: string | null
           created_at: string
+          display_all_subranges: boolean
           has_subranges: boolean
           id: string
           is_optional: boolean
@@ -1245,6 +1249,7 @@ export type Database = {
         Insert: {
           category_heading?: string | null
           created_at?: string
+          display_all_subranges?: boolean
           has_subranges?: boolean
           id?: string
           is_optional?: boolean
@@ -1260,6 +1265,7 @@ export type Database = {
         Update: {
           category_heading?: string | null
           created_at?: string
+          display_all_subranges?: boolean
           has_subranges?: boolean
           id?: string
           is_optional?: boolean
