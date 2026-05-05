@@ -685,8 +685,9 @@ function ParametersEditor({ testTypeId, testName, parameters, subranges, onClose
                 <div><Label>Max</Label><Input type="number" step="any" value={editing.ref_max ?? ""} onChange={(e) => setEditing({ ...editing, ref_max: e.target.value === "" ? null : Number(e.target.value) })} /></div>
               </div>
               <div><Label>Sort Order</Label><Input type="number" value={editing.sort_order ?? 100} onChange={(e) => setEditing({ ...editing, sort_order: Number(e.target.value) })} /></div>
-              <div className="flex gap-6 pt-1">
+              <div className="flex flex-wrap gap-6 pt-1">
                 <div className="flex items-center gap-2"><Switch checked={editing.has_subranges ?? false} onCheckedChange={(v) => setEditing({ ...editing, has_subranges: v })} /><Label>Has sub-ranges (gender / phase / age)</Label></div>
+                <div className="flex items-center gap-2"><Switch checked={(editing as any).display_all_subranges ?? false} onCheckedChange={(v) => setEditing({ ...editing, display_all_subranges: v } as any)} /><Label>Display all sub-ranges in report</Label></div>
                 <div className="flex items-center gap-2"><Switch checked={editing.is_optional ?? false} onCheckedChange={(v) => setEditing({ ...editing, is_optional: v })} /><Label>Optional</Label></div>
               </div>
             </div>
