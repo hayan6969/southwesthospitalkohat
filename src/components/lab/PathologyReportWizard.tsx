@@ -542,6 +542,10 @@ export function PathologyReportWizard() {
     const ttsFiltered = (tts ?? []).filter((t: any) => filterIds.includes(t.test_type_id));
     const { data: params } = await supabase
       .from("lab_test_parameters").select("*").in("test_type_id", filterIds).order("sort_order");
+    const paramIdsAll = (params ?? []).map((p: any) => p.id);
+    const { data: subrangesAll } = paramIdsAll.length > 0
+      ? await supabase.from("lab_parameter_subranges").select("*").in("parameter_id", paramIdsAll).order("sort_order")
+      : { data: [] as any[] } as any;
     const { data: resultsDb } = await supabase
       .from("lab_pathology_report_results").select("*").eq("report_id", reportId);
     const phone = (await supabase.from("profiles").select("phone").eq("id", r.patient_id).single()).data?.phone ?? null;
@@ -572,6 +576,7 @@ export function PathologyReportWizard() {
         notes: tt.lab_test_types?.notes ?? null,
         parameters: (params ?? []).filter((p: any) => p.test_type_id === tt.test_type_id).map((p: any) => {
           const res = (resultsDb ?? []).find((rr: any) => rr.parameter_id === p.id);
+          const psubs = (subrangesAll ?? []).filter((s: any) => s.parameter_id === p.id);
           return {
             category_heading: p.category_heading,
             parameter_name: p.parameter_name,
@@ -580,6 +585,15 @@ export function PathologyReportWizard() {
             result_value: res?.result_value ?? null,
             flag: (res?.flag ?? null) as "Low" | "High" | "Borderline" | null,
             subrange_used: res?.subrange_used ?? null,
+            subrange_id: res?.subrange_id ?? null,
+            display_all_subranges: !!p.display_all_subranges,
+            subranges: psubs.map((s: any) => ({
+              id: s.id,
+              label: s.label,
+              ref_min: s.ref_min,
+              ref_max: s.ref_max,
+              ref_display: s.ref_display,
+            })),
             parameter_id: p.id,
           };
         }),
