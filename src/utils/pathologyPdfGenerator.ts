@@ -532,5 +532,17 @@ export async function generatePathologyReportPDF(data: PathologyPdfData) {
   );
   doc.text('Computer-generated report', pageWidth - marginX, pageHeight - 3, { align: 'right' });
 
-  doc.save(`Lab_${data.reportNumber}.pdf`);
+  // Open in a new window and trigger the browser's Print dialog directly
+  // (instead of downloading the PDF file)
+  try {
+    doc.autoPrint();
+    const blobUrl = doc.output('bloburl');
+    const w = window.open(blobUrl as unknown as string, '_blank');
+    if (!w) {
+      // Popup blocked — fall back to saving so the user still gets the file
+      doc.save(`Lab_${data.reportNumber}.pdf`);
+    }
+  } catch {
+    doc.save(`Lab_${data.reportNumber}.pdf`);
+  }
 }
