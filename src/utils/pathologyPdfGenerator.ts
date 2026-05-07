@@ -1,4 +1,5 @@
 import jsPDF from 'jspdf';
+import QRCode from 'qrcode';
 import { supabase } from '@/integrations/supabase/client';
 import { formatInPakistanTime } from './timezone';
 
@@ -506,18 +507,38 @@ export async function generatePathologyReportPDF(data: PathologyPdfData) {
   doc.text('****End of Report****', pageWidth / 2, y, { align: 'center' });
   y += 8;
 
+  // QR Verification — links to the live report verification URL on our domain
+  try {
+    const origin = (hospital as any)?.website_url || window.location.origin;
+    const verifyUrl = `${origin.replace(/\/$/, '')}/verify-report/${data.reportNumber}`;
+    const qrDataUrl = await QRCode.toDataURL(verifyUrl, { margin: 0, width: 256 });
+    const qrSize = 22;
+    const qrX = marginX;
+    const qrY = Math.min(pageHeight - 38, y);
+    doc.addImage(qrDataUrl, 'PNG', qrX, qrY, qrSize, qrSize);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(8);
+    doc.setTextColor(0, 0, 0);
+    doc.text('Scan to Verify', qrX + qrSize + 2, qrY + 5);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(7);
+    doc.setTextColor(80, 80, 80);
+    const urlLines = doc.splitTextToSize(verifyUrl, 70);
+    doc.text(urlLines, qrX + qrSize + 2, qrY + 9);
+    doc.setTextColor(0, 0, 0);
+  } catch { /* QR best-effort */ }
+
   // Signatures
   const sigY = Math.min(pageHeight - 22, y + 4);
-  const sigCols = [marginX + 10, pageWidth / 2 - 20, pageWidth - marginX - 50];
+  const sigCols = [pageWidth / 2 - 20, pageWidth - marginX - 50];
   doc.setDrawColor(80, 80, 80);
   for (const sx of sigCols) {
     doc.line(sx, sigY, sx + 40, sigY);
   }
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(8);
-  doc.text('Medical Lab Technician', sigCols[0], sigY + 4);
-  doc.text('Pathologist', sigCols[1], sigY + 4);
-  doc.text('Authorised Signatory', sigCols[2], sigY + 4);
+  doc.text('Pathologist', sigCols[0], sigY + 4);
+  doc.text('Authorised Signatory', sigCols[1], sigY + 4);
 
   // Footer band
   doc.setFillColor(15, 76, 129);
