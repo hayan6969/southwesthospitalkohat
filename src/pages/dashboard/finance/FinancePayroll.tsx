@@ -243,11 +243,19 @@ export default function FinancePayroll() {
   const payrollRecords = allPayrollRecords;
 
   const syncPayrollOvertimePayments = async (record: PayrollRecord, paidAt: string) => {
+    // Compute first/last day of pay_period (YYYY-MM)
+    const [yearStr, monthStr] = record.pay_period.split('-');
+    const year = Number(yearStr);
+    const month = Number(monthStr);
+    const startDate = `${record.pay_period}-01`;
+    const endDate = new Date(year, month, 0).toISOString().split('T')[0]; // last day of month
+
     const { data, error } = await supabase
       .from('overtime_records')
       .select('id, employee_id, employee_name, overtime_hours, overtime_rate, overtime_amount')
       .eq('status', 'pending')
-      .like('overtime_date', `${record.pay_period}-%`);
+      .gte('overtime_date', startDate)
+      .lte('overtime_date', endDate);
 
     if (error) throw error;
 
