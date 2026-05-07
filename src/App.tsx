@@ -95,6 +95,7 @@ const App = () => (
             <Route path="/auth" element={<Auth />} />
             <Route path="/offline-mode" element={<OfflineMode />} />
             <Route path="/offline-mode-pharmacy" element={<OfflineModePharmacy />} />
+            <Route path="/verify-report/:reportNumber" element={<VerifyReport />} />
             <Route path="/" element={
               <ProtectedRoute>
                 <Index />
