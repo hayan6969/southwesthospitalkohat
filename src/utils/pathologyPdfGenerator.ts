@@ -509,7 +509,7 @@ export async function generatePathologyReportPDF(data: PathologyPdfData) {
 
   // QR Verification — links to the live report verification URL on our domain
   try {
-    const origin = (hospital as any)?.website_url || window.location.origin;
+    const origin = (hospital as any)?.website_url || 'https://southwesthospitalkohat.com';
     const verifyUrl = `${origin.replace(/\/$/, '')}/verify-report/${data.reportNumber}`;
     const qrDataUrl = await QRCode.toDataURL(verifyUrl, { margin: 0, width: 256 });
     const qrSize = 22;
