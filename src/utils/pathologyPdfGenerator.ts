@@ -248,8 +248,45 @@ export async function generatePathologyReportPDF(data: PathologyPdfData) {
   const cellPad = 3;
   const colX = { name: marginX + cellPad, result: marginX + 80, ref: marginX + 117, unit: marginX + 165 };
 
+  // Estimate height a single test will need so we can keep it on one page when possible
+  const estimateTestHeight = (tt: PathologyPdfTestType): number => {
+    let h = 5; // title
+    if (tt.report_category) h += 4;
+    if (data.sampleType) h += 4;
+    h += 8 + 5; // header row + top padding
+    let lastH: string | null = null;
+    for (const p of tt.parameters) {
+      if (p.category_heading && p.category_heading !== lastH) { h += 5; lastH = p.category_heading; }
+      h += 5; // result row
+      if (p.display_all_subranges && p.subranges && p.subranges.length > 0) {
+        h += p.subranges.length * 4 + 1;
+      }
+      const prev = p.parameter_id ? previousByParam.get(p.parameter_id) : undefined;
+      if (prev && prev.length > 0) h += 4;
+    }
+    h += 2 + 1; // bottom padding inside table
+    if (tt.method || data.instrument) h += 4;
+    if (tt.notes) {
+      const noteLines = doc.splitTextToSize(tt.notes, contentWidth);
+      h += noteLines.length * 3.5;
+    }
+    h += 3;
+    return h;
+  };
+
   for (const tt of data.testTypes) {
-    if (y > pageHeight - 50) { doc.addPage(); y = 18; }
+    // Push entire test to next page if it won't fully fit on remaining space.
+    // (If a single test is taller than a full page, we let it overflow naturally.)
+    const estHeight = estimateTestHeight(tt);
+    const usablePageHeight = pageHeight - 30 - 18; // bottom margin to top
+    const remaining = pageHeight - 30 - y;
+    if (estHeight > remaining && estHeight <= usablePageHeight) {
+      doc.addPage();
+      y = 18;
+    } else if (y > pageHeight - 50) {
+      doc.addPage();
+      y = 18;
+    }
 
     // Test type title — centered
     doc.setFont('helvetica', 'bold');
@@ -495,5 +532,17 @@ export async function generatePathologyReportPDF(data: PathologyPdfData) {
   );
   doc.text('Computer-generated report', pageWidth - marginX, pageHeight - 3, { align: 'right' });
 
-  doc.save(`Lab_${data.reportNumber}.pdf`);
+  // Open in a new window and trigger the browser's Print dialog directly
+  // (instead of downloading the PDF file)
+  try {
+    doc.autoPrint();
+    const blobUrl = doc.output('bloburl');
+    const w = window.open(blobUrl as unknown as string, '_blank');
+    if (!w) {
+      // Popup blocked — fall back to saving so the user still gets the file
+      doc.save(`Lab_${data.reportNumber}.pdf`);
+    }
+  } catch {
+    doc.save(`Lab_${data.reportNumber}.pdf`);
+  }
 }
