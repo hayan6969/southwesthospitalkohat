@@ -14,6 +14,7 @@ import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 import OfflineMode from "./pages/OfflineMode";
 import OfflineModePharmacy from "./pages/OfflineModePharmacy";
+import VerifyReport from "./pages/VerifyReport";
 
 // Dashboard main pages
 import DashboardPatient from "./pages/dashboard/DashboardPatient";
