@@ -173,6 +173,7 @@ export function DoctorPayments() {
 
   const pendingCount = doctorPayments?.filter(p => p.payment_status === 'pending').length || 0;
   const paidCount = doctorPayments?.filter(p => p.payment_status === 'paid').length || 0;
+  const totalHospitalShare = doctorPayments?.reduce((sum, p) => sum + Number(p.hospital_share || 0), 0) || 0;
 
   if (isLoading) {
     return (
