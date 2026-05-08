@@ -26,6 +26,9 @@ interface DoctorPayment {
   consultation_earnings: number;
   ot_earnings: number;
   total_earnings: number;
+  hospital_share: number;
+  doctor_share: number;
+  hospital_share_percentage: number;
   payment_status: 'pending' | 'paid' | 'processing';
   paid_at: string | null;
   paid_by: string | null;
