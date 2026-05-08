@@ -129,17 +129,16 @@ export async function generatePathologyReportPDF(data: PathologyPdfData) {
   const marginX = 10;
   const contentWidth = pageWidth - marginX * 2;
   const FOOTER_H = 8;
-  const FOOTER_RESERVE = FOOTER_H + 22; // space always kept free at bottom
+  const FOOTER_RESERVE = FOOTER_H + 22;
 
   // ── Column layout ─────────────────────────────────────────────────────────
   const cellPad = 3;
-  // Investigation column: marginX+cellPad … marginX+77
   const COL_NAME_START = marginX + cellPad;
-  const COL_NAME_END   = marginX + 77;          // hard right edge of Investigation col
+  const COL_NAME_END   = marginX + 77;
   const COL_RESULT     = marginX + 80;
   const COL_REF        = marginX + 117;
   const COL_UNIT       = marginX + 165;
-  const COL_RESULT_DIV = COL_RESULT - cellPad;  // vertical divider x
+  const COL_RESULT_DIV = COL_RESULT - cellPad;
   const COL_REF_DIV    = COL_REF    - cellPad;
   const COL_UNIT_DIV   = COL_UNIT   - cellPad;
 
@@ -188,7 +187,6 @@ export async function generatePathologyReportPDF(data: PathologyPdfData) {
     doc.text('Computer-generated report', pageWidth - marginX, pageHeight - 3, { align: 'right' });
   };
 
-  /** Finish current page (footer) and start a fresh one (header). Returns new y. */
   const newPage = (): number => {
     drawPageFooter();
     doc.addPage();
@@ -196,14 +194,9 @@ export async function generatePathologyReportPDF(data: PathologyPdfData) {
     return 36;
   };
 
-  // ── Safe bottom boundary ──────────────────────────────────────────────────
   const safeBottom = () => pageHeight - FOOTER_RESERVE;
 
   // ── Chip measurement helper ───────────────────────────────────────────────
-  /**
-   * Returns the number of pixel-rows of chips that will be drawn,
-   * given they are confined to [startX … maxX].
-   */
   const countChipRows = (
     prev: Array<{ value: string; date: string }>,
     startX: number,
@@ -240,16 +233,16 @@ export async function generatePathologyReportPDF(data: PathologyPdfData) {
     const prev = p.parameter_id ? previousByParam.get(p.parameter_id) : undefined;
     if (prev && prev.length > 0) {
       const rows = countChipRows(prev, COL_NAME_START + 20, COL_NAME_END - 2);
-      h += rows * 5 + 4;  // each chip row = 5 mm, plus trailing gap
+      h += rows * 5 + 4;
     }
     return h;
   };
 
   const measureTestHeight = (tt: PathologyPdfTestType): number => {
-    let h = 5; // title
+    let h = 5;
     if (tt.report_category) h += 4;
     if (data.sampleType) h += 4;
-    h += 8 + 5; // header row + gap
+    h += 8 + 5;
 
     let lastH: string | null = null;
     for (const p of tt.parameters) {
@@ -257,15 +250,14 @@ export async function generatePathologyReportPDF(data: PathologyPdfData) {
       h += measureParamHeight(p);
     }
 
-    h += 2 + 1; // bottom padding + border
-    // Method / notes are OUTSIDE the table border → add after
+    h += 2 + 1;
     if (tt.method || data.instrument) h += 5;
     if (tt.notes) {
       doc.setFontSize(8);
       h += doc.splitTextToSize(tt.notes, contentWidth).length * 3.5;
       doc.setFontSize(9);
     }
-    h += 4; // gap before next test
+    h += 4;
     return h;
   };
 
@@ -333,10 +325,9 @@ export async function generatePathologyReportPDF(data: PathologyPdfData) {
   // ── Render each test ──────────────────────────────────────────────────────
   for (const tt of data.testTypes) {
     const testH      = measureTestHeight(tt);
-    const usable     = safeBottom() - 18; // usable height on a fresh page
+    const usable     = safeBottom() - 18;
     const remaining  = safeBottom() - y;
 
-    // Jump to new page if the whole test fits fresh but not here
     if (testH <= usable && remaining < testH) {
       y = newPage();
     } else if (y > safeBottom() - 20) {
@@ -385,20 +376,16 @@ export async function generatePathologyReportPDF(data: PathologyPdfData) {
     doc.line(marginX, headerBottom, pageWidth - marginX, headerBottom);
     y = headerBottom + 5;
 
-    // Track where the current "table segment" started (for drawing borders)
-    let segHeaderTop = headerTop;
+    let segHeaderTop    = headerTop;
     let segHeaderBottom = headerBottom;
 
-    // Helper: draw vertical dividers + outer border for current segment
     const closeTableSegment = (bottomY: number) => {
       doc.setDrawColor(200, 200, 200);
       doc.setLineWidth(0.3);
-      // outer rectangle
-      doc.line(marginX,              segHeaderTop, marginX,              bottomY);
-      doc.line(pageWidth - marginX,  segHeaderTop, pageWidth - marginX,  bottomY);
-      doc.line(marginX,              segHeaderTop, pageWidth - marginX,  segHeaderTop);
-      doc.line(marginX,              bottomY,      pageWidth - marginX,  bottomY);
-      // vertical dividers (full height of segment)
+      doc.line(marginX,             segHeaderTop, marginX,             bottomY);
+      doc.line(pageWidth - marginX, segHeaderTop, pageWidth - marginX, bottomY);
+      doc.line(marginX,             segHeaderTop, pageWidth - marginX, segHeaderTop);
+      doc.line(marginX,             bottomY,      pageWidth - marginX, bottomY);
       [COL_RESULT_DIV, COL_REF_DIV, COL_UNIT_DIV].forEach(vx => {
         doc.line(vx, segHeaderTop, vx, bottomY);
       });
@@ -413,13 +400,10 @@ export async function generatePathologyReportPDF(data: PathologyPdfData) {
       const paramH   = measureParamHeight(p);
       const needed   = headingH + paramH;
 
-      // Mid-table page break
       if (y + needed > safeBottom()) {
-        // Close current segment
         closeTableSegment(y);
         y = newPage();
 
-        // Continuation header
         doc.setFont('helvetica', 'bold');
         doc.setFontSize(10);
         doc.setTextColor(0, 0, 0);
@@ -452,14 +436,14 @@ export async function generatePathologyReportPDF(data: PathologyPdfData) {
         lastHeading = p.category_heading;
       }
 
-      // ── Parameter name ──────────────────────────────────────────────────
+      // Parameter name
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(9);
       doc.setTextColor(0, 0, 0);
       const nameLines = doc.splitTextToSize(p.parameter_name, COL_RESULT - cellPad - COL_NAME_START);
       doc.text(nameLines, COL_NAME_START, y);
 
-      // ── Result + flag ───────────────────────────────────────────────────
+      // Result + flag
       const flag = p.flag;
       const resultText = p.result_value ?? '—';
       if      (flag === 'High')       doc.setTextColor(200, 30, 30);
@@ -478,7 +462,7 @@ export async function generatePathologyReportPDF(data: PathologyPdfData) {
       doc.setTextColor(0, 0, 0);
       doc.setFont('helvetica', 'normal');
 
-      // ── Reference ───────────────────────────────────────────────────────
+      // Reference
       const refText = p.display_all_subranges
         ? (p.ref_display || '( See Below )')
         : (p.subrange_used
@@ -487,12 +471,12 @@ export async function generatePathologyReportPDF(data: PathologyPdfData) {
       const refLines = doc.splitTextToSize(refText, COL_UNIT - cellPad - COL_REF);
       doc.text(refLines, COL_REF, y);
 
-      // ── Unit ────────────────────────────────────────────────────────────
+      // Unit
       doc.text(p.unit || '—', COL_UNIT, y);
 
       y += 5 * Math.max(nameLines.length, refLines.length, 1);
 
-      // ── Subranges ────────────────────────────────────────────────────────
+      // Subranges
       if (p.display_all_subranges && p.subranges && p.subranges.length > 0) {
         for (const sr of p.subranges) {
           if (y > safeBottom()) {
@@ -502,10 +486,10 @@ export async function generatePathologyReportPDF(data: PathologyPdfData) {
             doc.setFillColor(245, 245, 245);
             doc.rect(marginX, segHeaderTop, contentWidth, headerHeight, 'F');
             doc.setFont('helvetica', 'bold'); doc.setFontSize(9);
-            doc.text('Investigation', COL_NAME_START, y + 5.5);
-            doc.text('Result', COL_RESULT, y + 5.5);
-            doc.text('Reference Value', COL_REF, y + 5.5);
-            doc.text('Unit', COL_UNIT, y + 5.5);
+            doc.text('Investigation',   COL_NAME_START, y + 5.5);
+            doc.text('Result',          COL_RESULT,     y + 5.5);
+            doc.text('Reference Value', COL_REF,        y + 5.5);
+            doc.text('Unit',            COL_UNIT,       y + 5.5);
             segHeaderBottom = segHeaderTop + headerHeight;
             doc.setDrawColor(200, 200, 200);
             doc.line(marginX, segHeaderBottom, pageWidth - marginX, segHeaderBottom);
@@ -534,8 +518,7 @@ export async function generatePathologyReportPDF(data: PathologyPdfData) {
         y += 1;
       }
 
-      // ── Previous results chips ────────────────────────────────────────────
-      // Chips are STRICTLY confined within the Investigation column
+      // ── Previous results chips (confined to Investigation column) ─────────
       const prev = p.parameter_id ? previousByParam.get(p.parameter_id) : undefined;
       if (prev && prev.length > 0) {
         if (y > safeBottom()) {
@@ -545,22 +528,21 @@ export async function generatePathologyReportPDF(data: PathologyPdfData) {
           doc.setFillColor(245, 245, 245);
           doc.rect(marginX, segHeaderTop, contentWidth, headerHeight, 'F');
           doc.setFont('helvetica', 'bold'); doc.setFontSize(9);
-          doc.text('Investigation', COL_NAME_START, y + 5.5);
-          doc.text('Result', COL_RESULT, y + 5.5);
-          doc.text('Reference Value', COL_REF, y + 5.5);
-          doc.text('Unit', COL_UNIT, y + 5.5);
+          doc.text('Investigation',   COL_NAME_START, y + 5.5);
+          doc.text('Result',          COL_RESULT,     y + 5.5);
+          doc.text('Reference Value', COL_REF,        y + 5.5);
+          doc.text('Unit',            COL_UNIT,       y + 5.5);
           segHeaderBottom = segHeaderTop + headerHeight;
           doc.setDrawColor(200, 200, 200);
           doc.line(marginX, segHeaderBottom, pageWidth - marginX, segHeaderBottom);
           y = segHeaderBottom + 5;
         }
 
-        const chipRowH    = 5;
-        const chipStartX  = COL_NAME_START + 20;
-        const chipMaxX    = COL_NAME_END - 2;      // ← hard right edge = Investigation column
-        const labelW      = 18;                    // approximate width of "Previous" label
+        const chipRowH   = 5;
+        const chipStartX = COL_NAME_START + 20;
+        const chipMaxX   = COL_NAME_END - 2;
+        const labelW     = 18;
 
-        // Draw "Previous" label
         doc.setFont('helvetica', 'bold');
         doc.setFontSize(7);
         doc.setTextColor(130, 130, 130);
@@ -577,7 +559,6 @@ export async function generatePathologyReportPDF(data: PathologyPdfData) {
           doc.setFontSize(7);
           const chipW = doc.getTextWidth(chipText) + 5;
 
-          // If chip doesn't fit → wrap to next line (still within Investigation col)
           if (px + chipW > chipMaxX) {
             y  += chipRowH;
             px  = chipStartX;
@@ -588,10 +569,10 @@ export async function generatePathologyReportPDF(data: PathologyPdfData) {
               doc.setFillColor(245, 245, 245);
               doc.rect(marginX, segHeaderTop, contentWidth, headerHeight, 'F');
               doc.setFont('helvetica', 'bold'); doc.setFontSize(9);
-              doc.text('Investigation', COL_NAME_START, y + 5.5);
-              doc.text('Result', COL_RESULT, y + 5.5);
-              doc.text('Reference Value', COL_REF, y + 5.5);
-              doc.text('Unit', COL_UNIT, y + 5.5);
+              doc.text('Investigation',   COL_NAME_START, y + 5.5);
+              doc.text('Result',          COL_RESULT,     y + 5.5);
+              doc.text('Reference Value', COL_REF,        y + 5.5);
+              doc.text('Unit',            COL_UNIT,       y + 5.5);
               segHeaderBottom = segHeaderTop + headerHeight;
               doc.setDrawColor(200, 200, 200);
               doc.line(marginX, segHeaderBottom, pageWidth - marginX, segHeaderBottom);
@@ -599,11 +580,8 @@ export async function generatePathologyReportPDF(data: PathologyPdfData) {
             }
           }
 
-          // Chip background (pill) – clipped to Investigation column
           doc.setFillColor(225, 225, 225);
           doc.roundedRect(px - 1, y - 3.2, chipW, 4.5, 0.8, 0.8, 'F');
-
-          // Chip text
           doc.setTextColor(60, 60, 60);
           doc.setFont('helvetica', 'normal');
           doc.setFontSize(7);
@@ -612,7 +590,6 @@ export async function generatePathologyReportPDF(data: PathologyPdfData) {
           px += chipW + 3;
         }
 
-        // Gap after chips row
         y += 4;
         doc.setTextColor(0, 0, 0);
         doc.setFont('helvetica', 'normal');
@@ -620,12 +597,12 @@ export async function generatePathologyReportPDF(data: PathologyPdfData) {
       }
     } // end parameters loop
 
-    // ── Close table bottom + draw all borders ─────────────────────────────
-    y += 2; // bottom padding inside table
+    // Close table
+    y += 2;
     closeTableSegment(y);
     y += 1;
 
-    // ── Method / Instrument / Notes  (OUTSIDE table) ──────────────────────
+    // Method / Instrument / Notes (outside table)
     y += 2;
     if (tt.method || data.instrument) {
       if (y > safeBottom() - 6) { y = newPage(); }
@@ -647,7 +624,7 @@ export async function generatePathologyReportPDF(data: PathologyPdfData) {
       doc.text(noteLines, marginX, y);
       y += noteLines.length * 3.5;
     }
-    y += 4; // gap before next test
+    y += 4;
   } // end testTypes loop
 
   // ── Interpretation ────────────────────────────────────────────────────────
@@ -695,20 +672,7 @@ export async function generatePathologyReportPDF(data: PathologyPdfData) {
     const urlLines = doc.splitTextToSize(verifyUrl, 70);
     doc.text(urlLines, qrX + qrSize + 2, qrY + 9);
     doc.setTextColor(0, 0, 0);
-    y = qrY + qrSize + 4;
   } catch { /* best-effort */ }
-
-  // ── Signatures ────────────────────────────────────────────────────────────
-  if (y > safeBottom() - 12) { y = newPage(); }
-  const sigY    = y;
-  const sigCols = [pageWidth / 2 - 20, pageWidth - marginX - 50];
-  doc.setDrawColor(80, 80, 80);
-  sigCols.forEach(sx => doc.line(sx, sigY, sx + 40, sigY));
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(8);
-  doc.setTextColor(0, 0, 0);
-  doc.text('Pathologist',           sigCols[0], sigY + 4);
-  doc.text('Authorised Signatory',  sigCols[1], sigY + 4);
 
   // ── Footer on last page ───────────────────────────────────────────────────
   drawPageFooter();
