@@ -375,6 +375,12 @@ export function DoctorPayments() {
                       <TableCell className="text-purple-600 font-bold">
                         {formatPkrAmount(payment.total_earnings)}
                       </TableCell>
+                      <TableCell className="text-red-600 font-medium">
+                        {formatPkrAmount(Number(payment.hospital_share || 0))}
+                      </TableCell>
+                      <TableCell className="text-green-600 font-medium">
+                        {formatPkrAmount(Number(payment.doctor_share || 0))}
+                      </TableCell>
                       <TableCell>
                         <Badge
                           className={cn(
