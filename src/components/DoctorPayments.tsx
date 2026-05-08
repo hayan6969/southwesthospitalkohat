@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { CalendarIcon, Banknote, Users, ClipboardList, CheckCircle, Clock, AlertCircle } from "lucide-react";
+import { CalendarIcon, Banknote, Users, ClipboardList, CheckCircle, Clock, AlertCircle, Building2 } from "lucide-react";
 import { format } from "date-fns";
 import { formatPkrAmount } from "@/utils/currency";
 import { cn } from "@/lib/utils";
@@ -26,6 +26,9 @@ interface DoctorPayment {
   consultation_earnings: number;
   ot_earnings: number;
   total_earnings: number;
+  hospital_share: number;
+  doctor_share: number;
+  hospital_share_percentage: number;
   payment_status: 'pending' | 'paid' | 'processing';
   paid_at: string | null;
   paid_by: string | null;
@@ -170,6 +173,7 @@ export function DoctorPayments() {
 
   const pendingCount = doctorPayments?.filter(p => p.payment_status === 'pending').length || 0;
   const paidCount = doctorPayments?.filter(p => p.payment_status === 'paid').length || 0;
+  const totalHospitalShare = doctorPayments?.reduce((sum, p) => sum + Number(p.hospital_share || 0), 0) || 0;
 
   if (isLoading) {
     return (
@@ -227,7 +231,7 @@ export function DoctorPayments() {
       </Card>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
         <Card>
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
@@ -295,6 +299,23 @@ export function DoctorPayments() {
             </p>
           </CardContent>
         </Card>
+
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Hospital Revenue Today</p>
+                <p className="text-2xl font-bold text-purple-600">
+                  {formatPkrAmount(totalHospitalShare)}
+                </p>
+              </div>
+              <Building2 className="h-8 w-8 text-purple-600" />
+            </div>
+            <p className="text-xs text-muted-foreground mt-2">
+              Hospital share from all doctors
+            </p>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Payments Table */}
@@ -314,6 +335,8 @@ export function DoctorPayments() {
                   <TableHead>Consultation Earnings</TableHead>
                   <TableHead>OT Earnings</TableHead>
                   <TableHead>Total Earnings</TableHead>
+                  <TableHead>Hospital Share</TableHead>
+                  <TableHead>Doctor Share</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
@@ -351,6 +374,12 @@ export function DoctorPayments() {
                       </TableCell>
                       <TableCell className="text-purple-600 font-bold">
                         {formatPkrAmount(payment.total_earnings)}
+                      </TableCell>
+                      <TableCell className="text-red-600 font-medium">
+                        {formatPkrAmount(Number(payment.hospital_share || 0))}
+                      </TableCell>
+                      <TableCell className="text-green-600 font-medium">
+                        {formatPkrAmount(Number(payment.doctor_share || 0))}
                       </TableCell>
                       <TableCell>
                         <Badge
@@ -416,7 +445,7 @@ export function DoctorPayments() {
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={9} className="text-center text-muted-foreground py-8">
+                    <TableCell colSpan={11} className="text-center text-muted-foreground py-8">
                       No doctor payments found for {format(selectedDate, 'PPP')}
                     </TableCell>
                   </TableRow>

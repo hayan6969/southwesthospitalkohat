@@ -283,6 +283,9 @@ export type Database = {
           consultation_earnings: number | null
           created_at: string | null
           doctor_id: string
+          doctor_share: number
+          hospital_share: number
+          hospital_share_percentage: number
           id: string
           notes: string | null
           ot_count: number | null
@@ -300,6 +303,9 @@ export type Database = {
           consultation_earnings?: number | null
           created_at?: string | null
           doctor_id: string
+          doctor_share?: number
+          hospital_share?: number
+          hospital_share_percentage?: number
           id?: string
           notes?: string | null
           ot_count?: number | null
@@ -317,6 +323,9 @@ export type Database = {
           consultation_earnings?: number | null
           created_at?: string | null
           doctor_id?: string
+          doctor_share?: number
+          hospital_share?: number
+          hospital_share_percentage?: number
           id?: string
           notes?: string | null
           ot_count?: number | null
@@ -436,6 +445,10 @@ export type Database = {
           avatar_url: string | null
           consultation_fee: number | null
           experience_years: number | null
+          fee_set_by_finance: boolean
+          fee_updated_at: string | null
+          fee_updated_by: string | null
+          hospital_share_percentage: number
           id: string
           license_number: string | null
           specialization: string | null
@@ -444,6 +457,10 @@ export type Database = {
           avatar_url?: string | null
           consultation_fee?: number | null
           experience_years?: number | null
+          fee_set_by_finance?: boolean
+          fee_updated_at?: string | null
+          fee_updated_by?: string | null
+          hospital_share_percentage?: number
           id: string
           license_number?: string | null
           specialization?: string | null
@@ -452,11 +469,22 @@ export type Database = {
           avatar_url?: string | null
           consultation_fee?: number | null
           experience_years?: number | null
+          fee_set_by_finance?: boolean
+          fee_updated_at?: string | null
+          fee_updated_by?: string | null
+          hospital_share_percentage?: number
           id?: string
           license_number?: string | null
           specialization?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "doctors_fee_updated_by_fkey"
+            columns: ["fee_updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "doctors_id_fkey"
             columns: ["id"]
