@@ -1,0 +1,10 @@
+ALTER TABLE public.doctors
+  ADD COLUMN IF NOT EXISTS hospital_share_percentage NUMERIC(5,2) NOT NULL DEFAULT 30,
+  ADD COLUMN IF NOT EXISTS fee_set_by_finance BOOLEAN NOT NULL DEFAULT false,
+  ADD COLUMN IF NOT EXISTS fee_updated_by UUID REFERENCES public.profiles(id),
+  ADD COLUMN IF NOT EXISTS fee_updated_at TIMESTAMPTZ;
+
+ALTER TABLE public.doctor_payments
+  ADD COLUMN IF NOT EXISTS hospital_share NUMERIC(12,2) NOT NULL DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS doctor_share NUMERIC(12,2) NOT NULL DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS hospital_share_percentage NUMERIC(5,2) NOT NULL DEFAULT 30;
