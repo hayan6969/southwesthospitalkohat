@@ -14,11 +14,7 @@ export default function VerifyReport() {
     (async () => {
       try {
         const [{ data: rep }, { data: hosp }] = await Promise.all([
-          supabase
-            .from("lab_pathology_reports")
-            .select("id, report_number, status, reported_at, created_at, patients(patient_number, profiles(first_name, last_name))")
-            .eq("report_number", reportNumber as string)
-            .maybeSingle(),
+          supabase.rpc("verify_pathology_report", { p_report_number: reportNumber as string }),
           supabase.from("hospital_settings").select("hospital_name, hospital_address, contact_number, logo_url").limit(1).single(),
         ]);
         setReport(rep);
