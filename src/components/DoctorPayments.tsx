@@ -299,6 +299,23 @@ export function DoctorPayments() {
             </p>
           </CardContent>
         </Card>
+
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Hospital Revenue Today</p>
+                <p className="text-2xl font-bold text-purple-600">
+                  {formatPkrAmount(totalHospitalShare)}
+                </p>
+              </div>
+              <Building2 className="h-8 w-8 text-purple-600" />
+            </div>
+            <p className="text-xs text-muted-foreground mt-2">
+              Hospital share from all doctors
+            </p>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Payments Table */}
