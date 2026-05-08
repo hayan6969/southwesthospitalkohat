@@ -335,6 +335,8 @@ export function DoctorPayments() {
                   <TableHead>Consultation Earnings</TableHead>
                   <TableHead>OT Earnings</TableHead>
                   <TableHead>Total Earnings</TableHead>
+                  <TableHead>Hospital Share</TableHead>
+                  <TableHead>Doctor Share</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
