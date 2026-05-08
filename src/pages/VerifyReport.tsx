@@ -14,11 +14,7 @@ export default function VerifyReport() {
     (async () => {
       try {
         const [{ data: rep }, { data: hosp }] = await Promise.all([
-          supabase
-            .from("lab_pathology_reports")
-            .select("id, report_number, status, reported_at, created_at, patients(patient_number, profiles(first_name, last_name))")
-            .eq("report_number", reportNumber as string)
-            .maybeSingle(),
+          supabase.rpc("verify_pathology_report", { p_report_number: reportNumber as string }),
           supabase.from("hospital_settings").select("hospital_name, hospital_address, contact_number, logo_url").limit(1).single(),
         ]);
         setReport(rep);
@@ -54,8 +50,8 @@ export default function VerifyReport() {
             </div>
             <div className="text-left bg-muted/40 rounded-lg p-4 text-sm space-y-2">
               <div className="flex justify-between"><span className="text-muted-foreground">Report No:</span><span className="font-medium">{report.report_number}</span></div>
-              <div className="flex justify-between"><span className="text-muted-foreground">Patient:</span><span className="font-medium">{report.patients?.profiles?.first_name} {report.patients?.profiles?.last_name}</span></div>
-              <div className="flex justify-between"><span className="text-muted-foreground">PID:</span><span className="font-medium">{report.patients?.patient_number || "—"}</span></div>
+              <div className="flex justify-between"><span className="text-muted-foreground">Patient:</span><span className="font-medium">{report.first_name} {report.last_name}</span></div>
+              <div className="flex justify-between"><span className="text-muted-foreground">PID:</span><span className="font-medium">{report.patient_number || "—"}</span></div>
               <div className="flex justify-between"><span className="text-muted-foreground">Status:</span><span className="font-medium capitalize">{report.status}</span></div>
               <div className="flex justify-between"><span className="text-muted-foreground">Reported:</span><span className="font-medium">{report.reported_at ? formatInPakistanTime(report.reported_at, "dd MMM yyyy, hh:mm a") : "—"}</span></div>
             </div>

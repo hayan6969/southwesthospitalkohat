@@ -2771,6 +2771,10 @@ export type Database = {
         }
         Returns: undefined
       }
+      verify_pathology_report: {
+        Args: { p_report_number: string }
+        Returns: Json
+      }
     }
     Enums: {
       appointment_status:
