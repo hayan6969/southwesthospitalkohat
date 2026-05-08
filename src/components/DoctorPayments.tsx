@@ -445,7 +445,7 @@ export function DoctorPayments() {
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={9} className="text-center text-muted-foreground py-8">
+                    <TableCell colSpan={11} className="text-center text-muted-foreground py-8">
                       No doctor payments found for {format(selectedDate, 'PPP')}
                     </TableCell>
                   </TableRow>
