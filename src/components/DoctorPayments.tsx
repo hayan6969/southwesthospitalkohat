@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { CalendarIcon, Banknote, Users, ClipboardList, CheckCircle, Clock, AlertCircle } from "lucide-react";
+import { CalendarIcon, Banknote, Users, ClipboardList, CheckCircle, Clock, AlertCircle, Building2 } from "lucide-react";
 import { format } from "date-fns";
 import { formatPkrAmount } from "@/utils/currency";
 import { cn } from "@/lib/utils";
