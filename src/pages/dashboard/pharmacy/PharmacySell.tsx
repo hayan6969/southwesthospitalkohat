@@ -464,6 +464,82 @@ export default function PharmacySell() {
           </CardContent>
         </Card>
       </div>
+
+      <Dialog open={quickAddOpen} onOpenChange={(o) => { setQuickAddOpen(o); if (!o) resetQuickAdd(); }}>
+        <DialogContent className="max-h-[85vh] z-[9999] sm:max-w-md overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <PackagePlus className="w-5 h-5" />
+              Instant Add Medicine
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div>
+              <Label>Medicine Name *</Label>
+              <Input
+                value={quickName}
+                onChange={(e) => setQuickName(e.target.value)}
+                placeholder="e.g. Panadol 500mg"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label>Sell Price *</Label>
+                <Input
+                  type="number"
+                  min="0"
+                  value={quickSellPrice}
+                  onFocus={(e) => { if (e.target.value === "0") setQuickSellPrice(""); }}
+                  onChange={(e) => setQuickSellPrice(e.target.value === "" ? "" : Number(e.target.value))}
+                />
+              </div>
+              <div>
+                <Label>Buy Price *</Label>
+                <Input
+                  type="number"
+                  min="0"
+                  value={quickBuyPrice}
+                  onFocus={(e) => { if (e.target.value === "0") setQuickBuyPrice(""); }}
+                  onChange={(e) => setQuickBuyPrice(e.target.value === "" ? "" : Number(e.target.value))}
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label>Stock Quantity *</Label>
+                <Input
+                  type="number"
+                  min="1"
+                  value={quickStock}
+                  onFocus={(e) => { if (e.target.value === "0") setQuickStock(""); }}
+                  onChange={(e) => setQuickStock(e.target.value === "" ? "" : Number(e.target.value))}
+                />
+              </div>
+              <div>
+                <Label>Add to Bill (Qty)</Label>
+                <Input
+                  type="number"
+                  min="1"
+                  value={quickAddQty}
+                  onFocus={(e) => { if (e.target.value === "0") setQuickAddQty(""); }}
+                  onChange={(e) => setQuickAddQty(e.target.value === "" ? "" : Number(e.target.value))}
+                />
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              The medicine will be saved to inventory and auto-added to the current bill without affecting existing items.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setQuickAddOpen(false); resetQuickAdd(); }}>
+              Cancel
+            </Button>
+            <Button onClick={handleQuickAddMedicine} disabled={quickSubmitting}>
+              {quickSubmitting ? "Saving..." : "Save & Add to Bill"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </AppLayout>
   );
 }
