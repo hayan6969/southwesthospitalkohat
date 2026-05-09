@@ -43,11 +43,12 @@ export default function PharmacyInvoices() {
   const [quantity, setQuantity] = useState(1);
   const [filterDate, setFilterDate] = useState<Date | undefined>();
   const [searchTerm, setSearchTerm] = useState("");
+  const [typeFilter, setTypeFilter] = useState<'all' | 'sell' | 'return'>('all');
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 20;
 
   // Use paginated pharmacy invoices hook for better performance (with date filter)
-  const { data: paginatedResult, isLoading } = usePaginatedPharmacyInvoices(currentPage, itemsPerPage, searchTerm, filterDate);
+  const { data: paginatedResult, isLoading } = usePaginatedPharmacyInvoices(currentPage, itemsPerPage, searchTerm, filterDate, typeFilter);
   const invoices = paginatedResult?.data || [];
   const totalCount = paginatedResult?.count || 0;
   const totalPages = paginatedResult?.totalPages || 1;
