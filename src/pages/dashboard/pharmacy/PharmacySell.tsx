@@ -290,10 +290,22 @@ export default function PharmacySell() {
           {/* Add to Cart Section */}
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Plus className="w-5 h-5" />
-                Add Medicine to Cart
-              </CardTitle>
+              <div className="flex items-center justify-between gap-2">
+                <CardTitle className="flex items-center gap-2">
+                  <Plus className="w-5 h-5" />
+                  Add Medicine to Cart
+                </CardTitle>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setQuickAddOpen(true)}
+                  className="gap-1"
+                >
+                  <PackagePlus className="w-4 h-4" />
+                  Instant Add
+                </Button>
+              </div>
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
