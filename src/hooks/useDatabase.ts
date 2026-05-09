@@ -386,11 +386,11 @@ export const usePaginatedInvoices = (page: number = 1, pageSize: number = 20, se
 };
 
 // Hook for paginated pharmacy invoices
-export const usePaginatedPharmacyInvoices = (page: number = 1, pageSize: number = 20, searchTerm: string = '', filterDate?: Date) => {
+export const usePaginatedPharmacyInvoices = (page: number = 1, pageSize: number = 20, searchTerm: string = '', filterDate?: Date, typeFilter: 'all' | 'sell' | 'return' = 'all') => {
   return useQuery({
-    queryKey: ['pharmacy-invoices-paginated', page, pageSize, searchTerm, filterDate?.toDateString()],
+    queryKey: ['pharmacy-invoices-paginated', page, pageSize, searchTerm, filterDate?.toDateString(), typeFilter],
     queryFn: async () => {
-      console.log(`🔍 Fetching pharmacy invoices page ${page} with search: "${searchTerm}" and date: ${filterDate?.toDateString() || 'none'}`);
+      console.log(`🔍 Fetching pharmacy invoices page ${page} with search: "${searchTerm}" and date: ${filterDate?.toDateString() || 'none'} type: ${typeFilter}`);
       
       let query = supabase
         .from('pharmacy_invoices')
@@ -400,6 +400,13 @@ export const usePaginatedPharmacyInvoices = (page: number = 1, pageSize: number 
       // Apply search filter if provided
       if (searchTerm.trim()) {
         query = query.or(`invoice_number.ilike.%${searchTerm}%,customer_name.ilike.%${searchTerm}%`);
+      }
+
+      // Apply type filter (return invoices use RTN- prefix)
+      if (typeFilter === 'return') {
+        query = query.ilike('invoice_number', 'RTN-%');
+      } else if (typeFilter === 'sell') {
+        query = query.not('invoice_number', 'ilike', 'RTN-%');
       }
 
       // Apply date filter if provided (server-side)
