@@ -65,6 +65,7 @@ export default function PharmacySell() {
   const [quickBuyPrice, setQuickBuyPrice] = useState<number | "">("");
   const [quickStock, setQuickStock] = useState<number | "">("");
   const [quickAddQty, setQuickAddQty] = useState<number | "">(1);
+  const [quickExpiry, setQuickExpiry] = useState<string>("");
   const [quickSubmitting, setQuickSubmitting] = useState(false);
 
   const resetQuickAdd = () => {
@@ -73,6 +74,7 @@ export default function PharmacySell() {
     setQuickBuyPrice("");
     setQuickStock("");
     setQuickAddQty(1);
+    setQuickExpiry("");
   };
 
   const handleQuickAddMedicine = async () => {
@@ -88,14 +90,15 @@ export default function PharmacySell() {
     if (!(buy >= 0)) return toast.error("Enter a valid buy price");
     if (!(stock > 0)) return toast.error("Enter a valid stock quantity");
     if (!(addQty > 0) || addQty > stock) return toast.error("Invalid quantity to add to bill");
+    if (!quickExpiry) return toast.error("Please select expiry date");
+    const expiryDate = new Date(quickExpiry);
+    if (isNaN(expiryDate.getTime())) return toast.error("Invalid expiry date");
+    if (expiryDate.getTime() <= Date.now()) return toast.error("Expiry date must be in the future");
 
     if (quickSubmitting) return;
     setQuickSubmitting(true);
     try {
-      // Default expiry: 2 years from today (required by DB; user can edit later in Medicines page)
-      const expiry = new Date();
-      expiry.setFullYear(expiry.getFullYear() + 2);
-      const expiryStr = expiry.toISOString().slice(0, 10);
+      const expiryStr = quickExpiry;
 
       const created = await createMedicine.mutateAsync({
         name: quickName.trim(),
@@ -526,8 +529,17 @@ export default function PharmacySell() {
                 />
               </div>
             </div>
+            <div>
+              <Label>Expiry Date *</Label>
+              <Input
+                type="date"
+                value={quickExpiry}
+                min={new Date(Date.now() + 86400000).toISOString().slice(0, 10)}
+                onChange={(e) => setQuickExpiry(e.target.value)}
+              />
+            </div>
             <p className="text-xs text-muted-foreground">
-              The medicine will be saved to inventory and auto-added to the current bill without affecting existing items.
+              The medicine will be saved to inventory (with buy/sell price for finance profit tracking) and auto-added to the current bill without affecting existing items.
             </p>
           </div>
           <DialogFooter>
