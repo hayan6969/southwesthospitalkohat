@@ -529,8 +529,17 @@ export default function PharmacySell() {
                 />
               </div>
             </div>
+            <div>
+              <Label>Expiry Date *</Label>
+              <Input
+                type="date"
+                value={quickExpiry}
+                min={new Date(Date.now() + 86400000).toISOString().slice(0, 10)}
+                onChange={(e) => setQuickExpiry(e.target.value)}
+              />
+            </div>
             <p className="text-xs text-muted-foreground">
-              The medicine will be saved to inventory and auto-added to the current bill without affecting existing items.
+              The medicine will be saved to inventory (with buy/sell price for finance profit tracking) and auto-added to the current bill without affecting existing items.
             </p>
           </div>
           <DialogFooter>
