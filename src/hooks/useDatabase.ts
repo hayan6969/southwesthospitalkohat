@@ -1342,6 +1342,8 @@ export const useCreateMedicine = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['medicines'] });
       queryClient.invalidateQueries({ queryKey: ['medicines-paginated'] });
+      queryClient.invalidateQueries({ queryKey: ['medicines-searchable'] });
+      queryClient.invalidateQueries({ queryKey: ['medicines-all'] });
       queryClient.invalidateQueries({ queryKey: ['pharmacy-stats'] });
       queryClient.invalidateQueries({ queryKey: ['expiring-medicines'] });
     },

@@ -6,14 +6,15 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SearchableMedicineSelect } from "@/components/SearchableMedicineSelect";
 import { Separator } from "@/components/ui/separator";
-import { useSearchableMedicines, useCreatePharmacyInvoice } from "@/hooks/useDatabase";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { useSearchableMedicines, useCreatePharmacyInvoice, useCreateMedicine } from "@/hooks/useDatabase";
 import { useAuditLogger } from "@/hooks/useAuditLogger";
 import { useAuth } from "@/hooks/useAuth";
 import { formatPkrAmount } from "@/utils/currency";
 import { generatePharmacyInvoicePDF } from "@/utils/pharmacyPdfGenerator";
 import { getCurrentPakistanTime } from "@/utils/timezone";
 import { toast } from "sonner";
-import { ShoppingCart, Plus, Trash2 } from "lucide-react";
+import { ShoppingCart, Plus, Trash2, PackagePlus } from "lucide-react";
 
 type CartItem = {
   medicineId: string;
@@ -53,8 +54,79 @@ export default function PharmacySell() {
 
   const { data: medicines, isLoading } = useSearchableMedicines(searchTerm);
   const createInvoice = useCreatePharmacyInvoice();
+  const createMedicine = useCreateMedicine();
   const { logCreate } = useAuditLogger();
   const { profile } = useAuth();
+
+  // Quick add medicine dialog state
+  const [quickAddOpen, setQuickAddOpen] = useState(false);
+  const [quickName, setQuickName] = useState("");
+  const [quickSellPrice, setQuickSellPrice] = useState<number | "">("");
+  const [quickBuyPrice, setQuickBuyPrice] = useState<number | "">("");
+  const [quickStock, setQuickStock] = useState<number | "">("");
+  const [quickAddQty, setQuickAddQty] = useState<number | "">(1);
+  const [quickSubmitting, setQuickSubmitting] = useState(false);
+
+  const resetQuickAdd = () => {
+    setQuickName("");
+    setQuickSellPrice("");
+    setQuickBuyPrice("");
+    setQuickStock("");
+    setQuickAddQty(1);
+  };
+
+  const handleQuickAddMedicine = async () => {
+    if (!quickName.trim()) {
+      toast.error("Medicine name is required");
+      return;
+    }
+    const sell = Number(quickSellPrice);
+    const buy = Number(quickBuyPrice);
+    const stock = Number(quickStock);
+    const addQty = Number(quickAddQty);
+    if (!(sell > 0)) return toast.error("Enter a valid sell price");
+    if (!(buy >= 0)) return toast.error("Enter a valid buy price");
+    if (!(stock > 0)) return toast.error("Enter a valid stock quantity");
+    if (!(addQty > 0) || addQty > stock) return toast.error("Invalid quantity to add to bill");
+
+    if (quickSubmitting) return;
+    setQuickSubmitting(true);
+    try {
+      // Default expiry: 2 years from today (required by DB; user can edit later in Medicines page)
+      const expiry = new Date();
+      expiry.setFullYear(expiry.getFullYear() + 2);
+      const expiryStr = expiry.toISOString().slice(0, 10);
+
+      const created = await createMedicine.mutateAsync({
+        name: quickName.trim(),
+        selling_price: sell,
+        purchase_price: buy,
+        stock_quantity: stock,
+        expiry_date: expiryStr,
+      });
+
+      // Auto-add to cart without disrupting existing items
+      const newItem: CartItem = {
+        medicineId: created.id,
+        name: created.name,
+        unitPrice: created.selling_price,
+        quantity: addQty,
+        totalPrice: addQty * created.selling_price,
+        stockAvailable: created.stock_quantity,
+        expiryDate: created.expiry_date,
+      };
+      setCart(prev => [...prev, newItem]);
+
+      toast.success(`${created.name} added to inventory and cart`);
+      setQuickAddOpen(false);
+      resetQuickAdd();
+    } catch (err: any) {
+      console.error(err);
+      toast.error(err?.message || "Failed to add medicine");
+    } finally {
+      setQuickSubmitting(false);
+    }
+  };
 
   const addToCart = () => {
     if (!selectedMedicineId || quantity <= 0) {
@@ -218,10 +290,22 @@ export default function PharmacySell() {
           {/* Add to Cart Section */}
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Plus className="w-5 h-5" />
-                Add Medicine to Cart
-              </CardTitle>
+              <div className="flex items-center justify-between gap-2">
+                <CardTitle className="flex items-center gap-2">
+                  <Plus className="w-5 h-5" />
+                  Add Medicine to Cart
+                </CardTitle>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setQuickAddOpen(true)}
+                  className="gap-1"
+                >
+                  <PackagePlus className="w-4 h-4" />
+                  Instant Add
+                </Button>
+              </div>
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
@@ -380,6 +464,82 @@ export default function PharmacySell() {
           </CardContent>
         </Card>
       </div>
+
+      <Dialog open={quickAddOpen} onOpenChange={(o) => { setQuickAddOpen(o); if (!o) resetQuickAdd(); }}>
+        <DialogContent className="max-h-[85vh] z-[9999] sm:max-w-md overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <PackagePlus className="w-5 h-5" />
+              Instant Add Medicine
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div>
+              <Label>Medicine Name *</Label>
+              <Input
+                value={quickName}
+                onChange={(e) => setQuickName(e.target.value)}
+                placeholder="e.g. Panadol 500mg"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label>Sell Price *</Label>
+                <Input
+                  type="number"
+                  min="0"
+                  value={quickSellPrice}
+                  onFocus={(e) => { if (e.target.value === "0") setQuickSellPrice(""); }}
+                  onChange={(e) => setQuickSellPrice(e.target.value === "" ? "" : Number(e.target.value))}
+                />
+              </div>
+              <div>
+                <Label>Buy Price *</Label>
+                <Input
+                  type="number"
+                  min="0"
+                  value={quickBuyPrice}
+                  onFocus={(e) => { if (e.target.value === "0") setQuickBuyPrice(""); }}
+                  onChange={(e) => setQuickBuyPrice(e.target.value === "" ? "" : Number(e.target.value))}
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label>Stock Quantity *</Label>
+                <Input
+                  type="number"
+                  min="1"
+                  value={quickStock}
+                  onFocus={(e) => { if (e.target.value === "0") setQuickStock(""); }}
+                  onChange={(e) => setQuickStock(e.target.value === "" ? "" : Number(e.target.value))}
+                />
+              </div>
+              <div>
+                <Label>Add to Bill (Qty)</Label>
+                <Input
+                  type="number"
+                  min="1"
+                  value={quickAddQty}
+                  onFocus={(e) => { if (e.target.value === "0") setQuickAddQty(""); }}
+                  onChange={(e) => setQuickAddQty(e.target.value === "" ? "" : Number(e.target.value))}
+                />
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              The medicine will be saved to inventory and auto-added to the current bill without affecting existing items.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setQuickAddOpen(false); resetQuickAdd(); }}>
+              Cancel
+            </Button>
+            <Button onClick={handleQuickAddMedicine} disabled={quickSubmitting}>
+              {quickSubmitting ? "Saving..." : "Save & Add to Bill"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </AppLayout>
   );
 }
