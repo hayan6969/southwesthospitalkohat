@@ -54,8 +54,79 @@ export default function PharmacySell() {
 
   const { data: medicines, isLoading } = useSearchableMedicines(searchTerm);
   const createInvoice = useCreatePharmacyInvoice();
+  const createMedicine = useCreateMedicine();
   const { logCreate } = useAuditLogger();
   const { profile } = useAuth();
+
+  // Quick add medicine dialog state
+  const [quickAddOpen, setQuickAddOpen] = useState(false);
+  const [quickName, setQuickName] = useState("");
+  const [quickSellPrice, setQuickSellPrice] = useState<number | "">("");
+  const [quickBuyPrice, setQuickBuyPrice] = useState<number | "">("");
+  const [quickStock, setQuickStock] = useState<number | "">("");
+  const [quickAddQty, setQuickAddQty] = useState<number | "">(1);
+  const [quickSubmitting, setQuickSubmitting] = useState(false);
+
+  const resetQuickAdd = () => {
+    setQuickName("");
+    setQuickSellPrice("");
+    setQuickBuyPrice("");
+    setQuickStock("");
+    setQuickAddQty(1);
+  };
+
+  const handleQuickAddMedicine = async () => {
+    if (!quickName.trim()) {
+      toast.error("Medicine name is required");
+      return;
+    }
+    const sell = Number(quickSellPrice);
+    const buy = Number(quickBuyPrice);
+    const stock = Number(quickStock);
+    const addQty = Number(quickAddQty);
+    if (!(sell > 0)) return toast.error("Enter a valid sell price");
+    if (!(buy >= 0)) return toast.error("Enter a valid buy price");
+    if (!(stock > 0)) return toast.error("Enter a valid stock quantity");
+    if (!(addQty > 0) || addQty > stock) return toast.error("Invalid quantity to add to bill");
+
+    if (quickSubmitting) return;
+    setQuickSubmitting(true);
+    try {
+      // Default expiry: 2 years from today (required by DB; user can edit later in Medicines page)
+      const expiry = new Date();
+      expiry.setFullYear(expiry.getFullYear() + 2);
+      const expiryStr = expiry.toISOString().slice(0, 10);
+
+      const created = await createMedicine.mutateAsync({
+        name: quickName.trim(),
+        selling_price: sell,
+        purchase_price: buy,
+        stock_quantity: stock,
+        expiry_date: expiryStr,
+      });
+
+      // Auto-add to cart without disrupting existing items
+      const newItem: CartItem = {
+        medicineId: created.id,
+        name: created.name,
+        unitPrice: created.selling_price,
+        quantity: addQty,
+        totalPrice: addQty * created.selling_price,
+        stockAvailable: created.stock_quantity,
+        expiryDate: created.expiry_date,
+      };
+      setCart(prev => [...prev, newItem]);
+
+      toast.success(`${created.name} added to inventory and cart`);
+      setQuickAddOpen(false);
+      resetQuickAdd();
+    } catch (err: any) {
+      console.error(err);
+      toast.error(err?.message || "Failed to add medicine");
+    } finally {
+      setQuickSubmitting(false);
+    }
+  };
 
   const addToCart = () => {
     if (!selectedMedicineId || quantity <= 0) {
