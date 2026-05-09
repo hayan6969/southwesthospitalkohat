@@ -65,6 +65,7 @@ export default function PharmacySell() {
   const [quickBuyPrice, setQuickBuyPrice] = useState<number | "">("");
   const [quickStock, setQuickStock] = useState<number | "">("");
   const [quickAddQty, setQuickAddQty] = useState<number | "">(1);
+  const [quickExpiry, setQuickExpiry] = useState<string>("");
   const [quickSubmitting, setQuickSubmitting] = useState(false);
 
   const resetQuickAdd = () => {
