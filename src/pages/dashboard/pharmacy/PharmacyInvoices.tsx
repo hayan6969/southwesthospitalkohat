@@ -215,7 +215,7 @@ export default function PharmacyInvoices() {
   // Reset current page when search or filter changes
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, filterDate]);
+  }, [searchTerm, filterDate, typeFilter]);
 
   return (
     <AppLayout sidebarRole="head_pharmacist">
