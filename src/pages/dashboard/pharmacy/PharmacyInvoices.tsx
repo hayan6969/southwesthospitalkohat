@@ -43,11 +43,12 @@ export default function PharmacyInvoices() {
   const [quantity, setQuantity] = useState(1);
   const [filterDate, setFilterDate] = useState<Date | undefined>();
   const [searchTerm, setSearchTerm] = useState("");
+  const [typeFilter, setTypeFilter] = useState<'all' | 'sell' | 'return'>('all');
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 20;
 
   // Use paginated pharmacy invoices hook for better performance (with date filter)
-  const { data: paginatedResult, isLoading } = usePaginatedPharmacyInvoices(currentPage, itemsPerPage, searchTerm, filterDate);
+  const { data: paginatedResult, isLoading } = usePaginatedPharmacyInvoices(currentPage, itemsPerPage, searchTerm, filterDate, typeFilter);
   const invoices = paginatedResult?.data || [];
   const totalCount = paginatedResult?.count || 0;
   const totalPages = paginatedResult?.totalPages || 1;
@@ -214,7 +215,7 @@ export default function PharmacyInvoices() {
   // Reset current page when search or filter changes
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, filterDate]);
+  }, [searchTerm, filterDate, typeFilter]);
 
   return (
     <AppLayout sidebarRole="head_pharmacist">
@@ -285,6 +286,18 @@ export default function PharmacyInvoices() {
                 />
               </div>
               
+              {/* Type Filter */}
+              <Select value={typeFilter} onValueChange={(v) => setTypeFilter(v as 'all' | 'sell' | 'return')}>
+                <SelectTrigger className="w-36">
+                  <SelectValue placeholder="Type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All</SelectItem>
+                  <SelectItem value="sell">Sell</SelectItem>
+                  <SelectItem value="return">Return</SelectItem>
+                </SelectContent>
+              </Select>
+
               {/* Date Filter */}
               <Popover>
                 <PopoverTrigger asChild>
@@ -311,12 +324,13 @@ export default function PharmacyInvoices() {
               </Popover>
 
               {/* Clear Filter */}
-              {(filterDate || searchTerm) && (
+              {(filterDate || searchTerm || typeFilter !== 'all') && (
                 <Button 
                   variant="outline" 
                   onClick={() => {
                     setFilterDate(undefined);
                     setSearchTerm("");
+                    setTypeFilter('all');
                   }}
                   className="flex items-center gap-2"
                 >
