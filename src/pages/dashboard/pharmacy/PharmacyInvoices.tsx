@@ -286,6 +286,18 @@ export default function PharmacyInvoices() {
                 />
               </div>
               
+              {/* Type Filter */}
+              <Select value={typeFilter} onValueChange={(v) => setTypeFilter(v as 'all' | 'sell' | 'return')}>
+                <SelectTrigger className="w-36">
+                  <SelectValue placeholder="Type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All</SelectItem>
+                  <SelectItem value="sell">Sell</SelectItem>
+                  <SelectItem value="return">Return</SelectItem>
+                </SelectContent>
+              </Select>
+
               {/* Date Filter */}
               <Popover>
                 <PopoverTrigger asChild>
@@ -312,12 +324,13 @@ export default function PharmacyInvoices() {
               </Popover>
 
               {/* Clear Filter */}
-              {(filterDate || searchTerm) && (
+              {(filterDate || searchTerm || typeFilter !== 'all') && (
                 <Button 
                   variant="outline" 
                   onClick={() => {
                     setFilterDate(undefined);
                     setSearchTerm("");
+                    setTypeFilter('all');
                   }}
                   className="flex items-center gap-2"
                 >
