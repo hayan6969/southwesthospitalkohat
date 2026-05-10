@@ -80,6 +80,7 @@ export function StaffPathologyBilling() {
   const [isExternalDoctor, setIsExternalDoctor] = useState(false);
   const [externalDoctorName, setExternalDoctorName] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [reviewOpen, setReviewOpen] = useState(false);
 
   // New patient form
   const [newPatient, setNewPatient] = useState({
