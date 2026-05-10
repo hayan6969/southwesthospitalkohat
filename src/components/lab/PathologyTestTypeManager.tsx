@@ -10,7 +10,7 @@ import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Pencil, Trash2, Save, X, FlaskConical, Layers } from "lucide-react";
+import { Plus, Pencil, Trash2, Save, X, FlaskConical, Layers, ChevronDown, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 
 interface TestType {
@@ -206,6 +206,14 @@ export function PathologyTestTypeManager({ priceEditable = true }: { priceEditab
 }
 
 // ===== Inline New/Edit Test Dialog with Parameters =====
+interface InlineSubrange {
+  id?: string;
+  label: string;
+  ref_min: string;
+  ref_max: string;
+  ref_display: string;
+  _delete?: boolean;
+}
 interface InlineParam {
   id?: string;
   parameter_name: string;
@@ -216,6 +224,10 @@ interface InlineParam {
   ref_display: string;
   is_optional: boolean;
   sort_order: number;
+  has_subranges?: boolean;
+  display_all_subranges?: boolean;
+  subranges?: InlineSubrange[];
+  _expanded?: boolean;
   _delete?: boolean;
 }
 
@@ -249,13 +261,25 @@ function NewTestDialog({
     setHeadings({ ...defaultHeadings, ...(ch && typeof ch === "object" ? ch : {}) });
     if (editing.id) {
       (async () => {
-        const { data } = await supabase
+        const { data: paramRows } = await supabase
           .from("lab_test_parameters")
           .select("*")
           .eq("test_type_id", editing.id)
           .order("sort_order");
+        const ids = (paramRows ?? []).map((r: any) => r.id);
+        let srMap: Record<string, any[]> = {};
+        if (ids.length) {
+          const { data: srRows } = await supabase
+            .from("lab_parameter_subranges")
+            .select("*")
+            .in("parameter_id", ids)
+            .order("sort_order");
+          (srRows ?? []).forEach((s: any) => {
+            (srMap[s.parameter_id] ||= []).push(s);
+          });
+        }
         setParams(
-          (data ?? []).map((p: any) => ({
+          (paramRows ?? []).map((p: any) => ({
             id: p.id,
             parameter_name: p.parameter_name ?? "",
             category_heading: p.category_heading ?? "",
@@ -265,12 +289,22 @@ function NewTestDialog({
             ref_display: p.ref_display ?? "",
             is_optional: !!p.is_optional,
             sort_order: p.sort_order ?? 100,
+            has_subranges: !!p.has_subranges,
+            display_all_subranges: !!p.display_all_subranges,
+            _expanded: !!p.has_subranges,
+            subranges: (srMap[p.id] ?? []).map((s: any) => ({
+              id: s.id,
+              label: s.label ?? "",
+              ref_min: s.ref_min == null ? "" : String(s.ref_min),
+              ref_max: s.ref_max == null ? "" : String(s.ref_max),
+              ref_display: s.ref_display ?? "",
+            })),
           }))
         );
       })();
     } else {
       setParams([
-        { parameter_name: "", category_heading: "", unit: "", ref_min: "", ref_max: "", ref_display: "", is_optional: false, sort_order: 100 },
+        { parameter_name: "", category_heading: "", unit: "", ref_min: "", ref_max: "", ref_display: "", is_optional: false, sort_order: 100, subranges: [] },
       ]);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -278,11 +312,36 @@ function NewTestDialog({
 
   const addRow = () => setParams((prev) => [
     ...prev,
-    { parameter_name: "", category_heading: "", unit: "", ref_min: "", ref_max: "", ref_display: "", is_optional: false, sort_order: (prev.length + 1) * 10 },
+    { parameter_name: "", category_heading: "", unit: "", ref_min: "", ref_max: "", ref_display: "", is_optional: false, sort_order: (prev.length + 1) * 10, subranges: [] },
   ]);
 
   const updateRow = (idx: number, patch: Partial<InlineParam>) =>
     setParams((prev) => prev.map((r, i) => (i === idx ? { ...r, ...patch } : r)));
+
+  const addSubrange = (idx: number) => setParams((prev) => prev.map((r, i) => i === idx ? {
+    ...r,
+    _expanded: true,
+    has_subranges: true,
+    ref_display: r.ref_display || "( See Below )",
+    subranges: [...(r.subranges ?? []), { label: "", ref_min: "", ref_max: "", ref_display: "" }],
+  } : r));
+
+  const updateSubrange = (idx: number, sIdx: number, patch: Partial<InlineSubrange>) =>
+    setParams((prev) => prev.map((r, i) => i !== idx ? r : {
+      ...r,
+      subranges: (r.subranges ?? []).map((s, j) => j === sIdx ? { ...s, ...patch } : s),
+    }));
+
+  const removeSubrange = (idx: number, sIdx: number) =>
+    setParams((prev) => prev.map((r, i) => {
+      if (i !== idx) return r;
+      const list = r.subranges ?? [];
+      const s = list[sIdx];
+      if (s?.id) {
+        return { ...r, subranges: list.map((x, j) => j === sIdx ? { ...x, _delete: true } : x) };
+      }
+      return { ...r, subranges: list.filter((_, j) => j !== sIdx) };
+    }));
 
   const removeRow = (idx: number) =>
     setParams((prev) => {
@@ -323,6 +382,8 @@ function NewTestDialog({
           continue;
         }
         if (!p.parameter_name.trim() && !p.category_heading.trim()) continue;
+        const activeSubs = (p.subranges ?? []).filter((s) => !s._delete && (s.label.trim() || s.ref_min !== "" || s.ref_max !== "" || s.ref_display.trim()));
+        const hasSubs = activeSubs.length > 0;
         const payload = {
           test_type_id: testId!,
           parameter_name: p.parameter_name.trim() || "—",
@@ -330,15 +391,46 @@ function NewTestDialog({
           unit: p.unit.trim() || null,
           ref_min: p.ref_min === "" ? null : Number(p.ref_min),
           ref_max: p.ref_max === "" ? null : Number(p.ref_max),
-          ref_display: p.ref_display.trim() || null,
+          ref_display: p.ref_display.trim() || (hasSubs ? "( See Below )" : null),
           is_optional: p.is_optional,
-          has_subranges: false,
+          has_subranges: hasSubs,
+          display_all_subranges: hasSubs ? !!p.display_all_subranges : false,
           sort_order: (i + 1) * 10,
         };
-        if (p.id) {
-          await supabase.from("lab_test_parameters").update(payload).eq("id", p.id);
+        let paramId = p.id;
+        if (paramId) {
+          await supabase.from("lab_test_parameters").update(payload).eq("id", paramId);
         } else {
-          await supabase.from("lab_test_parameters").insert(payload);
+          const { data: ins } = await supabase.from("lab_test_parameters").insert(payload).select("id").single();
+          paramId = ins?.id;
+        }
+
+        // Persist subranges for this parameter
+        if (paramId) {
+          const list = p.subranges ?? [];
+          for (let j = 0; j < list.length; j++) {
+            const s = list[j];
+            if (s._delete && s.id) {
+              await supabase.from("lab_parameter_subranges").delete().eq("id", s.id);
+              continue;
+            }
+            if (!s.label.trim() && s.ref_min === "" && s.ref_max === "" && !s.ref_display.trim()) continue;
+            const minN = s.ref_min === "" ? null : Number(s.ref_min);
+            const maxN = s.ref_max === "" ? null : Number(s.ref_max);
+            const sPayload = {
+              parameter_id: paramId,
+              label: s.label.trim() || "—",
+              ref_min: minN,
+              ref_max: maxN,
+              ref_display: s.ref_display.trim() || (minN != null && maxN != null ? `${minN} - ${maxN}` : null),
+              sort_order: (j + 1),
+            };
+            if (s.id) {
+              await supabase.from("lab_parameter_subranges").update(sPayload).eq("id", s.id);
+            } else {
+              await supabase.from("lab_parameter_subranges").insert(sPayload);
+            }
+          }
         }
       }
 
@@ -462,48 +554,111 @@ function NewTestDialog({
                 )}
                 {params.map((p, i) =>
                   p._delete ? null : (
-                    <div key={p.id ?? `new-${i}`} className="grid grid-cols-12 gap-2 px-3 py-2 items-center">
-                      <Input
-                        className="col-span-3"
-                        placeholder="Hemoglobin"
-                        value={p.parameter_name}
-                        onChange={(e) => updateRow(i, { parameter_name: e.target.value })}
-                      />
-                      <Input
-                        className="col-span-2"
-                        placeholder="PRIMARY"
-                        value={p.category_heading}
-                        onChange={(e) => updateRow(i, { category_heading: e.target.value })}
-                      />
-                      <Input
-                        className="col-span-2"
-                        placeholder="g/dL"
-                        value={p.unit}
-                        onChange={(e) => updateRow(i, { unit: e.target.value })}
-                      />
-                      <Input
-                        className="col-span-1"
-                        type="number" step="any"
-                        value={p.ref_min}
-                        onChange={(e) => updateRow(i, { ref_min: e.target.value })}
-                      />
-                      <Input
-                        className="col-span-1"
-                        type="number" step="any"
-                        value={p.ref_max}
-                        onChange={(e) => updateRow(i, { ref_max: e.target.value })}
-                      />
-                      <Input
-                        className="col-span-2"
-                        placeholder="13.0 - 17.0"
-                        value={p.ref_display}
-                        onChange={(e) => updateRow(i, { ref_display: e.target.value })}
-                      />
-                      <div className="col-span-1 flex justify-end">
-                        <Button type="button" size="sm" variant="ghost" onClick={() => removeRow(i)}>
-                          <Trash2 className="w-4 h-4 text-destructive" />
-                        </Button>
+                    <div key={p.id ?? `new-${i}`} className="px-3 py-2">
+                      <div className="grid grid-cols-12 gap-2 items-center">
+                        <Input
+                          className="col-span-3"
+                          placeholder="Hemoglobin"
+                          value={p.parameter_name}
+                          onChange={(e) => updateRow(i, { parameter_name: e.target.value })}
+                        />
+                        <Input
+                          className="col-span-2"
+                          placeholder="PRIMARY"
+                          value={p.category_heading}
+                          onChange={(e) => updateRow(i, { category_heading: e.target.value })}
+                        />
+                        <Input
+                          className="col-span-2"
+                          placeholder="g/dL"
+                          value={p.unit}
+                          onChange={(e) => updateRow(i, { unit: e.target.value })}
+                        />
+                        <Input
+                          className="col-span-1"
+                          type="number" step="any"
+                          value={p.ref_min}
+                          onChange={(e) => updateRow(i, { ref_min: e.target.value })}
+                        />
+                        <Input
+                          className="col-span-1"
+                          type="number" step="any"
+                          value={p.ref_max}
+                          onChange={(e) => updateRow(i, { ref_max: e.target.value })}
+                        />
+                        <Input
+                          className="col-span-2"
+                          placeholder="13.0 - 17.0"
+                          value={p.ref_display}
+                          onChange={(e) => updateRow(i, { ref_display: e.target.value })}
+                        />
+                        <div className="col-span-1 flex justify-end">
+                          <Button type="button" size="sm" variant="ghost" onClick={() => removeRow(i)}>
+                            <Trash2 className="w-4 h-4 text-destructive" />
+                          </Button>
+                        </div>
                       </div>
+                      <div className="flex items-center gap-3 mt-1 pl-1">
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="ghost"
+                          className="h-7 px-2 text-xs"
+                          onClick={() => updateRow(i, { _expanded: !p._expanded })}
+                        >
+                          {p._expanded ? <ChevronDown className="w-3.5 h-3.5 mr-1" /> : <ChevronRight className="w-3.5 h-3.5 mr-1" />}
+                          Sub-ranges ({(p.subranges ?? []).filter((s) => !s._delete).length})
+                        </Button>
+                        {(p.subranges ?? []).filter((s) => !s._delete).length > 0 && (
+                          <label className="flex items-center gap-2 text-xs">
+                            <Switch
+                              checked={!!p.display_all_subranges}
+                              onCheckedChange={(v) => updateRow(i, { display_all_subranges: v })}
+                            />
+                            Show all sub-ranges in report
+                          </label>
+                        )}
+                      </div>
+                      {p._expanded && (
+                        <div className="mt-2 ml-6 border-l-2 border-blue-200 pl-3 space-y-1.5 bg-blue-50/30 rounded-r py-2">
+                          {(p.subranges ?? []).map((s, sIdx) => s._delete ? null : (
+                            <div key={s.id ?? `sr-${sIdx}`} className="grid grid-cols-12 gap-2 items-center">
+                              <Input
+                                className="col-span-4 h-8 text-xs"
+                                placeholder="Female (Luteal Phase)"
+                                value={s.label}
+                                onChange={(e) => updateSubrange(i, sIdx, { label: e.target.value })}
+                              />
+                              <Input
+                                className="col-span-2 h-8 text-xs"
+                                type="number" step="any" placeholder="Min"
+                                value={s.ref_min}
+                                onChange={(e) => updateSubrange(i, sIdx, { ref_min: e.target.value })}
+                              />
+                              <Input
+                                className="col-span-2 h-8 text-xs"
+                                type="number" step="any" placeholder="Max"
+                                value={s.ref_max}
+                                onChange={(e) => updateSubrange(i, sIdx, { ref_max: e.target.value })}
+                              />
+                              <Input
+                                className="col-span-3 h-8 text-xs"
+                                placeholder="auto: min - max"
+                                value={s.ref_display}
+                                onChange={(e) => updateSubrange(i, sIdx, { ref_display: e.target.value })}
+                              />
+                              <div className="col-span-1 flex justify-end">
+                                <Button type="button" size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => removeSubrange(i, sIdx)}>
+                                  <Trash2 className="w-3.5 h-3.5 text-destructive" />
+                                </Button>
+                              </div>
+                            </div>
+                          ))}
+                          <Button type="button" size="sm" variant="outline" className="h-7 text-xs" onClick={() => addSubrange(i)}>
+                            <Plus className="w-3 h-3 mr-1" /> Add sub-range
+                          </Button>
+                        </div>
+                      )}
                     </div>
                   )
                 )}
