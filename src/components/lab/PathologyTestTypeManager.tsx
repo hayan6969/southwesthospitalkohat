@@ -206,6 +206,14 @@ export function PathologyTestTypeManager({ priceEditable = true }: { priceEditab
 }
 
 // ===== Inline New/Edit Test Dialog with Parameters =====
+interface InlineSubrange {
+  id?: string;
+  label: string;
+  ref_min: string;
+  ref_max: string;
+  ref_display: string;
+  _delete?: boolean;
+}
 interface InlineParam {
   id?: string;
   parameter_name: string;
@@ -216,6 +224,10 @@ interface InlineParam {
   ref_display: string;
   is_optional: boolean;
   sort_order: number;
+  has_subranges?: boolean;
+  display_all_subranges?: boolean;
+  subranges?: InlineSubrange[];
+  _expanded?: boolean;
   _delete?: boolean;
 }
 
