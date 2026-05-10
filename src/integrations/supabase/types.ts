@@ -608,6 +608,42 @@ export type Database = {
         }
         Relationships: []
       }
+      hospital_services: {
+        Row: {
+          alias_no: number | null
+          application: string | null
+          category: string | null
+          created_at: string
+          id: string
+          name: string
+          panel_price: number | null
+          price: number
+          updated_at: string
+        }
+        Insert: {
+          alias_no?: number | null
+          application?: string | null
+          category?: string | null
+          created_at?: string
+          id?: string
+          name: string
+          panel_price?: number | null
+          price: number
+          updated_at?: string
+        }
+        Update: {
+          alias_no?: number | null
+          application?: string | null
+          category?: string | null
+          created_at?: string
+          id?: string
+          name?: string
+          panel_price?: number | null
+          price?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       hospital_settings: {
         Row: {
           booking_lead_time_hours: number | null
@@ -1366,6 +1402,7 @@ export type Database = {
           id: string
           name: string
           normal_range: string | null
+          panel_price: number | null
           preparation_instructions: string | null
           price: number
           updated_at: string | null
@@ -1377,6 +1414,7 @@ export type Database = {
           id?: string
           name: string
           normal_range?: string | null
+          panel_price?: number | null
           preparation_instructions?: string | null
           price: number
           updated_at?: string | null
@@ -1388,6 +1426,7 @@ export type Database = {
           id?: string
           name?: string
           normal_range?: string | null
+          panel_price?: number | null
           preparation_instructions?: string | null
           price?: number
           updated_at?: string | null
@@ -2675,6 +2714,7 @@ export type Database = {
           description: string | null
           id: string
           name: string
+          panel_price: number | null
           preparation_instructions: string | null
           price: number
           updated_at: string | null
@@ -2685,6 +2725,7 @@ export type Database = {
           description?: string | null
           id?: string
           name: string
+          panel_price?: number | null
           preparation_instructions?: string | null
           price: number
           updated_at?: string | null
@@ -2695,6 +2736,7 @@ export type Database = {
           description?: string | null
           id?: string
           name?: string
+          panel_price?: number | null
           preparation_instructions?: string | null
           price?: number
           updated_at?: string | null
