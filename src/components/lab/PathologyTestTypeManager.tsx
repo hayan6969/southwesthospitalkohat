@@ -382,6 +382,8 @@ function NewTestDialog({
           continue;
         }
         if (!p.parameter_name.trim() && !p.category_heading.trim()) continue;
+        const activeSubs = (p.subranges ?? []).filter((s) => !s._delete && (s.label.trim() || s.ref_min !== "" || s.ref_max !== "" || s.ref_display.trim()));
+        const hasSubs = activeSubs.length > 0;
         const payload = {
           test_type_id: testId!,
           parameter_name: p.parameter_name.trim() || "—",
@@ -389,15 +391,46 @@ function NewTestDialog({
           unit: p.unit.trim() || null,
           ref_min: p.ref_min === "" ? null : Number(p.ref_min),
           ref_max: p.ref_max === "" ? null : Number(p.ref_max),
-          ref_display: p.ref_display.trim() || null,
+          ref_display: p.ref_display.trim() || (hasSubs ? "( See Below )" : null),
           is_optional: p.is_optional,
-          has_subranges: false,
+          has_subranges: hasSubs,
+          display_all_subranges: hasSubs ? !!p.display_all_subranges : false,
           sort_order: (i + 1) * 10,
         };
-        if (p.id) {
-          await supabase.from("lab_test_parameters").update(payload).eq("id", p.id);
+        let paramId = p.id;
+        if (paramId) {
+          await supabase.from("lab_test_parameters").update(payload).eq("id", paramId);
         } else {
-          await supabase.from("lab_test_parameters").insert(payload);
+          const { data: ins } = await supabase.from("lab_test_parameters").insert(payload).select("id").single();
+          paramId = ins?.id;
+        }
+
+        // Persist subranges for this parameter
+        if (paramId) {
+          const list = p.subranges ?? [];
+          for (let j = 0; j < list.length; j++) {
+            const s = list[j];
+            if (s._delete && s.id) {
+              await supabase.from("lab_parameter_subranges").delete().eq("id", s.id);
+              continue;
+            }
+            if (!s.label.trim() && s.ref_min === "" && s.ref_max === "" && !s.ref_display.trim()) continue;
+            const minN = s.ref_min === "" ? null : Number(s.ref_min);
+            const maxN = s.ref_max === "" ? null : Number(s.ref_max);
+            const sPayload = {
+              parameter_id: paramId,
+              label: s.label.trim() || "—",
+              ref_min: minN,
+              ref_max: maxN,
+              ref_display: s.ref_display.trim() || (minN != null && maxN != null ? `${minN} - ${maxN}` : null),
+              sort_order: (j + 1),
+            };
+            if (s.id) {
+              await supabase.from("lab_parameter_subranges").update(sPayload).eq("id", s.id);
+            } else {
+              await supabase.from("lab_parameter_subranges").insert(sPayload);
+            }
+          }
         }
       }
 
