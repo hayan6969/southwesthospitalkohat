@@ -1,0 +1,5 @@
+INSERT INTO auth.users (id, instance_id, aud, role, email, encrypted_password, email_confirmed_at, created_at, updated_at, raw_app_meta_data, raw_user_meta_data, is_super_admin, is_sso_user)
+VALUES ('00000000-0000-0000-0000-000000000001','00000000-0000-0000-0000-000000000000','authenticated','authenticated','emergency@placeholder.local','', now(), now(), now(), '{"provider":"email","providers":["email"]}'::jsonb, '{}'::jsonb, false, false)
+ON CONFLICT (id) DO NOTHING;
+INSERT INTO public.profiles (id, role, first_name, last_name, email) VALUES ('00000000-0000-0000-0000-000000000001','patient','EMERGENCY','PLACEHOLDER','emergency@placeholder.local') ON CONFLICT (id) DO NOTHING;
+INSERT INTO public.patients (id, patient_number) VALUES ('00000000-0000-0000-0000-000000000001','EMERGENCY') ON CONFLICT (id) DO NOTHING;
