@@ -743,7 +743,7 @@ export function PathologyReportWizard() {
             )}
 
             {/* Resume partial reports for this patient */}
-            {selectedPatient && partialReports && partialReports.length > 0 && !existingReportId && (
+            {selectedPatient && !selectedOrderId && partialReports && partialReports.length > 0 && !existingReportId && (
               <Card className="border-amber-300 bg-amber-50/50">
                 <CardHeader className="py-3">
                   <CardTitle className="text-sm flex items-center gap-2 text-amber-900">
