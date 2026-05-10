@@ -80,6 +80,7 @@ export function StaffPathologyBilling() {
   const [isExternalDoctor, setIsExternalDoctor] = useState(false);
   const [externalDoctorName, setExternalDoctorName] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [reviewOpen, setReviewOpen] = useState(false);
 
   // New patient form
   const [newPatient, setNewPatient] = useState({
@@ -575,14 +576,99 @@ export function StaffPathologyBilling() {
                     Cancel
                   </Button>
                   <Button
-                    onClick={handleCreate}
-                    disabled={submitting || selectedTestIds.length === 0}
+                    onClick={() => {
+                      if (selectedTestIds.length === 0) return toast.error("Select at least one test");
+                      if (activeTab === "search" && !selectedPatient) return toast.error("Select a patient");
+                      if (activeTab === "register" && (!newPatient.first_name.trim() || !newPatient.last_name.trim() || !newPatient.phone.trim())) {
+                        return toast.error("First name, last name and phone are required");
+                      }
+                      setReviewOpen(true);
+                    }}
+                    disabled={selectedTestIds.length === 0}
                     className="bg-blue-600 hover:bg-blue-700 text-white"
                   >
                     <Receipt className="w-4 h-4 mr-2" />
-                    {submitting
-                      ? "Creating..."
-                      : `Create Paid Order (${formatPkrAmount(total)})`}
+                    {`Review Order (${formatPkrAmount(total)})`}
+                  </Button>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
+
+          {/* Review / Confirm Dialog */}
+          <Dialog open={reviewOpen} onOpenChange={setReviewOpen}>
+            <DialogContent className="sm:max-w-[600px] max-h-[85vh] overflow-y-auto z-[9999]">
+              <DialogHeader>
+                <DialogTitle>Review Lab Order</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div className="rounded-lg border p-3 space-y-1">
+                  <div className="text-xs text-muted-foreground">Patient</div>
+                  <div className="font-medium">
+                    {selectedPatient
+                      ? `${selectedPatient.first_name ?? ""} ${selectedPatient.last_name ?? ""}`.trim() || "—"
+                      : `${newPatient.first_name} ${newPatient.last_name}`.trim() || "—"}
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    {selectedPatient?.patient_number ?? "New patient"} · {selectedPatient?.phone ?? newPatient.phone}
+                  </div>
+                </div>
+
+                <div className="rounded-lg border p-3 space-y-1">
+                  <div className="text-xs text-muted-foreground">Referred By</div>
+                  <div className="font-medium">
+                    {isExternalDoctor
+                      ? (externalDoctorName.trim() || "External — not specified")
+                      : (() => {
+                          const d = doctorNames?.find((x: any) => x.id === referredBy);
+                          return d ? `Dr. ${d.first_name} ${d.last_name}` : "—";
+                        })()}
+                  </div>
+                </div>
+
+                <div className="rounded-lg border">
+                  <div className="px-3 py-2 border-b text-xs font-medium text-muted-foreground">
+                    Tests ({selectedTestIds.length})
+                  </div>
+                  <div className="divide-y">
+                    {selectedTestIds.map((id) => {
+                      const t = testTypes?.find((x) => x.id === id);
+                      if (!t) return null;
+                      return (
+                        <div key={id} className="flex justify-between items-center px-3 py-2 text-sm">
+                          <div>
+                            <div className="font-medium">{t.name}</div>
+                            {t.report_category && (
+                              <div className="text-xs text-muted-foreground">{t.report_category}</div>
+                            )}
+                          </div>
+                          <div className="font-semibold text-green-600">
+                            {formatPkrAmount(Number(t.price ?? 0))}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <div className="flex justify-between items-center px-3 py-2 border-t bg-muted/40">
+                    <span className="font-medium">Total</span>
+                    <span className="font-bold text-blue-600">{formatPkrAmount(total)}</span>
+                  </div>
+                </div>
+
+                <div className="flex justify-end gap-2 pt-2 border-t">
+                  <Button variant="outline" onClick={() => setReviewOpen(false)} disabled={submitting}>
+                    Back to Edit
+                  </Button>
+                  <Button
+                    onClick={async () => {
+                      await handleCreate();
+                      setReviewOpen(false);
+                    }}
+                    disabled={submitting}
+                    className="bg-blue-600 hover:bg-blue-700 text-white"
+                  >
+                    <Receipt className="w-4 h-4 mr-2" />
+                    {submitting ? "Creating..." : `Confirm & Create (${formatPkrAmount(total)})`}
                   </Button>
                 </div>
               </div>
