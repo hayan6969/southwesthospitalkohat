@@ -240,6 +240,7 @@ async function loadFullReport(reportId: string): Promise<PathologyPdfData | null
       notes: tt.lab_test_types?.notes ?? null,
       parameters: (params ?? []).filter((p: any) => p.test_type_id === tt.test_type_id).map((p: any) => {
         const res = (results ?? []).find((rr: any) => rr.parameter_id === p.id);
+        const psubs = (subrangesAll ?? []).filter((s: any) => s.parameter_id === p.id);
         return {
           category_heading: p.category_heading,
           parameter_name: p.parameter_name,
@@ -248,6 +249,15 @@ async function loadFullReport(reportId: string): Promise<PathologyPdfData | null
           result_value: res?.result_value ?? null,
           flag: (res?.flag ?? null) as "Low" | "High" | "Borderline" | null,
           subrange_used: res?.subrange_used ?? null,
+          subrange_id: res?.subrange_id ?? null,
+          display_all_subranges: !!p.display_all_subranges,
+          subranges: psubs.map((s: any) => ({
+            id: s.id,
+            label: s.label,
+            ref_min: s.ref_min,
+            ref_max: s.ref_max,
+            ref_display: s.ref_display,
+          })),
           parameter_id: p.id,
         };
       }),
