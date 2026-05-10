@@ -328,9 +328,9 @@ export async function generatePathologyReportPDF(data: PathologyPdfData) {
     const usable     = safeBottom() - 18;
     const remaining  = safeBottom() - y;
 
-    if (testH <= usable && remaining < testH) {
-      y = newPage();
-    } else if (y > safeBottom() - 20) {
+    // If test fits on a fresh page and won't fit in remaining space, push to next page.
+    // Otherwise still push if there's barely any room left.
+    if ((testH <= usable && remaining < testH) || remaining < 40) {
       y = newPage();
     }
 
