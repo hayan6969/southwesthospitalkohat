@@ -261,13 +261,25 @@ function NewTestDialog({
     setHeadings({ ...defaultHeadings, ...(ch && typeof ch === "object" ? ch : {}) });
     if (editing.id) {
       (async () => {
-        const { data } = await supabase
+        const { data: paramRows } = await supabase
           .from("lab_test_parameters")
           .select("*")
           .eq("test_type_id", editing.id)
           .order("sort_order");
+        const ids = (paramRows ?? []).map((r: any) => r.id);
+        let srMap: Record<string, any[]> = {};
+        if (ids.length) {
+          const { data: srRows } = await supabase
+            .from("lab_parameter_subranges")
+            .select("*")
+            .in("parameter_id", ids)
+            .order("sort_order");
+          (srRows ?? []).forEach((s: any) => {
+            (srMap[s.parameter_id] ||= []).push(s);
+          });
+        }
         setParams(
-          (data ?? []).map((p: any) => ({
+          (paramRows ?? []).map((p: any) => ({
             id: p.id,
             parameter_name: p.parameter_name ?? "",
             category_heading: p.category_heading ?? "",
@@ -277,12 +289,22 @@ function NewTestDialog({
             ref_display: p.ref_display ?? "",
             is_optional: !!p.is_optional,
             sort_order: p.sort_order ?? 100,
+            has_subranges: !!p.has_subranges,
+            display_all_subranges: !!p.display_all_subranges,
+            _expanded: !!p.has_subranges,
+            subranges: (srMap[p.id] ?? []).map((s: any) => ({
+              id: s.id,
+              label: s.label ?? "",
+              ref_min: s.ref_min == null ? "" : String(s.ref_min),
+              ref_max: s.ref_max == null ? "" : String(s.ref_max),
+              ref_display: s.ref_display ?? "",
+            })),
           }))
         );
       })();
     } else {
       setParams([
-        { parameter_name: "", category_heading: "", unit: "", ref_min: "", ref_max: "", ref_display: "", is_optional: false, sort_order: 100 },
+        { parameter_name: "", category_heading: "", unit: "", ref_min: "", ref_max: "", ref_display: "", is_optional: false, sort_order: 100, subranges: [] },
       ]);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -290,11 +312,36 @@ function NewTestDialog({
 
   const addRow = () => setParams((prev) => [
     ...prev,
-    { parameter_name: "", category_heading: "", unit: "", ref_min: "", ref_max: "", ref_display: "", is_optional: false, sort_order: (prev.length + 1) * 10 },
+    { parameter_name: "", category_heading: "", unit: "", ref_min: "", ref_max: "", ref_display: "", is_optional: false, sort_order: (prev.length + 1) * 10, subranges: [] },
   ]);
 
   const updateRow = (idx: number, patch: Partial<InlineParam>) =>
     setParams((prev) => prev.map((r, i) => (i === idx ? { ...r, ...patch } : r)));
+
+  const addSubrange = (idx: number) => setParams((prev) => prev.map((r, i) => i === idx ? {
+    ...r,
+    _expanded: true,
+    has_subranges: true,
+    ref_display: r.ref_display || "( See Below )",
+    subranges: [...(r.subranges ?? []), { label: "", ref_min: "", ref_max: "", ref_display: "" }],
+  } : r));
+
+  const updateSubrange = (idx: number, sIdx: number, patch: Partial<InlineSubrange>) =>
+    setParams((prev) => prev.map((r, i) => i !== idx ? r : {
+      ...r,
+      subranges: (r.subranges ?? []).map((s, j) => j === sIdx ? { ...s, ...patch } : s),
+    }));
+
+  const removeSubrange = (idx: number, sIdx: number) =>
+    setParams((prev) => prev.map((r, i) => {
+      if (i !== idx) return r;
+      const list = r.subranges ?? [];
+      const s = list[sIdx];
+      if (s?.id) {
+        return { ...r, subranges: list.map((x, j) => j === sIdx ? { ...x, _delete: true } : x) };
+      }
+      return { ...r, subranges: list.filter((_, j) => j !== sIdx) };
+    }));
 
   const removeRow = (idx: number) =>
     setParams((prev) => {
