@@ -509,7 +509,7 @@ export async function generatePathologyReportPDF(data: PathologyPdfData) {
           const srRef = sr.ref_display ||
             (sr.ref_min != null && sr.ref_max != null ? `${sr.ref_min} - ${sr.ref_max}` : '—');
           doc.text(srRef, COL_REF, y);
-          doc.text(p.unit || '', COL_UNIT, y);
+          // Unit intentionally omitted on subrange rows (shown once on parameter row)
           doc.setTextColor(0, 0, 0);
           doc.setFont('helvetica', 'normal');
           doc.setFontSize(9);
