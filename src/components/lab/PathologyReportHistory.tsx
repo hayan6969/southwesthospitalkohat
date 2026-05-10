@@ -208,6 +208,10 @@ async function loadFullReport(reportId: string): Promise<PathologyPdfData | null
   const testTypeIds = (tts ?? []).map((t: any) => t.test_type_id);
   const { data: params } = await supabase.from("lab_test_parameters").select("*").in("test_type_id", testTypeIds).order("sort_order");
   const { data: results } = await supabase.from("lab_pathology_report_results").select("*").eq("report_id", reportId);
+  const paramIds = (params ?? []).map((p: any) => p.id);
+  const { data: subrangesAll } = paramIds.length > 0
+    ? await supabase.from("lab_parameter_subranges").select("*").in("parameter_id", paramIds).order("sort_order")
+    : { data: [] as any[] };
 
   const phone = (await supabase.from("profiles").select("phone").eq("id", r.patient_id).single()).data?.phone ?? null;
 
