@@ -4,6 +4,7 @@ import AppLayout from "@/layouts/AppLayout";
 import { StatsCard } from "@/components/StatsCard";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MySupplyRequests } from "@/components/inventory/MySupplyRequests";
+import { IPDPharmacyQueue } from "@/components/ipd/IPDPharmacyQueue";
 
 import { Button } from "@/components/ui/button";
 import { usePharmacyStats, useExpiringMedicines, usePharmacyInvoices } from "@/hooks/useDatabase";
@@ -290,6 +291,9 @@ export default function DashboardPharmacy() {
           </TabsContent>
           <TabsContent value="supplies" className="space-y-6">
             <MySupplyRequests />
+          </TabsContent>
+          <TabsContent value="ipd" className="space-y-6">
+            <IPDPharmacyQueue />
           </TabsContent>
         </Tabs>
 
