@@ -149,6 +149,7 @@ export function TreatmentChartDialog({ open, onOpenChange, admissionId, patientN
       const { error } = await supabase.from("ipd_lab_orders").insert({
         admission_id: admissionId,
         test_name: form.test_name,
+        test_type_id: form.test_type_id || null,
         charge: form.charge ? Number(form.charge) : 0,
         ordered_by: profile?.id,
       });
