@@ -9,11 +9,13 @@ import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { usePatientNames, getPatientName } from "@/hooks/useDisplayHelpers";
 import { TreatmentChartDialog } from "./TreatmentChartDialog";
+import { DischargeBillDialog } from "./DischargeBillDialog";
 
 export function ActiveAdmissions() {
   const [rows, setRows] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [chartFor, setChartFor] = useState<any>(null);
+  const [billFor, setBillFor] = useState<any>(null);
   const { data: patientNames } = usePatientNames();
 
   const load = async () => {
