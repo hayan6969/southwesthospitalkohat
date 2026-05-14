@@ -12,6 +12,7 @@ import { toast } from "sonner";
 import { generateInvoicePDF } from "@/utils/pdfGenerator";
 import { supabase } from "@/integrations/supabase/client";
 import { useState, useEffect } from "react";
+import { ReferToIPDDialog } from "@/components/ipd/ReferToIPDDialog";
 
 export default function StaffAppointments() {
   const { data: appointmentsData, isLoading } = useAppointments();
@@ -271,6 +272,11 @@ export default function StaffAppointments() {
                                   Generate Invoice
                                 </Button>
                               )}
+                              <ReferToIPDDialog
+                                patientId={appointment.patient_id}
+                                doctorId={appointment.doctor_id}
+                                appointmentId={appointment.id}
+                              />
                             </>
                           )}
                         </div>
