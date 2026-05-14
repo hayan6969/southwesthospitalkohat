@@ -154,6 +154,50 @@ export type Database = {
           },
         ]
       }
+      beds: {
+        Row: {
+          bed_number: string
+          created_at: string
+          daily_charge: number
+          id: string
+          is_active: boolean
+          notes: string | null
+          status: string
+          updated_at: string
+          ward_id: string
+        }
+        Insert: {
+          bed_number: string
+          created_at?: string
+          daily_charge?: number
+          id?: string
+          is_active?: boolean
+          notes?: string | null
+          status?: string
+          updated_at?: string
+          ward_id: string
+        }
+        Update: {
+          bed_number?: string
+          created_at?: string
+          daily_charge?: number
+          id?: string
+          is_active?: boolean
+          notes?: string | null
+          status?: string
+          updated_at?: string
+          ward_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "beds_ward_id_fkey"
+            columns: ["ward_id"]
+            isOneToOne: false
+            referencedRelation: "wards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       daily_closings: {
         Row: {
           closing_date: string
@@ -861,6 +905,410 @@ export type Database = {
             columns: ["patient_id"]
             isOneToOne: false
             referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ipd_admissions: {
+        Row: {
+          admission_date: string
+          admission_number: string
+          bed_id: string | null
+          chief_complaint: string | null
+          created_at: string
+          created_by: string | null
+          discharge_date: string | null
+          doctor_id: string | null
+          final_diagnosis: string | null
+          id: string
+          notes: string | null
+          patient_id: string
+          provisional_diagnosis: string | null
+          referring_appointment_id: string | null
+          source: string
+          status: string
+          updated_at: string
+          ward_id: string | null
+        }
+        Insert: {
+          admission_date?: string
+          admission_number: string
+          bed_id?: string | null
+          chief_complaint?: string | null
+          created_at?: string
+          created_by?: string | null
+          discharge_date?: string | null
+          doctor_id?: string | null
+          final_diagnosis?: string | null
+          id?: string
+          notes?: string | null
+          patient_id: string
+          provisional_diagnosis?: string | null
+          referring_appointment_id?: string | null
+          source?: string
+          status?: string
+          updated_at?: string
+          ward_id?: string | null
+        }
+        Update: {
+          admission_date?: string
+          admission_number?: string
+          bed_id?: string | null
+          chief_complaint?: string | null
+          created_at?: string
+          created_by?: string | null
+          discharge_date?: string | null
+          doctor_id?: string | null
+          final_diagnosis?: string | null
+          id?: string
+          notes?: string | null
+          patient_id?: string
+          provisional_diagnosis?: string | null
+          referring_appointment_id?: string | null
+          source?: string
+          status?: string
+          updated_at?: string
+          ward_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ipd_admissions_bed_id_fkey"
+            columns: ["bed_id"]
+            isOneToOne: false
+            referencedRelation: "beds"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ipd_admissions_ward_id_fkey"
+            columns: ["ward_id"]
+            isOneToOne: false
+            referencedRelation: "wards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ipd_charges: {
+        Row: {
+          admission_id: string
+          amount: number
+          charge_date: string
+          charge_type: string
+          created_at: string
+          created_by: string | null
+          description: string
+          id: string
+          invoice_id: string | null
+          quantity: number
+          source_id: string | null
+          source_table: string | null
+          unit_price: number
+        }
+        Insert: {
+          admission_id: string
+          amount?: number
+          charge_date?: string
+          charge_type: string
+          created_at?: string
+          created_by?: string | null
+          description: string
+          id?: string
+          invoice_id?: string | null
+          quantity?: number
+          source_id?: string | null
+          source_table?: string | null
+          unit_price?: number
+        }
+        Update: {
+          admission_id?: string
+          amount?: number
+          charge_date?: string
+          charge_type?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string
+          id?: string
+          invoice_id?: string | null
+          quantity?: number
+          source_id?: string | null
+          source_table?: string | null
+          unit_price?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ipd_charges_admission_id_fkey"
+            columns: ["admission_id"]
+            isOneToOne: false
+            referencedRelation: "ipd_admissions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ipd_charges_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "ipd_invoices"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ipd_invoices: {
+        Row: {
+          admission_id: string
+          bed_charges_total: number
+          created_at: string
+          created_by: string | null
+          discount: number
+          doctor_charges_total: number
+          finalized_at: string | null
+          id: string
+          invoice_number: string
+          lab_charges_total: number
+          medicine_charges_total: number
+          nursing_charges_total: number
+          other_charges_total: number
+          paid_amount: number
+          patient_id: string
+          status: string
+          total_amount: number
+          updated_at: string
+        }
+        Insert: {
+          admission_id: string
+          bed_charges_total?: number
+          created_at?: string
+          created_by?: string | null
+          discount?: number
+          doctor_charges_total?: number
+          finalized_at?: string | null
+          id?: string
+          invoice_number: string
+          lab_charges_total?: number
+          medicine_charges_total?: number
+          nursing_charges_total?: number
+          other_charges_total?: number
+          paid_amount?: number
+          patient_id: string
+          status?: string
+          total_amount?: number
+          updated_at?: string
+        }
+        Update: {
+          admission_id?: string
+          bed_charges_total?: number
+          created_at?: string
+          created_by?: string | null
+          discount?: number
+          doctor_charges_total?: number
+          finalized_at?: string | null
+          id?: string
+          invoice_number?: string
+          lab_charges_total?: number
+          medicine_charges_total?: number
+          nursing_charges_total?: number
+          other_charges_total?: number
+          paid_amount?: number
+          patient_id?: string
+          status?: string
+          total_amount?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ipd_invoices_admission_id_fkey"
+            columns: ["admission_id"]
+            isOneToOne: true
+            referencedRelation: "ipd_admissions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ipd_lab_orders: {
+        Row: {
+          admission_id: string
+          charge: number
+          completed_at: string | null
+          completed_by: string | null
+          created_at: string
+          id: string
+          ordered_by: string | null
+          result_notes: string | null
+          status: string
+          test_name: string
+          test_type_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          admission_id: string
+          charge?: number
+          completed_at?: string | null
+          completed_by?: string | null
+          created_at?: string
+          id?: string
+          ordered_by?: string | null
+          result_notes?: string | null
+          status?: string
+          test_name: string
+          test_type_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          admission_id?: string
+          charge?: number
+          completed_at?: string | null
+          completed_by?: string | null
+          created_at?: string
+          id?: string
+          ordered_by?: string | null
+          result_notes?: string | null
+          status?: string
+          test_name?: string
+          test_type_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ipd_lab_orders_admission_id_fkey"
+            columns: ["admission_id"]
+            isOneToOne: false
+            referencedRelation: "ipd_admissions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ipd_medicine_orders: {
+        Row: {
+          administered_at: string | null
+          administered_by: string | null
+          admission_id: string
+          created_at: string
+          dispensed_at: string | null
+          dispensed_by: string | null
+          dosage: string | null
+          frequency: string | null
+          id: string
+          medicine_name: string
+          notes: string | null
+          ordered_by: string | null
+          quantity: number
+          route: string | null
+          status: string
+          unit_price: number
+          updated_at: string
+        }
+        Insert: {
+          administered_at?: string | null
+          administered_by?: string | null
+          admission_id: string
+          created_at?: string
+          dispensed_at?: string | null
+          dispensed_by?: string | null
+          dosage?: string | null
+          frequency?: string | null
+          id?: string
+          medicine_name: string
+          notes?: string | null
+          ordered_by?: string | null
+          quantity?: number
+          route?: string | null
+          status?: string
+          unit_price?: number
+          updated_at?: string
+        }
+        Update: {
+          administered_at?: string | null
+          administered_by?: string | null
+          admission_id?: string
+          created_at?: string
+          dispensed_at?: string | null
+          dispensed_by?: string | null
+          dosage?: string | null
+          frequency?: string | null
+          id?: string
+          medicine_name?: string
+          notes?: string | null
+          ordered_by?: string | null
+          quantity?: number
+          route?: string | null
+          status?: string
+          unit_price?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ipd_medicine_orders_admission_id_fkey"
+            columns: ["admission_id"]
+            isOneToOne: false
+            referencedRelation: "ipd_admissions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ipd_treatment_chart: {
+        Row: {
+          admission_id: string
+          bp_diastolic: number | null
+          bp_systolic: number | null
+          created_at: string
+          entry_type: string
+          fluid_rate: string | null
+          fluid_type: string | null
+          fluid_volume_ml: number | null
+          id: string
+          intake_ml: number | null
+          notes: string | null
+          output_ml: number | null
+          oxygen_saturation: number | null
+          pulse: number | null
+          recorded_at: string
+          recorded_by: string | null
+          respiratory_rate: number | null
+          temperature: number | null
+        }
+        Insert: {
+          admission_id: string
+          bp_diastolic?: number | null
+          bp_systolic?: number | null
+          created_at?: string
+          entry_type: string
+          fluid_rate?: string | null
+          fluid_type?: string | null
+          fluid_volume_ml?: number | null
+          id?: string
+          intake_ml?: number | null
+          notes?: string | null
+          output_ml?: number | null
+          oxygen_saturation?: number | null
+          pulse?: number | null
+          recorded_at?: string
+          recorded_by?: string | null
+          respiratory_rate?: number | null
+          temperature?: number | null
+        }
+        Update: {
+          admission_id?: string
+          bp_diastolic?: number | null
+          bp_systolic?: number | null
+          created_at?: string
+          entry_type?: string
+          fluid_rate?: string | null
+          fluid_type?: string | null
+          fluid_volume_ml?: number | null
+          id?: string
+          intake_ml?: number | null
+          notes?: string | null
+          output_ml?: number | null
+          oxygen_saturation?: number | null
+          pulse?: number | null
+          recorded_at?: string
+          recorded_by?: string | null
+          respiratory_rate?: number | null
+          temperature?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ipd_treatment_chart_admission_id_fkey"
+            columns: ["admission_id"]
+            isOneToOne: false
+            referencedRelation: "ipd_admissions"
             referencedColumns: ["id"]
           },
         ]
@@ -2637,6 +3085,39 @@ export type Database = {
           },
         ]
       }
+      wards: {
+        Row: {
+          created_at: string
+          description: string | null
+          floor: string | null
+          id: string
+          is_active: boolean
+          name: string
+          updated_at: string
+          ward_type: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          floor?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          updated_at?: string
+          ward_type?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          floor?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          updated_at?: string
+          ward_type?: string
+        }
+        Relationships: []
+      }
       xray_reports: {
         Row: {
           created_at: string | null
@@ -2796,10 +3277,12 @@ export type Database = {
         Returns: string
       }
       delete_user_safely: { Args: { user_uuid: string }; Returns: boolean }
+      generate_admission_number: { Args: never; Returns: string }
       generate_daily_doctor_payments: {
         Args: { target_date: string }
         Returns: number
       }
+      generate_ipd_invoice_number: { Args: never; Returns: string }
       generate_monthly_payroll: {
         Args: { target_month: string }
         Returns: number
