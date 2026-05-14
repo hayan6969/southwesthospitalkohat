@@ -102,7 +102,7 @@ export function BedDashboard() {
                 <div className="flex items-center justify-between gap-2 flex-wrap">
                   <CardTitle className="text-base flex items-center gap-2">
                     {w.name}
-                    <Badge variant="secondary" className="capitalize">{w.ward_type.replace("_", " ")}</Badge>
+                    <Badge variant="secondary" className="capitalize">{(w.ward_type ?? "general").replace("_", " ")}</Badge>
                     {w.floor && <span className="text-xs text-muted-foreground">Floor {w.floor}</span>}
                   </CardTitle>
                   <div className="text-xs text-muted-foreground">

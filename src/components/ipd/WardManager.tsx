@@ -148,7 +148,7 @@ export function WardManager() {
                 {wards.map((w) => (
                   <TableRow key={w.id}>
                     <TableCell className="font-medium">{w.name}</TableCell>
-                    <TableCell><Badge variant="secondary">{w.ward_type.replace("_", " ")}</Badge></TableCell>
+                    <TableCell><Badge variant="secondary">{(w.ward_type ?? "general").replace("_", " ")}</Badge></TableCell>
                     <TableCell>{w.floor ?? "—"}</TableCell>
                     <TableCell className="max-w-xs truncate">{w.description ?? "—"}</TableCell>
                     <TableCell className="text-right">
