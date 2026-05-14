@@ -11,7 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
-import { Loader2, Plus, Activity, StickyNote, Droplets, Pill } from "lucide-react";
+import { Loader2, Plus, Activity, StickyNote, Droplets, Pill, FlaskConical } from "lucide-react";
 import { format } from "date-fns";
 
 interface Props {
@@ -29,6 +29,7 @@ export function TreatmentChartDialog({ open, onOpenChange, admissionId, patientN
   const [tab, setTab] = useState<EntryType>("vitals");
   const [entries, setEntries] = useState<any[]>([]);
   const [meds, setMeds] = useState<any[]>([]);
+  const [labs, setLabs] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState<any>({});
