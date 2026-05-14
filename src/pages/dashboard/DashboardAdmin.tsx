@@ -814,6 +814,10 @@ export default function DashboardAdmin() {
               <AdminOT />
             </TabsContent>
 
+            <TabsContent value="ipd">
+              <IPDAdminPanel />
+            </TabsContent>
+
             <TabsContent value="emergency">
               <EmergencyExpensesManager />
             </TabsContent>
