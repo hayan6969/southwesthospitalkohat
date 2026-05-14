@@ -38,7 +38,7 @@ export function ActiveAdmissions() {
   }, []);
 
   const discharge = async (id: string) => {
-    if (!confirm("Discharge this patient?")) return;
+    if (!confirm("Discharge without final bill? (Use 'Discharge & Bill' for full settlement)")) return;
     const { error } = await supabase.from("ipd_admissions").update({
       status: "discharged",
       discharge_date: new Date().toISOString(),
