@@ -12,9 +12,10 @@ import { StaffXray } from "@/components/staff/StaffXray";
 import { StaffRevenueBreakdown } from "@/components/staff/StaffRevenueBreakdown";
 import { StaffShiftClosing } from "@/components/staff/StaffShiftClosing";
 import { StaffPathologyBilling } from "@/components/staff/StaffPathologyBilling";
+import { StaffIPDRegister } from "@/components/staff/StaffIPDRegister";
 import { PathologyReportHistory } from "@/components/lab/PathologyReportHistory";
 import { PatientSearchDialog } from "@/components/staff/PatientSearchDialog";
-import { Receipt, TestTube, Building2, FileText, Image, Search, ShoppingCart, Clock, Microscope } from "lucide-react";
+import { Receipt, TestTube, Building2, FileText, Image, Search, ShoppingCart, Clock, Microscope, BedDouble } from "lucide-react";
 import { useHospitalSettings } from "@/hooks/useHospitalSettings";
 import { AdminDashboardNav } from "@/components/AdminDashboardNav";
 
