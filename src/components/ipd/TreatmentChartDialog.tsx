@@ -137,6 +137,28 @@ export function TreatmentChartDialog({ open, onOpenChange, admissionId, patientN
     load();
   };
 
+  const saveLab = async () => {
+    if (!canWrite) return;
+    if (!form.test_name) { toast.error("Test name required"); return; }
+    setSaving(true);
+    try {
+      const { error } = await supabase.from("ipd_lab_orders").insert({
+        admission_id: admissionId,
+        test_name: form.test_name,
+        charge: form.charge ? Number(form.charge) : 0,
+        ordered_by: profile?.id,
+      });
+      if (error) throw error;
+      toast.success("Lab test ordered");
+      setForm({});
+      load();
+    } catch (e: any) {
+      toast.error(e.message || "Failed");
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-5xl max-h-[85vh] overflow-y-auto z-[9999]">
