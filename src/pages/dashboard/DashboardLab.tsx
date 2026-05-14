@@ -7,8 +7,9 @@ import { LabItemSupply } from "@/components/inventory/LabItemSupply";
 import { PathologyReportWizard } from "@/components/lab/PathologyReportWizard";
 import { PathologyReportHistory } from "@/components/lab/PathologyReportHistory";
 import { PathologyTestTypeManager } from "@/components/lab/PathologyTestTypeManager";
-import { ShoppingCart, FlaskConical, Microscope, History, Settings2 } from "lucide-react";
+import { ShoppingCart, FlaskConical, Microscope, History, Settings2, BedDouble } from "lucide-react";
 import AppLayout from "@/layouts/AppLayout";
+import { IPDLabQueue } from "@/components/ipd/IPDLabQueue";
 
 export default function DashboardLab() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -47,11 +48,19 @@ export default function DashboardLab() {
             <FlaskConical className="w-3.5 h-3.5" />
             <span>Lab Item Supply</span>
           </TabsTrigger>
+          <TabsTrigger value="ipd" className="flex items-center gap-1.5 text-xs sm:text-sm">
+            <BedDouble className="w-3.5 h-3.5" />
+            <span>IPD Orders</span>
+          </TabsTrigger>
           <TabsTrigger value="supplies" className="flex items-center gap-1.5 text-xs sm:text-sm">
             <ShoppingCart className="w-3.5 h-3.5" />
             <span>Request Supplies</span>
           </TabsTrigger>
         </TabsList>
+
+        <TabsContent value="ipd">
+          <IPDLabQueue />
+        </TabsContent>
 
         <TabsContent value="pathology">
           <PathologyReportWizard />
