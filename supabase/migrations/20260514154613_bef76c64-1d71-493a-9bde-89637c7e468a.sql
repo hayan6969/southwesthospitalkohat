@@ -1,0 +1,2 @@
+ALTER TABLE public.profiles DROP CONSTRAINT IF EXISTS profiles_role_check;
+ALTER TABLE public.profiles ADD CONSTRAINT profiles_role_check CHECK (role = ANY (ARRAY['admin'::text, 'doctor'::text, 'staff'::text, 'ota'::text, 'ipd'::text, 'head_pharmacist'::text, 'assistant_pharmacist'::text, 'salesman_pharmacist'::text, 'patient'::text, 'finance'::text, 'nursing'::text, 'inventory_manager'::text, 'store'::text, 'lab'::text]));
