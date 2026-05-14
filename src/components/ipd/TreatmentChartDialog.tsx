@@ -39,12 +39,14 @@ export function TreatmentChartDialog({ open, onOpenChange, admissionId, patientN
   const load = async () => {
     if (!admissionId) return;
     setLoading(true);
-    const [{ data: c }, { data: m }] = await Promise.all([
+    const [{ data: c }, { data: m }, { data: l }] = await Promise.all([
       supabase.from("ipd_treatment_chart").select("*").eq("admission_id", admissionId).order("recorded_at", { ascending: false }),
       supabase.from("ipd_medicine_orders").select("*").eq("admission_id", admissionId).order("created_at", { ascending: false }),
+      supabase.from("ipd_lab_orders").select("*").eq("admission_id", admissionId).order("created_at", { ascending: false }),
     ]);
     setEntries(c ?? []);
     setMeds(m ?? []);
+    setLabs(l ?? []);
     setLoading(false);
   };
 
