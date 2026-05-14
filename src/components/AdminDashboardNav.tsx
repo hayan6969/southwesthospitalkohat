@@ -8,12 +8,14 @@ import {
   Calendar,
   Building2,
   Package,
-  Warehouse
+  Warehouse,
+  BedDouble
 } from "lucide-react";
 
 const dashboards = [
   { path: "/dashboard/admin", label: "Admin", icon: Settings },
   { path: "/dashboard/admin/departments", label: "Departments", icon: Building2 },
+  { path: "/dashboard/admin/ipd", label: "IPD", icon: BedDouble },
   { path: "/dashboard/finance", label: "Finance", icon: DollarSign },
   { path: "/dashboard/pharmacy", label: "Pharmacy", icon: Pill },
   { path: "/dashboard/staff", label: "Staff", icon: UserCog },

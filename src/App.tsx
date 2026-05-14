@@ -51,6 +51,7 @@ import AdminDoctors from "./pages/dashboard/admin/AdminDoctors";
 import AdminAuditLogs from "./pages/dashboard/admin/AdminAuditLogs";
 import AdminSettings from "./pages/dashboard/admin/AdminSettings";
 import AdminRegions from "./pages/dashboard/admin/AdminRegions";
+import AdminIPD from "./pages/dashboard/admin/AdminIPD";
 
 // Pharmacy pages
 import PharmacyMedicines from "./pages/dashboard/pharmacy/PharmacyMedicines";
@@ -224,6 +225,11 @@ const App = () => (
             <Route path="/dashboard/admin/regions" element={
               <ProtectedRoute allowedRoles={['admin']}>
                 <AdminRegions />
+              </ProtectedRoute>
+            } />
+            <Route path="/dashboard/admin/ipd" element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <AdminIPD />
               </ProtectedRoute>
             } />
 
