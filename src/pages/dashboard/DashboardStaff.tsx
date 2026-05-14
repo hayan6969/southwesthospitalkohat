@@ -112,6 +112,10 @@ export default function DashboardStaff() {
                   <FileText className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                   Invoices
                 </TabsTrigger>
+                <TabsTrigger value="ipd" className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm whitespace-nowrap">
+                  <BedDouble className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                  IPD
+                </TabsTrigger>
                 <TabsTrigger value="shift-closing" className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm whitespace-nowrap">
                   <Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                   Shift Close
