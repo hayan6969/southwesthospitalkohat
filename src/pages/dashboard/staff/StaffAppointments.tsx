@@ -272,6 +272,11 @@ export default function StaffAppointments() {
                                   Generate Invoice
                                 </Button>
                               )}
+                              <ReferToIPDDialog
+                                patientId={appointment.patient_id}
+                                doctorId={appointment.doctor_id}
+                                appointmentId={appointment.id}
+                              />
                             </>
                           )}
                         </div>
