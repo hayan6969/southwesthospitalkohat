@@ -11,7 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
-import { Loader2, Plus, Activity, StickyNote, Droplets, Pill } from "lucide-react";
+import { Loader2, Plus, Activity, StickyNote, Droplets, Pill, FlaskConical } from "lucide-react";
 import { format } from "date-fns";
 
 interface Props {
@@ -29,6 +29,7 @@ export function TreatmentChartDialog({ open, onOpenChange, admissionId, patientN
   const [tab, setTab] = useState<EntryType>("vitals");
   const [entries, setEntries] = useState<any[]>([]);
   const [meds, setMeds] = useState<any[]>([]);
+  const [labs, setLabs] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState<any>({});
@@ -38,12 +39,14 @@ export function TreatmentChartDialog({ open, onOpenChange, admissionId, patientN
   const load = async () => {
     if (!admissionId) return;
     setLoading(true);
-    const [{ data: c }, { data: m }] = await Promise.all([
+    const [{ data: c }, { data: m }, { data: l }] = await Promise.all([
       supabase.from("ipd_treatment_chart").select("*").eq("admission_id", admissionId).order("recorded_at", { ascending: false }),
       supabase.from("ipd_medicine_orders").select("*").eq("admission_id", admissionId).order("created_at", { ascending: false }),
+      supabase.from("ipd_lab_orders").select("*").eq("admission_id", admissionId).order("created_at", { ascending: false }),
     ]);
     setEntries(c ?? []);
     setMeds(m ?? []);
+    setLabs(l ?? []);
     setLoading(false);
   };
 
@@ -134,6 +137,28 @@ export function TreatmentChartDialog({ open, onOpenChange, admissionId, patientN
     load();
   };
 
+  const saveLab = async () => {
+    if (!canWrite) return;
+    if (!form.test_name) { toast.error("Test name required"); return; }
+    setSaving(true);
+    try {
+      const { error } = await supabase.from("ipd_lab_orders").insert({
+        admission_id: admissionId,
+        test_name: form.test_name,
+        charge: form.charge ? Number(form.charge) : 0,
+        ordered_by: profile?.id,
+      });
+      if (error) throw error;
+      toast.success("Lab test ordered");
+      setForm({});
+      load();
+    } catch (e: any) {
+      toast.error(e.message || "Failed");
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-5xl max-h-[85vh] overflow-y-auto z-[9999]">
@@ -152,6 +177,7 @@ export function TreatmentChartDialog({ open, onOpenChange, admissionId, patientN
             <TabsTrigger value="iv_fluid" className="gap-1.5"><Droplets className="w-4 h-4" />IV Fluids</TabsTrigger>
             <TabsTrigger value="intake_output" className="gap-1.5"><Droplets className="w-4 h-4" />I / O</TabsTrigger>
             <TabsTrigger value={"medicine" as any} className="gap-1.5"><Pill className="w-4 h-4" />Medicine</TabsTrigger>
+            <TabsTrigger value={"lab" as any} className="gap-1.5"><FlaskConical className="w-4 h-4" />Lab</TabsTrigger>
           </TabsList>
 
           {/* Vitals */}
@@ -286,6 +312,43 @@ export function TreatmentChartDialog({ open, onOpenChange, admissionId, patientN
                         {m.status === "pending" && <Button size="sm" variant="outline" onClick={() => updateMedStatus(m.id, "dispensed")}>Dispense</Button>}
                         {m.status === "dispensed" && <Button size="sm" variant="outline" onClick={() => updateMedStatus(m.id, "administered")}>Administer</Button>}
                       </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </TabsContent>
+
+          {/* Lab orders */}
+          <TabsContent value={"lab" as any} className="space-y-4 mt-4">
+            {canWrite && (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3 p-4 border rounded-md">
+                <div className="md:col-span-2"><Label>Test Name</Label><Input value={form.test_name ?? ""} onChange={e => setForm({ ...form, test_name: e.target.value })} placeholder="e.g. CBC, LFT, Serum Electrolytes" /></div>
+                <div><Label>Charge (PKR)</Label><Input type="number" value={form.charge ?? ""} onChange={e => setForm({ ...form, charge: e.target.value })} /></div>
+                <div className="md:col-span-3"><Button onClick={saveLab} disabled={saving} size="sm"><Plus className="w-4 h-4 mr-1" />Order Test</Button></div>
+              </div>
+            )}
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Time</TableHead>
+                    <TableHead>Test</TableHead>
+                    <TableHead>Charge</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Result</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {labs.length === 0 ? (
+                    <TableRow><TableCell colSpan={5} className="text-center text-sm text-muted-foreground py-6">No lab orders</TableCell></TableRow>
+                  ) : labs.map((l) => (
+                    <TableRow key={l.id}>
+                      <TableCell className="text-xs">{format(new Date(l.created_at), "MMM d HH:mm")}</TableCell>
+                      <TableCell className="font-medium">{l.test_name}</TableCell>
+                      <TableCell>PKR {Number(l.charge ?? 0).toLocaleString()}</TableCell>
+                      <TableCell><Badge variant="outline">{l.status}</Badge></TableCell>
+                      <TableCell className="text-xs whitespace-pre-wrap">{l.result_notes ?? "—"}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
