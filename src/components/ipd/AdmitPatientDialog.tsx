@@ -133,7 +133,7 @@ export function AdmitPatientDialog({ open, onOpenChange, admission, onAdmitted }
               <SelectTrigger><SelectValue placeholder="Select doctor" /></SelectTrigger>
               <SelectContent className="z-[10000]">
                 {doctors.map((d: any) => {
-                  const n = d.profiles ? `${d.profiles.first_name ?? ""} ${d.profiles.last_name ?? ""}`.trim() : d.id;
+                  const n = `${d.first_name ?? ""} ${d.last_name ?? ""}`.trim() || "Doctor";
                   return <SelectItem key={d.id} value={d.id}>Dr. {n}{d.specialization ? ` — ${d.specialization}` : ""}</SelectItem>;
                 })}
               </SelectContent>
