@@ -8,10 +8,12 @@ import { format } from "date-fns";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { usePatientNames, getPatientName } from "@/hooks/useDisplayHelpers";
+import { TreatmentChartDialog } from "./TreatmentChartDialog";
 
 export function ActiveAdmissions() {
   const [rows, setRows] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [chartFor, setChartFor] = useState<any>(null);
   const { data: patientNames } = usePatientNames();
 
   const load = async () => {
@@ -73,7 +75,8 @@ export function ActiveAdmissions() {
                     <TableCell><Badge variant="outline">{r.wards?.name} / Bed {r.beds?.bed_number}</Badge></TableCell>
                     <TableCell className="max-w-xs truncate">{r.provisional_diagnosis || r.chief_complaint || "—"}</TableCell>
                     <TableCell className="text-xs">{format(new Date(r.admission_date), "MMM d, HH:mm")}</TableCell>
-                    <TableCell>
+                    <TableCell className="space-x-1">
+                      <Button size="sm" variant="outline" onClick={() => setChartFor(r)}>Chart</Button>
                       <Button size="sm" variant="outline" onClick={() => discharge(r.id)}>Discharge</Button>
                     </TableCell>
                   </TableRow>
@@ -83,6 +86,15 @@ export function ActiveAdmissions() {
           </div>
         )}
       </CardContent>
+      {chartFor && (
+        <TreatmentChartDialog
+          open={!!chartFor}
+          onOpenChange={(o) => !o && setChartFor(null)}
+          admissionId={chartFor.id}
+          patientName={getPatientName(chartFor.patient_id, patientNames || [])}
+          admissionNumber={chartFor.admission_number}
+        />
+      )}
     </Card>
   );
 }
