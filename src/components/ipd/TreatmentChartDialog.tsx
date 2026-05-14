@@ -267,8 +267,13 @@ export function TreatmentChartDialog({ open, onOpenChange, admissionId, patientN
           {/* Medicine orders */}
           <TabsContent value={"medicine" as any} className="space-y-4 mt-4">
             {canWrite && (
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-3 p-4 border rounded-md">
-                <div><Label>Medicine</Label><Input value={form.medicine_name ?? ""} onChange={e => setForm({ ...form, medicine_name: e.target.value })} /></div>
+                <div className="md:col-span-2">
+                  <Label>Medicine</Label>
+                  <MedicinePicker
+                    value={form.medicine_name ?? ""}
+                    onSelect={(m) => setForm({ ...form, medicine_name: m.name, unit_price: String(m.selling_price ?? 0) })}
+                  />
+                </div>
                 <div><Label>Dosage</Label><Input value={form.dosage ?? ""} onChange={e => setForm({ ...form, dosage: e.target.value })} placeholder="e.g. 500mg" /></div>
                 <div><Label>Frequency</Label><Input value={form.frequency ?? ""} onChange={e => setForm({ ...form, frequency: e.target.value })} placeholder="e.g. BD / TDS" /></div>
                 <div>
