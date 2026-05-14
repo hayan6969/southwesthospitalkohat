@@ -396,3 +396,93 @@ function EntriesTable({ rows, loading, columns }: { rows: any[]; loading: boolea
     </div>
   );
 }
+
+function MedicinePicker({ value, onSelect }: { value: string; onSelect: (m: { id: string; name: string; selling_price: number }) => void }) {
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState("");
+  const [items, setItems] = useState<any[]>([]);
+  useEffect(() => {
+    if (!open) return;
+    const t = setTimeout(async () => {
+      let q = supabase.from("medicines").select("id,name,selling_price,stock_quantity").order("name").limit(50);
+      if (search.trim()) q = q.ilike("name", `%${search.trim()}%`);
+      const { data } = await q;
+      setItems(data ?? []);
+    }, 200);
+    return () => clearTimeout(t);
+  }, [open, search]);
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button variant="outline" role="combobox" className="w-full justify-between">
+          {value || "Search medicine..."}
+          <ChevronsUpDown className="ml-2 h-4 w-4 opacity-50" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-[--radix-popover-trigger-width] p-0 z-[10000]" align="start">
+        <Command shouldFilter={false}>
+          <CommandInput placeholder="Type to search pharmacy..." value={search} onValueChange={setSearch} />
+          <CommandList>
+            <CommandEmpty>No medicine found.</CommandEmpty>
+            <CommandGroup>
+              {items.map((m) => (
+                <CommandItem key={m.id} value={m.id} onSelect={() => { onSelect(m); setOpen(false); setSearch(""); }}>
+                  <Check className={cn("mr-2 h-4 w-4", value === m.name ? "opacity-100" : "opacity-0")} />
+                  <div className="flex flex-col flex-1">
+                    <span className="font-medium">{m.name}</span>
+                    <span className="text-xs text-muted-foreground">PKR {Number(m.selling_price).toLocaleString()} • Stock: {m.stock_quantity}</span>
+                  </div>
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+function LabTestPicker({ value, onSelect }: { value: string; onSelect: (t: { id: string; name: string; price: number }) => void }) {
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState("");
+  const [items, setItems] = useState<any[]>([]);
+  useEffect(() => {
+    if (!open) return;
+    const t = setTimeout(async () => {
+      let q = supabase.from("lab_tests").select("id,name,price,category").order("name").limit(50);
+      if (search.trim()) q = q.ilike("name", `%${search.trim()}%`);
+      const { data } = await q;
+      setItems(data ?? []);
+    }, 200);
+    return () => clearTimeout(t);
+  }, [open, search]);
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button variant="outline" role="combobox" className="w-full justify-between">
+          {value || "Search lab tests..."}
+          <ChevronsUpDown className="ml-2 h-4 w-4 opacity-50" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-[--radix-popover-trigger-width] p-0 z-[10000]" align="start">
+        <Command shouldFilter={false}>
+          <CommandInput placeholder="Type to search lab tests..." value={search} onValueChange={setSearch} />
+          <CommandList>
+            <CommandEmpty>No test found.</CommandEmpty>
+            <CommandGroup>
+              {items.map((t) => (
+                <CommandItem key={t.id} value={t.id} onSelect={() => { onSelect(t); setOpen(false); setSearch(""); }}>
+                  <Check className={cn("mr-2 h-4 w-4", value === t.name ? "opacity-100" : "opacity-0")} />
+                  <div className="flex flex-col flex-1">
+                    <span className="font-medium">{t.name}</span>
+                    <span className="text-xs text-muted-foreground">PKR {Number(t.price ?? 0).toLocaleString()}{t.category ? ` • ${t.category}` : ""}</span>
+                  </div>
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
+  );
+}
