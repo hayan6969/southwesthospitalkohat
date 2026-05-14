@@ -9,11 +9,13 @@ import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { usePatientNames, getPatientName } from "@/hooks/useDisplayHelpers";
 import { TreatmentChartDialog } from "./TreatmentChartDialog";
+import { DischargeBillDialog } from "./DischargeBillDialog";
 
 export function ActiveAdmissions() {
   const [rows, setRows] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [chartFor, setChartFor] = useState<any>(null);
+  const [billFor, setBillFor] = useState<any>(null);
   const { data: patientNames } = usePatientNames();
 
   const load = async () => {
@@ -36,7 +38,7 @@ export function ActiveAdmissions() {
   }, []);
 
   const discharge = async (id: string) => {
-    if (!confirm("Discharge this patient?")) return;
+    if (!confirm("Discharge without final bill? (Use 'Discharge & Bill' for full settlement)")) return;
     const { error } = await supabase.from("ipd_admissions").update({
       status: "discharged",
       discharge_date: new Date().toISOString(),
@@ -77,7 +79,8 @@ export function ActiveAdmissions() {
                     <TableCell className="text-xs">{format(new Date(r.admission_date), "MMM d, HH:mm")}</TableCell>
                     <TableCell className="space-x-1">
                       <Button size="sm" variant="outline" onClick={() => setChartFor(r)}>Chart</Button>
-                      <Button size="sm" variant="outline" onClick={() => discharge(r.id)}>Discharge</Button>
+                      <Button size="sm" onClick={() => setBillFor(r)}>Discharge & Bill</Button>
+                      <Button size="sm" variant="ghost" onClick={() => discharge(r.id)}>Quick</Button>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -93,6 +96,15 @@ export function ActiveAdmissions() {
           admissionId={chartFor.id}
           patientName={getPatientName(chartFor.patient_id, patientNames || [])}
           admissionNumber={chartFor.admission_number}
+        />
+      )}
+      {billFor && (
+        <DischargeBillDialog
+          open={!!billFor}
+          onOpenChange={(o) => !o && setBillFor(null)}
+          admission={billFor}
+          patientName={getPatientName(billFor.patient_id, patientNames || [])}
+          onDischarged={load}
         />
       )}
     </Card>
