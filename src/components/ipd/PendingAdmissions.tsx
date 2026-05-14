@@ -6,7 +6,6 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { format } from "date-fns";
 import { AdmitPatientDialog } from "./AdmitPatientDialog";
-import { ReferToIPDDialog } from "./ReferToIPDDialog";
 import { Loader2 } from "lucide-react";
 import { usePatientNames, getPatientName } from "@/hooks/useDisplayHelpers";
 
