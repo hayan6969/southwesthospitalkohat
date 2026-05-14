@@ -38,10 +38,19 @@ export function AdmitPatientDialog({ open, onOpenChange, admission, onAdmitted }
     (async () => {
       const [{ data: w }, { data: d }] = await Promise.all([
         supabase.from("wards").select("id,name").eq("is_active", true).order("name"),
-        supabase.from("doctors").select("id, specialization, profiles:id(first_name,last_name)").limit(500),
+        supabase.from("profiles")
+          .select("id, first_name, last_name, doctors!inner(specialization)")
+          .eq("role", "doctor")
+          .eq("is_active", true)
+          .order("first_name"),
       ]);
       setWards(w ?? []);
-      setDoctors(d ?? []);
+      setDoctors((d ?? []).map((p: any) => ({
+        id: p.id,
+        first_name: p.first_name,
+        last_name: p.last_name,
+        specialization: p.doctors?.specialization || p.doctors?.[0]?.specialization || "",
+      })));
     })();
   }, [open, admission]);
 
