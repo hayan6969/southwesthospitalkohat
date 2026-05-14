@@ -79,7 +79,8 @@ export function ActiveAdmissions() {
                     <TableCell className="text-xs">{format(new Date(r.admission_date), "MMM d, HH:mm")}</TableCell>
                     <TableCell className="space-x-1">
                       <Button size="sm" variant="outline" onClick={() => setChartFor(r)}>Chart</Button>
-                      <Button size="sm" variant="outline" onClick={() => discharge(r.id)}>Discharge</Button>
+                      <Button size="sm" onClick={() => setBillFor(r)}>Discharge & Bill</Button>
+                      <Button size="sm" variant="ghost" onClick={() => discharge(r.id)}>Quick</Button>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -95,6 +96,15 @@ export function ActiveAdmissions() {
           admissionId={chartFor.id}
           patientName={getPatientName(chartFor.patient_id, patientNames || [])}
           admissionNumber={chartFor.admission_number}
+        />
+      )}
+      {billFor && (
+        <DischargeBillDialog
+          open={!!billFor}
+          onOpenChange={(o) => !o && setBillFor(null)}
+          admission={billFor}
+          patientName={getPatientName(billFor.patient_id, patientNames || [])}
+          onDischarged={load}
         />
       )}
     </Card>
