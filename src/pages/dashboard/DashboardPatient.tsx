@@ -8,7 +8,8 @@ import { StatsCard } from "@/components/StatsCard";
 import { DemoTable } from "@/components/DemoTable";
 import { AuditLog } from "@/components/AuditLog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Calendar, FileText, Banknote, Activity, Clock, Users, TestTube, Upload, Building2, Settings, ShoppingCart } from "lucide-react";
+import { Calendar, FileText, Banknote, Activity, Clock, Users, TestTube, Upload, Building2, Settings, ShoppingCart, BedDouble } from "lucide-react";
+import { PatientIPDView } from "@/components/ipd/PatientIPDView";
 import { MySupplyRequests } from "@/components/inventory/MySupplyRequests";
 import { useAuth } from "@/hooks/useAuth";
 import { AppointmentBooking } from "@/components/AppointmentBooking";
@@ -287,7 +288,7 @@ export default function DashboardPatient() {
     <PatientLayout>
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <div className="mb-6 overflow-x-auto">
-          <TabsList className="grid w-full min-w-max grid-cols-9 lg:grid-cols-9">
+          <TabsList className="grid w-full min-w-max grid-cols-10 lg:grid-cols-10">
             <TabsTrigger value="overview" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-4">
               <Activity className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
               <span className="hidden sm:inline">Overview</span>
@@ -322,6 +323,11 @@ export default function DashboardPatient() {
               <Building2 className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
               <span className="hidden sm:inline">OT</span>
               <span className="sm:hidden">OT</span>
+            </TabsTrigger>
+            <TabsTrigger value="ipd" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-4">
+              <BedDouble className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
+              <span className="hidden sm:inline">IPD</span>
+              <span className="sm:hidden">IPD</span>
             </TabsTrigger>
             <TabsTrigger value="supplies" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-4">
               <ShoppingCart className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
@@ -362,6 +368,10 @@ export default function DashboardPatient() {
 
         <TabsContent value="ot" className="space-y-4">
           {renderOTTab()}
+        </TabsContent>
+
+        <TabsContent value="ipd" className="space-y-4">
+          <PatientIPDView />
         </TabsContent>
 
         <TabsContent value="settings" className="space-y-4">
