@@ -267,6 +267,7 @@ export function TreatmentChartDialog({ open, onOpenChange, admissionId, patientN
           {/* Medicine orders */}
           <TabsContent value={"medicine" as any} className="space-y-4 mt-4">
             {canWrite && (
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-3 p-4 border rounded-md">
                 <div className="md:col-span-2">
                   <Label>Medicine</Label>
                   <MedicinePicker
