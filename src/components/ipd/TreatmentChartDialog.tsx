@@ -57,7 +57,7 @@ export function TreatmentChartDialog({ open, onOpenChange, admissionId, patientN
     if (!canWrite) return;
     setSaving(true);
     try {
-      if (tab === "medicine") return;
+      if ((tab as string) === "medicine") return;
       const payload: any = {
         admission_id: admissionId,
         entry_type: tab,
