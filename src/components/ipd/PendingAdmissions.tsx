@@ -37,12 +37,8 @@ export function PendingAdmissions() {
 
   return (
     <Card>
-      <CardHeader className="flex flex-row items-center justify-between">
+      <CardHeader>
         <CardTitle>Pending Admissions ({rows.length})</CardTitle>
-        <ReferToIPDDialog
-          patientId=""
-          trigger={<Button size="sm" variant="outline">+ Direct Admission</Button>}
-        />
       </CardHeader>
       <CardContent>
         {loading ? (
