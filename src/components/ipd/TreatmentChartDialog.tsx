@@ -8,6 +8,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { ChevronsUpDown, Check } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
@@ -145,6 +149,7 @@ export function TreatmentChartDialog({ open, onOpenChange, admissionId, patientN
       const { error } = await supabase.from("ipd_lab_orders").insert({
         admission_id: admissionId,
         test_name: form.test_name,
+        test_type_id: form.test_type_id || null,
         charge: form.charge ? Number(form.charge) : 0,
         ordered_by: profile?.id,
       });
@@ -264,7 +269,13 @@ export function TreatmentChartDialog({ open, onOpenChange, admissionId, patientN
           <TabsContent value={"medicine" as any} className="space-y-4 mt-4">
             {canWrite && (
               <div className="grid grid-cols-2 md:grid-cols-3 gap-3 p-4 border rounded-md">
-                <div><Label>Medicine</Label><Input value={form.medicine_name ?? ""} onChange={e => setForm({ ...form, medicine_name: e.target.value })} /></div>
+                <div className="md:col-span-2">
+                  <Label>Medicine</Label>
+                  <MedicinePicker
+                    value={form.medicine_name ?? ""}
+                    onSelect={(m) => setForm({ ...form, medicine_name: m.name, unit_price: String(m.selling_price ?? 0) })}
+                  />
+                </div>
                 <div><Label>Dosage</Label><Input value={form.dosage ?? ""} onChange={e => setForm({ ...form, dosage: e.target.value })} placeholder="e.g. 500mg" /></div>
                 <div><Label>Frequency</Label><Input value={form.frequency ?? ""} onChange={e => setForm({ ...form, frequency: e.target.value })} placeholder="e.g. BD / TDS" /></div>
                 <div>
@@ -323,7 +334,13 @@ export function TreatmentChartDialog({ open, onOpenChange, admissionId, patientN
           <TabsContent value={"lab" as any} className="space-y-4 mt-4">
             {canWrite && (
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3 p-4 border rounded-md">
-                <div className="md:col-span-2"><Label>Test Name</Label><Input value={form.test_name ?? ""} onChange={e => setForm({ ...form, test_name: e.target.value })} placeholder="e.g. CBC, LFT, Serum Electrolytes" /></div>
+                <div className="md:col-span-2">
+                  <Label>Test Name</Label>
+                  <LabTestPicker
+                    value={form.test_name ?? ""}
+                    onSelect={(t) => setForm({ ...form, test_name: t.name, test_type_id: t.id, charge: String(t.price ?? 0) })}
+                  />
+                </div>
                 <div><Label>Charge (PKR)</Label><Input type="number" value={form.charge ?? ""} onChange={e => setForm({ ...form, charge: e.target.value })} /></div>
                 <div className="md:col-span-3"><Button onClick={saveLab} disabled={saving} size="sm"><Plus className="w-4 h-4 mr-1" />Order Test</Button></div>
               </div>
@@ -377,5 +394,95 @@ function EntriesTable({ rows, loading, columns }: { rows: any[]; loading: boolea
         </TableBody>
       </Table>
     </div>
+  );
+}
+
+function MedicinePicker({ value, onSelect }: { value: string; onSelect: (m: { id: string; name: string; selling_price: number }) => void }) {
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState("");
+  const [items, setItems] = useState<any[]>([]);
+  useEffect(() => {
+    if (!open) return;
+    const t = setTimeout(async () => {
+      let q = supabase.from("medicines").select("id,name,selling_price,stock_quantity").order("name").limit(50);
+      if (search.trim()) q = q.ilike("name", `%${search.trim()}%`);
+      const { data } = await q;
+      setItems(data ?? []);
+    }, 200);
+    return () => clearTimeout(t);
+  }, [open, search]);
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button variant="outline" role="combobox" className="w-full justify-between">
+          {value || "Search medicine..."}
+          <ChevronsUpDown className="ml-2 h-4 w-4 opacity-50" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-[--radix-popover-trigger-width] p-0 z-[10000]" align="start">
+        <Command shouldFilter={false}>
+          <CommandInput placeholder="Type to search pharmacy..." value={search} onValueChange={setSearch} />
+          <CommandList>
+            <CommandEmpty>No medicine found.</CommandEmpty>
+            <CommandGroup>
+              {items.map((m) => (
+                <CommandItem key={m.id} value={m.id} onSelect={() => { onSelect(m); setOpen(false); setSearch(""); }}>
+                  <Check className={cn("mr-2 h-4 w-4", value === m.name ? "opacity-100" : "opacity-0")} />
+                  <div className="flex flex-col flex-1">
+                    <span className="font-medium">{m.name}</span>
+                    <span className="text-xs text-muted-foreground">PKR {Number(m.selling_price).toLocaleString()} • Stock: {m.stock_quantity}</span>
+                  </div>
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+function LabTestPicker({ value, onSelect }: { value: string; onSelect: (t: { id: string; name: string; price: number }) => void }) {
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState("");
+  const [items, setItems] = useState<any[]>([]);
+  useEffect(() => {
+    if (!open) return;
+    const t = setTimeout(async () => {
+      let q = supabase.from("lab_tests").select("id,name,price,category").order("name").limit(50);
+      if (search.trim()) q = q.ilike("name", `%${search.trim()}%`);
+      const { data } = await q;
+      setItems(data ?? []);
+    }, 200);
+    return () => clearTimeout(t);
+  }, [open, search]);
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button variant="outline" role="combobox" className="w-full justify-between">
+          {value || "Search lab tests..."}
+          <ChevronsUpDown className="ml-2 h-4 w-4 opacity-50" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-[--radix-popover-trigger-width] p-0 z-[10000]" align="start">
+        <Command shouldFilter={false}>
+          <CommandInput placeholder="Type to search lab tests..." value={search} onValueChange={setSearch} />
+          <CommandList>
+            <CommandEmpty>No test found.</CommandEmpty>
+            <CommandGroup>
+              {items.map((t) => (
+                <CommandItem key={t.id} value={t.id} onSelect={() => { onSelect(t); setOpen(false); setSearch(""); }}>
+                  <Check className={cn("mr-2 h-4 w-4", value === t.name ? "opacity-100" : "opacity-0")} />
+                  <div className="flex flex-col flex-1">
+                    <span className="font-medium">{t.name}</span>
+                    <span className="text-xs text-muted-foreground">PKR {Number(t.price ?? 0).toLocaleString()}{t.category ? ` • ${t.category}` : ""}</span>
+                  </div>
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
   );
 }
