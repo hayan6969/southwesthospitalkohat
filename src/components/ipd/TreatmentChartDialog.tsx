@@ -318,6 +318,43 @@ export function TreatmentChartDialog({ open, onOpenChange, admissionId, patientN
               </Table>
             </div>
           </TabsContent>
+
+          {/* Lab orders */}
+          <TabsContent value={"lab" as any} className="space-y-4 mt-4">
+            {canWrite && (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3 p-4 border rounded-md">
+                <div className="md:col-span-2"><Label>Test Name</Label><Input value={form.test_name ?? ""} onChange={e => setForm({ ...form, test_name: e.target.value })} placeholder="e.g. CBC, LFT, Serum Electrolytes" /></div>
+                <div><Label>Charge (PKR)</Label><Input type="number" value={form.charge ?? ""} onChange={e => setForm({ ...form, charge: e.target.value })} /></div>
+                <div className="md:col-span-3"><Button onClick={saveLab} disabled={saving} size="sm"><Plus className="w-4 h-4 mr-1" />Order Test</Button></div>
+              </div>
+            )}
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Time</TableHead>
+                    <TableHead>Test</TableHead>
+                    <TableHead>Charge</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Result</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {labs.length === 0 ? (
+                    <TableRow><TableCell colSpan={5} className="text-center text-sm text-muted-foreground py-6">No lab orders</TableCell></TableRow>
+                  ) : labs.map((l) => (
+                    <TableRow key={l.id}>
+                      <TableCell className="text-xs">{format(new Date(l.created_at), "MMM d HH:mm")}</TableCell>
+                      <TableCell className="font-medium">{l.test_name}</TableCell>
+                      <TableCell>PKR {Number(l.charge ?? 0).toLocaleString()}</TableCell>
+                      <TableCell><Badge variant="outline">{l.status}</Badge></TableCell>
+                      <TableCell className="text-xs whitespace-pre-wrap">{l.result_notes ?? "—"}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </TabsContent>
         </Tabs>
       </DialogContent>
     </Dialog>
