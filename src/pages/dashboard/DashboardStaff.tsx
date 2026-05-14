@@ -160,6 +160,9 @@ export default function DashboardStaff() {
             <TabsContent value="invoices" className="mt-4 sm:mt-6">
               <StaffInvoices />
             </TabsContent>
+            <TabsContent value="ipd" className="mt-4 sm:mt-6">
+              <StaffIPDRegister />
+            </TabsContent>
             <TabsContent value="shift-closing" className="mt-4 sm:mt-6">
               <StaffShiftClosing />
             </TabsContent>
