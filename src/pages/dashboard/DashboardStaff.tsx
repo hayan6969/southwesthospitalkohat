@@ -91,7 +91,7 @@ export default function DashboardStaff() {
 
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <div className="overflow-x-auto -mx-3 px-3 sm:mx-0 sm:px-0">
-              <TabsList className="inline-flex w-auto min-w-full sm:grid sm:w-full sm:grid-cols-7">
+              <TabsList className="inline-flex w-auto min-w-full sm:grid sm:w-full sm:grid-cols-8">
                 <TabsTrigger value="counter" className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm whitespace-nowrap">
                   <Receipt className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                   Counter
