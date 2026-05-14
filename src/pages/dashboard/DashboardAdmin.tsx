@@ -41,6 +41,7 @@ import { RegionWiseReport } from "@/components/RegionWiseReport";
 import { RegionsTabContent } from "@/components/admin/RegionsTabContent";
 import { AuditLogDetailDialog } from "@/components/dialogs/AuditLogDetailDialog";
 import { AdminDashboardNav } from "@/components/AdminDashboardNav";
+import { IPDAdminPanel } from "@/components/ipd/IPDAdminPanel";
 import { useAllShifts, useCreateShift, useUpdateShift, useDeleteShift } from "@/hooks/useShifts";
 import { Badge } from "@/components/ui/badge";
 import { Edit2, Trash2, X, Check, Plus as PlusIcon } from "lucide-react";
@@ -353,6 +354,7 @@ export default function DashboardAdmin() {
                 <TabsTrigger value="lab" className="whitespace-nowrap px-2.5 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm flex-1">Lab</TabsTrigger>
                 <TabsTrigger value="xray" className="whitespace-nowrap px-2.5 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm flex-1">X-ray</TabsTrigger>
                 <TabsTrigger value="ot" className="whitespace-nowrap px-2.5 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm flex-1">OT</TabsTrigger>
+                <TabsTrigger value="ipd" className="whitespace-nowrap px-2.5 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm flex-1">IPD</TabsTrigger>
                 <TabsTrigger value="emergency" className="whitespace-nowrap px-2.5 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm flex-1">Emergency</TabsTrigger>
                 <TabsTrigger value="logs" className="whitespace-nowrap px-2.5 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm flex-1">Logs</TabsTrigger>
                 <TabsTrigger value="settings" className="whitespace-nowrap px-2.5 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm flex-1">Settings</TabsTrigger>
