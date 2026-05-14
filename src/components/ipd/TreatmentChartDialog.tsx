@@ -155,6 +155,7 @@ export function TreatmentChartDialog({ open, onOpenChange, admissionId, patientN
             <TabsTrigger value="iv_fluid" className="gap-1.5"><Droplets className="w-4 h-4" />IV Fluids</TabsTrigger>
             <TabsTrigger value="intake_output" className="gap-1.5"><Droplets className="w-4 h-4" />I / O</TabsTrigger>
             <TabsTrigger value={"medicine" as any} className="gap-1.5"><Pill className="w-4 h-4" />Medicine</TabsTrigger>
+            <TabsTrigger value={"lab" as any} className="gap-1.5"><FlaskConical className="w-4 h-4" />Lab</TabsTrigger>
           </TabsList>
 
           {/* Vitals */}
