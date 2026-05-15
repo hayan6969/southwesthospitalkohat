@@ -46,12 +46,18 @@ export function PharmacyOrderHistoryDialog({ open, onOpenChange, admissionId, ad
   const load = useCallback(async () => {
     if (!admissionId) return;
     setLoading(true);
-    const { data } = await supabase
-      .from("ipd_medicine_orders")
-      .select("*")
-      .eq("admission_id", admissionId)
-      .order("created_at", { ascending: false });
-    setOrders((data as any) ?? []);
+    try {
+      const { data, error } = await supabase
+        .from("ipd_medicine_orders")
+        .select("*")
+        .eq("admission_id", admissionId)
+        .order("created_at", { ascending: false });
+      if (error) { toast.error(error.message); return; }
+      setOrders((data as any) ?? []);
+    } catch (e: any) {
+      toast.error(e.message || "Failed to load");
+      setOrders([]);
+    }
     setLoading(false);
   }, [admissionId]);
 
@@ -134,7 +140,7 @@ export function PharmacyOrderHistoryDialog({ open, onOpenChange, admissionId, ad
                     <TableCell className="font-medium">{o.medicine_name}</TableCell>
                     <TableCell className="text-xs">{[o.dosage, o.frequency, o.route].filter(Boolean).join(" / ") || "—"}</TableCell>
                     <TableCell>{o.quantity}</TableCell>
-                    <TableCell className="text-xs font-medium">{formatPkrAmount(o.quantity * o.unit_price)}</TableCell>
+                    <TableCell className="text-xs font-medium">{formatPkrAmount((o.quantity || 0) * (o.unit_price || 0))}</TableCell>
                     <TableCell>
                       <Badge className={statusBadge(o.status)} variant="outline">{o.status}</Badge>
                     </TableCell>

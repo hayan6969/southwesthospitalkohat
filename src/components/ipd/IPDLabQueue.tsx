@@ -7,6 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { usePatientNames, getPatientName } from "@/hooks/useDisplayHelpers";
 import { toast } from "sonner";
 import { Loader2, FlaskConical, RefreshCw } from "lucide-react";
 import { format } from "date-fns";
@@ -22,12 +23,12 @@ type Row = {
   ipd_admissions?: {
     admission_number: string;
     patient_id: string;
-    profiles?: { first_name: string | null; last_name: string | null } | null;
   } | null;
 };
 
 export function IPDLabQueue() {
   const { profile } = useAuth();
+  const { data: patientNames } = usePatientNames();
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<"pending" | "completed" | "all">("pending");
@@ -38,7 +39,7 @@ export function IPDLabQueue() {
     setLoading(true);
     let q = supabase
       .from("ipd_lab_orders")
-      .select("*, ipd_admissions(admission_number, patient_id, profiles:patient_id(first_name, last_name))")
+      .select("*, ipd_admissions(admission_number, patient_id)")
       .order("created_at", { ascending: false })
       .limit(200);
     if (filter !== "all") q = q.eq("status", filter);
@@ -102,13 +103,13 @@ export function IPDLabQueue() {
                 </TableHeader>
                 <TableBody>
                   {rows.map(r => {
-                    const p = r.ipd_admissions?.profiles;
-                    const name = p ? `${p.first_name ?? ""} ${p.last_name ?? ""}`.trim() : "—";
+                    const pid = r.ipd_admissions?.patient_id;
+                    const name = pid ? getPatientName(pid, patientNames || []) : "—";
                     return (
                       <TableRow key={r.id}>
                         <TableCell className="text-xs">{format(new Date(r.created_at), "MMM d HH:mm")}</TableCell>
                         <TableCell className="font-mono text-xs">{r.ipd_admissions?.admission_number ?? "—"}</TableCell>
-                        <TableCell>{name || "—"}</TableCell>
+                        <TableCell>{name}</TableCell>
                         <TableCell className="font-medium">{r.test_name}</TableCell>
                         <TableCell>PKR {Number(r.charge ?? 0).toLocaleString()}</TableCell>
                         <TableCell><Badge variant="outline">{r.status}</Badge></TableCell>

@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { usePatientNames, getPatientName } from "@/hooks/useDisplayHelpers";
 import { toast } from "sonner";
 import { Loader2, Pill, RefreshCw, PackageCheck } from "lucide-react";
 import { format } from "date-fns";
@@ -24,7 +25,6 @@ type Row = {
   ipd_admissions?: {
     admission_number: string;
     patient_id: string;
-    profiles?: { first_name: string | null; last_name: string | null } | null;
   } | null;
 };
 
@@ -32,21 +32,27 @@ const STATUS_GROUPS = ["pending", "dispensed", "received", "administered", "all"
 
 export function IPDPharmacyQueue() {
   const { profile } = useAuth();
+  const { data: patientNames } = usePatientNames();
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<string>("pending");
 
   const load = useCallback(async () => {
     setLoading(true);
-    let q = supabase
-      .from("ipd_medicine_orders")
-      .select("*, ipd_admissions(admission_number, patient_id, profiles:patient_id(first_name, last_name))")
-      .order("created_at", { ascending: false })
-      .limit(200);
-    if (filter !== "all") q = q.eq("status", filter);
-    const { data, error } = await q;
-    if (error) toast.error(error.message);
-    setRows((data as any) ?? []);
+    try {
+      let q = supabase
+        .from("ipd_medicine_orders")
+        .select("*, ipd_admissions(admission_number, patient_id)")
+        .order("created_at", { ascending: false })
+        .limit(200);
+      if (filter !== "all") q = q.eq("status", filter);
+      const { data, error } = await q;
+      if (error) { toast.error(error.message); return; }
+      setRows((data as any) ?? []);
+    } catch (e: any) {
+      toast.error(e.message || "Failed to load");
+      setRows([]);
+    }
     setLoading(false);
   }, [filter]);
 
@@ -138,18 +144,18 @@ export function IPDPharmacyQueue() {
               </TableHeader>
               <TableBody>
                 {rows.map(r => {
-                  const p = r.ipd_admissions?.profiles;
-                  const name = p ? `${p.first_name ?? ""} ${p.last_name ?? ""}`.trim() : "—";
+                  const pid = r.ipd_admissions?.patient_id;
+                  const name = pid ? getPatientName(pid, patientNames || []) : "—";
                   return (
                     <TableRow key={r.id}>
                       <TableCell className="text-xs">{format(new Date(r.created_at), "MMM d HH:mm")}</TableCell>
                       <TableCell className="font-mono text-xs">{r.ipd_admissions?.admission_number ?? "—"}</TableCell>
-                      <TableCell>{name || "—"}</TableCell>
+                      <TableCell>{name}</TableCell>
                       <TableCell className="font-medium">{r.medicine_name}</TableCell>
                       <TableCell className="text-xs">{[r.dosage, r.frequency, r.route].filter(Boolean).join(" / ") || "—"}</TableCell>
                       <TableCell>{r.quantity}</TableCell>
-                      <TableCell className="text-xs">{formatPkrAmount(r.unit_price)}</TableCell>
-                      <TableCell className="text-xs font-medium">{formatPkrAmount(r.quantity * r.unit_price)}</TableCell>
+                      <TableCell className="text-xs">{formatPkrAmount(r.unit_price || 0)}</TableCell>
+                      <TableCell className="text-xs font-medium">{formatPkrAmount((r.quantity || 0) * (r.unit_price || 0))}</TableCell>
                       <TableCell>
                         <Badge className={statusBadge(r.status)} variant="outline">{r.status}</Badge>
                       </TableCell>
