@@ -7,9 +7,10 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Calendar, User, Building2, Clock, FileText, Search, ChevronLeft, ChevronRight, Activity } from "lucide-react";
+import { Calendar, User, Building2, Clock, FileText, Search, ChevronLeft, ChevronRight, Activity, Banknote } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
+import { formatPkrAmount } from "@/utils/currency";
 import { TreatmentChartDialog } from "@/components/ipd/TreatmentChartDialog";
 import { usePatientNames, getPatientName } from "@/hooks/useDisplayHelpers";
 
@@ -36,6 +37,7 @@ export default function DoctorIPD() {
   const { profile } = useAuth();
   const { data: patientNames } = usePatientNames();
   const [admissions, setAdmissions] = useState<IPDAdmissionWithDetails[]>([]);
+  const [totalEarnings, setTotalEarnings] = useState(0);
   const [loading, setLoading] = useState(true);
 
   const [searchTerm, setSearchTerm] = useState("");
@@ -77,6 +79,22 @@ export default function DoctorIPD() {
       }
 
       setAdmissions(allAdmissions || []);
+
+      // Calculate total IPD earnings for this doctor
+      const dischargedIds = (allAdmissions || [])
+        .filter(a => a.status === "discharged")
+        .map(a => a.id);
+
+      if (dischargedIds.length > 0) {
+        const { data: charges } = await supabase
+          .from("ipd_charges")
+          .select("amount")
+          .in("admission_id", dischargedIds)
+          .eq("charge_type", "doctor");
+
+        const earned = (charges || []).reduce((sum, c) => sum + Number(c.amount), 0);
+        setTotalEarnings(earned);
+      }
     } catch (error) {
       console.error("Error fetching IPD admissions:", error);
       toast.error("Failed to load IPD admissions");
@@ -117,7 +135,7 @@ export default function DoctorIPD() {
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total IPD Admissions</CardTitle>
@@ -148,6 +166,17 @@ export default function DoctorIPD() {
           <CardContent>
             <div className="text-2xl font-bold">{dischargedAdmissions.length}</div>
             <p className="text-xs text-muted-foreground">Discharged patients</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total IPD Earnings</CardTitle>
+            <Banknote className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-green-600">{formatPkrAmount(totalEarnings)}</div>
+            <p className="text-xs text-muted-foreground">From discharged patients</p>
           </CardContent>
         </Card>
       </div>

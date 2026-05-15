@@ -25,30 +25,42 @@ export function AdmissionFormDialog({ open, onOpenChange, admission, patientName
   const printRef = useRef<HTMLDivElement>(null);
   const [loading, setLoading] = useState(true);
   const [hs, setHs] = useState<Hs | null>(null);
+  const [adm, setAdm] = useState<any>(null);
   const [profile, setProfile] = useState<any>(null);
   const [patient, setPatient] = useState<any>(null);
   const [ward, setWard] = useState<any>(null);
   const [bed, setBed] = useState<any>(null);
   const [doctor, setDoctor] = useState<any>(null);
+  const [doctorProf, setDoctorProf] = useState<any>(null);
 
   useEffect(() => {
     if (!open || !admission) return;
     (async () => {
       setLoading(true);
-      const [a, b, c, d, e, f] = await Promise.all([
+      // Always fetch latest admission data so ward_id/bed_id/doctor_id are fresh
+      const { data: fresh } = await supabase
+        .from("ipd_admissions")
+        .select("*, beds(bed_number,daily_charge), wards(name)")
+        .eq("id", admission.id)
+        .maybeSingle();
+      const a = fresh || admission;
+
+      const [hsRes, profRes, patRes, drRes, drProfRes] = await Promise.all([
         supabase.from("hospital_settings").select("hospital_name,hospital_address,contact_number,logo_url").maybeSingle(),
-        supabase.from("profiles").select("first_name,last_name,phone,email").eq("id", admission.patient_id).maybeSingle(),
-        supabase.from("patients").select("*").eq("id", admission.patient_id).maybeSingle(),
-        admission.ward_id ? supabase.from("wards").select("name").eq("id", admission.ward_id).maybeSingle() : { data: null },
-        admission.bed_id ? supabase.from("beds").select("bed_number,daily_charge").eq("id", admission.bed_id).maybeSingle() : { data: null },
-        admission.doctor_id ? supabase.from("profiles").select("first_name,last_name").eq("id", admission.doctor_id).maybeSingle() : { data: null },
+        supabase.from("profiles").select("first_name,last_name,phone,email").eq("id", a.patient_id).maybeSingle(),
+        supabase.from("patients").select("*").eq("id", a.patient_id).maybeSingle(),
+        a.doctor_id ? supabase.from("doctors").select("specialization,consultation_fee").eq("id", a.doctor_id).maybeSingle() : Promise.resolve({ data: null }),
+        a.doctor_id ? supabase.from("profiles").select("first_name,last_name").eq("id", a.doctor_id).maybeSingle() : Promise.resolve({ data: null }),
       ]);
-      setHs(a.data);
-      setProfile(b.data);
-      setPatient(c.data);
-      setWard(d.data);
-      setBed(e.data);
-      setDoctor(f.data);
+
+      setAdm(a);
+      setHs(hsRes.data);
+      setProfile(profRes.data);
+      setPatient(patRes.data);
+      setWard(a.wards || null);
+      setBed(a.beds || null);
+      setDoctor(drRes.data);
+      setDoctorProf(drProfRes.data);
       setLoading(false);
     })();
   }, [open, admission]);
@@ -120,9 +132,10 @@ export function AdmissionFormDialog({ open, onOpenChange, admission, patientName
     pdf.setLineWidth(0.5); pdf.line(m, y, pw - m, y); y += 6;
 
     sect("ADMISSION DETAILS");
-    R("Admission #", admission?.admission_number || "—", "Date", admission?.admission_date ? format(new Date(admission.admission_date), "dd/MM/yyyy HH:mm") : "—", "Status", admission?.status || "—");
+    R("Admission #", adm?.admission_number || "—", "Date", adm?.admission_date ? format(new Date(adm.admission_date), "dd/MM/yyyy HH:mm") : "—", "Status", adm?.status || "—");
     R("Ward", ward?.name || "—", "Bed #", bed?.bed_number || "—");
-    R("Consultant", doctor ? `Dr. ${doctor.first_name} ${doctor.last_name}` : "—", "Source", admission?.source || "—");
+    R("Consultant", doctorProf ? `Dr. ${doctorProf.first_name} ${doctorProf.last_name}` : "—", "Source", adm?.source || "—");
+    if (doctor?.specialization) R("Specialization", doctor.specialization);
     y += 2;
 
     sect("PATIENT INFORMATION");
@@ -136,10 +149,11 @@ export function AdmissionFormDialog({ open, onOpenChange, admission, patientName
     y += 2;
 
     sect("MEDICAL INFORMATION");
-    R("Chief Complaint", admission?.chief_complaint || "—");
-    R("Provisional Diagnosis", admission?.provisional_diagnosis || "—");
+    R("Chief Complaint", adm?.chief_complaint || "—");
+    R("Provisional Diagnosis", adm?.provisional_diagnosis || "—");
+    if (adm?.final_diagnosis) R("Final Diagnosis", adm.final_diagnosis);
     R("Allergies", patient?.allergies || "None");
-    if (admission?.notes) R("Notes", admission.notes);
+    if (adm?.notes) R("Notes", adm.notes);
     y += 5;
 
     sect("UNDERTAKING");
@@ -205,18 +219,19 @@ export function AdmissionFormDialog({ open, onOpenChange, admission, patientName
             {/* ---- ADMISSION DETAILS ---- */}
             <table cellPadding={0} cellSpacing={0}>
               <tr><td colSpan={6} className="section-title">ADMISSION DETAILS</td></tr>
-              {P("Admission #", admission?.admission_number || "—", "Date", admission?.admission_date ? format(new Date(admission.admission_date), "dd/MM/yyyy HH:mm") : "—", "Status", admission?.status || "—")}
+              {P("Admission #", adm?.admission_number || "—", "Date", adm?.admission_date ? format(new Date(adm.admission_date), "dd/MM/yyyy HH:mm") : "—", "Status", adm?.status || "—")}
               {P("Ward", ward?.name || "—", "Bed #", bed?.bed_number || "—")}
-              {P("Consultant", doctor ? `Dr. ${doctor.first_name} ${doctor.last_name}` : "—", "Source", admission?.source || "—")}
+              {P("Consultant", doctorProf ? `Dr. ${doctorProf.first_name} ${doctorProf.last_name}` : "—", "Source", adm?.source || "—")}
+              {doctor?.specialization && P("Specialization", doctor.specialization)}
             </table>
 
             {/* ---- PATIENT INFORMATION ---- */}
             <table cellPadding={0} cellSpacing={0}>
               <tr><td colSpan={6} className="section-title">PATIENT INFORMATION</td></tr>
-              {P("Patient Name", patientName, "Phone", profile?.phone || "—")}
-              {P("CNIC", patient?.cnic || "—", "DOB", patient?.date_of_birth ? format(new Date(patient.date_of_birth), "dd/MM/yyyy") : "—")}
-              {P("Blood Group", patient?.blood_type || "—", "City", patient?.city || "—")}
-              {P("Province", patient?.province || "—", "Address", patient?.address || "—")}
+              {P("Patient Name", patientName, "Patient #", patient?.patient_number || "—")}
+              {P("Phone", profile?.phone || "—", "CNIC", patient?.cnic || "—")}
+              {P("DOB", patient?.date_of_birth ? format(new Date(patient.date_of_birth), "dd/MM/yyyy") : "—", "Blood Group", patient?.blood_type || "—")}
+              {P("Address", patient?.address || "—")}
               {patient?.emergency_contact_name && P("Emergency Contact", `${patient.emergency_contact_name}${patient.emergency_contact_phone ? ` (${patient.emergency_contact_phone})` : ""}`)}
             </table>
 
@@ -224,16 +239,19 @@ export function AdmissionFormDialog({ open, onOpenChange, admission, patientName
             <table cellPadding={0} cellSpacing={0}>
               <tr><td colSpan={6} className="section-title">MEDICAL INFORMATION</td></tr>
               <tr><td colSpan={6} style={{ padding: "5px 7px", border: "1px solid #000" }}>
-                <strong>Chief Complaint:</strong> {admission?.chief_complaint || "—"}
+                <strong>Chief Complaint:</strong> {adm?.chief_complaint || "—"}
               </td></tr>
               <tr><td colSpan={6} style={{ padding: "5px 7px", border: "1px solid #000" }}>
-                <strong>Provisional Diagnosis:</strong> {admission?.provisional_diagnosis || "—"}
+                <strong>Provisional Diagnosis:</strong> {adm?.provisional_diagnosis || "—"}
               </td></tr>
+              {adm?.final_diagnosis && <tr><td colSpan={6} style={{ padding: "5px 7px", border: "1px solid #000" }}>
+                <strong>Final Diagnosis:</strong> {adm.final_diagnosis}
+              </td></tr>}
               <tr><td colSpan={6} style={{ padding: "5px 7px", border: "1px solid #000" }}>
                 <strong>Allergies:</strong> {patient?.allergies || "None recorded"}
               </td></tr>
-              {admission?.notes && <tr><td colSpan={6} style={{ padding: "5px 7px", border: "1px solid #000" }}>
-                <strong>Notes:</strong> {admission.notes}
+              {adm?.notes && <tr><td colSpan={6} style={{ padding: "5px 7px", border: "1px solid #000" }}>
+                <strong>Notes:</strong> {adm.notes}
               </td></tr>}
             </table>
 

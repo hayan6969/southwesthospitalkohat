@@ -21,13 +21,19 @@ export function AdmitPatientDialog({ open, onOpenChange, admission, onAdmitted }
   const [wards, setWards] = useState<any[]>([]);
   const [beds, setBeds] = useState<any[]>([]);
   const [doctors, setDoctors] = useState<any[]>([]);
+  const [hospitalSettings, setHospitalSettings] = useState<any>(null);
+  const [patientInfo, setPatientInfo] = useState<any>(null);
   const [wardId, setWardId] = useState<string>(admission?.ward_id ?? "");
   const [bedId, setBedId] = useState<string>(admission?.bed_id ?? "");
   const [doctorId, setDoctorId] = useState<string>(admission?.doctor_id ?? "");
-  const [chiefComplaint, setChiefComplaint] = useState(admission?.chief_complaint ?? "");
-  const [provisionalDiagnosis, setProvisionalDiagnosis] = useState(admission?.provisional_diagnosis ?? "");
+  const [chiefComplaint, setChiefComplaint] = useState("");
+  const [provisionalDiagnosis, setProvisionalDiagnosis] = useState("");
   const [notes, setNotes] = useState("");
   const [advanceAmount, setAdvanceAmount] = useState<number>(0);
+  const [dob, setDob] = useState("");
+  const [city, setCity] = useState("");
+  const [province, setProvince] = useState("");
+  const [address, setAddress] = useState("");
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
@@ -35,21 +41,17 @@ export function AdmitPatientDialog({ open, onOpenChange, admission, onAdmitted }
     setWardId(admission?.ward_id ?? "");
     setBedId(admission?.bed_id ?? "");
     setDoctorId(admission?.doctor_id ?? "");
-    setChiefComplaint(admission?.chief_complaint ?? "");
-    setProvisionalDiagnosis(admission?.provisional_diagnosis ?? "");
+    setChiefComplaint("");
+    setProvisionalDiagnosis("");
+    setNotes("");
 
-    // Parse deposit prefix from notes (set by ReferToIPDDialog)
     const rawNotes = admission?.notes ?? "";
     const depositMatch = rawNotes.match(/^__DEPOSIT__:(\d+)\n?(.*)$/s);
-    if (depositMatch) {
-      setAdvanceAmount(Number(depositMatch[1]));
-      setNotes(depositMatch[2].trim());
-    } else {
-      setAdvanceAmount(0);
-      setNotes(rawNotes);
-    }
+    setAdvanceAmount(depositMatch ? Number(depositMatch[1]) : 0);
+
     (async () => {
-      const [{ data: w }, { data: profiles }, { data: docRecords }] = await Promise.all([
+      const [{ data: hs }, { data: w }, { data: profiles }, { data: docRecords }, { data: patProf }, { data: pat }] = await Promise.all([
+        supabase.from("hospital_settings").select("hospital_name,logo_url").maybeSingle(),
         supabase.from("wards").select("id,name").eq("is_active", true).order("name"),
         supabase.from("profiles")
           .select("id, first_name, last_name")
@@ -57,7 +59,10 @@ export function AdmitPatientDialog({ open, onOpenChange, admission, onAdmitted }
           .eq("is_active", true)
           .order("first_name"),
         supabase.from("doctors").select("id, specialization"),
+        supabase.from("profiles").select("first_name,last_name,phone").eq("id", admission?.patient_id).maybeSingle(),
+        supabase.from("patients").select("patient_number,cnic,date_of_birth,blood_type,city,province,address,emergency_contact_name,emergency_contact_phone").eq("id", admission?.patient_id).maybeSingle(),
       ]);
+      setHospitalSettings(hs);
       setWards(w ?? []);
       const docMap = new Map((docRecords ?? []).map((d: any) => [d.id, d.specialization]));
       setDoctors((profiles ?? []).map((p: any) => ({
@@ -66,6 +71,12 @@ export function AdmitPatientDialog({ open, onOpenChange, admission, onAdmitted }
         last_name: p.last_name,
         specialization: docMap.get(p.id) || "",
       })));
+      setPatientInfo({ profile: patProf, patient: pat });
+      // Pre-fill patient demographic fields if already entered
+      if (pat?.date_of_birth) setDob(pat.date_of_birth);
+      if (pat?.city) setCity(pat.city);
+      if (pat?.province) setProvince(pat.province);
+      if (pat?.address) setAddress(pat.address);
     })();
   }, [open, admission]);
 
@@ -91,6 +102,16 @@ export function AdmitPatientDialog({ open, onOpenChange, admission, onAdmitted }
         admission_date: new Date().toISOString(),
       }).eq("id", admission.id);
       if (error) throw error;
+
+      // Update patient demographics if provided
+      const patientUpdate: any = {};
+      if (dob) patientUpdate.date_of_birth = dob;
+      if (city) patientUpdate.city = city;
+      if (province) patientUpdate.province = province;
+      if (address) patientUpdate.address = address;
+      if (Object.keys(patientUpdate).length > 0) {
+        await supabase.from("patients").update(patientUpdate).eq("id", admission.patient_id);
+      }
 
       // Create open invoice
       const { data: invNum } = await supabase.rpc("generate_ipd_invoice_number");
@@ -141,7 +162,46 @@ export function AdmitPatientDialog({ open, onOpenChange, admission, onAdmitted }
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto z-[9999]">
-        <DialogHeader><DialogTitle>Admit Patient — {admission?.admission_number}</DialogTitle></DialogHeader>
+        <DialogHeader>
+          <div className="flex items-center gap-3 mb-1">
+            {hospitalSettings?.logo_url && (
+              <img src={hospitalSettings.logo_url} alt="Logo" className="w-10 h-10 object-contain rounded" />
+            )}
+            <div>
+              <DialogTitle>Admit Patient — {admission?.admission_number}</DialogTitle>
+              {hospitalSettings?.hospital_name && (
+                <p className="text-xs text-muted-foreground">{hospitalSettings.hospital_name}</p>
+              )}
+            </div>
+          </div>
+        </DialogHeader>
+        {patientInfo && (
+          <div className="bg-blue-50 border border-blue-200 rounded-md p-3 mb-2 space-y-2">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-sm">
+              <div>
+                <span className="text-xs text-muted-foreground">Patient Name</span>
+                <p className="font-semibold">{patientInfo.profile?.first_name} {patientInfo.profile?.last_name}</p>
+              </div>
+              <div>
+                <span className="text-xs text-muted-foreground">Patient #</span>
+                <p className="font-medium">{patientInfo.patient?.patient_number || "—"}</p>
+              </div>
+              <div>
+                <span className="text-xs text-muted-foreground">Phone</span>
+                <p className="font-medium">{patientInfo.profile?.phone || "—"}</p>
+              </div>
+              <div>
+                <span className="text-xs text-muted-foreground">CNIC</span>
+                <p className="font-medium">{patientInfo.patient?.cnic || "—"}</p>
+              </div>
+            </div>
+            {(admission?.chief_complaint || admission?.provisional_diagnosis) && (
+              <div className="border-t border-blue-200 pt-1.5 text-xs text-muted-foreground">
+                <span className="font-medium">Referral info:</span>{admission?.chief_complaint ? ` ${admission.chief_complaint}` : ""}{admission?.provisional_diagnosis ? ` | ${admission.provisional_diagnosis}` : ""}
+              </div>
+            )}
+          </div>
+        )}
         <div className="grid gap-3 sm:grid-cols-2">
           <div>
             <Label>Ward</Label>
@@ -175,9 +235,30 @@ export function AdmitPatientDialog({ open, onOpenChange, admission, onAdmitted }
               </SelectContent>
             </Select>
           </div>
+          <div className="sm:col-span-2 border-t pt-3 mt-2">
+            <h4 className="font-semibold text-sm mb-2">Patient Demographics</h4>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <div>
+                <Label>Date of Birth</Label>
+                <Input type="date" value={dob} onChange={(e) => setDob(e.target.value)} />
+              </div>
+              <div>
+                <Label>City</Label>
+                <Input value={city} onChange={(e) => setCity(e.target.value)} placeholder="Enter city" />
+              </div>
+              <div>
+                <Label>Province</Label>
+                <Input value={province} onChange={(e) => setProvince(e.target.value)} placeholder="Enter province" />
+              </div>
+              <div>
+                <Label>Address</Label>
+                <Input value={address} onChange={(e) => setAddress(e.target.value)} placeholder="Enter address" />
+              </div>
+            </div>
+          </div>
           <div className="sm:col-span-2">
             <Label>Chief Complaint</Label>
-            <Input value={chiefComplaint} onChange={(e) => setChiefComplaint(e.target.value)} />
+            <Input value={chiefComplaint} onChange={(e) => setChiefComplaint(e.target.value)} placeholder="e.g. Severe abdominal pain" />
           </div>
           <div className="sm:col-span-2">
             <Label>Provisional Diagnosis</Label>
