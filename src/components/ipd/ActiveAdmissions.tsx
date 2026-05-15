@@ -1,11 +1,12 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { format } from "date-fns";
-import { Loader2, Pill, Banknote } from "lucide-react";
+import { Loader2, Pill, Banknote, Search, ChevronLeft, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 import { usePatientNames, getPatientName } from "@/hooks/useDisplayHelpers";
@@ -33,6 +34,9 @@ export function ActiveAdmissions() {
   const [balances, setBalances] = useState<Record<string, BalanceInfo>>({});
   const [orderCounts, setOrderCounts] = useState<Record<string, { pending: number; dispensed: number }>>({});
   const [invoiceData, setInvoiceData] = useState<Record<string, any>>({});
+  const [searchTerm, setSearchTerm] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 20;
   const { profile } = useAuth();
   const { data: patientNames } = usePatientNames();
   const isDoctor = profile?.role === "doctor";
@@ -140,6 +144,24 @@ export function ActiveAdmissions() {
     };
   }, []);
 
+  const filtered = useMemo(() => {
+    if (!searchTerm.trim()) return rows;
+    const term = searchTerm.toLowerCase();
+    return rows.filter(r =>
+      r.admission_number.toLowerCase().includes(term) ||
+      getPatientName(r.patient_id, patientNames || []).toLowerCase().includes(term)
+    );
+  }, [rows, searchTerm, patientNames]);
+
+  const paginated = useMemo(() => {
+    const start = (currentPage - 1) * itemsPerPage;
+    return filtered.slice(start, start + itemsPerPage);
+  }, [filtered, currentPage]);
+
+  const totalPages = Math.ceil(filtered.length / itemsPerPage);
+
+  useEffect(() => { setCurrentPage(1); }, [searchTerm]);
+
   const discharge = async (id: string) => {
     const inv = invoiceData[id];
     if (inv && Number(inv.total_amount) > 0 && Number(inv.paid_amount) < Number(inv.total_amount)) {
@@ -167,11 +189,25 @@ export function ActiveAdmissions() {
         </CardTitle>
       </CardHeader>
       <CardContent>
+        <div className="space-y-4">
+          <div className="flex items-center gap-2 max-w-md">
+            <Search className="w-4 h-4 text-gray-400" />
+            <Input
+              placeholder="Search by admission # or patient name..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="flex-1"
+            />
+          </div>
+
         {loading ? (
           <div className="flex justify-center p-8"><Loader2 className="w-5 h-5 animate-spin" /></div>
-        ) : rows.length === 0 ? (
-          <p className="text-sm text-muted-foreground text-center py-8">No active admissions.</p>
+        ) : filtered.length === 0 ? (
+          <p className="text-sm text-muted-foreground text-center py-8">
+            {searchTerm ? `No admissions matching "${searchTerm}"` : "No active admissions."}
+          </p>
         ) : (
+          <>
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
@@ -187,7 +223,7 @@ export function ActiveAdmissions() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {rows.map((r: any) => {
+                {paginated.map((r: any) => {
                   const c = orderCounts[r.id];
                   const b = balances[r.id];
                   return (
@@ -260,7 +296,25 @@ export function ActiveAdmissions() {
               </TableBody>
             </Table>
           </div>
+          <div className="flex items-center justify-between">
+            <div className="text-sm text-gray-500">
+              Showing {Math.min((currentPage - 1) * itemsPerPage + 1, filtered.length)} to {Math.min(currentPage * itemsPerPage, filtered.length)} of {filtered.length}
+            </div>
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="sm" onClick={() => setCurrentPage(p => Math.max(p - 1, 1))} disabled={currentPage === 1} className="flex items-center gap-1">
+                <ChevronLeft className="w-4 h-4" />Previous
+              </Button>
+              {Array.from({ length: totalPages }, (_, i) => i + 1).filter(p => p >= Math.max(1, currentPage - 2) && p <= Math.min(totalPages, currentPage + 2)).map(p => (
+                <Button key={p} variant={currentPage === p ? "default" : "outline"} size="sm" className="w-8 h-8 p-0" onClick={() => setCurrentPage(p)}>{p}</Button>
+              ))}
+              <Button variant="outline" size="sm" onClick={() => setCurrentPage(p => Math.min(p + 1, totalPages))} disabled={currentPage === totalPages} className="flex items-center gap-1">
+                Next<ChevronRight className="w-4 h-4" />
+              </Button>
+            </div>
+          </div>
+          </>
         )}
+        </div>
       </CardContent>
       {chartFor && (
         <TreatmentChartDialog
