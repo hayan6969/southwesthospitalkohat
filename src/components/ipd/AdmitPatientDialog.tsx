@@ -12,7 +12,7 @@ interface Props {
   open: boolean;
   onOpenChange: (v: boolean) => void;
   admission: any;
-  onAdmitted?: () => void;
+  onAdmitted?: (admission: any) => void;
 }
 
 export function AdmitPatientDialog({ open, onOpenChange, admission, onAdmitted }: Props) {
@@ -36,20 +36,22 @@ export function AdmitPatientDialog({ open, onOpenChange, admission, onAdmitted }
     setProvisionalDiagnosis(admission?.provisional_diagnosis ?? "");
     setNotes(admission?.notes ?? "");
     (async () => {
-      const [{ data: w }, { data: d }] = await Promise.all([
+      const [{ data: w }, { data: profiles }, { data: docRecords }] = await Promise.all([
         supabase.from("wards").select("id,name").eq("is_active", true).order("name"),
         supabase.from("profiles")
-          .select("id, first_name, last_name, doctors!inner(specialization)")
+          .select("id, first_name, last_name")
           .eq("role", "doctor")
           .eq("is_active", true)
           .order("first_name"),
+        supabase.from("doctors").select("id, specialization"),
       ]);
       setWards(w ?? []);
-      setDoctors((d ?? []).map((p: any) => ({
+      const docMap = new Map((docRecords ?? []).map((d: any) => [d.id, d.specialization]));
+      setDoctors((profiles ?? []).map((p: any) => ({
         id: p.id,
         first_name: p.first_name,
         last_name: p.last_name,
-        specialization: p.doctors?.specialization || p.doctors?.[0]?.specialization || "",
+        specialization: docMap.get(p.id) || "",
       })));
     })();
   }, [open, admission]);
@@ -85,7 +87,7 @@ export function AdmitPatientDialog({ open, onOpenChange, admission, onAdmitted }
       });
       toast.success("Patient admitted");
       onOpenChange(false);
-      onAdmitted?.();
+      onAdmitted?.(admission);
     } catch (e: any) {
       toast.error(e.message || "Failed to admit");
     } finally {

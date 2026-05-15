@@ -11,6 +11,7 @@ import { usePatientNames, getPatientName } from "@/hooks/useDisplayHelpers";
 import { TreatmentChartDialog } from "./TreatmentChartDialog";
 import { DischargeBillDialog } from "./DischargeBillDialog";
 import { PharmacyOrderHistoryDialog } from "./PharmacyOrderHistoryDialog";
+import { AdmissionFormDialog } from "./AdmissionFormDialog";
 
 export function ActiveAdmissions() {
   const [rows, setRows] = useState<any[]>([]);
@@ -18,6 +19,7 @@ export function ActiveAdmissions() {
   const [chartFor, setChartFor] = useState<any>(null);
   const [billFor, setBillFor] = useState<any>(null);
   const [pharmacyFor, setPharmacyFor] = useState<any>(null);
+  const [admissionFormFor, setAdmissionFormFor] = useState<any>(null);
   const [orderCounts, setOrderCounts] = useState<Record<string, { pending: number; dispensed: number }>>({});
   const { data: patientNames } = usePatientNames();
 
@@ -109,6 +111,7 @@ export function ActiveAdmissions() {
                       <TableCell className="space-x-1">
                         <Button size="sm" variant="outline" onClick={() => setChartFor(r)}>Chart</Button>
                         <Button size="sm" variant="outline" onClick={() => setPharmacyFor(r)} className="gap-1"><Pill className="w-3 h-3" />Pharmacy</Button>
+                        <Button size="sm" variant="outline" onClick={() => setAdmissionFormFor(r)} className="gap-1">Form</Button>
                         <Button size="sm" onClick={() => setBillFor(r)}>Discharge & Bill</Button>
                         <Button size="sm" variant="ghost" onClick={() => discharge(r.id)}>Quick</Button>
                       </TableCell>
@@ -145,6 +148,14 @@ export function ActiveAdmissions() {
           admissionId={pharmacyFor.id}
           admissionNumber={pharmacyFor.admission_number}
           patientName={getPatientName(pharmacyFor.patient_id, patientNames || [])}
+        />
+      )}
+      {admissionFormFor && (
+        <AdmissionFormDialog
+          open={!!admissionFormFor}
+          onOpenChange={(o) => !o && setAdmissionFormFor(null)}
+          admission={admissionFormFor}
+          patientName={getPatientName(admissionFormFor.patient_id, patientNames || [])}
         />
       )}
     </Card>
