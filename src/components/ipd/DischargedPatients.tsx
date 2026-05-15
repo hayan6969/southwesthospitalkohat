@@ -9,6 +9,7 @@ import { format } from "date-fns";
 import { Loader2, Search, ChevronLeft, ChevronRight, FileText, Download } from "lucide-react";
 import { usePatientNames, getPatientName } from "@/hooks/useDisplayHelpers";
 import { AdmissionFormDialog } from "./AdmissionFormDialog";
+import { DischargeSummaryDialog } from "./DischargeSummaryDialog";
 import { formatPkrAmount } from "@/utils/currency";
 import { generateDischargeBillPDF } from "@/utils/dischargeBillPdfGenerator";
 
@@ -19,6 +20,7 @@ export function DischargedPatients() {
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [formFor, setFormFor] = useState<any>(null);
+  const [summaryFor, setSummaryFor] = useState<any>(null);
   const itemsPerPage = 20;
   const { data: patientNames } = usePatientNames();
 
@@ -154,6 +156,9 @@ export function DischargedPatients() {
                           </TableCell>
                           <TableCell>
                             <div className="flex flex-wrap gap-1">
+                              <Button size="sm" variant="outline" onClick={() => setSummaryFor(r)} className="gap-1">
+                                <FileText className="w-3 h-3" />Slip
+                              </Button>
                               <Button size="sm" variant="outline" onClick={() => setFormFor(r)} className="gap-1">
                                 <FileText className="w-3 h-3" />Form
                               </Button>
@@ -197,6 +202,14 @@ export function DischargedPatients() {
           onOpenChange={(o) => !o && setFormFor(null)}
           admission={formFor}
           patientName={getPatientName(formFor.patient_id, patientNames || [])}
+        />
+      )}
+      {summaryFor && (
+        <DischargeSummaryDialog
+          open={!!summaryFor}
+          onOpenChange={(o) => !o && setSummaryFor(null)}
+          admission={summaryFor}
+          patientName={getPatientName(summaryFor.patient_id, patientNames || [])}
         />
       )}
     </Card>
