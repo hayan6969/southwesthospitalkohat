@@ -5,7 +5,8 @@ import { BedManager } from "@/components/ipd/BedManager";
 import { PendingAdmissions } from "@/components/ipd/PendingAdmissions";
 import { ActiveAdmissions } from "@/components/ipd/ActiveAdmissions";
 import { IPDPharmacyOrders } from "@/components/ipd/IPDPharmacyOrders";
-import { BedDouble, Building2, LayoutGrid, ClipboardList, UserCheck, Pill } from "lucide-react";
+import { StaffIPDRegister } from "@/components/staff/StaffIPDRegister";
+import { BedDouble, Building2, LayoutGrid, ClipboardList, UserCheck, Pill, UserPlus } from "lucide-react";
 import { useState } from "react";
 
 export function IPDAdminPanel() {
