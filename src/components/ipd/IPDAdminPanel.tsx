@@ -20,6 +20,7 @@ export function IPDAdminPanel() {
       <Tabs value={tab} onValueChange={setTab}>
         <div className="overflow-x-auto">
           <TabsList className="inline-flex w-auto">
+            <TabsTrigger value="register" className="gap-1.5 text-xs sm:text-sm"><UserPlus className="w-4 h-4" />Register / Admit</TabsTrigger>
             <TabsTrigger value="overview" className="gap-1.5 text-xs sm:text-sm"><LayoutGrid className="w-4 h-4" />Bed Dashboard</TabsTrigger>
             <TabsTrigger value="pending" className="gap-1.5 text-xs sm:text-sm"><ClipboardList className="w-4 h-4" />Pending</TabsTrigger>
             <TabsTrigger value="admitted" className="gap-1.5 text-xs sm:text-sm"><UserCheck className="w-4 h-4" />Admitted</TabsTrigger>
@@ -28,6 +29,7 @@ export function IPDAdminPanel() {
             <TabsTrigger value="pharmacy" className="gap-1.5 text-xs sm:text-sm"><Pill className="w-4 h-4" />Pharmacy History</TabsTrigger>
           </TabsList>
         </div>
+        <TabsContent value="register" className="mt-4"><StaffIPDRegister /></TabsContent>
         <TabsContent value="overview" className="mt-4"><BedDashboard /></TabsContent>
         <TabsContent value="pending" className="mt-4"><PendingAdmissions /></TabsContent>
         <TabsContent value="admitted" className="mt-4"><ActiveAdmissions /></TabsContent>
