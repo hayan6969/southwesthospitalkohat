@@ -10,7 +10,7 @@ import { BedDouble, Building2, LayoutGrid, ClipboardList, UserCheck, Pill, UserP
 import { useState } from "react";
 
 export function IPDAdminPanel() {
-  const [tab, setTab] = useState("overview");
+  const [tab, setTab] = useState("register");
   return (
     <div className="space-y-4">
       <div>
