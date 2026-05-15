@@ -39,6 +39,7 @@ export function TreatmentChartDialog({ open, onOpenChange, admissionId, patientN
   const [form, setForm] = useState<any>({});
 
   const canWrite = ["admin", "doctor", "nurse", "ota", "staff", "ipd"].includes(profile?.role as string);
+  const isDoctor = profile?.role === "doctor";
 
   const load = async () => {
     if (!admissionId) return;
@@ -211,9 +212,18 @@ export function TreatmentChartDialog({ open, onOpenChange, admissionId, patientN
             ]} />
           </TabsContent>
 
-          {/* Doctor Notes — view only */}
+          {/* Doctor Notes — only doctors can write */}
           <TabsContent value="doctor_note" className="space-y-4 mt-4">
-            <div className="text-xs text-muted-foreground mb-2">Doctor notes are read-only here. Doctors add notes from their dashboard.</div>
+            {(isDoctor || profile?.role === "admin") && (
+              <div className="space-y-2 p-4 border rounded-md">
+                <Label>Doctor Note</Label>
+                <Textarea rows={3} value={form.notes ?? ""} onChange={e => setForm({ ...form, notes: e.target.value })} />
+                <Button onClick={save} disabled={saving || !form.notes} size="sm"><Plus className="w-4 h-4 mr-1" />Add Note</Button>
+              </div>
+            )}
+            {!isDoctor && profile?.role !== "admin" && (
+              <div className="text-xs text-muted-foreground mb-2">Doctor notes are read-only. Only doctors can add notes.</div>
+            )}
             <EntriesTable rows={filtered} loading={loading} columns={[
               { h: "Time", c: (r) => format(new Date(r.recorded_at), "MMM d HH:mm") },
               { h: "Note", c: (r) => <span className="whitespace-pre-wrap">{r.notes}</span> },
