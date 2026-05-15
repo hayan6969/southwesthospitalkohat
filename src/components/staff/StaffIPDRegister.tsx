@@ -6,8 +6,9 @@ import { SearchablePatientSelect } from "@/components/SearchablePatientSelect";
 import { ReferToIPDDialog } from "@/components/ipd/ReferToIPDDialog";
 import { PendingAdmissions } from "@/components/ipd/PendingAdmissions";
 import { ActiveAdmissions } from "@/components/ipd/ActiveAdmissions";
+import { DischargedPatients } from "@/components/ipd/DischargedPatients";
 import { Button } from "@/components/ui/button";
-import { BedDouble, UserCheck } from "lucide-react";
+import { BedDouble, UserCheck, History } from "lucide-react";
 
 export function StaffIPDRegister() {
   const [patientId, setPatientId] = useState("");
@@ -46,9 +47,11 @@ export function StaffIPDRegister() {
         <TabsList>
           <TabsTrigger value="pending" className="gap-1.5"><BedDouble className="w-4 h-4" />Pending</TabsTrigger>
           <TabsTrigger value="admitted" className="gap-1.5"><UserCheck className="w-4 h-4" />Active Admissions</TabsTrigger>
+          <TabsTrigger value="discharged" className="gap-1.5"><History className="w-4 h-4" />Discharged</TabsTrigger>
         </TabsList>
         <TabsContent value="pending" className="mt-4"><PendingAdmissions /></TabsContent>
         <TabsContent value="admitted" className="mt-4"><ActiveAdmissions /></TabsContent>
+        <TabsContent value="discharged" className="mt-4"><DischargedPatients /></TabsContent>
       </Tabs>
     </div>
   );

@@ -5,8 +5,9 @@ import { WardManager } from "@/components/ipd/WardManager";
 import { BedManager } from "@/components/ipd/BedManager";
 import { PendingAdmissions } from "@/components/ipd/PendingAdmissions";
 import { ActiveAdmissions } from "@/components/ipd/ActiveAdmissions";
+import { DischargedPatients } from "@/components/ipd/DischargedPatients";
 import { IPDPharmacyOrders } from "@/components/ipd/IPDPharmacyOrders";
-import { BedDouble, Building2, LayoutGrid, ClipboardList, UserCheck, Pill } from "lucide-react";
+import { BedDouble, Building2, LayoutGrid, ClipboardList, UserCheck, Pill, History } from "lucide-react";
 import { useSearchParams } from "react-router-dom";
 
 export default function AdminIPD() {
@@ -26,6 +27,7 @@ export default function AdminIPD() {
             <TabsTrigger value="overview" className="gap-1.5"><LayoutGrid className="w-4 h-4" />Bed Dashboard</TabsTrigger>
             <TabsTrigger value="pending" className="gap-1.5"><ClipboardList className="w-4 h-4" />Pending</TabsTrigger>
             <TabsTrigger value="admitted" className="gap-1.5"><UserCheck className="w-4 h-4" />Admitted</TabsTrigger>
+            <TabsTrigger value="discharged" className="gap-1.5"><History className="w-4 h-4" />Discharged</TabsTrigger>
             <TabsTrigger value="wards" className="gap-1.5"><Building2 className="w-4 h-4" />Wards</TabsTrigger>
             <TabsTrigger value="beds" className="gap-1.5"><BedDouble className="w-4 h-4" />Beds</TabsTrigger>
             <TabsTrigger value="pharmacy" className="gap-1.5"><Pill className="w-4 h-4" />Pharmacy History</TabsTrigger>
@@ -33,6 +35,7 @@ export default function AdminIPD() {
           <TabsContent value="overview" className="mt-4"><BedDashboard /></TabsContent>
           <TabsContent value="pending" className="mt-4"><PendingAdmissions /></TabsContent>
           <TabsContent value="admitted" className="mt-4"><ActiveAdmissions /></TabsContent>
+          <TabsContent value="discharged" className="mt-4"><DischargedPatients /></TabsContent>
           <TabsContent value="wards" className="mt-4"><WardManager /></TabsContent>
           <TabsContent value="beds" className="mt-4"><BedManager /></TabsContent>
           <TabsContent value="pharmacy" className="mt-4"><IPDPharmacyOrders /></TabsContent>
