@@ -211,22 +211,29 @@ export function TreatmentChartDialog({ open, onOpenChange, admissionId, patientN
             ]} />
           </TabsContent>
 
-          {/* Doctor / Nursing notes */}
-          {(["doctor_note", "nursing_note"] as EntryType[]).map(t => (
-            <TabsContent key={t} value={t} className="space-y-4 mt-4">
-              {canWrite && (
-                <div className="space-y-2 p-4 border rounded-md">
-                  <Label>{t === "doctor_note" ? "Doctor Note" : "Nursing Note"}</Label>
-                  <Textarea rows={3} value={form.notes ?? ""} onChange={e => setForm({ ...form, notes: e.target.value })} />
-                  <Button onClick={save} disabled={saving || !form.notes} size="sm"><Plus className="w-4 h-4 mr-1" />Add Note</Button>
-                </div>
-              )}
-              <EntriesTable rows={filtered} loading={loading} columns={[
-                { h: "Time", c: (r) => format(new Date(r.recorded_at), "MMM d HH:mm") },
-                { h: "Note", c: (r) => <span className="whitespace-pre-wrap">{r.notes}</span> },
-              ]} />
-            </TabsContent>
-          ))}
+          {/* Doctor Notes — view only */}
+          <TabsContent value="doctor_note" className="space-y-4 mt-4">
+            <div className="text-xs text-muted-foreground mb-2">Doctor notes are read-only here. Doctors add notes from their dashboard.</div>
+            <EntriesTable rows={filtered} loading={loading} columns={[
+              { h: "Time", c: (r) => format(new Date(r.recorded_at), "MMM d HH:mm") },
+              { h: "Note", c: (r) => <span className="whitespace-pre-wrap">{r.notes}</span> },
+            ]} />
+          </TabsContent>
+
+          {/* Nursing Notes — writable */}
+          <TabsContent value="nursing_note" className="space-y-4 mt-4">
+            {canWrite && (
+              <div className="space-y-2 p-4 border rounded-md">
+                <Label>Nursing Note</Label>
+                <Textarea rows={3} value={form.notes ?? ""} onChange={e => setForm({ ...form, notes: e.target.value })} />
+                <Button onClick={save} disabled={saving || !form.notes} size="sm"><Plus className="w-4 h-4 mr-1" />Add Note</Button>
+              </div>
+            )}
+            <EntriesTable rows={filtered} loading={loading} columns={[
+              { h: "Time", c: (r) => format(new Date(r.recorded_at), "MMM d HH:mm") },
+              { h: "Note", c: (r) => <span className="whitespace-pre-wrap">{r.notes}</span> },
+            ]} />
+          </TabsContent>
 
           {/* IV Fluid */}
           <TabsContent value="iv_fluid" className="space-y-4 mt-4">
