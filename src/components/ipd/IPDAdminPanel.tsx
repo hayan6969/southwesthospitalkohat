@@ -5,11 +5,12 @@ import { BedManager } from "@/components/ipd/BedManager";
 import { PendingAdmissions } from "@/components/ipd/PendingAdmissions";
 import { ActiveAdmissions } from "@/components/ipd/ActiveAdmissions";
 import { IPDPharmacyOrders } from "@/components/ipd/IPDPharmacyOrders";
-import { BedDouble, Building2, LayoutGrid, ClipboardList, UserCheck, Pill } from "lucide-react";
+import { StaffIPDRegister } from "@/components/staff/StaffIPDRegister";
+import { BedDouble, Building2, LayoutGrid, ClipboardList, UserCheck, Pill, UserPlus } from "lucide-react";
 import { useState } from "react";
 
 export function IPDAdminPanel() {
-  const [tab, setTab] = useState("overview");
+  const [tab, setTab] = useState("register");
   return (
     <div className="space-y-4">
       <div>
@@ -19,6 +20,7 @@ export function IPDAdminPanel() {
       <Tabs value={tab} onValueChange={setTab}>
         <div className="overflow-x-auto">
           <TabsList className="inline-flex w-auto">
+            <TabsTrigger value="register" className="gap-1.5 text-xs sm:text-sm"><UserPlus className="w-4 h-4" />Register / Admit</TabsTrigger>
             <TabsTrigger value="overview" className="gap-1.5 text-xs sm:text-sm"><LayoutGrid className="w-4 h-4" />Bed Dashboard</TabsTrigger>
             <TabsTrigger value="pending" className="gap-1.5 text-xs sm:text-sm"><ClipboardList className="w-4 h-4" />Pending</TabsTrigger>
             <TabsTrigger value="admitted" className="gap-1.5 text-xs sm:text-sm"><UserCheck className="w-4 h-4" />Admitted</TabsTrigger>
@@ -27,6 +29,7 @@ export function IPDAdminPanel() {
             <TabsTrigger value="pharmacy" className="gap-1.5 text-xs sm:text-sm"><Pill className="w-4 h-4" />Pharmacy History</TabsTrigger>
           </TabsList>
         </div>
+        <TabsContent value="register" className="mt-4"><StaffIPDRegister /></TabsContent>
         <TabsContent value="overview" className="mt-4"><BedDashboard /></TabsContent>
         <TabsContent value="pending" className="mt-4"><PendingAdmissions /></TabsContent>
         <TabsContent value="admitted" className="mt-4"><ActiveAdmissions /></TabsContent>
