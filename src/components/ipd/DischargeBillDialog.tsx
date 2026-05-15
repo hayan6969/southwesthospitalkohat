@@ -16,6 +16,7 @@ interface Props {
   admission: any;
   patientName: string;
   onDischarged: () => void;
+  billOnly?: boolean;
 }
 
 interface LineItem {
@@ -26,7 +27,7 @@ interface LineItem {
   amount: number;
 }
 
-export function DischargeBillDialog({ open, onOpenChange, admission, patientName, onDischarged }: Props) {
+export function DischargeBillDialog({ open, onOpenChange, admission, patientName, onDischarged, billOnly }: Props) {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [items, setItems] = useState<LineItem[]>([]);
@@ -168,12 +169,14 @@ export function DischargeBillDialog({ open, onOpenChange, admission, patientName
         if (error) throw error;
       }
 
-      // Discharge admission
-      const { error: dErr } = await supabase
-        .from("ipd_admissions")
-        .update({ status: "discharged", discharge_date: new Date().toISOString() })
-        .eq("id", admission.id);
-      if (dErr) throw dErr;
+      // Discharge admission (skip if bill-only mode for staff)
+      if (!billOnly) {
+        const { error: dErr } = await supabase
+          .from("ipd_admissions")
+          .update({ status: "discharged", discharge_date: new Date().toISOString() })
+          .eq("id", admission.id);
+        if (dErr) throw dErr;
+      }
 
       // PDF
       await generateDischargeBillPDF({
@@ -192,7 +195,7 @@ export function DischargeBillDialog({ open, onOpenChange, admission, patientName
         paid: totalDeposit,
       });
 
-      toast.success("Patient discharged & bill generated");
+      toast.success(billOnly ? "Bill finalized" : "Patient discharged & bill generated");
       onDischarged();
       onOpenChange(false);
     } catch (e: any) {
@@ -206,7 +209,7 @@ export function DischargeBillDialog({ open, onOpenChange, admission, patientName
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto z-[9999]">
         <DialogHeader>
-          <DialogTitle>Final Discharge Bill — {patientName} ({admission?.admission_number})</DialogTitle>
+          <DialogTitle>{billOnly ? "Finalize Bill" : "Final Discharge Bill"} — {patientName} ({admission?.admission_number})</DialogTitle>
         </DialogHeader>
 
         {loading ? (
@@ -290,7 +293,7 @@ export function DischargeBillDialog({ open, onOpenChange, admission, patientName
               <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>Cancel</Button>
               <Button onClick={finalize} disabled={saving}>
                 {saving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                Finalize, Discharge & Generate PDF
+                {billOnly ? "Finalize Bill & Generate PDF" : "Finalize, Discharge & Generate PDF"}
               </Button>
             </div>
           </div>

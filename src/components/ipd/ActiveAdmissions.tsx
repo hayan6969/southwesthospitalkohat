@@ -32,11 +32,13 @@ export function ActiveAdmissions() {
   const [advanceFor, setAdvanceFor] = useState<any>(null);
   const [balances, setBalances] = useState<Record<string, BalanceInfo>>({});
   const [orderCounts, setOrderCounts] = useState<Record<string, { pending: number; dispensed: number }>>({});
+  const [invoiceData, setInvoiceData] = useState<Record<string, any>>({});
   const { profile } = useAuth();
   const { data: patientNames } = usePatientNames();
   const isDoctor = profile?.role === "doctor";
   const isAdmin = profile?.role === "admin";
-  const canDischarge = isDoctor || isAdmin;
+  const isStaff = profile?.role === "staff";
+  const isIPD = profile?.role === "ipd";
 
   const calcBalance = useCallback(async (admission: any): Promise<BalanceInfo> => {
     const admDate = new Date(admission.admission_date);
@@ -88,12 +90,16 @@ export function ActiveAdmissions() {
     if (data && data.length > 0) {
       const ids = data.map((r: any) => r.id);
 
-      const [{ data: orders }] = await Promise.all([
+      const [{ data: orders }, { data: invData }] = await Promise.all([
         supabase
           .from("ipd_medicine_orders")
           .select("admission_id, status")
           .in("admission_id", ids)
           .in("status", ["pending", "dispensed"]),
+        supabase
+          .from("ipd_invoices")
+          .select("admission_id, total_amount, paid_amount, status")
+          .in("admission_id", ids),
       ]);
 
       const counts: Record<string, { pending: number; dispensed: number }> = {};
@@ -102,6 +108,10 @@ export function ActiveAdmissions() {
         counts[o.admission_id][o.status as "pending" | "dispensed"]++;
       });
       setOrderCounts(counts);
+
+      const invMap: Record<string, any> = {};
+      (invData ?? []).forEach((inv: any) => { invMap[inv.admission_id] = inv; });
+      setInvoiceData(invMap);
 
       const balanceMap: Record<string, BalanceInfo> = {};
       await Promise.all(
@@ -131,7 +141,12 @@ export function ActiveAdmissions() {
   }, []);
 
   const discharge = async (id: string) => {
-    if (!confirm("Discharge without final bill? (Use 'Discharge & Bill' for full settlement)")) return;
+    const inv = invoiceData[id];
+    if (inv && Number(inv.total_amount) > 0 && Number(inv.paid_amount) < Number(inv.total_amount)) {
+      toast.error("Cannot discharge — bill payment is not complete");
+      return;
+    }
+    if (!confirm("Finalize discharge for this patient?")) return;
     const { error } = await supabase.from("ipd_admissions").update({
       status: "discharged",
       discharge_date: new Date().toISOString(),
@@ -214,21 +229,28 @@ export function ActiveAdmissions() {
                       <TableCell>
                         <div className="flex flex-wrap gap-1">
                           <Button size="sm" variant="outline" onClick={() => setChartFor(r)}>Chart</Button>
-                          <Button size="sm" variant="outline" onClick={() => setAdvanceFor(r)} className="gap-1">
-                            <Banknote className="w-3 h-3" />Advance
-                          </Button>
+                          {!isIPD && (
+                            <Button size="sm" variant="outline" onClick={() => setAdvanceFor(r)} className="gap-1">
+                              <Banknote className="w-3 h-3" />Advance
+                            </Button>
+                          )}
                           <Button size="sm" variant="outline" onClick={() => setPharmacyFor(r)} className="gap-1"><Pill className="w-3 h-3" />Pharmacy</Button>
                           <Button size="sm" variant="outline" onClick={() => setAdmissionFormFor(r)} className="gap-1">Form</Button>
-                          {isAdmin && (
-                            <>
-                              <Button size="sm" onClick={() => setBillFor(r)}>Discharge & Bill</Button>
-                              <Button size="sm" variant="ghost" onClick={() => discharge(r.id)}>Quick</Button>
-                            </>
+                          {!isIPD && !isDoctor && (isStaff || isAdmin) && (
+                            <Button size="sm" onClick={() => setBillFor(r)} className="gap-1">
+                              <Banknote className="w-3 h-3" />Finalize Bill
+                            </Button>
                           )}
                           {isDoctor && !isAdmin && (
                             <Button size="sm" variant="ghost" onClick={() => discharge(r.id)}>
                               Discharge
                             </Button>
+                          )}
+                          {isAdmin && (
+                            <>
+                              <Button size="sm" onClick={() => setBillFor(r)}>Discharge & Bill</Button>
+                              <Button size="sm" variant="ghost" onClick={() => discharge(r.id)}>Quick</Button>
+                            </>
                           )}
                         </div>
                       </TableCell>
@@ -256,6 +278,7 @@ export function ActiveAdmissions() {
           admission={billFor}
           patientName={getPatientName(billFor.patient_id, patientNames || [])}
           onDischarged={load}
+          billOnly={isStaff || false}
         />
       )}
       {pharmacyFor && (
