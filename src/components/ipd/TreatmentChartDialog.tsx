@@ -38,7 +38,7 @@ export function TreatmentChartDialog({ open, onOpenChange, admissionId, patientN
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState<any>({});
 
-  const canWrite = ["admin", "doctor", "nurse", "ota", "staff"].includes(profile?.role as string);
+  const canWrite = ["admin", "doctor", "nurse", "ota", "staff", "ipd"].includes(profile?.role as string);
 
   const load = async () => {
     if (!admissionId) return;
