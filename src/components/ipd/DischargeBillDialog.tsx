@@ -47,7 +47,7 @@ export function DischargeBillDialog({ open, onOpenChange, admission, patientName
 
       const [bedRes, medRes, labRes, docRes] = await Promise.all([
         admission.bed_id ? supabase.from("beds").select("daily_charge,bed_number").eq("id", admission.bed_id).maybeSingle() : Promise.resolve({ data: null } as any),
-        supabase.from("ipd_medicine_orders").select("medicine_name,quantity,unit_price,status").eq("admission_id", admission.id).in("status", ["dispensed", "administered"]),
+        supabase.from("ipd_medicine_orders").select("medicine_name,quantity,unit_price,status").eq("admission_id", admission.id).in("status", ["dispensed", "received", "administered"]),
         supabase.from("ipd_lab_orders").select("test_name,charge,status").eq("admission_id", admission.id).eq("status", "completed"),
         admission.doctor_id ? supabase.from("doctors").select("consultation_fee").eq("id", admission.doctor_id).maybeSingle() : Promise.resolve({ data: null } as any),
       ]);

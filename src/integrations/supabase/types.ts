@@ -1189,6 +1189,8 @@ export type Database = {
           notes: string | null
           ordered_by: string | null
           quantity: number
+          received_at: string | null
+          received_by: string | null
           route: string | null
           status: string
           unit_price: number
@@ -1208,6 +1210,8 @@ export type Database = {
           notes?: string | null
           ordered_by?: string | null
           quantity?: number
+          received_at?: string | null
+          received_by?: string | null
           route?: string | null
           status?: string
           unit_price?: number
@@ -1227,6 +1231,8 @@ export type Database = {
           notes?: string | null
           ordered_by?: string | null
           quantity?: number
+          received_at?: string | null
+          received_by?: string | null
           route?: string | null
           status?: string
           unit_price?: number

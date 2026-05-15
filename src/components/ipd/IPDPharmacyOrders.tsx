@@ -6,11 +6,12 @@ import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
-import { Loader2, Pill, RefreshCw, PackageCheck } from "lucide-react";
+import { Loader2, PackageCheck, RefreshCw, UserCheck } from "lucide-react";
 import { format } from "date-fns";
 import { formatPkrAmount } from "@/utils/currency";
+import { usePatientNames, getPatientName } from "@/hooks/useDisplayHelpers";
 
-type Row = {
+type OrderRow = {
   id: string;
   medicine_name: string;
   dosage: string | null;
@@ -24,23 +25,25 @@ type Row = {
   ipd_admissions?: {
     admission_number: string;
     patient_id: string;
-    profiles?: { first_name: string | null; last_name: string | null } | null;
+    wards?: { name: string } | null;
+    beds?: { bed_number: string } | null;
   } | null;
 };
 
-const STATUS_GROUPS = ["pending", "dispensed", "received", "administered", "all"] as const;
+const STATUS_FILTERS = ["dispensed", "received", "administered", "pending", "all"] as const;
 
-export function IPDPharmacyQueue() {
+export function IPDPharmacyOrders() {
   const { profile } = useAuth();
-  const [rows, setRows] = useState<Row[]>([]);
+  const [rows, setRows] = useState<OrderRow[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState<string>("pending");
+  const [filter, setFilter] = useState<string>("dispensed");
+  const { data: patientNames } = usePatientNames();
 
   const load = useCallback(async () => {
     setLoading(true);
     let q = supabase
       .from("ipd_medicine_orders")
-      .select("*, ipd_admissions(admission_number, patient_id, profiles:patient_id(first_name, last_name))")
+      .select("*, ipd_admissions!inner(admission_number, patient_id, wards(name), beds(bed_number))")
       .order("created_at", { ascending: false })
       .limit(200);
     if (filter !== "all") q = q.eq("status", filter);
@@ -54,38 +57,23 @@ export function IPDPharmacyQueue() {
 
   useEffect(() => {
     const ch = supabase
-      .channel("ipd-pharmacy-queue")
+      .channel("ipd-pharmacy-orders")
       .on("postgres_changes", { event: "*", schema: "public", table: "ipd_medicine_orders" }, () => load())
       .subscribe();
     return () => { supabase.removeChannel(ch); };
   }, [load]);
 
-  const dispense = async (id: string, medicineName: string, qty: number) => {
-    // Look up the medicine to deduct stock
-    const { data: meds } = await supabase
-      .from("medicines")
-      .select("id, stock_quantity")
-      .eq("name", medicineName)
-      .maybeSingle();
-
-    if (meds && meds.stock_quantity !== null) {
-      if (meds.stock_quantity < qty) {
-        toast.error(`Insufficient stock: only ${meds.stock_quantity} available`);
-        return;
-      }
-      const { error: stockErr } = await supabase
-        .from("medicines")
-        .update({ stock_quantity: meds.stock_quantity - qty })
-        .eq("id", meds.id);
-      if (stockErr) console.error("Stock deduction failed:", stockErr);
-    }
-
+  const markReceived = async (id: string) => {
     const { error } = await supabase
       .from("ipd_medicine_orders")
-      .update({ status: "dispensed", dispensed_by: profile?.id, dispensed_at: new Date().toISOString() })
+      .update({
+        status: "received",
+        received_by: profile?.id,
+        received_at: new Date().toISOString(),
+      })
       .eq("id", id);
     if (error) { toast.error(error.message); return; }
-    toast.success("Dispensed — stock deducted");
+    toast.success("Marked as received");
     load();
   };
 
@@ -103,11 +91,17 @@ export function IPDPharmacyQueue() {
     <Card>
       <CardHeader className="flex-row items-center justify-between space-y-0">
         <CardTitle className="flex items-center gap-2 text-base">
-          <PackageCheck className="w-4 h-4" />IPD Pharmacy Orders
+          <PackageCheck className="w-4 h-4" />Pharmacy Orders
         </CardTitle>
         <div className="flex items-center gap-1 flex-wrap">
-          {STATUS_GROUPS.map(f => (
-            <Button key={f} size="sm" variant={filter === f ? "default" : "outline"} onClick={() => setFilter(f)} className="capitalize">
+          {STATUS_FILTERS.map(f => (
+            <Button
+              key={f}
+              size="sm"
+              variant={filter === f ? "default" : "outline"}
+              onClick={() => setFilter(f)}
+              className="capitalize"
+            >
               {f === "all" ? "All" : f}
             </Button>
           ))}
@@ -118,19 +112,19 @@ export function IPDPharmacyQueue() {
         {loading ? (
           <div className="flex justify-center p-6"><Loader2 className="w-5 h-5 animate-spin" /></div>
         ) : rows.length === 0 ? (
-          <p className="text-sm text-muted-foreground text-center py-6">No orders.</p>
+          <p className="text-sm text-muted-foreground text-center py-6">No pharmacy orders.</p>
         ) : (
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Time</TableHead>
+                  <TableHead>Ordered</TableHead>
                   <TableHead>Admission</TableHead>
                   <TableHead>Patient</TableHead>
+                  <TableHead>Ward / Bed</TableHead>
                   <TableHead>Medicine</TableHead>
-                  <TableHead>Dose / Freq / Route</TableHead>
+                  <TableHead>Dose / Freq</TableHead>
                   <TableHead>Qty</TableHead>
-                  <TableHead>Unit Price</TableHead>
                   <TableHead>Total</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Action</TableHead>
@@ -138,25 +132,27 @@ export function IPDPharmacyQueue() {
               </TableHeader>
               <TableBody>
                 {rows.map(r => {
-                  const p = r.ipd_admissions?.profiles;
-                  const name = p ? `${p.first_name ?? ""} ${p.last_name ?? ""}`.trim() : "—";
+                  const a = r.ipd_admissions;
+                  const name = a ? getPatientName(a.patient_id, patientNames || []) : "—";
                   return (
                     <TableRow key={r.id}>
                       <TableCell className="text-xs">{format(new Date(r.created_at), "MMM d HH:mm")}</TableCell>
-                      <TableCell className="font-mono text-xs">{r.ipd_admissions?.admission_number ?? "—"}</TableCell>
-                      <TableCell>{name || "—"}</TableCell>
+                      <TableCell className="font-mono text-xs">{a?.admission_number ?? "—"}</TableCell>
+                      <TableCell>{name}</TableCell>
+                      <TableCell className="text-xs">
+                        {a?.wards?.name ? `${a.wards.name} / ${a.beds?.bed_number ?? "—"}` : "—"}
+                      </TableCell>
                       <TableCell className="font-medium">{r.medicine_name}</TableCell>
-                      <TableCell className="text-xs">{[r.dosage, r.frequency, r.route].filter(Boolean).join(" / ") || "—"}</TableCell>
+                      <TableCell className="text-xs">{[r.dosage, r.frequency].filter(Boolean).join(" / ") || "—"}</TableCell>
                       <TableCell>{r.quantity}</TableCell>
-                      <TableCell className="text-xs">{formatPkrAmount(r.unit_price)}</TableCell>
                       <TableCell className="text-xs font-medium">{formatPkrAmount(r.quantity * r.unit_price)}</TableCell>
                       <TableCell>
                         <Badge className={statusBadge(r.status)} variant="outline">{r.status}</Badge>
                       </TableCell>
                       <TableCell>
-                        {r.status === "pending" && (
-                          <Button size="sm" onClick={() => dispense(r.id, r.medicine_name, r.quantity)}>
-                            <Pill className="w-3 h-3 mr-1" />Dispense
+                        {r.status === "dispensed" && (
+                          <Button size="sm" onClick={() => markReceived(r.id)}>
+                            <UserCheck className="w-3 h-3 mr-1" />Mark Received
                           </Button>
                         )}
                       </TableCell>

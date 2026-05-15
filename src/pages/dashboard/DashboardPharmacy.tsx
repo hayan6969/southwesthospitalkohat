@@ -1,5 +1,6 @@
 
 import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import AppLayout from "@/layouts/AppLayout";
 import { StatsCard } from "@/components/StatsCard";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -8,7 +9,7 @@ import { IPDPharmacyQueue } from "@/components/ipd/IPDPharmacyQueue";
 
 import { Button } from "@/components/ui/button";
 import { usePharmacyStats, useExpiringMedicines, usePharmacyInvoices } from "@/hooks/useDatabase";
-import { Pill, ShoppingCart, Banknote, AlertTriangle, TrendingUp, FileText, WifiOff } from "lucide-react";
+import { Pill, ShoppingCart, Banknote, AlertTriangle, TrendingUp, FileText, WifiOff, PackageCheck } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -20,6 +21,9 @@ import { useToast } from "@/hooks/use-toast";
 import { usePharmacyPermissions } from "@/hooks/usePharmacyPermissions";
 
 export default function DashboardPharmacy() {
+  const [searchParams] = useSearchParams();
+  const tabFromUrl = searchParams.get("tab");
+  const [activeTab, setActiveTab] = useState(tabFromUrl || "overview");
   const { data: stats, isLoading: statsLoading } = usePharmacyStats();
   const { data: expiringMedicines, isLoading: expiringLoading } = useExpiringMedicines();
   const { data: invoices, isLoading: invoicesLoading } = usePharmacyInvoices();
@@ -142,12 +146,12 @@ export default function DashboardPharmacy() {
           />
         </div>
 
-        <Tabs defaultValue="overview" className="space-y-4">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
           <TabsList>
-            <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="invoices">Recent Invoices</TabsTrigger>
-            <TabsTrigger value="supplies">Supplies</TabsTrigger>
-            <TabsTrigger value="ipd">IPD Orders</TabsTrigger>
+            <TabsTrigger value="overview" className="gap-1.5">Overview</TabsTrigger>
+            <TabsTrigger value="invoices" className="gap-1.5">Recent Invoices</TabsTrigger>
+            <TabsTrigger value="supplies" className="gap-1.5">Supplies</TabsTrigger>
+            <TabsTrigger value="ipd" className="gap-1.5"><PackageCheck className="w-4 h-4" />IPD Orders</TabsTrigger>
           </TabsList>
 
           <TabsContent value="overview" className="space-y-6">

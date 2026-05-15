@@ -26,6 +26,7 @@ import DashboardFinance from "./pages/dashboard/DashboardFinance";
 import DashboardOTA from "./pages/dashboard/DashboardOTA";
 import DashboardStore from "./pages/dashboard/DashboardStore";
 import DashboardLab from "./pages/dashboard/DashboardLab";
+import DashboardIpd from "./pages/dashboard/DashboardIpd";
 
 // Doctor pages
 import DoctorSchedule from "./pages/dashboard/doctor/DoctorSchedule";
@@ -194,6 +195,18 @@ const App = () => (
             <Route path="/dashboard/ota/*" element={
               <ProtectedRoute allowedRoles={['ota', 'nursing', 'admin']}>
                 <DashboardOTA />
+              </ProtectedRoute>
+            } />
+
+            {/* IPD dashboard routes */}
+            <Route path="/dashboard/ipd" element={
+              <ProtectedRoute allowedRoles={['ipd', 'admin']}>
+                <DashboardIpd />
+              </ProtectedRoute>
+            } />
+            <Route path="/dashboard/ipd/*" element={
+              <ProtectedRoute allowedRoles={['ipd', 'admin']}>
+                <DashboardIpd />
               </ProtectedRoute>
             } />
 

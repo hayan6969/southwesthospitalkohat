@@ -134,6 +134,7 @@ export function TreatmentChartDialog({ open, onOpenChange, admissionId, patientN
   const updateMedStatus = async (id: string, status: string) => {
     const patch: any = { status };
     if (status === "dispensed") { patch.dispensed_by = profile?.id; patch.dispensed_at = new Date().toISOString(); }
+    if (status === "received") { patch.received_by = profile?.id; patch.received_at = new Date().toISOString(); }
     if (status === "administered") { patch.administered_by = profile?.id; patch.administered_at = new Date().toISOString(); }
     const { error } = await supabase.from("ipd_medicine_orders").update(patch).eq("id", id);
     if (error) { toast.error(error.message); return; }
@@ -305,23 +306,28 @@ export function TreatmentChartDialog({ open, onOpenChange, admissionId, patientN
                     <TableHead>Medicine</TableHead>
                     <TableHead>Dose / Freq / Route</TableHead>
                     <TableHead>Qty</TableHead>
+                    <TableHead>Unit Pr.</TableHead>
+                    <TableHead>Total</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Action</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {meds.length === 0 ? (
-                    <TableRow><TableCell colSpan={6} className="text-center text-sm text-muted-foreground py-6">No medicine orders</TableCell></TableRow>
+                    <TableRow><TableCell colSpan={8} className="text-center text-sm text-muted-foreground py-6">No medicine orders</TableCell></TableRow>
                   ) : meds.map((m) => (
                     <TableRow key={m.id}>
                       <TableCell className="text-xs">{format(new Date(m.created_at), "MMM d HH:mm")}</TableCell>
                       <TableCell className="font-medium">{m.medicine_name}</TableCell>
                       <TableCell className="text-xs">{[m.dosage, m.frequency, m.route].filter(Boolean).join(" / ") || "—"}</TableCell>
                       <TableCell>{m.quantity}</TableCell>
+                      <TableCell className="text-xs">PKR {Number(m.unit_price).toLocaleString()}</TableCell>
+                      <TableCell className="text-xs font-medium">PKR {(m.quantity * m.unit_price).toLocaleString()}</TableCell>
                       <TableCell><Badge variant="outline">{m.status}</Badge></TableCell>
                       <TableCell className="space-x-1">
                         {m.status === "pending" && <Button size="sm" variant="outline" onClick={() => updateMedStatus(m.id, "dispensed")}>Dispense</Button>}
-                        {m.status === "dispensed" && <Button size="sm" variant="outline" onClick={() => updateMedStatus(m.id, "administered")}>Administer</Button>}
+                        {m.status === "dispensed" && <Button size="sm" variant="outline" onClick={() => updateMedStatus(m.id, "received")}>Mark Received</Button>}
+                        {m.status === "received" && <Button size="sm" variant="outline" onClick={() => updateMedStatus(m.id, "administered")}>Administer</Button>}
                       </TableCell>
                     </TableRow>
                   ))}

@@ -1,6 +1,6 @@
 
 import { NavLink, useLocation } from "react-router-dom";
-import { User, Users, Calendar, FileText, Inbox, Info, Activity, Building2, Shield, Pill, Clock, TestTube, CreditCard, Calculator, Receipt, Settings, ChartBar, UserPlus, Stethoscope, Upload, CheckCircle, RotateCcw, FlaskConical, Menu, X, Package, Warehouse, Tag } from "lucide-react";
+import { User, Users, Calendar, FileText, Inbox, Info, Activity, Building2, Shield, Pill, Clock, TestTube, CreditCard, Calculator, Receipt, Settings, ChartBar, UserPlus, Stethoscope, Upload, CheckCircle, RotateCcw, FlaskConical, Menu, X, Package, Warehouse, Tag, PackageCheck } from "lucide-react";
 import { useState } from "react";
 import { useIsMobile } from "@/hooks/use-mobile";
 
@@ -50,6 +50,7 @@ const navsByRole: Record<string, { label: string; to: string; icon: React.Elemen
   ],
   head_pharmacist: [
     { label: "Dashboard", to: "/dashboard/pharmacy", icon: Info },
+    { label: "IPD Orders", to: "/dashboard/pharmacy?tab=ipd", icon: PackageCheck },
     { label: "Medicines", to: "/dashboard/pharmacy/medicines", icon: Pill },
     { label: "Sell Medicine", to: "/dashboard/pharmacy/sell", icon: CreditCard },
     { label: "Invoices", to: "/dashboard/pharmacy/invoices", icon: Receipt },
@@ -62,6 +63,7 @@ const navsByRole: Record<string, { label: string; to: string; icon: React.Elemen
   ],
   assistant_pharmacist: [
     { label: "Dashboard", to: "/dashboard/pharmacy", icon: Info },
+    { label: "IPD Orders", to: "/dashboard/pharmacy?tab=ipd", icon: PackageCheck },
     { label: "Medicines", to: "/dashboard/pharmacy/medicines", icon: Pill },
     { label: "Sell Medicine", to: "/dashboard/pharmacy/sell", icon: CreditCard },
     { label: "Invoices", to: "/dashboard/pharmacy/invoices", icon: Receipt },
@@ -105,6 +107,9 @@ const navsByRole: Record<string, { label: string; to: string; icon: React.Elemen
     { label: "Lab Item Supply", to: "/dashboard/lab?tab=inventory", icon: FlaskConical },
     { label: "Request Supplies", to: "/dashboard/lab?tab=supplies", icon: Package },
   ],
+  ipd: [
+    { label: "Dashboard", to: "/dashboard/ipd", icon: Info },
+  ],
 };
 
 export function SidebarNav({ role }: SidebarNavProps) {
@@ -127,7 +132,7 @@ export function SidebarNav({ role }: SidebarNavProps) {
       return true;
     }
     // For dashboard root links, exact match
-    if (item.to === `/dashboard/${role}` || item.to === "/dashboard/pharmacy" || item.to === "/dashboard/finance" || item.to === "/dashboard/store" || item.to === "/dashboard/lab") {
+    if (item.to === `/dashboard/${role}` || item.to === "/dashboard/pharmacy" || item.to === "/dashboard/finance" || item.to === "/dashboard/store" || item.to === "/dashboard/lab" || item.to === "/dashboard/ipd") {
       return location.pathname === itemPath && !location.search;
     }
     return location.pathname.startsWith(itemPath);
