@@ -156,7 +156,7 @@ export function AdmitPatientDialog({ open, onOpenChange, admission, onAdmitted }
     if (error) { toast.error(error.message); return; }
     toast.success("Admission cancelled");
     onOpenChange(false);
-    onAdmitted?.();
+    onAdmitted?.(admission);
   };
 
   return (
