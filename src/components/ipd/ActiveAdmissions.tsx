@@ -1,17 +1,26 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { format } from "date-fns";
-import { Loader2, Pill } from "lucide-react";
+import { Loader2, Pill, Banknote } from "lucide-react";
 import { toast } from "sonner";
+import { useAuth } from "@/hooks/useAuth";
 import { usePatientNames, getPatientName } from "@/hooks/useDisplayHelpers";
 import { TreatmentChartDialog } from "./TreatmentChartDialog";
 import { DischargeBillDialog } from "./DischargeBillDialog";
 import { PharmacyOrderHistoryDialog } from "./PharmacyOrderHistoryDialog";
 import { AdmissionFormDialog } from "./AdmissionFormDialog";
+import { CollectAdvanceDialog } from "./CollectAdvanceDialog";
+import { formatPkrAmount } from "@/utils/currency";
+
+interface BalanceInfo {
+  accrued: number;
+  deposit: number;
+  balance: number;
+}
 
 export function ActiveAdmissions() {
   const [rows, setRows] = useState<any[]>([]);
@@ -20,8 +29,52 @@ export function ActiveAdmissions() {
   const [billFor, setBillFor] = useState<any>(null);
   const [pharmacyFor, setPharmacyFor] = useState<any>(null);
   const [admissionFormFor, setAdmissionFormFor] = useState<any>(null);
+  const [advanceFor, setAdvanceFor] = useState<any>(null);
+  const [balances, setBalances] = useState<Record<string, BalanceInfo>>({});
   const [orderCounts, setOrderCounts] = useState<Record<string, { pending: number; dispensed: number }>>({});
+  const { profile } = useAuth();
   const { data: patientNames } = usePatientNames();
+  const isDoctor = profile?.role === "doctor";
+  const isAdmin = profile?.role === "admin";
+  const canDischarge = isDoctor || isAdmin;
+
+  const calcBalance = useCallback(async (admission: any): Promise<BalanceInfo> => {
+    const admDate = new Date(admission.admission_date);
+    const days = Math.max(1, Math.ceil((Date.now() - admDate.getTime()) / 86400000));
+
+    const [bedRes, medRes, labRes, docRes, invoiceRes] = await Promise.all([
+      admission.bed_id
+        ? supabase.from("beds").select("daily_charge").eq("id", admission.bed_id).maybeSingle()
+        : Promise.resolve({ data: null } as any),
+      supabase
+        .from("ipd_medicine_orders")
+        .select("quantity, unit_price")
+        .eq("admission_id", admission.id)
+        .in("status", ["dispensed", "received", "administered"]),
+      supabase
+        .from("ipd_lab_orders")
+        .select("charge")
+        .eq("admission_id", admission.id)
+        .eq("status", "completed"),
+      admission.doctor_id
+        ? supabase.from("doctors").select("consultation_fee").eq("id", admission.doctor_id).maybeSingle()
+        : Promise.resolve({ data: null } as any),
+      supabase
+        .from("ipd_invoices")
+        .select("paid_amount")
+        .eq("admission_id", admission.id)
+        .maybeSingle(),
+    ]);
+
+    const bedCharge = days * Number(bedRes.data?.daily_charge || 0);
+    const medicineCharge = (medRes.data ?? []).reduce((s: number, m: any) => s + Number(m.quantity || 1) * Number(m.unit_price || 0), 0);
+    const labCharge = (labRes.data ?? []).reduce((s: number, l: any) => s + Number(l.charge || 0), 0);
+    const docCharge = Number(docRes.data?.consultation_fee || 0);
+    const deposit = Number(invoiceRes.data?.paid_amount || 0);
+    const accrued = bedCharge + medicineCharge + labCharge + docCharge;
+
+    return { accrued, deposit, balance: Math.max(0, accrued - deposit) };
+  }, []);
 
   const load = async () => {
     setLoading(true);
@@ -32,20 +85,31 @@ export function ActiveAdmissions() {
       .order("admission_date", { ascending: false });
     setRows(data ?? []);
 
-    // Fetch pending/dispensed order counts for all active admissions
     if (data && data.length > 0) {
       const ids = data.map((r: any) => r.id);
-      const { data: orders } = await supabase
-        .from("ipd_medicine_orders")
-        .select("admission_id, status")
-        .in("admission_id", ids)
-        .in("status", ["pending", "dispensed"]);
+
+      const [{ data: orders }] = await Promise.all([
+        supabase
+          .from("ipd_medicine_orders")
+          .select("admission_id, status")
+          .in("admission_id", ids)
+          .in("status", ["pending", "dispensed"]),
+      ]);
+
       const counts: Record<string, { pending: number; dispensed: number }> = {};
       (orders ?? []).forEach((o: any) => {
         if (!counts[o.admission_id]) counts[o.admission_id] = { pending: 0, dispensed: 0 };
         counts[o.admission_id][o.status as "pending" | "dispensed"]++;
       });
       setOrderCounts(counts);
+
+      const balanceMap: Record<string, BalanceInfo> = {};
+      await Promise.all(
+        data.map(async (r: any) => {
+          balanceMap[r.id] = await calcBalance(r);
+        })
+      );
+      setBalances(balanceMap);
     }
     setLoading(false);
   };
@@ -54,8 +118,16 @@ export function ActiveAdmissions() {
     load();
     const ch = supabase.channel("ipd_active")
       .on("postgres_changes", { event: "*", schema: "public", table: "ipd_admissions" }, () => load())
+      .on("postgres_changes", { event: "*", schema: "public", table: "ipd_invoices" }, () => load())
+      .on("postgres_changes", { event: "*", schema: "public", table: "ipd_charges" }, () => load())
       .subscribe();
-    return () => { supabase.removeChannel(ch); };
+
+    const interval = setInterval(load, 30000);
+
+    return () => {
+      supabase.removeChannel(ch);
+      clearInterval(interval);
+    };
   }, []);
 
   const discharge = async (id: string) => {
@@ -71,7 +143,14 @@ export function ActiveAdmissions() {
 
   return (
     <Card>
-      <CardHeader><CardTitle>Admitted Patients ({rows.length})</CardTitle></CardHeader>
+      <CardHeader>
+        <CardTitle className="flex items-center justify-between">
+          <span>Admitted Patients ({rows.length})</span>
+          <span className="text-sm font-normal text-muted-foreground">
+            Auto-refreshes every 30s
+          </span>
+        </CardTitle>
+      </CardHeader>
       <CardContent>
         {loading ? (
           <div className="flex justify-center p-8"><Loader2 className="w-5 h-5 animate-spin" /></div>
@@ -87,6 +166,7 @@ export function ActiveAdmissions() {
                   <TableHead>Ward / Bed</TableHead>
                   <TableHead>Diagnosis</TableHead>
                   <TableHead>Pharmacy</TableHead>
+                  <TableHead>Balance</TableHead>
                   <TableHead>Admitted</TableHead>
                   <TableHead>Action</TableHead>
                 </TableRow>
@@ -94,6 +174,7 @@ export function ActiveAdmissions() {
               <TableBody>
                 {rows.map((r: any) => {
                   const c = orderCounts[r.id];
+                  const b = balances[r.id];
                   return (
                     <TableRow key={r.id}>
                       <TableCell className="font-mono text-xs">{r.admission_number}</TableCell>
@@ -107,13 +188,49 @@ export function ActiveAdmissions() {
                           {!c?.pending && !c?.dispensed ? <span className="text-xs text-muted-foreground">—</span> : null}
                         </div>
                       </TableCell>
+                      <TableCell>
+                        {b ? (
+                          <div className="space-y-0.5 min-w-[120px]">
+                            <div className="flex justify-between text-xs">
+                              <span className="text-muted-foreground">Accrued:</span>
+                              <span className="font-medium">{formatPkrAmount(b.accrued)}</span>
+                            </div>
+                            <div className="flex justify-between text-xs">
+                              <span className="text-muted-foreground">Deposit:</span>
+                              <span className="font-medium text-green-600">{formatPkrAmount(b.deposit)}</span>
+                            </div>
+                            <div className="flex justify-between text-xs font-semibold border-t pt-0.5">
+                              <span>Balance:</span>
+                              <span className={b.balance > 0 ? "text-red-600" : "text-green-600"}>
+                                {b.balance > 0 ? formatPkrAmount(b.balance) : "Cleared"}
+                              </span>
+                            </div>
+                          </div>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">—</span>
+                        )}
+                      </TableCell>
                       <TableCell className="text-xs">{format(new Date(r.admission_date), "MMM d, HH:mm")}</TableCell>
-                      <TableCell className="space-x-1">
-                        <Button size="sm" variant="outline" onClick={() => setChartFor(r)}>Chart</Button>
-                        <Button size="sm" variant="outline" onClick={() => setPharmacyFor(r)} className="gap-1"><Pill className="w-3 h-3" />Pharmacy</Button>
-                        <Button size="sm" variant="outline" onClick={() => setAdmissionFormFor(r)} className="gap-1">Form</Button>
-                        <Button size="sm" onClick={() => setBillFor(r)}>Discharge & Bill</Button>
-                        <Button size="sm" variant="ghost" onClick={() => discharge(r.id)}>Quick</Button>
+                      <TableCell>
+                        <div className="flex flex-wrap gap-1">
+                          <Button size="sm" variant="outline" onClick={() => setChartFor(r)}>Chart</Button>
+                          <Button size="sm" variant="outline" onClick={() => setAdvanceFor(r)} className="gap-1">
+                            <Banknote className="w-3 h-3" />Advance
+                          </Button>
+                          <Button size="sm" variant="outline" onClick={() => setPharmacyFor(r)} className="gap-1"><Pill className="w-3 h-3" />Pharmacy</Button>
+                          <Button size="sm" variant="outline" onClick={() => setAdmissionFormFor(r)} className="gap-1">Form</Button>
+                          {isAdmin && (
+                            <>
+                              <Button size="sm" onClick={() => setBillFor(r)}>Discharge & Bill</Button>
+                              <Button size="sm" variant="ghost" onClick={() => discharge(r.id)}>Quick</Button>
+                            </>
+                          )}
+                          {isDoctor && !isAdmin && (
+                            <Button size="sm" variant="ghost" onClick={() => discharge(r.id)}>
+                              Discharge
+                            </Button>
+                          )}
+                        </div>
                       </TableCell>
                     </TableRow>
                   );
@@ -156,6 +273,15 @@ export function ActiveAdmissions() {
           onOpenChange={(o) => !o && setAdmissionFormFor(null)}
           admission={admissionFormFor}
           patientName={getPatientName(admissionFormFor.patient_id, patientNames || [])}
+        />
+      )}
+      {advanceFor && (
+        <CollectAdvanceDialog
+          open={!!advanceFor}
+          onOpenChange={(o) => !o && setAdvanceFor(null)}
+          admission={advanceFor}
+          currentDeposit={balances[advanceFor.id]?.deposit || 0}
+          onCollected={load}
         />
       )}
     </Card>

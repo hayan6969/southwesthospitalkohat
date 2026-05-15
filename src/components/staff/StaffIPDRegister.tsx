@@ -1,11 +1,13 @@
 import { useState } from "react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { SearchablePatientSelect } from "@/components/SearchablePatientSelect";
 import { ReferToIPDDialog } from "@/components/ipd/ReferToIPDDialog";
 import { PendingAdmissions } from "@/components/ipd/PendingAdmissions";
+import { ActiveAdmissions } from "@/components/ipd/ActiveAdmissions";
 import { Button } from "@/components/ui/button";
-import { BedDouble } from "lucide-react";
+import { BedDouble, UserCheck } from "lucide-react";
 
 export function StaffIPDRegister() {
   const [patientId, setPatientId] = useState("");
@@ -40,7 +42,14 @@ export function StaffIPDRegister() {
         </CardContent>
       </Card>
 
-      <PendingAdmissions />
+      <Tabs defaultValue="pending">
+        <TabsList>
+          <TabsTrigger value="pending" className="gap-1.5"><BedDouble className="w-4 h-4" />Pending</TabsTrigger>
+          <TabsTrigger value="admitted" className="gap-1.5"><UserCheck className="w-4 h-4" />Active Admissions</TabsTrigger>
+        </TabsList>
+        <TabsContent value="pending" className="mt-4"><PendingAdmissions /></TabsContent>
+        <TabsContent value="admitted" className="mt-4"><ActiveAdmissions /></TabsContent>
+      </Tabs>
     </div>
   );
 }

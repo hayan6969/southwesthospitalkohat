@@ -26,6 +26,7 @@ import DoctorSchedule from "@/pages/dashboard/doctor/DoctorSchedule";
 import DoctorNotes from "@/pages/dashboard/doctor/DoctorNotes";
 import DoctorConsultationRates from "@/pages/dashboard/doctor/DoctorConsultationRates";
 import DoctorOT from "@/pages/dashboard/doctor/DoctorOT";
+import DoctorIPD from "@/pages/dashboard/doctor/DoctorIPD";
 import { DoctorProfileSettings } from "@/components/DoctorProfileSettings";
 import { DoctorAvailabilityManager } from "@/components/DoctorAvailabilityManager";
 import { StopAppointmentsButton } from "@/components/StopAppointmentsButton";
@@ -165,12 +166,13 @@ export default function DashboardDoctor() {
           </div>
 
           <Tabs defaultValue="overview" className="w-full">
-            <TabsList className="grid w-full grid-cols-9 h-auto p-1">
+            <TabsList className="grid w-full grid-cols-10 h-auto p-1">
               <TabsTrigger value="overview" className="text-xs sm:text-sm">Overview</TabsTrigger>
               <TabsTrigger value="appointments" className="text-xs sm:text-sm">Appointments</TabsTrigger>
               <TabsTrigger value="patients" className="text-xs sm:text-sm">Patient History</TabsTrigger>
               <TabsTrigger value="diagnoses" className="text-xs sm:text-sm">Diagnoses & Rx</TabsTrigger>
               <TabsTrigger value="ot" className="text-xs sm:text-sm">OT Operations</TabsTrigger>
+              <TabsTrigger value="ipd" className="text-xs sm:text-sm">IPD</TabsTrigger>
               <TabsTrigger value="notes" className="text-xs sm:text-sm">Patient Notes</TabsTrigger>
               <TabsTrigger value="settings" className="text-xs sm:text-sm">Settings</TabsTrigger>
               <TabsTrigger value="analytics" className="text-xs sm:text-sm">Analytics</TabsTrigger>
@@ -395,6 +397,10 @@ export default function DashboardDoctor() {
 
             <TabsContent value="ot">
               <DoctorOT />
+            </TabsContent>
+
+            <TabsContent value="ipd">
+              <DoctorIPD />
             </TabsContent>
 
             <TabsContent value="notes">

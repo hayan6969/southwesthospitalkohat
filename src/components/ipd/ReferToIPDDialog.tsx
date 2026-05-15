@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
-import { BedDouble } from "lucide-react";
+import { BedDouble, Banknote } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -21,6 +21,7 @@ export function ReferToIPDDialog({ patientId, doctorId, appointmentId, trigger, 
   const [chiefComplaint, setChiefComplaint] = useState("");
   const [provisionalDiagnosis, setProvisionalDiagnosis] = useState("");
   const [notes, setNotes] = useState("");
+  const [depositAmount, setDepositAmount] = useState<number>(0);
   const [submitting, setSubmitting] = useState(false);
 
   const submit = async () => {
@@ -30,6 +31,12 @@ export function ReferToIPDDialog({ patientId, doctorId, appointmentId, trigger, 
       const { data: numData, error: numErr } = await supabase.rpc("generate_admission_number");
       if (numErr) throw numErr;
       const { data: { user } } = await supabase.auth.getUser();
+
+      // Store deposit in notes with a parseable prefix
+      const notesToSave = depositAmount > 0
+        ? `__DEPOSIT__:${depositAmount}\n${notes}`.trim()
+        : notes || null;
+
       const { error } = await supabase.from("ipd_admissions").insert({
         admission_number: numData as string,
         patient_id: patientId,
@@ -39,13 +46,17 @@ export function ReferToIPDDialog({ patientId, doctorId, appointmentId, trigger, 
         status: "pending",
         chief_complaint: chiefComplaint || null,
         provisional_diagnosis: provisionalDiagnosis || null,
-        notes: notes || null,
+        notes: notesToSave,
         created_by: user?.id ?? null,
       });
       if (error) throw error;
-      toast.success("Patient referred to IPD — pending admission created");
+      toast.success(
+        depositAmount > 0
+          ? `Pending admission created with Rs ${depositAmount.toLocaleString()} deposit intent`
+          : "Patient referred to IPD — pending admission created"
+      );
       setOpen(false);
-      setChiefComplaint(""); setProvisionalDiagnosis(""); setNotes("");
+      setChiefComplaint(""); setProvisionalDiagnosis(""); setNotes(""); setDepositAmount(0);
       onReferred?.();
     } catch (e: any) {
       toast.error(e.message || "Failed to refer to IPD");
@@ -76,14 +87,44 @@ export function ReferToIPDDialog({ patientId, doctorId, appointmentId, trigger, 
             <Label>Provisional Diagnosis</Label>
             <Input value={provisionalDiagnosis} onChange={(e) => setProvisionalDiagnosis(e.target.value)} placeholder="e.g. Acute appendicitis" />
           </div>
+          <div className="border-t pt-3">
+            <h4 className="font-semibold text-sm mb-2 flex items-center gap-1.5">
+              <Banknote className="w-4 h-4" /> Advance Payment (Optional)
+            </h4>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label>Initial Deposit (PKR)</Label>
+                <Input
+                  type="number"
+                  min={0}
+                  value={depositAmount || ""}
+                  onChange={(e) => setDepositAmount(Number(e.target.value) || 0)}
+                  placeholder="0"
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  This deposit intent will carry forward to admission
+                </p>
+              </div>
+              <div className="flex items-end pb-2">
+                <div className="bg-green-50 border border-green-200 rounded-md p-3 w-full">
+                  <p className="text-xs text-green-700 font-medium">Deposit Intent</p>
+                  <p className="text-lg font-bold text-green-700">
+                    Rs {(depositAmount || 0).toLocaleString()}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
           <div>
             <Label>Notes</Label>
-            <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={3} />
+            <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} />
           </div>
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
-          <Button onClick={submit} disabled={submitting}>{submitting ? "Referring..." : "Create Pending Admission"}</Button>
+          <Button onClick={submit} disabled={submitting}>
+            {submitting ? "Referring..." : depositAmount > 0 ? `Create Pending (Rs ${depositAmount.toLocaleString()} deposit)` : "Create Pending Admission"}
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

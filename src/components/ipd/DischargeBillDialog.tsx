@@ -32,8 +32,10 @@ export function DischargeBillDialog({ open, onOpenChange, admission, patientName
   const [items, setItems] = useState<LineItem[]>([]);
   const [discount, setDiscount] = useState(0);
   const [paid, setPaid] = useState(0);
+  const [deposit, setDeposit] = useState(0);
   const [otherDesc, setOtherDesc] = useState("");
   const [otherAmt, setOtherAmt] = useState(0);
+  const [docFee, setDocFee] = useState(0);
   const [days, setDays] = useState(1);
 
   useEffect(() => {
@@ -45,11 +47,12 @@ export function DischargeBillDialog({ open, onOpenChange, admission, patientName
       const d = Math.max(1, Math.ceil((now.getTime() - admDate.getTime()) / 86400000));
       setDays(d);
 
-      const [bedRes, medRes, labRes, docRes] = await Promise.all([
+      const [bedRes, medRes, labRes, docRes, invoiceRes] = await Promise.all([
         admission.bed_id ? supabase.from("beds").select("daily_charge,bed_number").eq("id", admission.bed_id).maybeSingle() : Promise.resolve({ data: null } as any),
         supabase.from("ipd_medicine_orders").select("medicine_name,quantity,unit_price,status").eq("admission_id", admission.id).in("status", ["dispensed", "received", "administered"]),
         supabase.from("ipd_lab_orders").select("test_name,charge,status").eq("admission_id", admission.id).eq("status", "completed"),
         admission.doctor_id ? supabase.from("doctors").select("consultation_fee").eq("id", admission.doctor_id).maybeSingle() : Promise.resolve({ data: null } as any),
+        supabase.from("ipd_invoices").select("paid_amount").eq("admission_id", admission.id).maybeSingle(),
       ]);
 
       const list: LineItem[] = [];
@@ -60,15 +63,6 @@ export function DischargeBillDialog({ open, onOpenChange, admission, patientName
           qty: d,
           unit: Number(bedRes.data.daily_charge),
           amount: d * Number(bedRes.data.daily_charge),
-        });
-      }
-      if (docRes.data?.consultation_fee) {
-        list.push({
-          category: "Doctor",
-          description: `Consultation × ${d} day(s)`,
-          qty: d,
-          unit: Number(docRes.data.consultation_fee),
-          amount: d * Number(docRes.data.consultation_fee),
         });
       }
       (medRes.data ?? []).forEach((m: any) => {
@@ -89,27 +83,29 @@ export function DischargeBillDialog({ open, onOpenChange, admission, patientName
           amount: Number(l.charge || 0),
         });
       });
+
+      setDocFee(Number(docRes.data?.consultation_fee) || 0);
       setItems(list);
+      setDeposit(Number(invoiceRes.data?.paid_amount) || 0);
       setLoading(false);
     })();
   }, [open, admission]);
 
   const totals = useMemo(() => {
     const bed = items.filter(i => i.category === "Bed").reduce((s, i) => s + i.amount, 0);
-    const doc = items.filter(i => i.category === "Doctor").reduce((s, i) => s + i.amount, 0);
+    const doc = Number(docFee) || 0;
     const med = items.filter(i => i.category === "Medicine").reduce((s, i) => s + i.amount, 0);
     const lab = items.filter(i => i.category === "Lab").reduce((s, i) => s + i.amount, 0);
     const other = Number(otherAmt) || 0;
     const subtotal = bed + doc + med + lab + other;
     const total = Math.max(0, subtotal - (Number(discount) || 0));
     return { bed, doc, med, lab, other, subtotal, total };
-  }, [items, otherAmt, discount]);
+  }, [items, docFee, otherAmt, discount]);
 
   const finalize = async () => {
     if (saving) return;
     setSaving(true);
     try {
-      // Upsert invoice
       const { data: existing } = await supabase
         .from("ipd_invoices")
         .select("id, invoice_number")
@@ -118,6 +114,8 @@ export function DischargeBillDialog({ open, onOpenChange, admission, patientName
 
       let invoiceId = existing?.id;
       let invoiceNumber = existing?.invoice_number;
+
+      const totalDeposit = (Number(deposit) || 0) + (Number(paid) || 0);
 
       const payload = {
         admission_id: admission.id,
@@ -130,8 +128,8 @@ export function DischargeBillDialog({ open, onOpenChange, admission, patientName
         other_charges_total: totals.other,
         discount: Number(discount) || 0,
         total_amount: totals.total,
-        paid_amount: Number(paid) || 0,
-        status: (Number(paid) || 0) >= totals.total ? "paid" : "pending",
+        paid_amount: totalDeposit,
+        status: totalDeposit >= totals.total ? "paid" : "pending",
         finalized_at: new Date().toISOString(),
       };
 
@@ -154,6 +152,7 @@ export function DischargeBillDialog({ open, onOpenChange, admission, patientName
       await supabase.from("ipd_charges").delete().eq("admission_id", admission.id).eq("invoice_id", invoiceId);
       const chargeRows = [
         ...items,
+        ...(docFee > 0 ? [{ category: "Doctor", description: `Consultation fee`, qty: 1, unit: docFee, amount: docFee }] : []),
         ...(otherAmt > 0 ? [{ category: "Other", description: otherDesc || "Other", qty: 1, unit: Number(otherAmt), amount: Number(otherAmt) }] : []),
       ].map(i => ({
         admission_id: admission.id,
@@ -190,7 +189,7 @@ export function DischargeBillDialog({ open, onOpenChange, admission, patientName
         subtotal: totals.subtotal,
         discount: Number(discount) || 0,
         total: totals.total,
-        paid: Number(paid) || 0,
+        paid: totalDeposit,
       });
 
       toast.success("Patient discharged & bill generated");
@@ -245,36 +244,46 @@ export function DischargeBillDialog({ open, onOpenChange, admission, patientName
               </Table>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+              <div>
+                <Label>Doctor Fee (manual)</Label>
+                <Input type="number" value={docFee} onChange={(e) => setDocFee(Number(e.target.value))} placeholder="Enter fee" />
+              </div>
               <div>
                 <Label>Other Charge — Description</Label>
                 <Input value={otherDesc} onChange={(e) => setOtherDesc(e.target.value)} placeholder="e.g. ICU fee" />
               </div>
               <div>
                 <Label>Other Charge — Amount</Label>
-                <Input type="number" value={otherAmt} onFocus={(e) => e.target.value === "0" && setOtherAmt(0)} onChange={(e) => setOtherAmt(Number(e.target.value))} />
+                <Input type="number" value={otherAmt} onChange={(e) => setOtherAmt(Number(e.target.value))} />
               </div>
               <div>
                 <Label>Discount</Label>
                 <Input type="number" value={discount} onChange={(e) => setDiscount(Number(e.target.value))} />
               </div>
               <div>
-                <Label>Paid Amount</Label>
-                <Input type="number" value={paid} onChange={(e) => setPaid(Number(e.target.value))} />
+                <Label>Initial Deposit (paid earlier)</Label>
+                <Input type="number" value={deposit} onChange={(e) => setDeposit(Number(e.target.value))} placeholder="0" />
+              </div>
+              <div>
+                <Label>Payment at Discharge</Label>
+                <Input type="number" value={paid} onChange={(e) => setPaid(Number(e.target.value))} placeholder="0" />
               </div>
             </div>
 
             <div className="border-t pt-3 space-y-1 text-sm">
               <div className="flex justify-between"><span>Bed Charges</span><span>{formatPkrAmount(totals.bed)}</span></div>
-              <div className="flex justify-between"><span>Doctor Charges</span><span>{formatPkrAmount(totals.doc)}</span></div>
+              <div className="flex justify-between"><span>Doctor Charges (manual)</span><span>{formatPkrAmount(totals.doc)}</span></div>
               <div className="flex justify-between"><span>Medicine Charges</span><span>{formatPkrAmount(totals.med)}</span></div>
               <div className="flex justify-between"><span>Lab Charges</span><span>{formatPkrAmount(totals.lab)}</span></div>
               <div className="flex justify-between"><span>Other</span><span>{formatPkrAmount(totals.other)}</span></div>
               <div className="flex justify-between font-medium"><span>Subtotal</span><span>{formatPkrAmount(totals.subtotal)}</span></div>
               <div className="flex justify-between text-destructive"><span>Discount</span><span>- {formatPkrAmount(Number(discount) || 0)}</span></div>
               <div className="flex justify-between text-lg font-bold border-t pt-2"><span>Total Due</span><span>{formatPkrAmount(totals.total)}</span></div>
-              <div className="flex justify-between"><span>Paid</span><span>{formatPkrAmount(Number(paid) || 0)}</span></div>
-              <div className="flex justify-between font-medium"><span>Balance</span><span>{formatPkrAmount(Math.max(0, totals.total - (Number(paid) || 0)))}</span></div>
+              <div className="flex justify-between"><span>Initial Deposit</span><span>{formatPkrAmount(Number(deposit) || 0)}</span></div>
+              <div className="flex justify-between"><span>Payment at Discharge</span><span>{formatPkrAmount(Number(paid) || 0)}</span></div>
+              <div className="flex justify-between font-medium border-t pt-1"><span>Total Paid</span><span>{formatPkrAmount((Number(deposit) || 0) + (Number(paid) || 0))}</span></div>
+              <div className="flex justify-between font-medium"><span>Balance</span><span>{formatPkrAmount(Math.max(0, totals.total - (Number(deposit) || 0) - (Number(paid) || 0)))}</span></div>
             </div>
 
             <div className="flex justify-end gap-2 pt-2">
