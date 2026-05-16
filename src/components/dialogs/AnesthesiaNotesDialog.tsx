@@ -165,21 +165,64 @@ export function AnesthesiaNotesDialog({ open, onOpenChange, otSchedule, admissio
         if (orders?.notes) setPostopNotes(orders.notes);
       }
 
-      // Auto-fill patient info
-      const fullName = `${otSchedule.patient.profile.first_name} ${otSchedule.patient.profile.last_name}`;
-      setPatientName(fullName);
-      setMrNumber(otSchedule.patient.patient_number);
-      setConsultantDoctor(otSchedule.doctor_name);
-      setSurgicalProcedure(prev => prev || otSchedule.operation.operation_name);
-      setGender(prev => prev || otSchedule.patient.gender || "");
+      // Auto-fill patient info from otSchedule when available
+      if (otSchedule) {
+        const fullName = `${otSchedule.patient.profile.first_name} ${otSchedule.patient.profile.last_name}`;
+        setPatientName(fullName);
+        setMrNumber(otSchedule.patient.patient_number);
+        setConsultantDoctor(otSchedule.doctor_name);
+        setSurgicalProcedure(prev => prev || otSchedule.operation.operation_name);
+        setGender(prev => prev || otSchedule.patient.gender || "");
 
-      if (otSchedule.patient.date_of_birth) {
-        const dob = new Date(otSchedule.patient.date_of_birth);
-        const today = new Date();
-        let calcAge = today.getFullYear() - dob.getFullYear();
-        const m = today.getMonth() - dob.getMonth();
-        if (m < 0 || (m === 0 && today.getDate() < dob.getDate())) calcAge--;
-        setAge(prev => prev || calcAge.toString());
+        if (otSchedule.patient.date_of_birth) {
+          const dob = new Date(otSchedule.patient.date_of_birth);
+          const today = new Date();
+          let calcAge = today.getFullYear() - dob.getFullYear();
+          const m = today.getMonth() - dob.getMonth();
+          if (m < 0 || (m === 0 && today.getDate() < dob.getDate())) calcAge--;
+          setAge(prev => prev || calcAge.toString());
+        }
+      }
+
+      // Fetch admission info if admissionId (and auto-fill patient when no otSchedule)
+      if (admissionId) {
+        const { data: adm } = await supabase
+          .from("ipd_admissions")
+          .select("admission_number, patient_id, doctor_id")
+          .eq("id", admissionId)
+          .maybeSingle();
+        if (adm) {
+          setAdmissionNo(adm.admission_number);
+          if (!otSchedule && adm.patient_id) {
+            const { data: pt } = await supabase
+              .from("patients")
+              .select("patient_number, date_of_birth, gender, profile:profiles!patients_id_fkey(first_name, last_name)")
+              .eq("id", adm.patient_id)
+              .maybeSingle();
+            if (pt) {
+              const prof: any = (pt as any).profile;
+              if (prof) setPatientName(`${prof.first_name ?? ""} ${prof.last_name ?? ""}`.trim());
+              setMrNumber((pt as any).patient_number || "");
+              setGender(prev => prev || (pt as any).gender || "");
+              if ((pt as any).date_of_birth) {
+                const dob = new Date((pt as any).date_of_birth);
+                const today = new Date();
+                let calcAge = today.getFullYear() - dob.getFullYear();
+                const m = today.getMonth() - dob.getMonth();
+                if (m < 0 || (m === 0 && today.getDate() < dob.getDate())) calcAge--;
+                setAge(prev => prev || calcAge.toString());
+              }
+            }
+          }
+          if (!otSchedule && adm.doctor_id) {
+            const { data: doc } = await supabase
+              .from("profiles")
+              .select("first_name, last_name")
+              .eq("id", adm.doctor_id)
+              .maybeSingle();
+            if (doc) setConsultantDoctor(`Dr. ${doc.first_name ?? ""} ${doc.last_name ?? ""}`.trim());
+          }
+        }
       }
 
       // Fetch admission number if admissionId
