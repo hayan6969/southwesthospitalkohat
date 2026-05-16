@@ -15,7 +15,7 @@ import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
-import { Loader2, Plus, Activity, StickyNote, Droplets, Pill, FlaskConical, Download } from "lucide-react";
+import { Loader2, Plus, Activity, StickyNote, Droplets, Pill, FlaskConical, Download, Syringe } from "lucide-react";
 import { format } from "date-fns";
 import jsPDF from "jspdf";
 
@@ -35,6 +35,7 @@ export function TreatmentChartDialog({ open, onOpenChange, admissionId, patientN
   const [entries, setEntries] = useState<any[]>([]);
   const [meds, setMeds] = useState<any[]>([]);
   const [labs, setLabs] = useState<any[]>([]);
+  const [anesthesiaNotes, setAnesthesiaNotes] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState<any>({});
@@ -45,14 +46,16 @@ export function TreatmentChartDialog({ open, onOpenChange, admissionId, patientN
   const load = async () => {
     if (!admissionId) return;
     setLoading(true);
-    const [{ data: c }, { data: m }, { data: l }] = await Promise.all([
+    const [{ data: c }, { data: m }, { data: l }, { data: a }] = await Promise.all([
       supabase.from("ipd_treatment_chart").select("*").eq("admission_id", admissionId).order("recorded_at", { ascending: false }),
       supabase.from("ipd_medicine_orders").select("*").eq("admission_id", admissionId).order("created_at", { ascending: false }),
       supabase.from("ipd_lab_orders").select("*").eq("admission_id", admissionId).order("created_at", { ascending: false }),
+      supabase.from("anesthesia_notes").select("*").eq("admission_id", admissionId).order("created_at", { ascending: false }),
     ]);
     setEntries(c ?? []);
     setMeds(m ?? []);
     setLabs(l ?? []);
+    setAnesthesiaNotes(a ?? []);
     setLoading(false);
   };
 
@@ -73,6 +76,12 @@ export function TreatmentChartDialog({ open, onOpenChange, admissionId, patientN
         recorded_by: profile?.id,
         notes: form.notes || null,
       };
+      if (form.time) {
+        const now = new Date();
+        const [h, m] = form.time.split(":");
+        now.setHours(parseInt(h), parseInt(m), 0, 0);
+        payload.recorded_at = now.toISOString();
+      }
       if (tab === "vitals") {
         Object.assign(payload, {
           temperature: form.temperature ? Number(form.temperature) : null,
@@ -186,6 +195,7 @@ export function TreatmentChartDialog({ open, onOpenChange, admissionId, patientN
             <TabsTrigger value="intake_output" className="gap-1.5"><Droplets className="w-4 h-4" />I / O</TabsTrigger>
             <TabsTrigger value={"medicine" as any} className="gap-1.5"><Pill className="w-4 h-4" />Medicine</TabsTrigger>
             <TabsTrigger value={"lab" as any} className="gap-1.5"><FlaskConical className="w-4 h-4" />Lab</TabsTrigger>
+            <TabsTrigger value={"anesthesia" as any} className="gap-1.5"><Syringe className="w-4 h-4" />Anaesthesia</TabsTrigger>
           </TabsList>
 
           {/* Vitals */}
@@ -203,7 +213,8 @@ export function TreatmentChartDialog({ open, onOpenChange, admissionId, patientN
               )}
             </div>
             {canWrite && (
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-3 p-4 border rounded-md">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 p-4 border rounded-md">
+                <div><Label>Time</Label><Input type="time" value={form.time ?? ""} onChange={e => setForm({ ...form, time: e.target.value })} /></div>
                 <div><Label>Temp (°C)</Label><Input type="number" step="0.1" value={form.temperature ?? ""} onChange={e => setForm({ ...form, temperature: e.target.value })} /></div>
                 <div><Label>Pulse</Label><Input type="number" value={form.pulse ?? ""} onChange={e => setForm({ ...form, pulse: e.target.value })} /></div>
                 <div><Label>Resp Rate</Label><Input type="number" value={form.respiratory_rate ?? ""} onChange={e => setForm({ ...form, respiratory_rate: e.target.value })} /></div>
@@ -272,7 +283,8 @@ export function TreatmentChartDialog({ open, onOpenChange, admissionId, patientN
               )}
             </div>
             {canWrite && (
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-3 p-4 border rounded-md">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 p-4 border rounded-md">
+                <div><Label>Time</Label><Input type="time" value={form.time ?? ""} onChange={e => setForm({ ...form, time: e.target.value })} /></div>
                 <div><Label>Fluid Type</Label><Input value={form.fluid_type ?? ""} onChange={e => setForm({ ...form, fluid_type: e.target.value })} placeholder="e.g. Normal Saline" /></div>
                 <div><Label>Volume (ml)</Label><Input type="number" value={form.fluid_volume_ml ?? ""} onChange={e => setForm({ ...form, fluid_volume_ml: e.target.value })} /></div>
                 <div><Label>Rate</Label><Input value={form.fluid_rate ?? ""} onChange={e => setForm({ ...form, fluid_rate: e.target.value })} placeholder="e.g. 100ml/hr" /></div>
@@ -428,6 +440,55 @@ export function TreatmentChartDialog({ open, onOpenChange, admissionId, patientN
                 </TableBody>
               </Table>
             </div>
+          </TabsContent>
+
+          {/* Anaesthesia Notes */}
+          <TabsContent value={"anesthesia" as any} className="space-y-4 mt-4">
+            {loading ? (
+              <div className="flex justify-center p-6"><Loader2 className="w-5 h-5 animate-spin" /></div>
+            ) : anesthesiaNotes.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                <Syringe className="w-8 h-8 mx-auto mb-2 opacity-40" />
+                <p className="text-sm">No anaesthesia notes found for this admission.</p>
+                <p className="text-xs mt-1">Add anaesthesia notes from the Doctor OT page.</p>
+              </div>
+            ) : anesthesiaNotes.map((note) => (
+              <div key={note.id} className="space-y-3 border rounded-lg p-4">
+                <div className="flex items-center justify-between">
+                  <Badge variant={note.status === "finalized" ? "default" : "secondary"}>{note.status}</Badge>
+                  <span className="text-xs text-muted-foreground">{format(new Date(note.created_at), "MMM d, yyyy HH:mm")}</span>
+                </div>
+                <div className="grid grid-cols-2 gap-2 text-sm">
+                  <div><span className="font-medium">Surgical Procedure:</span><p className="text-muted-foreground">{note.surgical_procedure || "\u2014"}</p></div>
+                  <div><span className="font-medium">Anesthesia Type:</span><p className="text-muted-foreground">{note.anesthesia_type || "\u2014"}</p></div>
+                </div>
+                <div className="text-sm"><span className="font-medium">Brief History:</span><p className="text-muted-foreground whitespace-pre-wrap">{note.brief_history || "\u2014"}</p></div>
+                <div className="text-sm">
+                  <span className="font-medium">Pre-Op Vitals:</span>
+                  <p className="text-muted-foreground">
+                    HR: {note.preop_hr ?? "\u2014"} | BP: {note.preop_bp || "\u2014"} | SpO₂: {note.preop_spo2 ?? "\u2014"}%
+                  </p>
+                </div>
+                <div className="text-sm"><span className="font-medium">Pre-Op Medication:</span><p className="text-muted-foreground whitespace-pre-wrap">{note.preop_medication || "\u2014"}</p></div>
+                <div className="text-sm"><span className="font-medium">Drugs Used:</span><p className="text-muted-foreground whitespace-pre-wrap">{note.anesthesia_drugs || "\u2014"}</p></div>
+                <div className="text-sm"><span className="font-medium">Recovery Status:</span><p className="text-muted-foreground">{note.recovery_status || "\u2014"}</p></div>
+                <div className="text-sm"><span className="font-medium">Post-Op Orders:</span><p className="text-muted-foreground whitespace-pre-wrap">{note.postop_orders?.items?.join(", ") || "\u2014"}</p></div>
+                {note.input_output_notes && <div className="text-sm"><span className="font-medium">I/O During Surgery:</span><p className="text-muted-foreground whitespace-pre-wrap">{note.input_output_notes}</p></div>}
+                {note.intraop_assessment?.length > 0 && (
+                  <div className="text-sm">
+                    <span className="font-medium">Intra-Op Assessment:</span>
+                    <div className="overflow-x-auto mt-1">
+                      <Table>
+                        <TableHeader><TableRow><TableHead>Time</TableHead><TableHead>HR</TableHead><TableHead>SpO₂</TableHead><TableHead>BP</TableHead></TableRow></TableHeader>
+                        <TableBody>{(note.intraop_assessment as any[]).map((row: any, i: number) => (
+                          <TableRow key={i}><TableCell>{row.time || "\u2014"}</TableCell><TableCell>{row.hr || "\u2014"}</TableCell><TableCell>{row.spo2 || "\u2014"}</TableCell><TableCell>{row.bp || "\u2014"}</TableCell></TableRow>
+                        ))}</TableBody>
+                      </Table>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ))}
           </TabsContent>
         </Tabs>
       </DialogContent>
