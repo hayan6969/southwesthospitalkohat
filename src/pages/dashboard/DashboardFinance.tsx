@@ -1,6 +1,6 @@
 
 import { StatsCard } from "@/components/StatsCard";
-import { Calculator, TrendingUp, Users, Receipt, Banknote, Minus, Pill, TrendingDown, Building2, Stethoscope, FlaskConical, Syringe, AlertTriangle, Activity, FileSpreadsheet, Scan } from "lucide-react";
+import { Calculator, TrendingUp, Users, Receipt, Banknote, Minus, Pill, TrendingDown, Building2, Stethoscope, FlaskConical, Syringe, AlertTriangle, Activity, FileSpreadsheet, Scan, BedDouble } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -23,7 +23,6 @@ export default function DashboardFinance() {
   const { settings: hospitalSettings } = useHospitalSettings();
   const navigate = useNavigate();
   
-  // Get pharmacy invoices with items for profit calculation
   const { data: pharmacyInvoices, isLoading: pharmacyLoading } = useQuery({
     queryKey: ['pharmacy-invoices-with-profit'],
     queryFn: async () => {
@@ -45,7 +44,6 @@ export default function DashboardFinance() {
     }
   });
 
-  // Get lab reports for revenue
   const { data: labReports, isLoading: labLoading } = useQuery({
     queryKey: ['lab-reports-revenue'],
     queryFn: async () => {
@@ -58,7 +56,6 @@ export default function DashboardFinance() {
     }
   });
 
-  // Get OT schedules for revenue calculation
   const { data: otSchedules, isLoading: otLoading } = useQuery({
     queryKey: ['ot-schedules-revenue'],
     queryFn: async () => {
@@ -71,7 +68,6 @@ export default function DashboardFinance() {
     }
   });
 
-  // Get expenses
   const { data: expenses, isLoading: expensesLoading } = useQuery({
     queryKey: ['expenses'],
     queryFn: async () => {
@@ -84,7 +80,6 @@ export default function DashboardFinance() {
     }
   });
 
-  // Get refunds
   const { data: refunds } = useQuery({
     queryKey: ['refunds-finance-dashboard'],
     queryFn: async () => {
@@ -97,7 +92,6 @@ export default function DashboardFinance() {
     }
   });
 
-  // Get pharmacy account and expenses
   const { data: pharmacyAccount } = useQuery({
     queryKey: ['pharmacy-account'],
     queryFn: async () => {
@@ -124,7 +118,6 @@ export default function DashboardFinance() {
     }
   });
 
-  // Get X-ray reports
   const { data: xrayReports } = useQuery({
     queryKey: ['xray-reports-revenue'],
     queryFn: async () => {
@@ -138,7 +131,6 @@ export default function DashboardFinance() {
     }
   });
 
-  // Get miscellaneous income
   const { data: miscIncome } = useQuery({
     queryKey: ['misc-income-revenue'],
     queryFn: async () => {
@@ -151,7 +143,6 @@ export default function DashboardFinance() {
     }
   });
 
-  // Get per-doctor revenue data
   const { data: doctorProfiles, isLoading: doctorsLoading } = useQuery({
     queryKey: ['doctor-profiles-revenue'],
     queryFn: async () => {
@@ -164,7 +155,6 @@ export default function DashboardFinance() {
     }
   });
 
-  // Get staff profiles for operator tracking
   const { data: staffProfiles } = useQuery({
     queryKey: ['staff-profiles-operators'],
     queryFn: async () => {
@@ -177,14 +167,25 @@ export default function DashboardFinance() {
     }
   });
 
-  // Helper to get operator name
+  const { data: ipdInvoices, isLoading: ipdLoading } = useQuery({
+    queryKey: ['ipd-invoices-revenue'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('ipd_invoices')
+        .select('*')
+        .not('finalized_at', 'is', null)
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return data;
+    }
+  });
+
   const getOperatorName = (createdBy: string | null) => {
-    if (!createdBy) return '—';
+    if (!createdBy) return '\u2014';
     const staff = staffProfiles?.find(s => s.id === createdBy);
-    return staff ? `${staff.first_name} ${staff.last_name}` : '—';
+    return staff ? `${staff.first_name} ${staff.last_name}` : '\u2014';
   };
 
-  // Deduplicate invoices helper (same patient, same amount, within 2 min)
   const deduplicateInvs = (invs: typeof invoices) => {
     if (!invs) return [];
     const kept: typeof invs = [];
@@ -204,24 +205,20 @@ export default function DashboardFinance() {
 
   const paidInvoices = deduplicateInvs(invoices?.filter(inv => inv.status === 'paid'));
 
-  // Emergency detection — consistent with PDF logic
   const isEmergencyInv = (inv: any) =>
     inv.description?.toLowerCase().includes('emergency') ||
     inv.emergency_patient_data ||
     inv.invoice_number?.startsWith('EMG-') ||
     inv.invoice_number?.startsWith('EMERGENCY-');
 
-  // Hospital revenue from paid invoices — using invoice_number prefix (consistent with PDF)
   const emergencyConsultationRevenue = paidInvoices
     .filter(isEmergencyInv)
     .reduce((sum, inv) => sum + (inv.amount || 0), 0);
 
-  // Regular consultation revenue (OPD — INV- prefix, non-emergency)
   const consultationRevenue = paidInvoices
     .filter(inv => inv.invoice_number?.startsWith('INV-') && !isEmergencyInv(inv))
     .reduce((sum, inv) => sum + (inv.amount || 0), 0);
   
-  // Calculate pharmacy revenue and profit correctly
   let pharmacyRevenue = 0;
   let pharmacyProfit = 0;
   
@@ -239,7 +236,6 @@ export default function DashboardFinance() {
     }, 0);
   }
   
-  // Lab revenue — from LAB- prefixed invoices (consistent with PDF)
   const labRevenue = paidInvoices
     .filter(inv => inv.invoice_number?.startsWith('LAB-'))
     .reduce((sum, inv) => sum + Number(inv.amount), 0);
@@ -261,12 +257,22 @@ export default function DashboardFinance() {
   const hospitalRevenue = emergencyConsultationRevenue + labRevenue + xrayRevenue + otHospitalRevenue + miscellaneousIncome;
   const totalExpenses = expenses?.reduce((sum, exp) => sum + (exp.amount || 0), 0) || 0;
   const totalRefunds = refunds?.reduce((sum, r) => sum + (Number(r.amount) || 0), 0) || 0;
-  // CORRECT FORMULA: Hospital Share + Pharmacy Profit - Expenses - Refunds
   const hospitalNetProfit = hospitalRevenue + pharmacyProfit - totalExpenses - totalRefunds;
-  const totalRevenue = hospitalRevenue + doctorsRevenue + pharmacyRevenue;
   const pharmacyTotalExpenses = pharmacyExpenses?.reduce((sum, exp) => sum + exp.amount, 0) || 0;
 
-  // Per-doctor revenue breakdown (using deduped invoices)
+  // IPD revenue calculations
+  const ipdDoctorRevenue = ipdInvoices?.reduce((sum, inv) => sum + (Number(inv.doctor_charges_total) || 0), 0) || 0;
+  const ipdAnesthesiaRevenue = ipdInvoices?.reduce((sum, inv) => sum + (Number(inv.anesthesia_charges_total) || 0), 0) || 0;
+  const ipdOtaRevenue = ipdInvoices?.reduce((sum, inv) => sum + (Number(inv.ota_charges_total) || 0), 0) || 0;
+  const ipdOtRevenue = ipdInvoices?.reduce((sum, inv) => sum + (Number(inv.ot_charges_total) || 0), 0) || 0;
+  const ipdBedRevenue = ipdInvoices?.reduce((sum, inv) => sum + (Number(inv.bed_charges_total) || 0), 0) || 0;
+  const ipdMedicineRevenue = ipdInvoices?.reduce((sum, inv) => sum + (Number(inv.medicine_charges_total) || 0), 0) || 0;
+  const ipdLabRevenue = ipdInvoices?.reduce((sum, inv) => sum + (Number(inv.lab_charges_total) || 0), 0) || 0;
+  const ipdTotalRevenue = ipdInvoices?.reduce((sum, inv) => sum + (Number(inv.total_amount) || 0), 0) || 0;
+  const ipdTotalPaid = ipdInvoices?.reduce((sum, inv) => sum + (Number(inv.paid_amount) || 0), 0) || 0;
+
+  const totalRevenue = hospitalRevenue + doctorsRevenue + pharmacyRevenue + ipdTotalRevenue;
+
   const perDoctorRevenue = doctorProfiles?.map(doctor => {
     const profile = doctor.profiles as any;
     const doctorName = profile ? `Dr. ${profile.first_name} ${profile.last_name}` : 'Unknown';
@@ -296,7 +302,6 @@ export default function DashboardFinance() {
   })?.filter(d => d.totalRevenue > 0 || d.appointmentCount > 0)
     .sort((a, b) => b.totalRevenue - a.totalRevenue) || [];
 
-  // Per-staff revenue (counter invoices created_by)
   const perStaffRevenue = staffProfiles?.map(staff => {
     const staffInvoices = invoices?.filter(inv => 
       inv.status === 'paid' && (inv as any).created_by === staff.id
@@ -312,7 +317,25 @@ export default function DashboardFinance() {
   })?.filter(s => s.totalGenerated > 0)
     .sort((a, b) => b.totalGenerated - a.totalGenerated) || [];
 
-  // Calculate monthly revenue
+  const ipdPerDoctorRevenue = doctorProfiles?.map(doctor => {
+    const profile = doctor.profiles as any;
+    const doctorName = profile ? `Dr. ${profile.first_name} ${profile.last_name}` : 'Unknown';
+    
+    const doctorIpdInvoices = ipdInvoices?.filter(inv => inv.doctor_id === doctor.id) || [];
+    const ipdDoctorFees = doctorIpdInvoices.reduce((sum, inv) => sum + (Number(inv.doctor_charges_total) || 0), 0);
+    const ipdAnesthesiaFees = doctorIpdInvoices.reduce((sum, inv) => sum + (Number(inv.anesthesia_charges_total) || 0), 0);
+    
+    return {
+      id: doctor.id,
+      name: doctorName,
+      ipdDoctorFees,
+      ipdAnesthesiaFees,
+      ipdTotal: ipdDoctorFees + ipdAnesthesiaFees,
+      admissionCount: doctorIpdInvoices.length,
+    };
+  })?.filter(d => d.ipdTotal > 0)
+    .sort((a, b) => b.ipdTotal - a.ipdTotal) || [];
+
   const currentMonth = new Date().getMonth();
   const currentYear = new Date().getFullYear();
   
@@ -337,7 +360,6 @@ export default function DashboardFinance() {
   const monthlyRevenue = monthlyHospitalRevenue + monthlyDoctorsRevenue + monthlyPharmacyRevenue;
   const maxDoctorRevenue = perDoctorRevenue.length > 0 ? perDoctorRevenue[0].totalRevenue : 1;
 
-  // Export full report
   const handleExportCSV = () => {
     exportDailyClosingToCSV({
       date: format(new Date(), 'yyyy-MM-dd'),
@@ -355,12 +377,20 @@ export default function DashboardFinance() {
       totalExpenses,
       totalRefunds,
       netProfit: hospitalNetProfit,
+      ipdDoctorRevenue,
+      ipdAnesthesiaRevenue,
+      ipdOtaRevenue,
+      ipdOtRevenue,
+      ipdBedRevenue,
+      ipdMedicineRevenue,
+      ipdLabRevenue,
+      ipdTotalRevenue,
+      ipdTotalPaid,
     });
   };
 
   return (
     <div className="space-y-6">
-      {/* Header with Export */}
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold tracking-tight">Financial Overview</h2>
@@ -374,7 +404,6 @@ export default function DashboardFinance() {
         </Button>
       </div>
 
-      {/* Top Summary Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <Card className="bg-gradient-to-br from-green-50 to-emerald-50 border-green-200">
           <CardContent className="pt-4 pb-3 px-4">
@@ -404,7 +433,6 @@ export default function DashboardFinance() {
         </Card>
       </div>
 
-      {/* ========== HOSPITAL REVENUE SECTION ========== */}
       <Card className="border-l-4 border-l-blue-500">
         <CardHeader className="pb-2">
           <div className="flex items-center justify-between">
@@ -502,7 +530,6 @@ export default function DashboardFinance() {
         </CardContent>
       </Card>
 
-      {/* ========== DOCTORS REVENUE SECTION ========== */}
       <Card className="border-l-4 border-l-indigo-500">
         <CardHeader className="pb-2">
           <div className="flex items-center justify-between">
@@ -573,7 +600,6 @@ export default function DashboardFinance() {
         </CardContent>
       </Card>
 
-      {/* ========== STAFF COUNTER REVENUE SECTION ========== */}
       {perStaffRevenue.length > 0 && (
         <Card className="border-l-4 border-l-emerald-500">
           <CardHeader className="pb-2">
@@ -627,7 +653,6 @@ export default function DashboardFinance() {
         </Card>
       )}
 
-      {/* ========== PHARMACY SECTION ========== */}
       <Card className="border-l-4 border-l-purple-500">
         <CardHeader className="pb-2">
           <div className="flex items-center justify-between">
@@ -696,7 +721,136 @@ export default function DashboardFinance() {
         </CardContent>
       </Card>
 
-      {/* ========== BOTTOM ROW ========== */}
+      <Card className="border-l-4 border-l-amber-500">
+        <CardHeader className="pb-2">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-amber-100">
+                <BedDouble className="w-5 h-5 text-amber-700" />
+              </div>
+              <div>
+                <CardTitle className="text-lg">IPD Revenue</CardTitle>
+                <CardDescription>Bed charges, doctor fees, anesthesia, OTA/OT, medicines, lab — routed by stakeholder</CardDescription>
+              </div>
+            </div>
+            <Badge variant="outline" className="text-amber-700 border-amber-300 bg-amber-50 text-base px-3 py-1">
+              {formatPkrAmount(ipdTotalRevenue)}
+            </Badge>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {ipdLoading ? (
+            <div className="space-y-3">
+              {[1,2,3].map(i => <div key={i} className="h-10 bg-muted/50 rounded animate-pulse" />)}
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <div className="border rounded-lg overflow-hidden">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-amber-50/50">
+                      <TableHead className="font-semibold">Category</TableHead>
+                      <TableHead className="font-semibold text-right">Amount</TableHead>
+                      <TableHead className="font-semibold text-right">Revenue To</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    <TableRow>
+                      <TableCell className="flex items-center gap-2"><BedDouble className="w-4 h-4 text-blue-500" />Bed / Stay Charges</TableCell>
+                      <TableCell className="text-right font-medium">{formatPkrAmount(ipdBedRevenue)}</TableCell>
+                      <TableCell className="text-right"><Badge variant="secondary">Hospital</Badge></TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell className="flex items-center gap-2"><Stethoscope className="w-4 h-4 text-indigo-500" />Doctor Fees</TableCell>
+                      <TableCell className="text-right font-medium">{formatPkrAmount(ipdDoctorRevenue)}</TableCell>
+                      <TableCell className="text-right"><Badge variant="outline" className="text-indigo-700">Doctor</Badge></TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell className="flex items-center gap-2"><Syringe className="w-4 h-4 text-cyan-500" />Anesthesia</TableCell>
+                      <TableCell className="text-right font-medium">{formatPkrAmount(ipdAnesthesiaRevenue)}</TableCell>
+                      <TableCell className="text-right"><Badge variant="outline" className="text-cyan-700">Anesthesiologist</Badge></TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell className="flex items-center gap-2"><Activity className="w-4 h-4 text-rose-500" />OTA / OT Charges</TableCell>
+                      <TableCell className="text-right font-medium">{formatPkrAmount(ipdOtaRevenue + ipdOtRevenue)}</TableCell>
+                      <TableCell className="text-right"><Badge variant="secondary">Hospital</Badge></TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell className="flex items-center gap-2"><Pill className="w-4 h-4 text-purple-500" />Medicines</TableCell>
+                      <TableCell className="text-right font-medium">{formatPkrAmount(ipdMedicineRevenue)}</TableCell>
+                      <TableCell className="text-right"><Badge variant="outline" className="text-purple-700">Pharmacy</Badge></TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell className="flex items-center gap-2"><FlaskConical className="w-4 h-4 text-teal-500" />Lab Tests</TableCell>
+                      <TableCell className="text-right font-medium">{formatPkrAmount(ipdLabRevenue)}</TableCell>
+                      <TableCell className="text-right"><Badge variant="outline" className="text-teal-700">Lab</Badge></TableCell>
+                    </TableRow>
+                  </TableBody>
+                  <TableFooter>
+                    <TableRow className="bg-amber-50/80">
+                      <TableCell className="font-bold">Total IPD Revenue</TableCell>
+                      <TableCell className="text-right font-bold text-amber-700">{formatPkrAmount(ipdTotalRevenue)}</TableCell>
+                      <TableCell></TableCell>
+                    </TableRow>
+                    <TableRow className="bg-green-50/50">
+                      <TableCell className="font-semibold text-green-700">Total Collected</TableCell>
+                      <TableCell className="text-right font-semibold text-green-700">{formatPkrAmount(ipdTotalPaid)}</TableCell>
+                      <TableCell></TableCell>
+                    </TableRow>
+                    <TableRow className={ipdTotalRevenue - ipdTotalPaid > 0 ? 'bg-red-50/50' : 'bg-green-50/50'}>
+                      <TableCell className="font-semibold">Outstanding Balance</TableCell>
+                      <TableCell className={`text-right font-bold ${ipdTotalRevenue - ipdTotalPaid > 0 ? 'text-red-700' : 'text-green-700'}`}>
+                        {formatPkrAmount(ipdTotalRevenue - ipdTotalPaid)}
+                      </TableCell>
+                      <TableCell></TableCell>
+                    </TableRow>
+                  </TableFooter>
+                </Table>
+              </div>
+
+              {ipdPerDoctorRevenue.length > 0 && (
+                <div className="mt-4">
+                  <h4 className="text-sm font-semibold mb-2">Per-Doctor IPD Revenue</h4>
+                  <div className="border rounded-lg overflow-hidden">
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="bg-amber-50/30">
+                          <TableHead>Doctor</TableHead>
+                          <TableHead className="text-center">Admissions</TableHead>
+                          <TableHead className="text-right">Doctor Fees</TableHead>
+                          <TableHead className="text-right">Anesthesia</TableHead>
+                          <TableHead className="text-right">Total</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {ipdPerDoctorRevenue.map(doc => (
+                          <TableRow key={doc.id}>
+                            <TableCell className="font-medium">{doc.name}</TableCell>
+                            <TableCell className="text-center"><Badge variant="secondary">{doc.admissionCount}</Badge></TableCell>
+                            <TableCell className="text-right">{formatPkrAmount(doc.ipdDoctorFees)}</TableCell>
+                            <TableCell className="text-right">{formatPkrAmount(doc.ipdAnesthesiaFees)}</TableCell>
+                            <TableCell className="text-right font-bold text-amber-700">{formatPkrAmount(doc.ipdTotal)}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </div>
+              )}
+
+              <div className="flex gap-2 mt-4">
+                <Button variant="outline" size="sm" onClick={() => navigate('/dashboard/finance/ipd')}>
+                  <Receipt className="w-4 h-4 mr-1" /> IPD Finance Detail
+                </Button>
+                <Button variant="outline" size="sm" onClick={() => navigate('/dashboard/finance/ipd-doctor-payments')}>
+                  <Banknote className="w-4 h-4 mr-1" /> IPD Doctor Payments
+                </Button>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card>
           <CardHeader className="pb-3">
@@ -714,6 +868,14 @@ export default function DashboardFinance() {
               <Button className="h-14 flex flex-col items-center justify-center text-sm" variant="outline" onClick={() => navigate('/dashboard/finance/doctor-payments')}>
                 <Users className="w-5 h-5 mb-1" />
                 Doctor Payments
+              </Button>
+              <Button className="h-14 flex flex-col items-center justify-center text-sm" variant="outline" onClick={() => navigate('/dashboard/finance/ipd')}>
+                <BedDouble className="w-5 h-5 mb-1" />
+                IPD Finance
+              </Button>
+              <Button className="h-14 flex flex-col items-center justify-center text-sm" variant="outline" onClick={() => navigate('/dashboard/finance/ipd-doctor-payments')}>
+                <Banknote className="w-5 h-5 mb-1" />
+                IPD Payments
               </Button>
               <Button className="h-14 flex flex-col items-center justify-center text-sm" variant="outline" onClick={() => navigate('/dashboard/finance/payroll')}>
                 <Users className="w-5 h-5 mb-1" />

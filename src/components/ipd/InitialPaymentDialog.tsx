@@ -39,7 +39,6 @@ export function InitialPaymentDialog({ open, onOpenChange, admission, patientNam
         const { data: charges } = await supabase.from("ipd_charges").select("*").eq("admission_id", admission.id).eq("invoice_id", invoice.id);
         const existing = charges ?? [];
         setExistingCharges(existing);
-        // Pre-fill from existing charges
         setDoctorFee(existing.find((c: any) => c.charge_type === "doctor")?.amount || 0);
         setAnesthesiaFee(existing.find((c: any) => c.charge_type === "anesthesia")?.amount || 0);
         setOtaFee(existing.find((c: any) => c.charge_type === "ota")?.amount || 0);
@@ -61,7 +60,6 @@ export function InitialPaymentDialog({ open, onOpenChange, admission, patientNam
       let invoiceId = existingInvoice?.id;
       let invoiceNumber = existingInvoice?.invoice_number;
 
-      // Create invoice if not exists
       if (!invoiceId) {
         const { data: numData } = await supabase.rpc("generate_ipd_invoice_number");
         invoiceNumber = numData as string;
@@ -74,13 +72,11 @@ export function InitialPaymentDialog({ open, onOpenChange, admission, patientNam
         invoiceId = data.id;
       }
 
-      // Delete old upfront charges
       await supabase.from("ipd_charges").delete()
         .eq("admission_id", admission.id)
         .eq("invoice_id", invoiceId)
         .in("charge_type", ["doctor", "anesthesia", "ota", "ot"]);
 
-      // Insert new upfront charges
       const chargeRows: any[] = [];
       if (doctorFee > 0) chargeRows.push({ charge_type: "doctor", description: "Doctor fees", amount: doctorFee });
       if (anesthesiaFee > 0) chargeRows.push({ charge_type: "anesthesia", description: "Anesthesia/Anesthetist fees", amount: anesthesiaFee });
@@ -98,19 +94,60 @@ export function InitialPaymentDialog({ open, onOpenChange, admission, patientNam
             unit_price: c.amount,
             amount: c.amount,
             created_by: profile?.id,
+            assigned_to: c.charge_type === "doctor" ? "doctor"
+              : c.charge_type === "anesthesia" ? "anesthesiologist"
+              : "hospital",
+            doctor_id: c.charge_type === "doctor" ? admission.doctor_id : null,
+            anesthesiologist_id: c.charge_type === "anesthesia" ? (admission.anesthesiologist_id ?? null) : null,
           }))
         );
         if (error) throw error;
       }
 
-      // Update invoice paid_amount with this payment
       const newPaid = alreadyPaid + payment;
       const { error: invErr } = await supabase.from("ipd_invoices").update({
         paid_amount: newPaid,
         doctor_charges_total: doctorFee,
-        other_charges_total: (Number(existingInvoice?.other_charges_total) || 0) + anesthesiaFee + otaFee + otCharges,
+        anesthesia_charges_total: anesthesiaFee,
+        ota_charges_total: otaFee,
+        ot_charges_total: otCharges,
+        other_charges_total: 0,
       }).eq("id", invoiceId);
       if (invErr) throw invErr;
+
+      // Create ipd_doctor_payments records
+      const doctorPaymentsToCreate: any[] = [];
+      if (doctorFee > 0 && admission.doctor_id) {
+        doctorPaymentsToCreate.push({
+          doctor_id: admission.doctor_id,
+          admission_id: admission.id,
+          charge_type: "doctor",
+          amount: doctorFee,
+          status: "pending",
+        });
+      }
+      if (anesthesiaFee > 0 && admission.anesthesiologist_id) {
+        doctorPaymentsToCreate.push({
+          doctor_id: admission.anesthesiologist_id,
+          admission_id: admission.id,
+          charge_type: "anesthesia",
+          amount: anesthesiaFee,
+          status: "pending",
+        });
+      }
+      if (otaFee > 0) {
+        doctorPaymentsToCreate.push({
+          doctor_id: admission.doctor_id,
+          admission_id: admission.id,
+          charge_type: "ota",
+          amount: otaFee,
+          status: "pending",
+        });
+      }
+      if (doctorPaymentsToCreate.length > 0) {
+        const { error: dpError } = await supabase.from("ipd_doctor_payments").insert(doctorPaymentsToCreate);
+        if (dpError) console.warn("Failed to create IPD doctor payments:", dpError);
+      }
 
       toast.success(`Initial payment of Rs ${payment.toLocaleString()} collected`);
       onCollected();

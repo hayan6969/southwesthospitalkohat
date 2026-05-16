@@ -26,6 +26,18 @@ interface LineItem {
   amount: number;
 }
 
+const getAssignedTo = (category: string): string => {
+  switch (category.toLowerCase()) {
+    case "doctor": return "doctor";
+    case "anesthesia": return "anesthesiologist";
+    case "ota": case "ot": return "hospital";
+    case "stay": return "hospital";
+    case "medicine": return "pharmacy";
+    case "lab": return "lab";
+    default: return "hospital";
+  }
+};
+
 export function DischargeBillDialog({ open, onOpenChange, admission, patientName, onDischarged, billOnly }: Props) {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -77,7 +89,6 @@ export function DischargeBillDialog({ open, onOpenChange, admission, patientName
       const list: LineItem[] = [];
       const daily = Number(bedRes.data?.daily_charge || 0);
       setBedDailyRate(daily);
-      // Add existing upfront charges as read-only line items
       if (hasDoctor) list.push({ category: "Doctor", description: "Doctor fees (already collected)", qty: 1, unit: Number(hasDoctor.amount), amount: Number(hasDoctor.amount) });
       if (hasAnesthesia) list.push({ category: "Anesthesia", description: "Anesthesia (already collected)", qty: 1, unit: Number(hasAnesthesia.amount), amount: Number(hasAnesthesia.amount) });
       if (hasOta) list.push({ category: "OTA", description: "OTA (already collected)", qty: 1, unit: Number(hasOta.amount), amount: Number(hasOta.amount) });
@@ -128,7 +139,6 @@ export function DischargeBillDialog({ open, onOpenChange, admission, patientName
     return days;
   };
 
-  // Auto-recalculate stay charges when days or freeFirstDay changes
   useEffect(() => {
     const chargeableDays = Math.max(0, days - (freeFirstDay ? 1 : 0));
     setStayCharges(chargeableDays * bedDailyRate);
@@ -154,10 +164,13 @@ export function DischargeBillDialog({ open, onOpenChange, admission, patientName
         patient_id: admission.patient_id,
         bed_charges_total: totals.bed,
         doctor_charges_total: totals.doc,
+        anesthesia_charges_total: totals.anes,
+        ota_charges_total: totals.ota,
+        ot_charges_total: totals.ot,
         medicine_charges_total: totals.med,
         lab_charges_total: totals.lab,
         nursing_charges_total: 0,
-        other_charges_total: totals.anes + totals.ota + totals.ot + 0,
+        other_charges_total: 0,
         discount: Number(discount) || 0,
         total_amount: totals.total,
         paid_amount: totalDeposit,
@@ -180,7 +193,7 @@ export function DischargeBillDialog({ open, onOpenChange, admission, patientName
         invoiceId = data.id;
       }
 
-      // Persist line items as ipd_charges
+      // Persist line items as ipd_charges with revenue attribution
       await supabase.from("ipd_charges").delete().eq("admission_id", admission.id).eq("invoice_id", invoiceId);
       const manualCharges: LineItem[] = [];
       if (stayCharges > 0) manualCharges.push({ category: "Stay", description: `Stay charges ${freeFirstDay ? `(${paidDays()} chargeable day(s), 1st free)` : `(${days} day(s))`}`, qty: paidDays(), unit: bedDailyRate, amount: stayCharges });
@@ -195,13 +208,49 @@ export function DischargeBillDialog({ open, onOpenChange, admission, patientName
         quantity: i.qty,
         unit_price: i.unit,
         amount: i.amount,
+        assigned_to: getAssignedTo(i.category),
+        doctor_id: i.category.toLowerCase() === "doctor" ? admission.doctor_id : null,
+        anesthesiologist_id: i.category.toLowerCase() === "anesthesia" ? (admission.anesthesiologist_id ?? null) : null,
       }));
       if (chargeRows.length) {
         const { error } = await supabase.from("ipd_charges").insert(chargeRows);
         if (error) throw error;
       }
 
-      // Discharge admission (skip if bill-only mode for staff)
+      // Create ipd_doctor_payments records for doctor, anesthesia, and OTA fees
+      const doctorPaymentsToCreate: any[] = [];
+      if (totals.doc > 0 && admission.doctor_id) {
+        doctorPaymentsToCreate.push({
+          doctor_id: admission.doctor_id,
+          admission_id: admission.id,
+          charge_type: "doctor",
+          amount: totals.doc,
+          status: "pending",
+        });
+      }
+      if (totals.anes > 0 && admission.anesthesiologist_id) {
+        doctorPaymentsToCreate.push({
+          doctor_id: admission.anesthesiologist_id,
+          admission_id: admission.id,
+          charge_type: "anesthesia",
+          amount: totals.anes,
+          status: "pending",
+        });
+      }
+      if (totals.ota > 0) {
+        doctorPaymentsToCreate.push({
+          doctor_id: admission.doctor_id,
+          admission_id: admission.id,
+          charge_type: "ota",
+          amount: totals.ota,
+          status: "pending",
+        });
+      }
+      if (doctorPaymentsToCreate.length > 0) {
+        const { error: dpError } = await supabase.from("ipd_doctor_payments").insert(doctorPaymentsToCreate);
+        if (dpError) console.warn("Failed to create IPD doctor payments:", dpError);
+      }
+
       if (!billOnly) {
         const { error: dErr } = await supabase
           .from("ipd_admissions")
@@ -210,7 +259,6 @@ export function DischargeBillDialog({ open, onOpenChange, admission, patientName
         if (dErr) throw dErr;
       }
 
-      // PDF
       await generateDischargeBillPDF({
         invoiceNumber: invoiceNumber!,
         admissionNumber: admission.admission_number,

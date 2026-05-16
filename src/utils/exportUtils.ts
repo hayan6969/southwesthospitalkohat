@@ -50,6 +50,15 @@ export function exportDailyClosingToCSV(data: {
   totalExpenses: number;
   totalRefunds: number;
   netProfit: number;
+  ipdDoctorRevenue?: number;
+  ipdAnesthesiaRevenue?: number;
+  ipdOtaRevenue?: number;
+  ipdOtRevenue?: number;
+  ipdBedRevenue?: number;
+  ipdMedicineRevenue?: number;
+  ipdLabRevenue?: number;
+  ipdTotalRevenue?: number;
+  ipdTotalPaid?: number;
 }) {
   const rows: string[][] = [
     ["Daily Financial Closing Report"],
@@ -75,13 +84,25 @@ export function exportDailyClosingToCSV(data: {
     ["Pharmacy Revenue (Sales)", String(data.pharmacyRevenue)],
     ["Pharmacy Profit", String(data.pharmacyProfit)],
     [],
+    data.ipdTotalRevenue ? [] as any : null,
+    data.ipdTotalRevenue ? ["=== IPD REVENUE ===", ""] as any : null,
+    data.ipdBedRevenue ? ["Bed / Stay Charges", String(data.ipdBedRevenue)] as any : null,
+    data.ipdDoctorRevenue ? ["IPD Doctor Fees", String(data.ipdDoctorRevenue)] as any : null,
+    data.ipdAnesthesiaRevenue ? ["IPD Anesthesia", String(data.ipdAnesthesiaRevenue)] as any : null,
+    data.ipdOtaRevenue ? ["IPD OTA Charges", String(data.ipdOtaRevenue)] as any : null,
+    data.ipdOtRevenue ? ["IPD OT Charges", String(data.ipdOtRevenue)] as any : null,
+    data.ipdMedicineRevenue ? ["IPD Medicines", String(data.ipdMedicineRevenue)] as any : null,
+    data.ipdLabRevenue ? ["IPD Lab Tests", String(data.ipdLabRevenue)] as any : null,
+    data.ipdTotalRevenue ? ["Total IPD Revenue", String(data.ipdTotalRevenue)] as any : null,
+    data.ipdTotalPaid ? ["IPD Total Collected", String(data.ipdTotalPaid)] as any : null,
+    [],
     ["=== DEDUCTIONS ===", ""],
     ["Total Expenses", String(data.totalExpenses)],
     ["Total Refunds", String(data.totalRefunds)],
     [],
     ["=== SUMMARY ===", ""],
     ["Net Profit (Hospital)", String(data.netProfit)],
-  ];
+  ].filter(Boolean);
 
   const csvContent = rows.map(r => r.map(c => `"${c}"`).join(",")).join("\n");
   downloadCSV(csvContent, `daily-closing-${data.date}.csv`);

@@ -12,6 +12,8 @@ import FinanceDaily from "./finance/FinanceDaily";
 import FinanceInvoices from "./finance/FinanceInvoices";
 import FinanceDiscounts from "./finance/FinanceDiscounts";
 import FinanceStaffPayments from "./finance/FinanceStaffPayments";
+import FinanceIPD from "./finance/FinanceIPD";
+import FinanceIPDDoctorPayments from "./finance/FinanceIPDDoctorPayments";
 
 export default function FinanceRoutes() {
   return (
@@ -29,6 +31,8 @@ export default function FinanceRoutes() {
         <Route path="refunds" element={<FinanceRefunds />} />
         <Route path="invoices" element={<FinanceInvoices />} />
         <Route path="discounts" element={<FinanceDiscounts />} />
+        <Route path="ipd" element={<FinanceIPD />} />
+        <Route path="ipd-doctor-payments" element={<FinanceIPDDoctorPayments />} />
       </Routes>
     </FinanceLayout>
   );
