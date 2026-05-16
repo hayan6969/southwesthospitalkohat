@@ -225,15 +225,6 @@ export function AnesthesiaNotesDialog({ open, onOpenChange, otSchedule, admissio
         }
       }
 
-      // Fetch admission number if admissionId
-      if (admissionId) {
-        const { data: adm } = await supabase
-          .from("ipd_admissions")
-          .select("admission_number")
-          .eq("id", admissionId)
-          .maybeSingle();
-        if (adm) setAdmissionNo(adm.admission_number);
-      }
     } catch (e: any) {
       console.error("Failed to load anesthesia notes:", e);
       if (e?.code === "PGRST301" || e?.message?.includes("does not exist")) {
