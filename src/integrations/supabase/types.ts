@@ -14,6 +14,78 @@ export type Database = {
   }
   public: {
     Tables: {
+      anesthesia_notes: {
+        Row: {
+          admission_id: string | null
+          anesthesia_drugs: string | null
+          anesthesia_type: string | null
+          brief_history: string | null
+          created_at: string | null
+          created_by: string | null
+          id: string
+          input_output_notes: string | null
+          intraop_assessment: Json | null
+          ot_booking_id: string | null
+          patient_id: string | null
+          postop_notes: string | null
+          postop_orders: Json | null
+          preop_bp: string | null
+          preop_hr: number | null
+          preop_medication: string | null
+          preop_spo2: number | null
+          recovery_status: string | null
+          status: string | null
+          surgical_procedure: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          admission_id?: string | null
+          anesthesia_drugs?: string | null
+          anesthesia_type?: string | null
+          brief_history?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          input_output_notes?: string | null
+          intraop_assessment?: Json | null
+          ot_booking_id?: string | null
+          patient_id?: string | null
+          postop_notes?: string | null
+          postop_orders?: Json | null
+          preop_bp?: string | null
+          preop_hr?: number | null
+          preop_medication?: string | null
+          preop_spo2?: number | null
+          recovery_status?: string | null
+          status?: string | null
+          surgical_procedure?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          admission_id?: string | null
+          anesthesia_drugs?: string | null
+          anesthesia_type?: string | null
+          brief_history?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          input_output_notes?: string | null
+          intraop_assessment?: Json | null
+          ot_booking_id?: string | null
+          patient_id?: string | null
+          postop_notes?: string | null
+          postop_orders?: Json | null
+          preop_bp?: string | null
+          preop_hr?: number | null
+          preop_medication?: string | null
+          preop_spo2?: number | null
+          recovery_status?: string | null
+          status?: string | null
+          surgical_procedure?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       appointments: {
         Row: {
           appointment_date: string
