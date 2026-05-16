@@ -56,7 +56,8 @@ export function DischargeSummaryDialog({ open, onOpenChange, admission, patientN
       .header h2 { margin: 6px 0 0; font-size: 15px; text-transform: uppercase; }
       table { width: 100%; border-collapse: collapse; margin-bottom: 10px; }
       td, th { border: 1px solid #000; padding: 5px 7px; font-size: 11px; vertical-align: top; }
-      th { background: #222; color: #fff; text-align: center; }
+      th { background: transparent; color: #000; text-align: center; font-weight: bold; font-size: 12px; padding: 5px 7px; }
+      .section-title { font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; }
       .lbl { font-weight: bold; width: 120px; background: #f5f5f5; }
     </style></head><body><div class="container">${html}</div>
     <script>window.print();</script></body></html>`);
@@ -151,23 +152,23 @@ export function DischargeSummaryDialog({ open, onOpenChange, admission, patientN
             <table cellPadding={0} cellSpacing={0}>
               <tr><th colSpan={7}>VITALS RECORD</th></tr>
               <tr>
-                <th style={{ fontSize: 10, padding: 3 }}>Date/Time</th>
-                <th style={{ fontSize: 10, padding: 3 }}>Temp</th>
-                <th style={{ fontSize: 10, padding: 3 }}>Pulse</th>
-                <th style={{ fontSize: 10, padding: 3 }}>BP</th>
-                <th style={{ fontSize: 10, padding: 3 }}>RR</th>
-                <th style={{ fontSize: 10, padding: 3 }}>SpO₂</th>
-                <th style={{ fontSize: 10, padding: 3 }}>Notes</th>
+                <th style={{ padding: 3 }}>Date/Time</th>
+                <th style={{ padding: 3 }}>Temp</th>
+                <th style={{ padding: 3 }}>Pulse</th>
+                <th style={{ padding: 3 }}>BP</th>
+                <th style={{ padding: 3 }}>RR</th>
+                <th style={{ padding: 3 }}>SpO₂</th>
+                <th style={{ padding: 3 }}>Notes</th>
               </tr>
               {vitals.slice(0, 10).map((v: any) => (
                 <tr key={v.id}>
-                  <td style={{ fontSize: 10, padding: 3 }}>{format(new Date(v.recorded_at), "MMM d HH:mm")}</td>
-                  <td style={{ fontSize: 10, padding: 3 }}>{v.temperature ?? "—"}</td>
-                  <td style={{ fontSize: 10, padding: 3 }}>{v.pulse ?? "—"}</td>
-                  <td style={{ fontSize: 10, padding: 3 }}>{v.bp_systolic && v.bp_diastolic ? `${v.bp_systolic}/${v.bp_diastolic}` : "—"}</td>
-                  <td style={{ fontSize: 10, padding: 3 }}>{v.respiratory_rate ?? "—"}</td>
-                  <td style={{ fontSize: 10, padding: 3 }}>{v.oxygen_saturation ?? "—"}</td>
-                  <td style={{ fontSize: 10, padding: 3 }}>{v.notes ?? "—"}</td>
+                  <td style={{ padding: 3 }}>{format(new Date(v.recorded_at), "MMM d HH:mm")}</td>
+                  <td style={{ padding: 3 }}>{v.temperature ?? "—"}</td>
+                  <td style={{ padding: 3 }}>{v.pulse ?? "—"}</td>
+                  <td style={{ padding: 3 }}>{v.bp_systolic && v.bp_diastolic ? `${v.bp_systolic}/${v.bp_diastolic}` : "—"}</td>
+                  <td style={{ padding: 3 }}>{v.respiratory_rate ?? "—"}</td>
+                  <td style={{ padding: 3 }}>{v.oxygen_saturation ?? "—"}</td>
+                  <td style={{ padding: 3 }}>{v.notes ?? "—"}</td>
                 </tr>
               ))}
             </table>
@@ -189,19 +190,19 @@ export function DischargeSummaryDialog({ open, onOpenChange, admission, patientN
             <table cellPadding={0} cellSpacing={0}>
               <tr><th colSpan={5}>IV FLUIDS ADMINISTERED</th></tr>
               <tr>
-                <th style={{ fontSize: 10, padding: 3 }}>Date/Time</th>
-                <th style={{ fontSize: 10, padding: 3 }}>Fluid Type</th>
-                <th style={{ fontSize: 10, padding: 3 }}>Volume</th>
-                <th style={{ fontSize: 10, padding: 3 }}>Rate</th>
-                <th style={{ fontSize: 10, padding: 3 }}>Notes</th>
+                <th style={{ padding: 3 }}>Date/Time</th>
+                <th style={{ padding: 3 }}>Fluid Type</th>
+                <th style={{ padding: 3 }}>Volume</th>
+                <th style={{ padding: 3 }}>Rate</th>
+                <th style={{ padding: 3 }}>Notes</th>
               </tr>
               {ivFluids.slice(0, 10).map((v: any) => (
                 <tr key={v.id}>
-                  <td style={{ fontSize: 10, padding: 3 }}>{format(new Date(v.recorded_at), "MMM d HH:mm")}</td>
-                  <td style={{ fontSize: 10, padding: 3 }}>{v.fluid_type || "—"}</td>
-                  <td style={{ fontSize: 10, padding: 3 }}>{v.fluid_volume_ml ? `${v.fluid_volume_ml} ml` : "—"}</td>
-                  <td style={{ fontSize: 10, padding: 3 }}>{v.fluid_rate || "—"}</td>
-                  <td style={{ fontSize: 10, padding: 3 }}>{v.notes || "—"}</td>
+                  <td style={{ padding: 3 }}>{format(new Date(v.recorded_at), "MMM d HH:mm")}</td>
+                  <td style={{ padding: 3 }}>{v.fluid_type || "—"}</td>
+                  <td style={{ padding: 3 }}>{v.fluid_volume_ml ? `${v.fluid_volume_ml} ml` : "—"}</td>
+                  <td style={{ padding: 3 }}>{v.fluid_rate || "—"}</td>
+                  <td style={{ padding: 3 }}>{v.notes || "—"}</td>
                 </tr>
               ))}
             </table>
@@ -211,17 +212,17 @@ export function DischargeSummaryDialog({ open, onOpenChange, admission, patientN
             <table cellPadding={0} cellSpacing={0}>
               <tr><th colSpan={4}>INTAKE / OUTPUT RECORD</th></tr>
               <tr>
-                <th style={{ fontSize: 10, padding: 3 }}>Date/Time</th>
-                <th style={{ fontSize: 10, padding: 3 }}>Intake (ml)</th>
-                <th style={{ fontSize: 10, padding: 3 }}>Output (ml)</th>
-                <th style={{ fontSize: 10, padding: 3 }}>Notes</th>
+                <th style={{ padding: 3 }}>Date/Time</th>
+                <th style={{ padding: 3 }}>Intake (ml)</th>
+                <th style={{ padding: 3 }}>Output (ml)</th>
+                <th style={{ padding: 3 }}>Notes</th>
               </tr>
               {intakeOutput.slice(0, 10).map((io: any) => (
                 <tr key={io.id}>
-                  <td style={{ fontSize: 10, padding: 3 }}>{format(new Date(io.recorded_at), "MMM d HH:mm")}</td>
-                  <td style={{ fontSize: 10, padding: 3 }}>{io.intake_ml ?? "—"}</td>
-                  <td style={{ fontSize: 10, padding: 3 }}>{io.output_ml ?? "—"}</td>
-                  <td style={{ fontSize: 10, padding: 3 }}>{io.notes || "—"}</td>
+                  <td style={{ padding: 3 }}>{format(new Date(io.recorded_at), "MMM d HH:mm")}</td>
+                  <td style={{ padding: 3 }}>{io.intake_ml ?? "—"}</td>
+                  <td style={{ padding: 3 }}>{io.output_ml ?? "—"}</td>
+                  <td style={{ padding: 3 }}>{io.notes || "—"}</td>
                 </tr>
               ))}
             </table>
@@ -231,21 +232,21 @@ export function DischargeSummaryDialog({ open, onOpenChange, admission, patientN
             <table cellPadding={0} cellSpacing={0}>
               <tr><th colSpan={6}>MEDICINE ORDERS</th></tr>
               <tr>
-                <th style={{ fontSize: 10, padding: 3 }}>Date</th>
-                <th style={{ fontSize: 10, padding: 3 }}>Medicine</th>
-                <th style={{ fontSize: 10, padding: 3 }}>Dosage</th>
-                <th style={{ fontSize: 10, padding: 3 }}>Frequency</th>
-                <th style={{ fontSize: 10, padding: 3 }}>Route</th>
-                <th style={{ fontSize: 10, padding: 3 }}>Status</th>
+                <th style={{ padding: 3 }}>Date</th>
+                <th style={{ padding: 3 }}>Medicine</th>
+                <th style={{ padding: 3 }}>Dosage</th>
+                <th style={{ padding: 3 }}>Frequency</th>
+                <th style={{ padding: 3 }}>Route</th>
+                <th style={{ padding: 3 }}>Status</th>
               </tr>
               {medicines.slice(0, 10).map((m: any) => (
                 <tr key={m.id}>
-                  <td style={{ fontSize: 10, padding: 3 }}>{format(new Date(m.created_at), "MMM d")}</td>
-                  <td style={{ fontSize: 10, padding: 3 }}>{m.medicine_name}</td>
-                  <td style={{ fontSize: 10, padding: 3 }}>{m.dosage || "—"}</td>
-                  <td style={{ fontSize: 10, padding: 3 }}>{m.frequency || "—"}</td>
-                  <td style={{ fontSize: 10, padding: 3 }}>{m.route || "—"}</td>
-                  <td style={{ fontSize: 10, padding: 3 }}>{m.status}</td>
+                  <td style={{ padding: 3 }}>{format(new Date(m.created_at), "MMM d")}</td>
+                  <td style={{ padding: 3 }}>{m.medicine_name}</td>
+                  <td style={{ padding: 3 }}>{m.dosage || "—"}</td>
+                  <td style={{ padding: 3 }}>{m.frequency || "—"}</td>
+                  <td style={{ padding: 3 }}>{m.route || "—"}</td>
+                  <td style={{ padding: 3 }}>{m.status}</td>
                 </tr>
               ))}
             </table>
@@ -255,17 +256,17 @@ export function DischargeSummaryDialog({ open, onOpenChange, admission, patientN
             <table cellPadding={0} cellSpacing={0}>
               <tr><th colSpan={4}>LAB TESTS</th></tr>
               <tr>
-                <th style={{ fontSize: 10, padding: 3 }}>Date</th>
-                <th style={{ fontSize: 10, padding: 3 }}>Test</th>
-                <th style={{ fontSize: 10, padding: 3 }}>Result</th>
-                <th style={{ fontSize: 10, padding: 3 }}>Status</th>
+                <th style={{ padding: 3 }}>Date</th>
+                <th style={{ padding: 3 }}>Test</th>
+                <th style={{ padding: 3 }}>Result</th>
+                <th style={{ padding: 3 }}>Status</th>
               </tr>
               {labs.slice(0, 10).map((l: any) => (
                 <tr key={l.id}>
-                  <td style={{ fontSize: 10, padding: 3 }}>{format(new Date(l.created_at), "MMM d")}</td>
-                  <td style={{ fontSize: 10, padding: 3 }}>{l.test_name}</td>
-                  <td style={{ fontSize: 10, padding: 3 }}>{l.result_notes || "—"}</td>
-                  <td style={{ fontSize: 10, padding: 3 }}>{l.status}</td>
+                  <td style={{ padding: 3 }}>{format(new Date(l.created_at), "MMM d")}</td>
+                  <td style={{ padding: 3 }}>{l.test_name}</td>
+                  <td style={{ padding: 3 }}>{l.result_notes || "—"}</td>
+                  <td style={{ padding: 3 }}>{l.status}</td>
                 </tr>
               ))}
             </table>
