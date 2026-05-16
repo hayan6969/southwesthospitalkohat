@@ -61,19 +61,24 @@ export function ClinicalRecordSheetDialog({ open, onOpenChange, admission, patie
     if (!open || !admission) return;
     (async () => {
       setLoading(true);
-      const [patRes, docRes, anesRes, otRes, assessRes] = await Promise.all([
-        supabase.from("patients").select("*, profiles!patients_id_fkey(first_name, last_name, date_of_birth, phone)").eq("id", admission.patient_id).maybeSingle(),
+      const [patRes, docRes, anesRes, otRes] = await Promise.all([
+        supabase.from("patients").select("*, profiles(first_name, last_name, date_of_birth, phone)").eq("id", admission.patient_id).maybeSingle(),
         admission.doctor_id ? supabase.from("profiles").select("first_name, last_name").eq("id", admission.doctor_id).maybeSingle() : Promise.resolve({ data: null }),
         admission.anesthesiologist_id ? supabase.from("profiles").select("first_name, last_name").eq("id", admission.anesthesiologist_id).maybeSingle() : Promise.resolve({ data: null }),
         supabase.from("ot_schedules").select("*, operation:ot_operations(operation_name)").eq("patient_id", admission.patient_id).order("operation_date", { ascending: false }).limit(1).maybeSingle(),
-        supabase.from("assessment_entries").select("id", { count: "exact", head: true }).eq("patient_id", admission.patient_id),
       ]);
+
+      let assessmentCount = 0;
+      if (otRes.data?.id) {
+        const assessRes = await supabase.from("assessment_entries").select("id", { count: "exact", head: true }).eq("ot_schedule_id", otRes.data.id);
+        assessmentCount = assessRes.count || 0;
+      }
 
       setPatient(patRes.data);
       setDoctor(docRes.data);
       setAnesthetist(anesRes.data);
       setOtBooking(otRes.data);
-      setAssessmentCount(assessRes.count || 0);
+      setAssessmentCount(assessmentCount);
       setLoading(false);
     })();
   }, [open, admission]);
