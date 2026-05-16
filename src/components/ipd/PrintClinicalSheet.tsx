@@ -109,6 +109,7 @@ export function PrintClinicalSheet({ open, onOpenChange, admission, patientName 
       </tr>
       ${ivRows}
     </table>
+    <div class="page-break"></div>
     <table>
       <tr><th style="font-size:15px;padding:10px" colspan="4">INTAKE / OUTPUT</th></tr>
       <tr>
