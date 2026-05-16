@@ -432,7 +432,6 @@ export function AdmissionFormDialog({ open, onOpenChange, admission, patientName
               </div>
             </div>
           )}
-        )}
       </DialogContent>
     </Dialog>
   );
