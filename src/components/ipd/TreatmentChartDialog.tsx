@@ -176,14 +176,129 @@ export function TreatmentChartDialog({ open, onOpenChange, admissionId, patientN
     }
   };
 
+  const downloadFullPdf = () => {
+    const pdf = new jsPDF("p", "mm", "a4");
+    const pw = pdf.internal.pageSize.getWidth();
+    const m = 15;
+    let y = m;
+
+    const header = () => {
+      pdf.setFontSize(14); pdf.setFont("helvetica", "bold");
+      pdf.text("Treatment Chart", pw / 2, y, { align: "center" }); y += 6;
+      pdf.setFontSize(9); pdf.setFont("helvetica", "normal");
+      pdf.text(`${patientName || ""} (${admissionNumber || admissionId})`, pw / 2, y, { align: "center" }); y += 5;
+      pdf.line(m, y, pw - m, y); y += 5;
+    };
+
+    const section = (title: string) => {
+      if (y > 272) { pdf.addPage(); y = m; }
+      pdf.setFillColor(50, 50, 50); pdf.rect(m, y - 1, pw - 2 * m, 6, "F");
+      pdf.setTextColor(255); pdf.setFont("helvetica", "bold"); pdf.setFontSize(10);
+      pdf.text(title, pw / 2, y + 4, { align: "center" });
+      pdf.setTextColor(0); pdf.setFont("helvetica", "normal");
+      y += 9;
+    };
+
+    const row = (cols: string[], widths: number[]) => {
+      if (y > 275) { pdf.addPage(); y = m; header(); }
+      let x = m;
+      cols.forEach((c, i) => {
+        pdf.rect(x, y, widths[i], 5);
+        pdf.setFontSize(8); pdf.text(c, x + 1, y + 3.5);
+        x += widths[i];
+      });
+      y += 5;
+    };
+
+    header();
+
+    // VITALS
+    const vitals = entries.filter(e => e.entry_type === "vitals");
+    if (vitals.length > 0) {
+      section("VITALS");
+      const cw = (pw - 2 * m) / 6;
+      const vCols = ["Time", "Temp", "Pulse", "BP", "RR", "SpO₂"];
+      pdf.setFillColor(230); row(vCols, Array(6).fill(cw));
+      vitals.forEach(v => row([
+        format(new Date(v.recorded_at), "MMM d HH:mm"),
+        v.temperature ?? "\u2014",
+        v.pulse ?? "\u2014",
+        v.bp_systolic && v.bp_diastolic ? `${v.bp_systolic}/${v.bp_diastolic}` : "\u2014",
+        v.respiratory_rate ?? "\u2014",
+        v.oxygen_saturation ?? "\u2014",
+      ], Array(6).fill(cw)));
+    }
+
+    // IV FLUIDS
+    const ivs = entries.filter(e => e.entry_type === "iv_fluid");
+    if (ivs.length > 0) {
+      section("IV FLUIDS");
+      const cw = (pw - 2 * m) / 5;
+      const iCols = ["Time", "Fluid", "Volume", "Rate", "Notes"];
+      pdf.setFillColor(230); row(iCols, Array(5).fill(cw));
+      ivs.forEach(iv => row([
+        format(new Date(iv.recorded_at), "MMM d HH:mm"),
+        iv.fluid_type ?? "\u2014",
+        iv.fluid_volume_ml ? `${iv.fluid_volume_ml} ml` : "\u2014",
+        iv.fluid_rate ?? "\u2014",
+        iv.notes ?? "\u2014",
+      ], Array(5).fill(cw)));
+    }
+
+    // INTAKE/OUTPUT
+    const ios = entries.filter(e => e.entry_type === "intake_output");
+    if (ios.length > 0) {
+      section("INTAKE / OUTPUT");
+      const cw = (pw - 2 * m) / 4;
+      const ioCols = ["Time", "Intake", "Output", "Notes"];
+      pdf.setFillColor(230); row(ioCols, Array(4).fill(cw));
+      ios.forEach(io => row([
+        format(new Date(io.recorded_at), "MMM d HH:mm"),
+        io.intake_ml ? `${io.intake_ml} ml` : "\u2014",
+        io.output_ml ? `${io.output_ml} ml` : "\u2014",
+        io.notes ?? "\u2014",
+      ], Array(4).fill(cw)));
+    }
+
+    // ANAESTHESIA NOTES
+    if (anesthesiaNotes.length > 0) {
+      section("ANAESTHESIA NOTES");
+      anesthesiaNotes.forEach(note => {
+        if (y > 260) { pdf.addPage(); y = m; header(); }
+        pdf.setFontSize(9); pdf.setFont("helvetica", "bold");
+        const line = (lbl: string, val: string) => {
+          if (y > 275) { pdf.addPage(); y = m; header(); }
+          pdf.setFont("helvetica", "bold"); pdf.text(lbl + ":", m, y);
+          pdf.setFont("helvetica", "normal"); pdf.text(val || "\u2014", m + 40, y);
+          y += 5;
+        };
+        line("Procedure", note.surgical_procedure);
+        line("Anesthesia", note.anesthesia_type);
+        line("History", note.brief_history);
+        line("Pre-Op Vitals", `HR: ${note.preop_hr ?? "\u2014"} BP: ${note.preop_bp || "\u2014"} SpO₂: ${note.preop_spo2 ?? "\u2014"}`);
+        line("Pre-Op Med", note.preop_medication);
+        line("Drugs Used", note.anesthesia_drugs);
+        line("Recovery", note.recovery_status);
+        if (note.postop_orders?.items?.length) line("Post-Op Orders", note.postop_orders.items.join(", "));
+      });
+    }
+
+    pdf.save(`Treatment_Chart_${admissionNumber || admissionId}.pdf`);
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-5xl max-h-[85vh] overflow-y-auto z-[9999]">
         <DialogHeader>
-          <DialogTitle>
-            Treatment Chart
-            {patientName && <span className="ml-2 text-sm text-muted-foreground">— {patientName} ({admissionNumber})</span>}
-          </DialogTitle>
+          <div className="flex items-center justify-between">
+            <DialogTitle>
+              Treatment Chart
+              {patientName && <span className="ml-2 text-sm text-muted-foreground">— {patientName} ({admissionNumber})</span>}
+            </DialogTitle>
+            <Button size="sm" variant="outline" onClick={downloadFullPdf} className="gap-1.5">
+              <Download className="w-4 h-4" /> Download PDF
+            </Button>
+          </div>
         </DialogHeader>
 
         <Tabs value={tab} onValueChange={(v) => { setTab(v as EntryType); setForm({}); }}>
