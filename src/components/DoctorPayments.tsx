@@ -125,18 +125,17 @@ export function DoctorPayments() {
 
       if (error) throw error;
 
-      // Fetch doctor names
+      // Fetch doctor names from profiles directly
       const doctorIds = [...new Set(data?.map(p => p.doctor_id) || [])];
       let doctorMap: Record<string, string> = {};
       if (doctorIds.length > 0) {
-        const { data: doctors } = await supabase
-          .from('doctors')
-          .select('id, profiles(first_name, last_name)')
+        const { data: profiles } = await supabase
+          .from('profiles')
+          .select('id, first_name, last_name')
           .in('id', doctorIds);
-        if (doctors) {
-          doctors.forEach(d => {
-            const p = d.profiles as any;
-            doctorMap[d.id] = p ? `Dr. ${p.first_name} ${p.last_name}` : 'Unknown';
+        if (profiles) {
+          profiles.forEach(p => {
+            doctorMap[p.id] = `Dr. ${p.first_name} ${p.last_name}`;
           });
         }
       }
@@ -178,18 +177,17 @@ export function DoctorPayments() {
         byDoctor[doctorId].count += 1;
       });
 
-      // Fetch doctor names
+      // Fetch doctor names from profiles directly
       const doctorIds = Object.keys(byDoctor);
       let doctorMap: Record<string, string> = {};
       if (doctorIds.length > 0) {
-        const { data: doctors } = await supabase
-          .from('doctors')
-          .select('id, profiles(first_name, last_name)')
+        const { data: profiles } = await supabase
+          .from('profiles')
+          .select('id, first_name, last_name')
           .in('id', doctorIds);
-        if (doctors) {
-          doctors.forEach(d => {
-            const p = d.profiles as any;
-            doctorMap[d.id] = p ? `Dr. ${p.first_name} ${p.last_name}` : 'Unknown';
+        if (profiles) {
+          profiles.forEach(p => {
+            doctorMap[p.id] = `Dr. ${p.first_name} ${p.last_name}`;
           });
         }
       }

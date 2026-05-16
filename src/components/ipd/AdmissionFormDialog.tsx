@@ -1,14 +1,10 @@
 import { useEffect, useState, useRef } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/useAuth";
-import { Loader2, Printer, Download, Save } from "lucide-react";
+import { Loader2, Printer, Download } from "lucide-react";
 import { format } from "date-fns";
 import jsPDF from "jspdf";
-import { toast } from "sonner";
 
 interface Props {
   open: boolean;
@@ -16,17 +12,6 @@ interface Props {
   admission: any;
   patientName: string;
   autoPrint?: boolean;
-  clinicalEntry?: boolean;
-}
-
-interface VitalsRow {
-  time: string;
-  temp: string;
-  pulse: string;
-  bpSystolic: string;
-  bpDiastolic: string;
-  rr: string;
-  spo2: string;
 }
 
 interface Hs {
@@ -36,24 +21,17 @@ interface Hs {
   logo_url: string | null;
 }
 
-export function AdmissionFormDialog({ open, onOpenChange, admission, patientName, autoPrint, clinicalEntry }: Props) {
-  const { profile } = useAuth();
+export function AdmissionFormDialog({ open, onOpenChange, admission, patientName, autoPrint }: Props) {
   const printRef = useRef<HTMLDivElement>(null);
   const [loading, setLoading] = useState(true);
-  const [savingClinical, setSavingClinical] = useState(false);
   const [hs, setHs] = useState<Hs | null>(null);
   const [adm, setAdm] = useState<any>(null);
-  const [prof, setProf] = useState<any>(null);
+  const [profile, setProfile] = useState<any>(null);
   const [patient, setPatient] = useState<any>(null);
   const [ward, setWard] = useState<any>(null);
   const [bed, setBed] = useState<any>(null);
   const [doctor, setDoctor] = useState<any>(null);
   const [doctorProf, setDoctorProf] = useState<any>(null);
-  const [vitalsRows, setVitalsRows] = useState<VitalsRow[]>(
-    Array.from({ length: 10 }, () => ({ time: "", temp: "", pulse: "", bpSystolic: "", bpDiastolic: "", rr: "", spo2: "" }))
-  );
-  const [ivFluid, setIvFluid] = useState({ time: "", fluidType: "", volume: "", rate: "", notes: "" });
-  const [io, setIo] = useState({ time: "", intake: "", output: "", notes: "" });
 
   useEffect(() => {
     if (!open || !admission) return;
@@ -77,7 +55,7 @@ export function AdmissionFormDialog({ open, onOpenChange, admission, patientName
 
       setAdm(a);
       setHs(hsRes.data);
-      setProf(profRes.data);
+      setProfile(profRes.data);
       setPatient(patRes.data);
       setWard(a.wards || null);
       setBed(a.beds || null);
@@ -161,7 +139,7 @@ export function AdmissionFormDialog({ open, onOpenChange, admission, patientName
     y += 2;
 
     sect("PATIENT INFORMATION");
-    R("Patient Name", patientName, "Phone", prof?.phone || "—");
+    R("Patient Name", patientName, "Phone", profile?.phone || "—");
     R("CNIC", patient?.cnic || "—", "DOB", patient?.date_of_birth ? format(new Date(patient.date_of_birth), "dd/MM/yyyy") : "—");
     R("Blood Group", patient?.blood_type || "—", "City", patient?.city || "—");
     R("Province", patient?.province || "—", "Address", patient?.address || "—");
@@ -204,59 +182,6 @@ export function AdmissionFormDialog({ open, onOpenChange, admission, patientName
     pdf.save(`Admission_Form_${admission?.admission_number || "unknown"}.pdf`);
   };
 
-  const saveClinical = async () => {
-    setSavingClinical(true);
-    try {
-      const toInsert: any[] = [];
-      vitalsRows.forEach((r) => {
-        if (!r.temp && !r.pulse && !r.bpSystolic) return;
-        toInsert.push({
-          admission_id: admission.id,
-          entry_type: "vitals",
-          recorded_at: r.time || new Date().toISOString(),
-          temperature: r.temp ? Number(r.temp) : null,
-          pulse: r.pulse ? Number(r.pulse) : null,
-          bp_systolic: r.bpSystolic ? Number(r.bpSystolic) : null,
-          bp_diastolic: r.bpDiastolic ? Number(r.bpDiastolic) : null,
-          respiratory_rate: r.rr ? Number(r.rr) : null,
-          oxygen_saturation: r.spo2 ? Number(r.spo2) : null,
-          recorded_by: profile?.id,
-        });
-      });
-      if (ivFluid.fluidType) {
-        toInsert.push({
-          admission_id: admission.id,
-          entry_type: "iv_fluid",
-          recorded_at: ivFluid.time || new Date().toISOString(),
-          fluid_type: ivFluid.fluidType,
-          fluid_volume_ml: ivFluid.volume ? Number(ivFluid.volume) : null,
-          fluid_rate: ivFluid.rate || null,
-          notes: ivFluid.notes || null,
-          recorded_by: profile?.id,
-        });
-      }
-      if (io.intake || io.output) {
-        toInsert.push({
-          admission_id: admission.id,
-          entry_type: "intake_output",
-          recorded_at: io.time || new Date().toISOString(),
-          intake_ml: io.intake ? Number(io.intake) : null,
-          output_ml: io.output ? Number(io.output) : null,
-          notes: io.notes || null,
-          recorded_by: profile?.id,
-        });
-      }
-      if (toInsert.length === 0) { toast.error("No clinical data to save"); setSavingClinical(false); return; }
-      const { error } = await supabase.from("ipd_treatment_chart").insert(toInsert);
-      if (error) throw error;
-      toast.success(`${toInsert.length} clinical entries saved`);
-    } catch (e: any) {
-      toast.error(e.message || "Failed to save clinical data");
-    } finally {
-      setSavingClinical(false);
-    }
-  };
-
   const P = (l: string, v: string, l2?: string, v2?: string, l3?: string, v3?: string) => (
     <tr>
       <td className="lbl">{l}</td>
@@ -281,7 +206,7 @@ export function AdmissionFormDialog({ open, onOpenChange, admission, patientName
 
         {loading ? (
           <div className="flex justify-center p-12"><Loader2 className="w-6 h-6 animate-spin" /></div>
-        ) : (<>
+        ) : (
           <div id="admission-form-content" ref={printRef} style={{ fontFamily: "Arial, sans-serif", fontSize: "12px", color: "#000" }}>
             {/* ---- HEADER ---- */}
             <div style={{ textAlign: "center", borderBottom: "2px solid #000", paddingBottom: 10, marginBottom: 14 }}>
@@ -304,7 +229,7 @@ export function AdmissionFormDialog({ open, onOpenChange, admission, patientName
             <table cellPadding={0} cellSpacing={0}>
               <tr><td colSpan={6} style={{ fontWeight: "bold", fontSize: 12, textAlign: "center", padding: 6, border: "1px solid #000" }}>PATIENT INFORMATION</td></tr>
               {P("Patient Name", patientName, "Patient #", patient?.patient_number || "—")}
-              {P("Phone", prof?.phone || "—", "CNIC", patient?.cnic || "—")}
+              {P("Phone", profile?.phone || "—", "CNIC", patient?.cnic || "—")}
               {P("DOB", patient?.date_of_birth ? format(new Date(patient.date_of_birth), "dd/MM/yyyy") : "—", "Blood Group", patient?.blood_type || "—")}
               {P("Address", patient?.address || "—")}
               {patient?.emergency_contact_name && P("Emergency Contact", `${patient.emergency_contact_name}${patient.emergency_contact_phone ? ` (${patient.emergency_contact_phone})` : ""}`)}
@@ -368,71 +293,7 @@ export function AdmissionFormDialog({ open, onOpenChange, admission, patientName
               Generated on {format(new Date(), "dd/MM/yyyy HH:mm")} — {hs?.hospital_name || "Hospital"}
             </div>
           </div>
-
-          {clinicalEntry && (
-            <div className="space-y-4 border-t pt-4">
-              <div className="flex justify-between items-center">
-                <h3 className="font-semibold">Clinical Entry</h3>
-                <Button size="sm" onClick={saveClinical} disabled={savingClinical}>
-                  <Save className="w-4 h-4 mr-1" />{savingClinical ? "Saving..." : "Save Clinical Data"}
-                </Button>
-              </div>
-
-              <div>
-                <h4 className="text-sm font-medium mb-1">Vitals</h4>
-                <div className="overflow-x-auto">
-                  <table className="w-full" style={{ tableLayout: "fixed", borderCollapse: "collapse" }}>
-                    <thead>
-                      <tr className="border-b text-xs">
-                        <th className="p-1 text-left" style={{ width: "110px" }}>Time</th>
-                        <th className="p-1 text-left" style={{ width: "60px" }}>Temp</th>
-                        <th className="p-1 text-left" style={{ width: "55px" }}>Pulse</th>
-                        <th className="p-1 text-left" style={{ width: "65px" }}>BP Sys</th>
-                        <th className="p-1 text-left" style={{ width: "65px" }}>BP Dia</th>
-                        <th className="p-1 text-left" style={{ width: "55px" }}>RR</th>
-                        <th className="p-1 text-left" style={{ width: "55px" }}>SpO₂</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {vitalsRows.map((row, idx) => (
-                        <tr key={idx} className="border-b">
-                          <td className="p-1"><Input type="datetime-local" value={row.time} onChange={e => { const r = [...vitalsRows]; r[idx] = { ...r[idx], time: e.target.value }; setVitalsRows(r); }} className="h-7 text-xs" /></td>
-                          <td className="p-1"><Input type="number" step="0.1" value={row.temp} onChange={e => { const r = [...vitalsRows]; r[idx] = { ...r[idx], temp: e.target.value }; setVitalsRows(r); }} className="h-7 text-xs" placeholder="°C" /></td>
-                          <td className="p-1"><Input type="number" value={row.pulse} onChange={e => { const r = [...vitalsRows]; r[idx] = { ...r[idx], pulse: e.target.value }; setVitalsRows(r); }} className="h-7 text-xs" placeholder="/min" /></td>
-                          <td className="p-1"><Input type="number" value={row.bpSystolic} onChange={e => { const r = [...vitalsRows]; r[idx] = { ...r[idx], bpSystolic: e.target.value }; setVitalsRows(r); }} className="h-7 text-xs" placeholder="Sys" /></td>
-                          <td className="p-1"><Input type="number" value={row.bpDiastolic} onChange={e => { const r = [...vitalsRows]; r[idx] = { ...r[idx], bpDiastolic: e.target.value }; setVitalsRows(r); }} className="h-7 text-xs" placeholder="Dia" /></td>
-                          <td className="p-1"><Input type="number" value={row.rr} onChange={e => { const r = [...vitalsRows]; r[idx] = { ...r[idx], rr: e.target.value }; setVitalsRows(r); }} className="h-7 text-xs" placeholder="/min" /></td>
-                          <td className="p-1"><Input type="number" step="0.1" value={row.spo2} onChange={e => { const r = [...vitalsRows]; r[idx] = { ...r[idx], spo2: e.target.value }; setVitalsRows(r); }} className="h-7 text-xs" placeholder="%" /></td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-
-              <div className="border-t pt-2">
-                <h4 className="text-sm font-medium mb-1">IV Fluids</h4>
-                <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
-                  <div><Label className="text-xs">Time</Label><Input type="datetime-local" value={ivFluid.time} onChange={e => setIvFluid({ ...ivFluid, time: e.target.value })} className="h-8 text-xs" /></div>
-                  <div><Label className="text-xs">Fluid Type</Label><Input value={ivFluid.fluidType} onChange={e => setIvFluid({ ...ivFluid, fluidType: e.target.value })} className="h-8 text-xs" placeholder="e.g. Normal Saline" /></div>
-                  <div><Label className="text-xs">Volume (ml)</Label><Input type="number" value={ivFluid.volume} onChange={e => setIvFluid({ ...ivFluid, volume: e.target.value })} className="h-8 text-xs" /></div>
-                  <div><Label className="text-xs">Rate</Label><Input value={ivFluid.rate} onChange={e => setIvFluid({ ...ivFluid, rate: e.target.value })} className="h-8 text-xs" placeholder="e.g. 100ml/hr" /></div>
-                  <div><Label className="text-xs">Notes</Label><Input value={ivFluid.notes} onChange={e => setIvFluid({ ...ivFluid, notes: e.target.value })} className="h-8 text-xs" /></div>
-                </div>
-              </div>
-
-              <div className="border-t pt-2">
-                <h4 className="text-sm font-medium mb-1">Intake / Output</h4>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                  <div><Label className="text-xs">Time</Label><Input type="datetime-local" value={io.time} onChange={e => setIo({ ...io, time: e.target.value })} className="h-8 text-xs" /></div>
-                  <div><Label className="text-xs">Intake (ml)</Label><Input type="number" value={io.intake} onChange={e => setIo({ ...io, intake: e.target.value })} className="h-8 text-xs" /></div>
-                  <div><Label className="text-xs">Output (ml)</Label><Input type="number" value={io.output} onChange={e => setIo({ ...io, output: e.target.value })} className="h-8 text-xs" /></div>
-                  <div><Label className="text-xs">Notes</Label><Input value={io.notes} onChange={e => setIo({ ...io, notes: e.target.value })} className="h-8 text-xs" /></div>
-                </div>
-              </div>
-            </div>
-          )}
-        </>)}
+        )}
       </DialogContent>
     </Dialog>
   );
