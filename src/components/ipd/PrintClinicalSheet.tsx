@@ -47,8 +47,8 @@ export function PrintClinicalSheet({ open, onOpenChange, admission, patientName 
     const today = format(new Date(), "dd/MM/yyyy");
     const now = format(new Date(), "dd/MM/yyyy HH:mm");
 
-    const vitalsRows = Array.from({ length: 10 }, () =>
-      `<tr>${Array.from({ length: 7 }, () => '<td class="vital-cell"></td>').join("")}</tr>`
+    const vitalsRows = Array.from({ length: 8 }, () =>
+      `<tr>${Array.from({ length: 6 }, () => '<td class="vital-cell"></td>').join("")}</tr>`
     ).join("");
     const ivRows = Array.from({ length: 8 }, () =>
       `<tr>${Array.from({ length: 5 }, () => '<td style="height:40px"></td>').join("")}</tr>`
@@ -69,7 +69,7 @@ export function PrintClinicalSheet({ open, onOpenChange, admission, patientName 
       th { background: transparent; color: #000; font-weight: bold; text-align: center; font-size: 14px; }
       .info-label { font-weight: bold; width: 90px; background: #f5f5f5; }
       .blank-line { border-bottom: 1px solid #000; min-height: 30px; width: 100%; display: block; }
-      .vital-cell { min-height: 35px; }
+      .vital-cell { min-height: 45px; }
       .footer { text-align: center; font-size: 10px; color: #888; margin-top: 15px; border-top: 1px solid #ccc; padding-top: 6px; }
       .sig-line { border-bottom: 1px solid #000; height: 40px; width: 240px; display: inline-block; margin-top: 8px; }
       .page-break { page-break-before: always; }
@@ -86,13 +86,12 @@ export function PrintClinicalSheet({ open, onOpenChange, admission, patientName 
       <tr><td class="info-label">Admitted</td><td colspan="5"><span class="blank-line">${admDate}</span></td></tr>
     </table>
     <table>
-      <tr><th colspan="7">VITALS RECORD</th></tr>
+      <tr>      <th style="font-size:16px;padding:10px" colspan="6">VITALS RECORD</th></tr>
       <tr>
-        <th style="width:14%">Date / Time</th>
+        <th style="width:18%">Date / Time</th>
         <th style="width:14%">Temp (°C)</th>
         <th style="width:14%">Pulse (/min)</th>
-        <th style="width:14%">BP Systolic</th>
-        <th style="width:14%">BP Diastolic</th>
+        <th style="width:26%">BP (Sys / Dia)</th>
         <th style="width:14%">RR (/min)</th>
         <th style="width:14%">SpO₂ (%)</th>
       </tr>
