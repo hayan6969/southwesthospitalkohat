@@ -92,6 +92,7 @@ export function AnesthesiaNotesDialog({ open, onOpenChange, otSchedule, admissio
   const [age, setAge] = useState("");
   const [gender, setGender] = useState("");
   const [consultantDoctor, setConsultantDoctor] = useState("");
+  const [admissionPatientId, setAdmissionPatientId] = useState<string | null>(null);
 
   // Form fields
   const [surgicalProcedure, setSurgicalProcedure] = useState("");
