@@ -51,33 +51,33 @@ export function PrintClinicalSheet({ open, onOpenChange, admission, patientName 
       `<tr>${Array.from({ length: 6 }, () => '<td class="vital-cell"></td>').join("")}</tr>`
     ).join("");
     const ivRows = Array.from({ length: 8 }, () =>
-      `<tr>${Array.from({ length: 5 }, () => '<td style="height:40px"></td>').join("")}</tr>`
+      `<tr>${Array.from({ length: 5 }, () => '<td style="height:60px"></td>').join("")}</tr>`
     ).join("");
     const ioRows = Array.from({ length: 8 }, () =>
-      `<tr>${Array.from({ length: 4 }, () => '<td style="height:40px"></td>').join("")}</tr>`
+      `<tr>${Array.from({ length: 4 }, () => '<td style="height:60px"></td>').join("")}</tr>`
     ).join("");
 
     const html = `<!DOCTYPE html><html><head><title>Clinical Record Sheet</title>
     <style>
       @page { size: A4 landscape; margin: 8mm; }
-      body { font-family: Arial, sans-serif; font-size: 13px; margin: 0; padding: 0; }
-      .header { text-align: center; margin-bottom: 16px; border-bottom: 2px solid #000; padding-bottom: 10px; }
-      .header h1 { margin: 0; font-size: 22px; color: #000; }
-      .header h2 { margin: 6px 0 0; font-size: 17px; text-transform: uppercase; color: #000; }
-      table { width: 100%; border-collapse: collapse; margin-bottom: 12px; }
-      td, th { border: 1px solid #000; padding: 8px 10px; font-size: 13px; vertical-align: middle; }
-      th { background: transparent; color: #000; font-weight: bold; text-align: center; font-size: 14px; }
-      .info-label { font-weight: bold; width: 90px; background: #f5f5f5; }
-      .blank-line { border-bottom: 1px solid #000; min-height: 30px; width: 100%; display: block; }
-      .vital-cell { min-height: 45px; }
-      .footer { text-align: center; font-size: 10px; color: #888; margin-top: 15px; border-top: 1px solid #ccc; padding-top: 6px; }
-      .sig-line { border-bottom: 1px solid #000; height: 40px; width: 240px; display: inline-block; margin-top: 8px; }
+      body { font-family: Arial, sans-serif; font-size: 14px; margin: 0; padding: 0; }
+      .header { text-align: center; margin-bottom: 20px; border-bottom: 2px solid #000; padding-bottom: 12px; }
+      .header h1 { margin: 0; font-size: 24px; color: #000; }
+      .header h2 { margin: 8px 0 0; font-size: 18px; text-transform: uppercase; color: #000; letter-spacing: 1px; }
+      table { width: 100%; border-collapse: collapse; margin-bottom: 16px; }
+      td, th { border: 1px solid #000; padding: 12px 14px; font-size: 14px; vertical-align: middle; }
+      th { background: transparent; color: #000; font-weight: bold; text-align: center; font-size: 15px; }
+      .info-label { font-weight: bold; width: 100px; background: #f5f5f5; font-size: 14px; }
+      .blank-line { border-bottom: 1px solid #000; min-height: 48px; width: 100%; display: block; }
+      .vital-cell { min-height: 65px; }
+      .footer { text-align: center; font-size: 11px; color: #888; margin-top: 18px; border-top: 1px solid #ccc; padding-top: 8px; }
+      .sig-line { border-bottom: 1px solid #000; height: 55px; width: 260px; display: inline-block; margin-top: 10px; }
       .page-break { page-break-before: always; }
     </style></head><body>
     <div class="header">
       <h1>${hn}</h1>
       <h2>Clinical Record Sheet</h2>
-      <p style="margin:2px 0;font-size:11px">Admission #: ${admNum} | Patient: ${patientName}</p>
+      <p style="margin:2px 0;font-size:13px">Admission #: ${admNum} | Patient: ${patientName}</p>
     </div>
     <table>
       <tr><td class="info-label">Ward</td><td style="width:25%"><span class="blank-line">${wName}</span></td>
@@ -86,7 +86,7 @@ export function PrintClinicalSheet({ open, onOpenChange, admission, patientName 
       <tr><td class="info-label">Admitted</td><td colspan="5"><span class="blank-line">${admDate}</span></td></tr>
     </table>
     <table>
-      <tr>      <th style="font-size:16px;padding:10px" colspan="6">VITALS RECORD</th></tr>
+      <tr>      <th style="font-size:18px;padding:12px" colspan="6">VITALS RECORD</th></tr>
       <tr>
         <th style="width:18%">Date / Time</th>
         <th style="width:14%">Temp (°C)</th>
@@ -99,7 +99,7 @@ export function PrintClinicalSheet({ open, onOpenChange, admission, patientName 
     </table>
     <div class="page-break"></div>
     <table>
-      <tr><th colspan="5">IV FLUIDS</th></tr>
+      <tr><th style="font-size:16px;padding:10px" colspan="5">IV FLUIDS</th></tr>
       <tr>
         <th style="width:20%">Date / Time</th>
         <th style="width:25%">Fluid Type</th>
@@ -110,7 +110,7 @@ export function PrintClinicalSheet({ open, onOpenChange, admission, patientName 
       ${ivRows}
     </table>
     <table>
-      <tr><th colspan="4">INTAKE / OUTPUT</th></tr>
+      <tr><th style="font-size:16px;padding:10px" colspan="4">INTAKE / OUTPUT</th></tr>
       <tr>
         <th style="width:25%">Date / Time</th>
         <th style="width:25%">Intake (ml)</th>
@@ -120,16 +120,16 @@ export function PrintClinicalSheet({ open, onOpenChange, admission, patientName 
       ${ioRows}
     </table>
     <table>
-      <tr><td style="width:50%;padding:8px 10px;border:1px solid #000">
-        <strong>Nurse / Staff Signature:</strong>
+      <tr><td style="width:50%;padding:14px 16px;border:1px solid #000">
+        <strong style="font-size:15px">Nurse / Staff Signature:</strong>
         <div class="sig-line"></div>
       </td>
-      <td style="width:50%;padding:8px 10px;border:1px solid #000">
-        <strong>Doctor Signature:</strong>
+      <td style="width:50%;padding:14px 16px;border:1px solid #000">
+        <strong style="font-size:15px">Doctor Signature:</strong>
         <div class="sig-line"></div>
       </td></tr>
-      <tr><td colspan="2" style="padding:6px 10px;border:1px solid #000;font-size:10px">
-        <strong>Date:</strong> ${today}
+      <tr><td colspan="2" style="padding:10px 14px;border:1px solid #000;font-size:12px">
+        <strong style="font-size:14px">Date:</strong> ${today}
       </td></tr>
     </table>
     <div class="footer">Generated on ${now} — ${hn}</div>
