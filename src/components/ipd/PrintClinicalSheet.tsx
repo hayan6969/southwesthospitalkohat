@@ -97,7 +97,7 @@ export function PrintClinicalSheet({ open, onOpenChange, admission, patientName 
       <tr><td class="info-label">Admitted</td><td colspan="5"><span class="blank-line">${admDate}</span></td></tr>
     </table>
     <table>
-      <tr><th style="font-size:14px;padding:8px" colspan="6">VITALS RECORD (Page 1 of 3)</th></tr>
+      <tr><th style="font-size:14px;padding:8px" colspan="6">VITALS RECORD (Page 1 of 4)</th></tr>
       <tr>
         <th style="width:18%;padding:6px 4px;font-size:12px;">Date / Time</th>
         <th style="width:14%;padding:6px 4px;font-size:12px;">Temp (°C)</th>
@@ -110,7 +110,7 @@ export function PrintClinicalSheet({ open, onOpenChange, admission, patientName 
     </table>
     <div class="page-break"></div>
     <table>
-      <tr><th style="font-size:14px;padding:8px" colspan="5">IV FLUIDS (Page 2 of 3)</th></tr>
+      <tr><th style="font-size:14px;padding:8px" colspan="5">IV FLUIDS (Page 2 of 4)</th></tr>
       <tr>
         <th style="width:20%;padding:6px 4px;font-size:12px;">Date / Time</th>
         <th style="width:25%;padding:6px 4px;font-size:12px;">Fluid Type</th>
@@ -120,8 +120,9 @@ export function PrintClinicalSheet({ open, onOpenChange, admission, patientName 
       </tr>
       ${ivRows}
     </table>
-    <table style="margin-top:6px;">
-      <tr><th style="font-size:14px;padding:8px" colspan="4">INTAKE / OUTPUT</th></tr>
+    <div class="page-break"></div>
+    <table>
+      <tr><th style="font-size:14px;padding:8px" colspan="4">INTAKE / OUTPUT (Page 3 of 4)</th></tr>
       <tr>
         <th style="width:25%;padding:6px 4px;font-size:12px;">Date / Time</th>
         <th style="width:25%;padding:6px 4px;font-size:12px;">Intake (ml)</th>
