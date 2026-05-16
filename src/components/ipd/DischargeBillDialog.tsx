@@ -298,8 +298,8 @@ export function DischargeBillDialog({ open, onOpenChange, admission, patientName
                   <Input type="number" value={discount} onChange={(e) => setDiscount(Number(e.target.value) || 0)} placeholder="0" />
                 </div>
                 <div>
-                  <Label>Initial Deposit (paid earlier)</Label>
-                  <Input type="number" value={deposit} onChange={(e) => setDeposit(Number(e.target.value) || 0)} placeholder="0" />
+                  <Label>Initial Deposit (paid earlier) <span className="text-xs text-muted-foreground">(locked)</span></Label>
+                  <Input type="number" value={deposit} disabled placeholder="0" className="bg-muted" />
                 </div>
                 <div>
                   <Label>Payment at Discharge</Label>
