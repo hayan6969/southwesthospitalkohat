@@ -88,6 +88,7 @@ export function AdmitPatientDialog({ open, onOpenChange, admission, onAdmitted }
 
   const admit = async () => {
     if (!wardId || !bedId) { toast.error("Pick a ward and bed"); return; }
+    if (!doctorId) { toast.error("Select an attending doctor"); return; }
     if (busy) return;
     setBusy(true);
     try {
@@ -224,7 +225,7 @@ export function AdmitPatientDialog({ open, onOpenChange, admission, onAdmitted }
             </Select>
           </div>
           <div className="sm:col-span-2">
-            <Label>Attending Doctor</Label>
+            <Label>Attending Doctor <span className="text-red-500">*</span></Label>
             <Select value={doctorId} onValueChange={setDoctorId}>
               <SelectTrigger><SelectValue placeholder="Select doctor" /></SelectTrigger>
               <SelectContent className="z-[10000]">
