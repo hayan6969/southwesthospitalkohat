@@ -256,12 +256,12 @@ export function AnesthesiaNotesDialog({ open, onOpenChange, otSchedule, admissio
       setPostopOrders([]);
       setPostopNotes("");
     }
-  }, [open, otSchedule, fetchExistingNotes]);
+  }, [open, otSchedule, admissionId, fetchExistingNotes]);
 
   const collectData = () => ({
-    patient_id: otSchedule?.patient_id,
+    patient_id: otSchedule?.patient_id || admissionPatientId,
     admission_id: admissionId || null,
-    ot_booking_id: otSchedule?.id,
+    ot_booking_id: otSchedule?.id || null,
     surgical_procedure: surgicalProcedure,
     brief_history: briefHistory,
     preop_hr: preopHr ? Number(preopHr) : null,
@@ -278,7 +278,7 @@ export function AnesthesiaNotesDialog({ open, onOpenChange, otSchedule, admissio
   });
 
   const handleSave = async (finalize: boolean = false) => {
-    if (!otSchedule || !isDoctorOrAnesthetist) return;
+    if ((!otSchedule && !admissionId) || !isDoctorOrAnesthetist) return;
     setSaving(true);
     try {
       const payload: any = { ...collectData(), status: finalize ? "finalized" : "draft" };
