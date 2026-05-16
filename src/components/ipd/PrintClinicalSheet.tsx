@@ -86,10 +86,10 @@ export function PrintClinicalSheet({ open, onOpenChange, admission, patientName 
     const vitalsRows = (count: number) => Array.from({ length: count }, () =>
       `<tr>${Array.from({ length: 6 }, () => vitalsCell).join("")}</tr>`
     ).join("");
-    const ivRows = Array.from({ length: 10 }, () =>
+    const ivRows = Array.from({ length: 15 }, () =>
       `<tr>${Array.from({ length: 5 }, () => '<td style="height:50px"></td>').join("")}</tr>`
     ).join("");
-    const ioRows = Array.from({ length: 10 }, () =>
+    const ioRows = Array.from({ length: 15 }, () =>
       `<tr>${Array.from({ length: 4 }, () => '<td style="height:50px"></td>').join("")}</tr>`
     ).join("");
 
@@ -320,8 +320,8 @@ export function PrintClinicalSheet({ open, onOpenChange, admission, patientName 
           </p>
           <ul className="text-xs text-left text-muted-foreground space-y-1 max-w-xs mx-auto">
             <li>• 12 blank Vitals rows on 1 page</li>
-            <li>• 10 blank IV Fluid rows</li>
-            <li>• 10 blank Intake/Output rows</li>
+            <li>• 15 blank IV Fluid rows</li>
+            <li>• 15 blank Intake/Output rows</li>
             <li>• Anaesthesia Notes form (10 sections)</li>
             <li>• Doctor/Anaesthetist signature</li>
           </ul>
