@@ -108,6 +108,7 @@ export default function DoctorOT() {
             patient:patients (
               patient_number,
               date_of_birth,
+              gender,
               address,
               profiles (
                 first_name,
@@ -742,7 +743,7 @@ export default function DoctorOT() {
         open={showAnesthesiaDialog}
         onOpenChange={setShowAnesthesiaDialog}
         otSchedule={selectedOT}
-        onSave={() => {}}
+        onSave={fetchDoctorOTSchedules}
       />
     </div>
   );
