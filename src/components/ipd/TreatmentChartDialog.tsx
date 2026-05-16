@@ -40,6 +40,7 @@ export function TreatmentChartDialog({ open, onOpenChange, admissionId, patientN
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState<any>({});
+  const [showAnesthesiaDialog, setShowAnesthesiaDialog] = useState(false);
 
   const canWrite = ["admin", "doctor", "nurse", "ota", "staff", "ipd"].includes(profile?.role as string);
   const isDoctor = profile?.role === "doctor";
