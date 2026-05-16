@@ -124,9 +124,6 @@ export function DischargeSummaryDialog({ open, onOpenChange, admission, patientN
   const profile = data?.profile;
   const patient = data?.patient;
   const chart = data?.chart || [];
-  const vitals = chart.filter((e: any) => e.entry_type === "vitals");
-  const ivFluids = chart.filter((e: any) => e.entry_type === "iv_fluid");
-  const intakeOutput = chart.filter((e: any) => e.entry_type === "intake_output");
   const doctorNotes = chart.filter((e: any) => e.entry_type === "doctor_note");
   const medicines = data?.medicines || [];
   const labs = data?.labs || [];
@@ -207,32 +204,6 @@ export function DischargeSummaryDialog({ open, onOpenChange, admission, patientN
             {adm?.notes && <tr><td className="lbl">Notes</td><td>{adm.notes}</td></tr>}
           </table>
 
-          {vitals.length > 0 && (
-            <table cellPadding={0} cellSpacing={0}>
-              <tr><th colSpan={7}>VITALS RECORD</th></tr>
-              <tr>
-                <th style={{ padding: 3 }}>Date/Time</th>
-                <th style={{ padding: 3 }}>Temp</th>
-                <th style={{ padding: 3 }}>Pulse</th>
-                <th style={{ padding: 3 }}>BP</th>
-                <th style={{ padding: 3 }}>RR</th>
-                <th style={{ padding: 3 }}>SpO₂</th>
-                <th style={{ padding: 3 }}>Notes</th>
-              </tr>
-              {vitals.slice(0, 10).map((v: any) => (
-                <tr key={v.id}>
-                  <td style={{ padding: 3 }}>{format(new Date(v.recorded_at), "MMM d HH:mm")}</td>
-                  <td style={{ padding: 3 }}>{v.temperature ?? "—"}</td>
-                  <td style={{ padding: 3 }}>{v.pulse ?? "—"}</td>
-                  <td style={{ padding: 3 }}>{v.bp_systolic && v.bp_diastolic ? `${v.bp_systolic}/${v.bp_diastolic}` : "—"}</td>
-                  <td style={{ padding: 3 }}>{v.respiratory_rate ?? "—"}</td>
-                  <td style={{ padding: 3 }}>{v.oxygen_saturation ?? "—"}</td>
-                  <td style={{ padding: 3 }}>{v.notes ?? "—"}</td>
-                </tr>
-              ))}
-            </table>
-          )}
-
           {doctorNotes.length > 0 && (
             <table cellPadding={0} cellSpacing={0}>
               <tr><th colSpan={2}>DOCTOR NOTES</th></tr>
@@ -240,48 +211,6 @@ export function DischargeSummaryDialog({ open, onOpenChange, admission, patientN
                 <tr key={n.id}>
                   <td style={{ fontSize: 10, width: 120 }}>{format(new Date(n.recorded_at), "MMM d HH:mm")}</td>
                   <td style={{ fontSize: 10 }}>{n.notes || "—"}</td>
-                </tr>
-              ))}
-            </table>
-          )}
-
-          {ivFluids.length > 0 && (
-            <table cellPadding={0} cellSpacing={0}>
-              <tr><th colSpan={5}>IV FLUIDS ADMINISTERED</th></tr>
-              <tr>
-                <th style={{ padding: 3 }}>Date/Time</th>
-                <th style={{ padding: 3 }}>Fluid Type</th>
-                <th style={{ padding: 3 }}>Volume</th>
-                <th style={{ padding: 3 }}>Rate</th>
-                <th style={{ padding: 3 }}>Notes</th>
-              </tr>
-              {ivFluids.slice(0, 10).map((v: any) => (
-                <tr key={v.id}>
-                  <td style={{ padding: 3 }}>{format(new Date(v.recorded_at), "MMM d HH:mm")}</td>
-                  <td style={{ padding: 3 }}>{v.fluid_type || "—"}</td>
-                  <td style={{ padding: 3 }}>{v.fluid_volume_ml ? `${v.fluid_volume_ml} ml` : "—"}</td>
-                  <td style={{ padding: 3 }}>{v.fluid_rate || "—"}</td>
-                  <td style={{ padding: 3 }}>{v.notes || "—"}</td>
-                </tr>
-              ))}
-            </table>
-          )}
-
-          {intakeOutput.length > 0 && (
-            <table cellPadding={0} cellSpacing={0}>
-              <tr><th colSpan={4}>INTAKE / OUTPUT RECORD</th></tr>
-              <tr>
-                <th style={{ padding: 3 }}>Date/Time</th>
-                <th style={{ padding: 3 }}>Intake (ml)</th>
-                <th style={{ padding: 3 }}>Output (ml)</th>
-                <th style={{ padding: 3 }}>Notes</th>
-              </tr>
-              {intakeOutput.slice(0, 10).map((io: any) => (
-                <tr key={io.id}>
-                  <td style={{ padding: 3 }}>{format(new Date(io.recorded_at), "MMM d HH:mm")}</td>
-                  <td style={{ padding: 3 }}>{io.intake_ml ?? "—"}</td>
-                  <td style={{ padding: 3 }}>{io.output_ml ?? "—"}</td>
-                  <td style={{ padding: 3 }}>{io.notes || "—"}</td>
                 </tr>
               ))}
             </table>
