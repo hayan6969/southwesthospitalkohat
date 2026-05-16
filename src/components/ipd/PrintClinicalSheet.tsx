@@ -72,6 +72,7 @@ export function PrintClinicalSheet({ open, onOpenChange, admission, patientName 
       .vital-cell { min-height: 35px; }
       .footer { text-align: center; font-size: 10px; color: #888; margin-top: 15px; border-top: 1px solid #ccc; padding-top: 6px; }
       .sig-line { border-bottom: 1px solid #000; height: 40px; width: 240px; display: inline-block; margin-top: 8px; }
+      .page-break { page-break-before: always; }
     </style></head><body>
     <div class="header">
       <h1>${hn}</h1>
@@ -97,6 +98,7 @@ export function PrintClinicalSheet({ open, onOpenChange, admission, patientName 
       </tr>
       ${vitalsRows}
     </table>
+    <div class="page-break"></div>
     <table>
       <tr><th colspan="5">IV FLUIDS</th></tr>
       <tr>
