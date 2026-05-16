@@ -50,28 +50,28 @@ export function PrintClinicalSheet({ open, onOpenChange, admission, patientName 
     const vitalsRows = Array.from({ length: 10 }, () =>
       `<tr>${Array.from({ length: 7 }, () => '<td class="vital-cell"></td>').join("")}</tr>`
     ).join("");
-    const ivRows = Array.from({ length: 5 }, () =>
-      `<tr>${Array.from({ length: 5 }, () => '<td style="height:32px"></td>').join("")}</tr>`
+    const ivRows = Array.from({ length: 8 }, () =>
+      `<tr>${Array.from({ length: 5 }, () => '<td style="height:40px"></td>').join("")}</tr>`
     ).join("");
-    const ioRows = Array.from({ length: 5 }, () =>
-      `<tr>${Array.from({ length: 4 }, () => '<td style="height:32px"></td>').join("")}</tr>`
+    const ioRows = Array.from({ length: 8 }, () =>
+      `<tr>${Array.from({ length: 4 }, () => '<td style="height:40px"></td>').join("")}</tr>`
     ).join("");
 
     const html = `<!DOCTYPE html><html><head><title>Clinical Record Sheet</title>
     <style>
-      @page { size: A4 landscape; margin: 10mm; }
-      body { font-family: Arial, sans-serif; font-size: 11px; margin: 0; padding: 0; }
-      .header { text-align: center; margin-bottom: 12px; border-bottom: 2px solid #000; padding-bottom: 8px; }
-      .header h1 { margin: 0; font-size: 18px; color: #000; }
-      .header h2 { margin: 4px 0 0; font-size: 14px; text-transform: uppercase; color: #000; }
-      table { width: 100%; border-collapse: collapse; margin-bottom: 8px; }
-      td, th { border: 1px solid #000; padding: 6px 8px; font-size: 11px; vertical-align: middle; }
-      th { background: transparent; color: #000; font-weight: bold; text-align: center; font-size: 12px; }
-      .info-label { font-weight: bold; width: 80px; background: #f5f5f5; }
-      .blank-line { border-bottom: 1px solid #000; min-height: 26px; width: 100%; display: block; }
-      .vital-cell { min-height: 28px; }
-      .footer { text-align: center; font-size: 9px; color: #888; margin-top: 10px; border-top: 1px solid #ccc; padding-top: 5px; }
-      .sig-line { border-bottom: 1px solid #000; height: 30px; width: 200px; display: inline-block; margin-top: 5px; }
+      @page { size: A4 landscape; margin: 8mm; }
+      body { font-family: Arial, sans-serif; font-size: 13px; margin: 0; padding: 0; }
+      .header { text-align: center; margin-bottom: 16px; border-bottom: 2px solid #000; padding-bottom: 10px; }
+      .header h1 { margin: 0; font-size: 22px; color: #000; }
+      .header h2 { margin: 6px 0 0; font-size: 17px; text-transform: uppercase; color: #000; }
+      table { width: 100%; border-collapse: collapse; margin-bottom: 12px; }
+      td, th { border: 1px solid #000; padding: 8px 10px; font-size: 13px; vertical-align: middle; }
+      th { background: transparent; color: #000; font-weight: bold; text-align: center; font-size: 14px; }
+      .info-label { font-weight: bold; width: 90px; background: #f5f5f5; }
+      .blank-line { border-bottom: 1px solid #000; min-height: 30px; width: 100%; display: block; }
+      .vital-cell { min-height: 35px; }
+      .footer { text-align: center; font-size: 10px; color: #888; margin-top: 15px; border-top: 1px solid #ccc; padding-top: 6px; }
+      .sig-line { border-bottom: 1px solid #000; height: 40px; width: 240px; display: inline-block; margin-top: 8px; }
     </style></head><body>
     <div class="header">
       <h1>${hn}</h1>
