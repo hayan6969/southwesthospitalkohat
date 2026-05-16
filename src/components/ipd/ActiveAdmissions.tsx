@@ -136,11 +136,8 @@ export function ActiveAdmissions() {
       .on("postgres_changes", { event: "*", schema: "public", table: "ipd_charges" }, () => load())
       .subscribe();
 
-    const interval = setInterval(load, 30000);
-
     return () => {
       supabase.removeChannel(ch);
-      clearInterval(interval);
     };
   }, []);
 
@@ -183,9 +180,6 @@ export function ActiveAdmissions() {
       <CardHeader>
         <CardTitle className="flex items-center justify-between">
           <span>Admitted Patients ({rows.length})</span>
-          <span className="text-sm font-normal text-muted-foreground">
-            Auto-refreshes every 30s
-          </span>
         </CardTitle>
       </CardHeader>
       <CardContent>
