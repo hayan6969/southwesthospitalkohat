@@ -16,6 +16,7 @@ import { DischargeWithSummaryDialog } from "./DischargeWithSummaryDialog";
 import { PharmacyOrderHistoryDialog } from "./PharmacyOrderHistoryDialog";
 import { AdmissionFormDialog } from "./AdmissionFormDialog";
 import { CollectAdvanceDialog } from "./CollectAdvanceDialog";
+import { InitialPaymentDialog } from "./InitialPaymentDialog";
 import { formatPkrAmount } from "@/utils/currency";
 
 interface BalanceInfo {
@@ -33,6 +34,7 @@ export function ActiveAdmissions() {
   const [pharmacyFor, setPharmacyFor] = useState<any>(null);
   const [admissionFormFor, setAdmissionFormFor] = useState<any>(null);
   const [advanceFor, setAdvanceFor] = useState<any>(null);
+  const [initialPaymentFor, setInitialPaymentFor] = useState<any>(null);
   const [balances, setBalances] = useState<Record<string, BalanceInfo>>({});
   const [orderCounts, setOrderCounts] = useState<Record<string, { pending: number; dispensed: number }>>({});
   const [invoiceData, setInvoiceData] = useState<Record<string, any>>({});
@@ -265,9 +267,14 @@ export function ActiveAdmissions() {
                       <TableCell>
                         <div className="flex flex-wrap gap-1">
                           {isStaff ? (
-                            <Button size="sm" onClick={() => setBillFor(r)} className="gap-1">
-                              <Banknote className="w-3 h-3" />Finalize Bill
-                            </Button>
+                            <>
+                              <Button size="sm" variant="outline" onClick={() => setInitialPaymentFor(r)} className="gap-1">
+                                <Banknote className="w-3 h-3" />Initial Payment
+                              </Button>
+                              <Button size="sm" onClick={() => setBillFor(r)} className="gap-1">
+                                <Banknote className="w-3 h-3" />Finalize Bill
+                              </Button>
+                            </>
                           ) : (
                             <>
                               <Button size="sm" variant="outline" onClick={() => setChartFor(r)}>Chart</Button>
@@ -381,6 +388,15 @@ export function ActiveAdmissions() {
           admission={dischargeFor}
           patientName={getPatientName(dischargeFor.patient_id, patientNames || [])}
           onDischarged={load}
+        />
+      )}
+      {initialPaymentFor && (
+        <InitialPaymentDialog
+          open={!!initialPaymentFor}
+          onOpenChange={(o) => !o && setInitialPaymentFor(null)}
+          admission={initialPaymentFor}
+          patientName={getPatientName(initialPaymentFor.patient_id, patientNames || [])}
+          onCollected={load}
         />
       )}
     </Card>
