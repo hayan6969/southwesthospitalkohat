@@ -264,28 +264,36 @@ export function ActiveAdmissions() {
                       <TableCell className="text-xs">{format(new Date(r.admission_date), "MMM d, HH:mm")}</TableCell>
                       <TableCell>
                         <div className="flex flex-wrap gap-1">
-                          <Button size="sm" variant="outline" onClick={() => setChartFor(r)}>Chart</Button>
-                          {!isIPD && (
-                            <Button size="sm" variant="outline" onClick={() => setAdvanceFor(r)} className="gap-1">
-                              <Banknote className="w-3 h-3" />Advance
-                            </Button>
-                          )}
-                          <Button size="sm" variant="outline" onClick={() => setPharmacyFor(r)} className="gap-1"><Pill className="w-3 h-3" />Pharmacy</Button>
-                          <Button size="sm" variant="outline" onClick={() => setAdmissionFormFor(r)} className="gap-1">Form</Button>
-                          {!isIPD && !isDoctor && (isStaff || isAdmin) && (
+                          {isStaff ? (
                             <Button size="sm" onClick={() => setBillFor(r)} className="gap-1">
                               <Banknote className="w-3 h-3" />Finalize Bill
                             </Button>
-                          )}
-                          {isDoctor && !isAdmin && (
-                            <Button size="sm" variant="ghost" onClick={() => discharge(r.id)}>
-                              Discharge
-                            </Button>
-                          )}
-                          {isAdmin && (
+                          ) : (
                             <>
-                              <Button size="sm" onClick={() => setBillFor(r)}>Discharge & Bill</Button>
-                              <Button size="sm" variant="ghost" onClick={() => discharge(r.id)}>Quick</Button>
+                              <Button size="sm" variant="outline" onClick={() => setChartFor(r)}>Chart</Button>
+                              {!isIPD && (
+                                <Button size="sm" variant="outline" onClick={() => setAdvanceFor(r)} className="gap-1">
+                                  <Banknote className="w-3 h-3" />Advance
+                                </Button>
+                              )}
+                              <Button size="sm" variant="outline" onClick={() => setPharmacyFor(r)} className="gap-1"><Pill className="w-3 h-3" />Pharmacy</Button>
+                              <Button size="sm" variant="outline" onClick={() => setAdmissionFormFor(r)} className="gap-1">Form</Button>
+                              {!isIPD && !isDoctor && isAdmin && (
+                                <Button size="sm" onClick={() => setBillFor(r)} className="gap-1">
+                                  <Banknote className="w-3 h-3" />Finalize Bill
+                                </Button>
+                              )}
+                              {isDoctor && !isAdmin && (
+                                <Button size="sm" variant="ghost" onClick={() => discharge(r.id)}>
+                                  Discharge
+                                </Button>
+                              )}
+                              {isAdmin && (
+                                <>
+                                  <Button size="sm" onClick={() => setBillFor(r)}>Discharge & Bill</Button>
+                                  <Button size="sm" variant="ghost" onClick={() => discharge(r.id)}>Quick</Button>
+                                </>
+                              )}
                             </>
                           )}
                         </div>
