@@ -79,8 +79,15 @@ export function PrintClinicalSheet({ open, onOpenChange, admission, patientName 
         </DialogHeader>
         <div className="text-center space-y-4 py-4">
           <p className="text-sm text-muted-foreground">
-            Print a blank clinical record sheet for <strong>{patientName}</strong> ({admission?.admission_number})
+            Prints a clinical record sheet with:
           </p>
+          <ul className="text-xs text-left text-muted-foreground space-y-1 max-w-xs mx-auto">
+            <li>• 10 blank Vitals rows (Time, Temp, Pulse, BP Sys/Dia, RR, SpO₂)</li>
+            <li>• 5 blank IV Fluid rows</li>
+            <li>• 5 blank Intake/Output rows</li>
+            <li>• Signature fields for Nurse &amp; Doctor</li>
+          </ul>
+          <p className="text-sm font-medium">{patientName} — {admission?.admission_number}</p>
           <Button size="lg" onClick={print} className="gap-2">
             <Printer className="w-5 h-5" /> Print Clinical Sheet
           </Button>
