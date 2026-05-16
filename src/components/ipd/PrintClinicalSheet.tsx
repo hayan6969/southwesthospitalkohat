@@ -57,28 +57,34 @@ export function PrintClinicalSheet({ open, onOpenChange, admission, patientName 
       `<tr>${Array.from({ length: 4 }, () => '<td style="height:50px"></td>').join("")}</tr>`
     ).join("");
 
+    const intraOpRows = Array.from({ length: 5 }, () =>
+      `<tr>${Array.from({ length: 4 }, () => '<td class="vital-cell"></td>').join("")}</tr>`
+    ).join("");
+
     const html = `<!DOCTYPE html><html><head><title>Clinical Record Sheet</title>
     <style>
       @page { size: A4 landscape; margin: 8mm; }
-      body { font-family: Arial, sans-serif; font-size: 13px; margin: 0; padding: 0; color: #000; }
-      .header { text-align: center; margin-bottom: 16px; border-bottom: 2px solid #000; padding-bottom: 10px; }
-      .header h1 { margin: 0; font-size: 22px; font-weight: bold; }
-      .header h2 { margin: 6px 0 0; font-size: 16px; text-transform: uppercase; letter-spacing: 0.5px; font-weight: bold; }
-      table { width: 100%; border-collapse: collapse; margin-bottom: 14px; }
-      td, th { border: 1px solid #000; padding: 10px 12px; font-size: 13px; vertical-align: middle; }
-      th { font-weight: bold; text-align: center; font-size: 14px; background: transparent; }
-      .info-label { font-weight: bold; width: 95px; background: #f5f5f5; font-size: 13px; }
-      .blank-line { border-bottom: 1px solid #000; min-height: 38px; width: 100%; display: block; }
-      .vital-cell { min-height: 55px; }
-      .footer { text-align: center; font-size: 10px; color: #888; margin-top: 14px; border-top: 1px solid #ccc; padding-top: 6px; }
-      .sig-line { border-bottom: 1px solid #000; height: 48px; width: 250px; display: inline-block; margin-top: 8px; }
+      body { font-family: Arial, sans-serif; font-size: 12px; margin: 0; padding: 0; color: #000; }
+      .header { text-align: center; margin-bottom: 14px; border-bottom: 2px solid #000; padding-bottom: 8px; }
+      .header h1 { margin: 0; font-size: 20px; font-weight: bold; }
+      .header h2 { margin: 4px 0 0; font-size: 15px; text-transform: uppercase; letter-spacing: 0.5px; font-weight: bold; }
+      table { width: 100%; border-collapse: collapse; margin-bottom: 10px; }
+      td, th { border: 1px solid #000; padding: 6px 8px; font-size: 12px; vertical-align: middle; }
+      th { font-weight: bold; text-align: center; font-size: 13px; background: transparent; }
+      .info-label { font-weight: bold; width: 90px; background: #f5f5f5; font-size: 12px; }
+      .blank-line { border-bottom: 1px solid #000; min-height: 32px; width: 100%; display: block; }
+      .blank-sm { border-bottom: 1px solid #000; min-height: 24px; width: 100%; display: block; }
+      .vital-cell { min-height: 48px; }
+      .footer { text-align: center; font-size: 9px; color: #888; margin-top: 10px; border-top: 1px solid #ccc; padding-top: 4px; }
+      .sig-line { border-bottom: 1px solid #000; height: 40px; width: 220px; display: inline-block; margin-top: 6px; }
       .page-break { page-break-before: always; }
-      .page-num { text-align: center; font-size: 10px; color: #aaa; margin-top: 8px; }
+      .section-num { font-weight: bold; font-size: 12px; }
+      .anesthesia-table td { padding: 4px 6px; font-size: 11px; }
     </style></head><body>
     <div class="header">
       <h1>${hn}</h1>
       <h2>Clinical Record Sheet</h2>
-      <p style="margin:2px 0;font-size:12px">Admission #: ${admNum} | Patient: ${patientName}</p>
+      <p style="margin:2px 0;font-size:11px">Admission #: ${admNum} | Patient: ${patientName}</p>
     </div>
     <table>
       <tr><td class="info-label">Ward</td><td style="width:25%"><span class="blank-line">${wName}</span></td>
@@ -87,7 +93,7 @@ export function PrintClinicalSheet({ open, onOpenChange, admission, patientName 
       <tr><td class="info-label">Admitted</td><td colspan="5"><span class="blank-line">${admDate}</span></td></tr>
     </table>
     <table>
-      <tr><th style="font-size:15px;padding:10px" colspan="6">VITALS RECORD (Page 1 of 4)</th></tr>
+      <tr><th style="font-size:14px;padding:8px" colspan="6">VITALS RECORD (Page 1 of 5)</th></tr>
       <tr>
         <th style="width:18%">Date / Time</th>
         <th style="width:14%">Temp (°C)</th>
@@ -100,7 +106,7 @@ export function PrintClinicalSheet({ open, onOpenChange, admission, patientName 
     </table>
     <div class="page-break"></div>
     <table>
-      <tr><th style="font-size:15px;padding:10px" colspan="6">VITALS RECORD (Page 2 of 4)</th></tr>
+      <tr><th style="font-size:14px;padding:8px" colspan="6">VITALS RECORD (Page 2 of 5)</th></tr>
       <tr>
         <th style="width:18%">Date / Time</th>
         <th style="width:14%">Temp (°C)</th>
@@ -113,7 +119,7 @@ export function PrintClinicalSheet({ open, onOpenChange, admission, patientName 
     </table>
     <div class="page-break"></div>
     <table>
-      <tr><th style="font-size:15px;padding:10px" colspan="5">IV FLUIDS (Page 3 of 4)</th></tr>
+      <tr><th style="font-size:14px;padding:8px" colspan="5">IV FLUIDS (Page 3 of 5)</th></tr>
       <tr>
         <th style="width:20%">Date / Time</th>
         <th style="width:25%">Fluid Type</th>
@@ -125,7 +131,54 @@ export function PrintClinicalSheet({ open, onOpenChange, admission, patientName 
     </table>
     <div class="page-break"></div>
     <table>
-      <tr><th style="font-size:15px;padding:10px" colspan="4">INTAKE / OUTPUT (Page 4 of 4)</th></tr>
+      <tr><th style="font-size:14px;padding:8px" colspan="4">ANESTHESIA NOTES FORM (Page 4 of 5)</th></tr>
+      <tr><td colspan="4" style="padding:6px 8px;">
+        <p class="section-num">1. Surgical Procedure</p><span class="blank-line" style="min-height:28px"></span>
+        <p class="section-num" style="margin-top:6px">2. Brief Medical & Surgical History</p><span class="blank-line" style="min-height:36px"></span>
+        <p class="section-num" style="margin-top:6px">3. Pre-Op Vitals</p>
+        <table style="margin:4px 0"><tr><td style="border:none;padding:2px 4px;width:33%">HR: <span class="blank-sm" style="display:inline-block;width:60px"></span> bpm</td>
+        <td style="border:none;padding:2px 4px;width:34%">BP: <span class="blank-sm" style="display:inline-block;width:80px"></span> mmHg</td>
+        <td style="border:none;padding:2px 4px;width:33%">SpO₂: <span class="blank-sm" style="display:inline-block;width:60px"></span> %</td></tr></table>
+        <p class="section-num" style="margin-top:6px">4. Pre-Op Medication</p><span class="blank-line" style="min-height:28px"></span>
+        <p class="section-num" style="margin-top:6px">5. Mode of Anesthesia</p>
+        <table style="margin:4px 0"><tr><td style="border:none;padding:2px 10px;width:25%">☐ Spinal</td>
+        <td style="border:none;padding:2px 10px;width:30%">☐ General Anesthesia</td>
+        <td style="border:none;padding:2px 10px;width:20%">☐ Local</td>
+        <td style="border:none;padding:2px 10px;width:25%">☐ Sedation</td></tr></table>
+        <p class="section-num" style="margin-top:6px">6. Drugs Used in Induction of Anesthesia</p><span class="blank-line" style="min-height:28px"></span>
+      </td></tr>
+      <tr><th style="font-size:13px;padding:6px" colspan="4">7. Intra-Op Assessment</th></tr>
+      <tr>
+        <th style="width:25%">Time</th>
+        <th style="width:25%">HR</th>
+        <th style="width:25%">SpO₂</th>
+        <th style="width:25%">BP</th>
+      </tr>
+      ${intraOpRows}
+    </table>
+    <div class="page-break"></div>
+    <table>
+      <tr><th style="font-size:14px;padding:8px" colspan="4">ANESTHESIA NOTES FORM (Page 5 of 5)</th></tr>
+      <tr><td colspan="4" style="padding:6px 8px;">
+        <p class="section-num">8. Input / Output During Surgery</p><span class="blank-line" style="min-height:36px"></span>
+        <p class="section-num" style="margin-top:6px">9. Recovery Status</p>
+        <table style="margin:4px 0"><tr><td style="border:none;padding:2px 10px;width:20%">☐ Stable</td>
+        <td style="border:none;padding:2px 10px;width:20%">☐ Critical</td>
+        <td style="border:none;padding:2px 10px;width:25%">☐ Shifted to ICU</td>
+        <td style="border:none;padding:2px 10px;width:20%">☐ Shifted to Ward</td>
+        <td style="border:none;padding:2px 10px;width:15%">☐ Under Obs.</td></tr></table>
+        <p class="section-num" style="margin-top:6px">10. Post-Op Orders</p>
+        <table style="margin:4px 0"><tr><td style="border:none;padding:2px 10px;width:50%">☐ Monitor Vitals</td>
+        <td style="border:none;padding:2px 10px;width:50%">☐ Intake/Output Record</td></tr>
+        <tr><td style="border:none;padding:2px 10px;">☐ Keep NPO for 6 hours</td>
+        <td style="border:none;padding:2px 10px;">☐ Pain Management</td></tr>
+        <tr><td style="border:none;padding:2px 10px;">☐ Oxygen Support</td>
+        <td style="border:none;padding:2px 10px;">☐ Antibiotics Continue</td></tr></table>
+        <span class="blank-line" style="min-height:28px;margin-top:4px"></span>
+      </td></tr>
+    </table>
+    <table>
+      <tr><th style="font-size:14px;padding:8px" colspan="4">INTAKE / OUTPUT</th></tr>
       <tr>
         <th style="width:25%">Date / Time</th>
         <th style="width:25%">Intake (ml)</th>
@@ -135,15 +188,15 @@ export function PrintClinicalSheet({ open, onOpenChange, admission, patientName 
       ${ioRows}
     </table>
     <table>
-      <tr><td style="width:50%;padding:12px 14px;border:1px solid #000">
+      <tr><td style="width:50%;padding:10px 12px;border:1px solid #000">
         <strong>Nurse / Staff Signature:</strong>
         <div class="sig-line"></div>
       </td>
-      <td style="width:50%;padding:12px 14px;border:1px solid #000">
+      <td style="width:50%;padding:10px 12px;border:1px solid #000">
         <strong>Doctor Signature:</strong>
         <div class="sig-line"></div>
       </td></tr>
-      <tr><td colspan="2" style="padding:8px 12px;border:1px solid #000;font-size:11px">
+      <tr><td colspan="2" style="padding:6px 10px;border:1px solid #000;font-size:11px">
         <strong>Date:</strong> ${today}
       </td></tr>
     </table>
