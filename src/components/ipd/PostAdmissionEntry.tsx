@@ -259,11 +259,11 @@ export function PostAdmissionEntry({ open, onOpenChange, admission, patientName 
             <tr><td className="info-label">Ward</td><td style={{ width: "25%" }}><span className="blank-line">{ward?.name || ""}</span></td>
                 <td className="info-label">Bed</td><td style={{ width: "25%" }}><span className="blank-line">{bed?.bed_number || ""}</span></td>
                 <td className="info-label">Doctor</td><td><span className="blank-line">{doctor ? `Dr. ${doctor.first_name} ${doctor.last_name}` : ""}</span></td></tr>
-            <tr><td className="info-label">Admitted</td><td colSpan="5"><span className="blank-line">{admission.admission_date ? format(new Date(admission.admission_date), "MMM d, yyyy HH:mm") : ""}</span></td></tr>
+            <tr><td className="info-label">Admitted</td><td colSpan={5}><span className="blank-line">{admission.admission_date ? format(new Date(admission.admission_date), "MMM d, yyyy HH:mm") : ""}</span></td></tr>
           </table>
 
           <table>
-            <tr><th colSpan="7">VITALS RECORD</th></tr>
+            <tr><th colSpan={7}>VITALS RECORD</th></tr>
             <tr>
               <th style={{ width: "14%" }}>Date / Time</th>
               <th style={{ width: "14%" }}>Temp (°C)</th>
@@ -283,7 +283,7 @@ export function PostAdmissionEntry({ open, onOpenChange, admission, patientName 
           </table>
 
           <table>
-            <tr><th colSpan="5">IV FLUIDS</th></tr>
+            <tr><th colSpan={5}>IV FLUIDS</th></tr>
             <tr>
               <th style={{ width: "20%" }}>Date / Time</th>
               <th style={{ width: "25%" }}>Fluid Type</th>
@@ -301,7 +301,7 @@ export function PostAdmissionEntry({ open, onOpenChange, admission, patientName 
           </table>
 
           <table>
-            <tr><th colSpan="4">INTAKE / OUTPUT</th></tr>
+            <tr><th colSpan={4}>INTAKE / OUTPUT</th></tr>
             <tr>
               <th style={{ width: "25%" }}>Date / Time</th>
               <th style={{ width: "25%" }}>Intake (ml)</th>
@@ -326,7 +326,7 @@ export function PostAdmissionEntry({ open, onOpenChange, admission, patientName 
               <strong>Doctor Signature:</strong>
               <div className="sig-line"></div>
             </td></tr>
-            <tr><td colSpan="2" style={{ padding: "6px 10px", border: "1px solid #000", fontSize: 10 }}>
+            <tr><td colSpan={2} style={{ padding: "6px 10px", border: "1px solid #000", fontSize: 10 }}>
               <strong>Date:</strong> {format(new Date(), "dd/MM/yyyy")}
             </td></tr>
           </table>
