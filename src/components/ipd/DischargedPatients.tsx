@@ -6,10 +6,11 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { format } from "date-fns";
-import { Loader2, Search, ChevronLeft, ChevronRight, FileText, Download } from "lucide-react";
+import { Loader2, Search, ChevronLeft, ChevronRight, FileText, Download, Eye } from "lucide-react";
 import { usePatientNames, getPatientName } from "@/hooks/useDisplayHelpers";
 import { AdmissionFormDialog } from "./AdmissionFormDialog";
 import { DischargeSummaryDialog } from "./DischargeSummaryDialog";
+import { InvoiceViewDialog } from "./InvoiceViewDialog";
 import { formatPkrAmount } from "@/utils/currency";
 import { generateDischargeBillPDF } from "@/utils/dischargeBillPdfGenerator";
 
@@ -21,6 +22,7 @@ export function DischargedPatients() {
   const [currentPage, setCurrentPage] = useState(1);
   const [formFor, setFormFor] = useState<any>(null);
   const [summaryFor, setSummaryFor] = useState<any>(null);
+  const [invoiceViewFor, setInvoiceViewFor] = useState<any>(null);
   const itemsPerPage = 20;
   const { data: patientNames } = usePatientNames();
 
@@ -163,9 +165,14 @@ export function DischargedPatients() {
                                 <FileText className="w-3 h-3" />Form
                               </Button>
                               {inv && (
-                                <Button size="sm" variant="outline" onClick={() => handleBillPdf(r)} className="gap-1">
-                                  <Download className="w-3 h-3" />Bill
-                                </Button>
+                                <>
+                                  <Button size="sm" variant="outline" onClick={() => setInvoiceViewFor(r)} className="gap-1">
+                                    <Eye className="w-3 h-3" />Invoice
+                                  </Button>
+                                  <Button size="sm" variant="outline" onClick={() => handleBillPdf(r)} className="gap-1">
+                                    <Download className="w-3 h-3" />Bill PDF
+                                  </Button>
+                                </>
                               )}
                             </div>
                           </TableCell>
@@ -210,6 +217,13 @@ export function DischargedPatients() {
           onOpenChange={(o) => !o && setSummaryFor(null)}
           admission={summaryFor}
           patientName={getPatientName(summaryFor.patient_id, patientNames || [])}
+        />
+      )}
+      {invoiceViewFor && (
+        <InvoiceViewDialog
+          open={!!invoiceViewFor}
+          onOpenChange={(o) => !o && setInvoiceViewFor(null)}
+          admission={invoiceViewFor}
         />
       )}
     </Card>

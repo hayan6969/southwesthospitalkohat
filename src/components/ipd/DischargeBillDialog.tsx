@@ -221,30 +221,30 @@ export function DischargeBillDialog({ open, onOpenChange, admission, patientName
             </div>
 
             <div className="border rounded-md overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Category</TableHead>
-                    <TableHead>Description</TableHead>
-                    <TableHead className="text-right">Qty</TableHead>
-                    <TableHead className="text-right">Unit</TableHead>
-                    <TableHead className="text-right">Amount</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
+              <table className="w-full" style={{ tableLayout: "fixed", borderCollapse: "collapse" }}>
+                <thead>
+                  <tr className="border-b">
+                    <th className="text-left text-xs font-medium p-2" style={{ width: "70px" }}>Category</th>
+                    <th className="text-left text-xs font-medium p-2" style={{ width: "auto" }}>Description</th>
+                    <th className="text-right text-xs font-medium p-2" style={{ width: "40px" }}>Qty</th>
+                    <th className="text-right text-xs font-medium p-2" style={{ width: "70px" }}>Unit</th>
+                    <th className="text-right text-xs font-medium p-2" style={{ width: "80px" }}>Amount</th>
+                  </tr>
+                </thead>
+                <tbody>
                   {items.length === 0 ? (
-                    <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground text-sm py-4">No accumulated charges</TableCell></TableRow>
+                    <tr><td colSpan={5} className="text-center text-muted-foreground text-sm py-4">No accumulated charges</td></tr>
                   ) : items.map((i, idx) => (
-                    <TableRow key={idx}>
-                      <TableCell className="text-xs">{i.category}</TableCell>
-                      <TableCell className="text-xs">{i.description}</TableCell>
-                      <TableCell className="text-right text-xs">{i.qty}</TableCell>
-                      <TableCell className="text-right text-xs">{formatPkrAmount(i.unit)}</TableCell>
-                      <TableCell className="text-right text-xs font-medium">{formatPkrAmount(i.amount)}</TableCell>
-                    </TableRow>
+                    <tr key={idx} className="border-b">
+                      <td className="text-xs p-2 align-top">{i.category}</td>
+                      <td className="text-xs p-2 align-top break-words" style={{ wordBreak: "break-word" }}>{i.description}</td>
+                      <td className="text-right text-xs p-2 align-top">{i.qty}</td>
+                      <td className="text-right text-xs p-2 align-top whitespace-nowrap">{formatPkrAmount(i.unit)}</td>
+                      <td className="text-right text-xs font-medium p-2 align-top whitespace-nowrap">{formatPkrAmount(i.amount)}</td>
+                    </tr>
                   ))}
-                </TableBody>
-              </Table>
+                </tbody>
+              </table>
             </div>
 
             <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
