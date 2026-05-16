@@ -88,7 +88,7 @@ export function AdmissionFormDialog({ open, onOpenChange, admission, patientName
       table { width: 100%; border-collapse: collapse; margin-bottom: 10px; }
       td { border: 1px solid #000; padding: 5px 7px; font-size: 11px; vertical-align: top; }
       .lbl { font-weight: bold; width: 130px; background: #f5f5f5; }
-      .section-title { background: #222 !important; color: #fff; font-weight: bold; font-size: 12px; text-align: center; padding: 6px; }
+      .section-title { background: transparent !important; color: #000 !important; font-weight: bold; font-size: 12px; text-align: center; padding: 6px; }
       .sig-line { border-bottom: 1px solid #000; min-height: 32px; }
       .footer { text-align: center; font-size: 9px; color: #888; margin-top: 15px; border-top: 1px solid #ccc; padding-top: 6px; }
     </style></head><body><div class="form-container">${html}</div>
@@ -218,7 +218,7 @@ export function AdmissionFormDialog({ open, onOpenChange, admission, patientName
 
             {/* ---- ADMISSION DETAILS ---- */}
             <table cellPadding={0} cellSpacing={0}>
-              <tr><td colSpan={6} className="section-title">ADMISSION DETAILS</td></tr>
+              <tr><td colSpan={6} style={{ fontWeight: "bold", fontSize: 12, textAlign: "center", padding: 6, border: "1px solid #000" }}>ADMISSION DETAILS</td></tr>
               {P("Admission #", adm?.admission_number || "—", "Date", adm?.admission_date ? format(new Date(adm.admission_date), "dd/MM/yyyy HH:mm") : "—", "Status", adm?.status || "—")}
               {P("Ward", ward?.name || "—", "Bed #", bed?.bed_number || "—")}
               {P("Consultant", doctorProf ? `Dr. ${doctorProf.first_name} ${doctorProf.last_name}` : "—", "Source", adm?.source || "—")}
@@ -227,7 +227,7 @@ export function AdmissionFormDialog({ open, onOpenChange, admission, patientName
 
             {/* ---- PATIENT INFORMATION ---- */}
             <table cellPadding={0} cellSpacing={0}>
-              <tr><td colSpan={6} className="section-title">PATIENT INFORMATION</td></tr>
+              <tr><td colSpan={6} style={{ fontWeight: "bold", fontSize: 12, textAlign: "center", padding: 6, border: "1px solid #000" }}>PATIENT INFORMATION</td></tr>
               {P("Patient Name", patientName, "Patient #", patient?.patient_number || "—")}
               {P("Phone", profile?.phone || "—", "CNIC", patient?.cnic || "—")}
               {P("DOB", patient?.date_of_birth ? format(new Date(patient.date_of_birth), "dd/MM/yyyy") : "—", "Blood Group", patient?.blood_type || "—")}
