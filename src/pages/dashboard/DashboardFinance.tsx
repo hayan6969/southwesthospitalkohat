@@ -172,7 +172,7 @@ export default function DashboardFinance() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('ipd_invoices')
-        .select('*')
+        .select('*, ipd_admissions(doctor_id)')
         .not('finalized_at', 'is', null)
         .order('created_at', { ascending: false });
       if (error) throw error;
@@ -321,7 +321,7 @@ export default function DashboardFinance() {
     const profile = doctor.profiles as any;
     const doctorName = profile ? `Dr. ${profile.first_name} ${profile.last_name}` : 'Unknown';
     
-    const doctorIpdInvoices = ipdInvoices?.filter(inv => inv.doctor_id === doctor.id) || [];
+    const doctorIpdInvoices = ipdInvoices?.filter((inv: any) => inv.ipd_admissions?.doctor_id === doctor.id) || [];
     const ipdDoctorFees = doctorIpdInvoices.reduce((sum, inv) => sum + (Number(inv.doctor_charges_total) || 0), 0);
     const ipdAnesthesiaFees = doctorIpdInvoices.reduce((sum, inv) => sum + (Number(inv.anesthesia_charges_total) || 0), 0);
     

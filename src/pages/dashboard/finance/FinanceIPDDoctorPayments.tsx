@@ -131,12 +131,11 @@ export default function FinanceIPDDoctorPayments() {
         .insert({
           doctor_id: doctorId,
           amount,
-          payment_date: new Date().toISOString(),
           notes,
           status: "paid",
           paid_at: new Date().toISOString(),
           paid_by: user?.id,
-          created_by: user?.id,
+          charge_type: 'aggregate',
         })
         .select()
         .single();
