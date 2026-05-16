@@ -125,18 +125,18 @@ export const useDoctorNames = () => {
 
       try {
         const { data, error } = await supabase
-          .from('doctors')
-          .select('id, profiles!inner(first_name, last_name, phone, email)')
-          .eq('profiles.role', 'doctor');
+          .from('profiles')
+          .select('id, first_name, last_name, phone, email')
+          .eq('role', 'doctor');
 
         if (error) throw error;
 
         const formattedData = data?.map(doctor => ({
           id: doctor.id,
-          first_name: (doctor.profiles as any)?.first_name,
-          last_name: (doctor.profiles as any)?.last_name,
-          phone: (doctor.profiles as any)?.phone,
-          email: (doctor.profiles as any)?.email,
+          first_name: doctor.first_name,
+          last_name: doctor.last_name,
+          phone: doctor.phone,
+          email: doctor.email,
         })) || [];
 
         if (formattedData) {

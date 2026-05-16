@@ -269,10 +269,19 @@ export default function DoctorIPD() {
                               <Button
                                 size="sm"
                                 variant="outline"
-                                onClick={() => handleClinicalRecord(a)}
+                                onClick={() => handleChart(a)}
                                 className="flex items-center gap-1"
                               >
                                 <FileText className="w-3 h-3" />
+                                Treatment Chart
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleClinicalRecord(a)}
+                                className="flex items-center gap-1"
+                              >
+                                <Activity className="w-3 h-3" />
                                 Clinical Record
                               </Button>
                               <Button
@@ -370,15 +379,6 @@ export default function DoctorIPD() {
                                   : "—"}
                               </TableCell>
                               <TableCell>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => handleClinicalRecord(a)}
-                                className="flex items-center gap-1"
-                              >
-                                <FileText className="w-3 h-3" />
-                                Clinical Record
-                              </Button>
                               </TableCell>
                             </TableRow>
                           ))}
