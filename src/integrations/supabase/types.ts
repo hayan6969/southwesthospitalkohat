@@ -913,60 +913,84 @@ export type Database = {
         Row: {
           admission_date: string
           admission_number: string
+          advice_for_home: string | null
           bed_id: string | null
           chief_complaint: string | null
+          complication: string | null
+          condition_of_discharge: string | null
           created_at: string
           created_by: string | null
           discharge_date: string | null
           doctor_id: string | null
           final_diagnosis: string | null
           id: string
+          investigation: string | null
           notes: string | null
+          pa_exam: string | null
           patient_id: string
+          procedure_performed: string | null
           provisional_diagnosis: string | null
           referring_appointment_id: string | null
           source: string
           status: string
+          treatment_given: string | null
+          ua_exam: string | null
           updated_at: string
           ward_id: string | null
         }
         Insert: {
           admission_date?: string
           admission_number: string
+          advice_for_home?: string | null
           bed_id?: string | null
           chief_complaint?: string | null
+          complication?: string | null
+          condition_of_discharge?: string | null
           created_at?: string
           created_by?: string | null
           discharge_date?: string | null
           doctor_id?: string | null
           final_diagnosis?: string | null
           id?: string
+          investigation?: string | null
           notes?: string | null
+          pa_exam?: string | null
           patient_id: string
+          procedure_performed?: string | null
           provisional_diagnosis?: string | null
           referring_appointment_id?: string | null
           source?: string
           status?: string
+          treatment_given?: string | null
+          ua_exam?: string | null
           updated_at?: string
           ward_id?: string | null
         }
         Update: {
           admission_date?: string
           admission_number?: string
+          advice_for_home?: string | null
           bed_id?: string | null
           chief_complaint?: string | null
+          complication?: string | null
+          condition_of_discharge?: string | null
           created_at?: string
           created_by?: string | null
           discharge_date?: string | null
           doctor_id?: string | null
           final_diagnosis?: string | null
           id?: string
+          investigation?: string | null
           notes?: string | null
+          pa_exam?: string | null
           patient_id?: string
+          procedure_performed?: string | null
           provisional_diagnosis?: string | null
           referring_appointment_id?: string | null
           source?: string
           status?: string
+          treatment_given?: string | null
+          ua_exam?: string | null
           updated_at?: string
           ward_id?: string | null
         }
