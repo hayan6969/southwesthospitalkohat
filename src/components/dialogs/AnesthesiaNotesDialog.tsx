@@ -242,7 +242,7 @@ export function AnesthesiaNotesDialog({ open, onOpenChange, otSchedule, admissio
     if (!otSchedule || !isDoctorOrAnesthetist) return;
     setSaving(true);
     try {
-      const payload = { ...collectData(), status: finalize ? "finalized" : "draft" };
+      const payload: any = { ...collectData(), status: finalize ? "finalized" : "draft" };
       let error;
 
       if (notesId) {
