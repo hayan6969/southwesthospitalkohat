@@ -47,13 +47,13 @@ export function PrintClinicalSheet({ open, onOpenChange, admission, patientName 
     const today = format(new Date(), "dd/MM/yyyy");
     const now = format(new Date(), "dd/MM/yyyy HH:mm");
 
-    const vitalsRows = Array.from({ length: 8 }, () =>
+    const vitalsRows = (count: number) => Array.from({ length: count }, () =>
       `<tr>${Array.from({ length: 6 }, () => '<td class="vital-cell"></td>').join("")}</tr>`
     ).join("");
-    const ivRows = Array.from({ length: 6 }, () =>
+    const ivRows = Array.from({ length: 5 }, () =>
       `<tr>${Array.from({ length: 5 }, () => '<td style="height:50px"></td>').join("")}</tr>`
     ).join("");
-    const ioRows = Array.from({ length: 6 }, () =>
+    const ioRows = Array.from({ length: 5 }, () =>
       `<tr>${Array.from({ length: 4 }, () => '<td style="height:50px"></td>').join("")}</tr>`
     ).join("");
 
@@ -73,6 +73,7 @@ export function PrintClinicalSheet({ open, onOpenChange, admission, patientName 
       .footer { text-align: center; font-size: 10px; color: #888; margin-top: 14px; border-top: 1px solid #ccc; padding-top: 6px; }
       .sig-line { border-bottom: 1px solid #000; height: 48px; width: 250px; display: inline-block; margin-top: 8px; }
       .page-break { page-break-before: always; }
+      .page-num { text-align: center; font-size: 10px; color: #aaa; margin-top: 8px; }
     </style></head><body>
     <div class="header">
       <h1>${hn}</h1>
@@ -86,7 +87,7 @@ export function PrintClinicalSheet({ open, onOpenChange, admission, patientName 
       <tr><td class="info-label">Admitted</td><td colspan="5"><span class="blank-line">${admDate}</span></td></tr>
     </table>
     <table>
-      <tr><th style="font-size:15px;padding:10px" colspan="6">VITALS RECORD</th></tr>
+      <tr><th style="font-size:15px;padding:10px" colspan="6">VITALS RECORD (Page 1 of 4)</th></tr>
       <tr>
         <th style="width:18%">Date / Time</th>
         <th style="width:14%">Temp (°C)</th>
@@ -95,11 +96,24 @@ export function PrintClinicalSheet({ open, onOpenChange, admission, patientName 
         <th style="width:14%">RR (/min)</th>
         <th style="width:14%">SpO₂ (%)</th>
       </tr>
-      ${vitalsRows}
+      ${vitalsRows(5)}
     </table>
     <div class="page-break"></div>
     <table>
-      <tr><th style="font-size:15px;padding:10px" colspan="5">IV FLUIDS</th></tr>
+      <tr><th style="font-size:15px;padding:10px" colspan="6">VITALS RECORD (Page 2 of 4)</th></tr>
+      <tr>
+        <th style="width:18%">Date / Time</th>
+        <th style="width:14%">Temp (°C)</th>
+        <th style="width:14%">Pulse (/min)</th>
+        <th style="width:26%">BP (Sys / Dia)</th>
+        <th style="width:14%">RR (/min)</th>
+        <th style="width:14%">SpO₂ (%)</th>
+      </tr>
+      ${vitalsRows(5)}
+    </table>
+    <div class="page-break"></div>
+    <table>
+      <tr><th style="font-size:15px;padding:10px" colspan="5">IV FLUIDS (Page 3 of 4)</th></tr>
       <tr>
         <th style="width:20%">Date / Time</th>
         <th style="width:25%">Fluid Type</th>
@@ -111,7 +125,7 @@ export function PrintClinicalSheet({ open, onOpenChange, admission, patientName 
     </table>
     <div class="page-break"></div>
     <table>
-      <tr><th style="font-size:15px;padding:10px" colspan="4">INTAKE / OUTPUT</th></tr>
+      <tr><th style="font-size:15px;padding:10px" colspan="4">INTAKE / OUTPUT (Page 4 of 4)</th></tr>
       <tr>
         <th style="width:25%">Date / Time</th>
         <th style="width:25%">Intake (ml)</th>
