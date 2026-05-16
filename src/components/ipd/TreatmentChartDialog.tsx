@@ -15,8 +15,9 @@ import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
-import { Loader2, Plus, Activity, StickyNote, Droplets, Pill, FlaskConical } from "lucide-react";
+import { Loader2, Plus, Activity, StickyNote, Droplets, Pill, FlaskConical, Download } from "lucide-react";
 import { format } from "date-fns";
+import jsPDF from "jspdf";
 
 interface Props {
   open: boolean;
@@ -189,6 +190,18 @@ export function TreatmentChartDialog({ open, onOpenChange, admissionId, patientN
 
           {/* Vitals */}
           <TabsContent value="vitals" className="space-y-4 mt-4">
+            <div className="flex justify-end">
+              {filtered.length > 0 && (
+                <Button size="sm" variant="outline" onClick={() => downloadPdf(`Vitals_${patientName || admissionId}`, filtered, [
+                  { h: "Time", f: (r) => format(new Date(r.recorded_at), "MMM d HH:mm") },
+                  { h: "Temp", f: (r) => r.temperature ?? "—" },
+                  { h: "Pulse", f: (r) => r.pulse ?? "—" },
+                  { h: "BP", f: (r) => r.bp_systolic && r.bp_diastolic ? `${r.bp_systolic}/${r.bp_diastolic}` : "—" },
+                  { h: "RR", f: (r) => r.respiratory_rate ?? "—" },
+                  { h: "SpO₂", f: (r) => r.oxygen_saturation ?? "—" },
+                ])} className="gap-1"><Download className="w-3 h-3" />PDF</Button>
+              )}
+            </div>
             {canWrite && (
               <div className="grid grid-cols-2 md:grid-cols-3 gap-3 p-4 border rounded-md">
                 <div><Label>Temp (°C)</Label><Input type="number" step="0.1" value={form.temperature ?? ""} onChange={e => setForm({ ...form, temperature: e.target.value })} /></div>
@@ -247,6 +260,17 @@ export function TreatmentChartDialog({ open, onOpenChange, admissionId, patientN
 
           {/* IV Fluid */}
           <TabsContent value="iv_fluid" className="space-y-4 mt-4">
+            <div className="flex justify-end">
+              {filtered.length > 0 && (
+                <Button size="sm" variant="outline" onClick={() => downloadPdf(`IV_Fluids_${patientName || admissionId}`, filtered, [
+                  { h: "Time", f: (r) => format(new Date(r.recorded_at), "MMM d HH:mm") },
+                  { h: "Fluid", f: (r) => r.fluid_type ?? "—" },
+                  { h: "Volume", f: (r) => r.fluid_volume_ml ? `${r.fluid_volume_ml} ml` : "—" },
+                  { h: "Rate", f: (r) => r.fluid_rate ?? "—" },
+                  { h: "Notes", f: (r) => r.notes ?? "—" },
+                ])} className="gap-1"><Download className="w-3 h-3" />PDF</Button>
+              )}
+            </div>
             {canWrite && (
               <div className="grid grid-cols-2 md:grid-cols-3 gap-3 p-4 border rounded-md">
                 <div><Label>Fluid Type</Label><Input value={form.fluid_type ?? ""} onChange={e => setForm({ ...form, fluid_type: e.target.value })} placeholder="e.g. Normal Saline" /></div>
@@ -267,6 +291,16 @@ export function TreatmentChartDialog({ open, onOpenChange, admissionId, patientN
 
           {/* I/O */}
           <TabsContent value="intake_output" className="space-y-4 mt-4">
+            <div className="flex justify-end">
+              {filtered.length > 0 && (
+                <Button size="sm" variant="outline" onClick={() => downloadPdf(`Intake_Output_${patientName || admissionId}`, filtered, [
+                  { h: "Time", f: (r) => format(new Date(r.recorded_at), "MMM d HH:mm") },
+                  { h: "Intake", f: (r) => r.intake_ml ? `${r.intake_ml} ml` : "—" },
+                  { h: "Output", f: (r) => r.output_ml ? `${r.output_ml} ml` : "—" },
+                  { h: "Notes", f: (r) => r.notes ?? "—" },
+                ])} className="gap-1"><Download className="w-3 h-3" />PDF</Button>
+              )}
+            </div>
             {canWrite && (
               <div className="grid grid-cols-2 md:grid-cols-3 gap-3 p-4 border rounded-md">
                 <div><Label>Intake (ml)</Label><Input type="number" value={form.intake_ml ?? ""} onChange={e => setForm({ ...form, intake_ml: e.target.value })} /></div>
@@ -418,6 +452,28 @@ function EntriesTable({ rows, loading, columns }: { rows: any[]; loading: boolea
       </Table>
     </div>
   );
+}
+
+function downloadPdf(title: string, rows: any[], columns: { h: string; f: (r: any) => string }[]) {
+  const pdf = new jsPDF("l", "mm", "a4");
+  const pw = pdf.internal.pageSize.getWidth();
+  let y = 15;
+  pdf.setFontSize(14); pdf.setFont("helvetica", "bold");
+  pdf.text(title, pw / 2, y, { align: "center" }); y += 10;
+  pdf.setFontSize(9); pdf.setFont("helvetica", "normal");
+  const colW = (pw - 30) / columns.length;
+  // Header
+  pdf.setFillColor(50, 50, 50); pdf.setTextColor(255);
+  columns.forEach((c, i) => { pdf.text(c.h, 15 + i * colW + colW / 2, y + 3, { align: "center" }); });
+  pdf.rect(15, y - 1, pw - 30, 7, "F");
+  y += 8; pdf.setTextColor(0);
+  // Rows
+  rows.forEach((r) => {
+    if (y > 185) { pdf.addPage(); y = 15; }
+    columns.forEach((c, i) => { pdf.text(c.f(r), 15 + i * colW + colW / 2, y + 3, { align: "center" }); });
+    y += 6;
+  });
+  pdf.save(`${title.replace(/\s+/g, "_")}.pdf`);
 }
 
 function MedicinePicker({ value, onSelect }: { value: string; onSelect: (m: { id: string; name: string; selling_price: number }) => void }) {
