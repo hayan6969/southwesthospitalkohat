@@ -1,9 +1,7 @@
 import { useEffect, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Loader2, Printer, Download } from "lucide-react";
+import { Loader2, Printer } from "lucide-react";
 import { format, differenceInYears } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -22,7 +20,7 @@ export function DischargeSummaryDialog({ open, onOpenChange, admission, patientN
     if (!open || !admission) return;
     (async () => {
       setLoading(true);
-      const [admRes, profRes, patRes, chartRes] = await Promise.all([
+      const [admRes, profRes, patRes, chartRes, medRes, labRes] = await Promise.all([
         supabase
           .from("ipd_admissions")
           .select("*, beds(bed_number), wards(name)")
@@ -31,8 +29,10 @@ export function DischargeSummaryDialog({ open, onOpenChange, admission, patientN
         supabase.from("profiles").select("first_name,last_name,phone,email").eq("id", admission.patient_id).maybeSingle(),
         supabase.from("patients").select("*").eq("id", admission.patient_id).maybeSingle(),
         supabase.from("ipd_treatment_chart").select("*").eq("admission_id", admission.id).order("recorded_at", { ascending: false }),
+        supabase.from("ipd_medicine_orders").select("*").eq("admission_id", admission.id).order("created_at", { ascending: false }),
+        supabase.from("ipd_lab_orders").select("*").eq("admission_id", admission.id).order("created_at", { ascending: false }),
       ]);
-      setData({ admission: admRes.data, profile: profRes.data, patient: patRes.data, chart: chartRes.data ?? [] });
+      setData({ admission: admRes.data, profile: profRes.data, patient: patRes.data, chart: chartRes.data ?? [], medicines: medRes.data ?? [], labs: labRes.data ?? [] });
       setLoading(false);
     })();
   }, [open, admission]);
@@ -78,7 +78,10 @@ export function DischargeSummaryDialog({ open, onOpenChange, admission, patientN
   const patient = data?.patient;
   const chart = data?.chart || [];
   const vitals = chart.filter((e: any) => e.entry_type === "vitals");
+  const ivFluids = chart.filter((e: any) => e.entry_type === "iv_fluid");
   const doctorNotes = chart.filter((e: any) => e.entry_type === "doctor_note");
+  const medicines = data?.medicines || [];
+  const labs = data?.labs || [];
   const age = patient?.date_of_birth ? calcAge(patient.date_of_birth) : null;
   const days = adm?.admission_date && adm?.discharge_date
     ? Math.max(1, Math.ceil((new Date(adm.discharge_date).getTime() - new Date(adm.admission_date).getTime()) / 86400000))
@@ -181,10 +184,76 @@ export function DischargeSummaryDialog({ open, onOpenChange, admission, patientN
             </table>
           )}
 
-          {adm?.allergies && (
+          {ivFluids.length > 0 && (
+            <table cellPadding={0} cellSpacing={0}>
+              <tr><th colSpan={5}>IV FLUIDS ADMINISTERED</th></tr>
+              <tr>
+                <th style={{ fontSize: 10, padding: 3 }}>Date/Time</th>
+                <th style={{ fontSize: 10, padding: 3 }}>Fluid Type</th>
+                <th style={{ fontSize: 10, padding: 3 }}>Volume</th>
+                <th style={{ fontSize: 10, padding: 3 }}>Rate</th>
+                <th style={{ fontSize: 10, padding: 3 }}>Notes</th>
+              </tr>
+              {ivFluids.slice(0, 10).map((v: any) => (
+                <tr key={v.id}>
+                  <td style={{ fontSize: 10, padding: 3 }}>{format(new Date(v.recorded_at), "MMM d HH:mm")}</td>
+                  <td style={{ fontSize: 10, padding: 3 }}>{v.fluid_type || "—"}</td>
+                  <td style={{ fontSize: 10, padding: 3 }}>{v.fluid_volume_ml ? `${v.fluid_volume_ml} ml` : "—"}</td>
+                  <td style={{ fontSize: 10, padding: 3 }}>{v.fluid_rate || "—"}</td>
+                  <td style={{ fontSize: 10, padding: 3 }}>{v.notes || "—"}</td>
+                </tr>
+              ))}
+            </table>
+          )}
+
+          {medicines.length > 0 && (
+            <table cellPadding={0} cellSpacing={0}>
+              <tr><th colSpan={6}>MEDICINE ORDERS</th></tr>
+              <tr>
+                <th style={{ fontSize: 10, padding: 3 }}>Date</th>
+                <th style={{ fontSize: 10, padding: 3 }}>Medicine</th>
+                <th style={{ fontSize: 10, padding: 3 }}>Dosage</th>
+                <th style={{ fontSize: 10, padding: 3 }}>Frequency</th>
+                <th style={{ fontSize: 10, padding: 3 }}>Route</th>
+                <th style={{ fontSize: 10, padding: 3 }}>Status</th>
+              </tr>
+              {medicines.slice(0, 10).map((m: any) => (
+                <tr key={m.id}>
+                  <td style={{ fontSize: 10, padding: 3 }}>{format(new Date(m.created_at), "MMM d")}</td>
+                  <td style={{ fontSize: 10, padding: 3 }}>{m.medicine_name}</td>
+                  <td style={{ fontSize: 10, padding: 3 }}>{m.dosage || "—"}</td>
+                  <td style={{ fontSize: 10, padding: 3 }}>{m.frequency || "—"}</td>
+                  <td style={{ fontSize: 10, padding: 3 }}>{m.route || "—"}</td>
+                  <td style={{ fontSize: 10, padding: 3 }}>{m.status}</td>
+                </tr>
+              ))}
+            </table>
+          )}
+
+          {labs.length > 0 && (
+            <table cellPadding={0} cellSpacing={0}>
+              <tr><th colSpan={4}>LAB TESTS</th></tr>
+              <tr>
+                <th style={{ fontSize: 10, padding: 3 }}>Date</th>
+                <th style={{ fontSize: 10, padding: 3 }}>Test</th>
+                <th style={{ fontSize: 10, padding: 3 }}>Result</th>
+                <th style={{ fontSize: 10, padding: 3 }}>Status</th>
+              </tr>
+              {labs.slice(0, 10).map((l: any) => (
+                <tr key={l.id}>
+                  <td style={{ fontSize: 10, padding: 3 }}>{format(new Date(l.created_at), "MMM d")}</td>
+                  <td style={{ fontSize: 10, padding: 3 }}>{l.test_name}</td>
+                  <td style={{ fontSize: 10, padding: 3 }}>{l.result_notes || "—"}</td>
+                  <td style={{ fontSize: 10, padding: 3 }}>{l.status}</td>
+                </tr>
+              ))}
+            </table>
+          )}
+
+          {patient?.allergies && (
             <table cellPadding={0} cellSpacing={0}>
               <tr><th>ALLERGIES</th></tr>
-              <tr><td style={{ padding: "5px 7px" }}>{patient?.allergies || "None recorded"}</td></tr>
+              <tr><td style={{ padding: "5px 7px" }}>{patient.allergies}</td></tr>
             </table>
           )}
 
