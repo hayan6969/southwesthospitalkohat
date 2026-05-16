@@ -156,7 +156,7 @@ export function DoctorPayments() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('ipd_invoices')
-        .select('doctor_id, doctor_charges_total, anesthesia_charges_total, ota_charges_total, ot_charges_total')
+        .select('doctor_charges_total, anesthesia_charges_total, ota_charges_total, ot_charges_total, ipd_admissions(doctor_id)')
         .not('finalized_at', 'is', null)
         .gte('finalized_at', `${targetDate}T00:00:00`)
         .lte('finalized_at', `${targetDate}T23:59:59`);
@@ -165,16 +165,17 @@ export function DoctorPayments() {
 
       // Aggregate by doctor
       const byDoctor: Record<string, { doctorFees: number; anesthesiaFees: number; otaCharges: number; otCharges: number; count: number }> = {};
-      (data || []).forEach(inv => {
-        if (!inv.doctor_id) return;
-        if (!byDoctor[inv.doctor_id]) {
-          byDoctor[inv.doctor_id] = { doctorFees: 0, anesthesiaFees: 0, otaCharges: 0, otCharges: 0, count: 0 };
+      (data || []).forEach((inv: any) => {
+        const doctorId = inv.ipd_admissions?.doctor_id;
+        if (!doctorId) return;
+        if (!byDoctor[doctorId]) {
+          byDoctor[doctorId] = { doctorFees: 0, anesthesiaFees: 0, otaCharges: 0, otCharges: 0, count: 0 };
         }
-        byDoctor[inv.doctor_id].doctorFees += Number(inv.doctor_charges_total) || 0;
-        byDoctor[inv.doctor_id].anesthesiaFees += Number(inv.anesthesia_charges_total) || 0;
-        byDoctor[inv.doctor_id].otaCharges += Number(inv.ota_charges_total) || 0;
-        byDoctor[inv.doctor_id].otCharges += Number(inv.ot_charges_total) || 0;
-        byDoctor[inv.doctor_id].count += 1;
+        byDoctor[doctorId].doctorFees += Number(inv.doctor_charges_total) || 0;
+        byDoctor[doctorId].anesthesiaFees += Number(inv.anesthesia_charges_total) || 0;
+        byDoctor[doctorId].otaCharges += Number(inv.ota_charges_total) || 0;
+        byDoctor[doctorId].otCharges += Number(inv.ot_charges_total) || 0;
+        byDoctor[doctorId].count += 1;
       });
 
       // Fetch doctor names
