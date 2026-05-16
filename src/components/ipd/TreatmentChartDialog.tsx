@@ -244,7 +244,7 @@ export function TreatmentChartDialog({ open, onOpenChange, admissionId, patientN
       section("VITALS");
       const cw = (pw - 2 * m) / 6;
       const vCols = ["Time", "Temp", "Pulse", "BP", "RR", "SpO₂"];
-      pdf.setFillColor(230); row(vCols, Array(6).fill(cw));
+      pdf.setFillColor(230, 230, 230); row(vCols, Array(6).fill(cw));
       vitals.forEach(v => row([
         format(new Date(v.recorded_at), "MMM d HH:mm"),
         v.temperature != null ? String(v.temperature) : "\u2014",
@@ -261,7 +261,7 @@ export function TreatmentChartDialog({ open, onOpenChange, admissionId, patientN
       section("IV FLUIDS");
       const cw = (pw - 2 * m) / 5;
       const iCols = ["Time", "Fluid", "Volume", "Rate", "Notes"];
-      pdf.setFillColor(230); row(iCols, Array(5).fill(cw));
+      pdf.setFillColor(230, 230, 230); row(iCols, Array(5).fill(cw));
       ivs.forEach(iv => row([
         format(new Date(iv.recorded_at), "MMM d HH:mm"),
         iv.fluid_type ?? "\u2014",
@@ -277,7 +277,7 @@ export function TreatmentChartDialog({ open, onOpenChange, admissionId, patientN
       section("INTAKE / OUTPUT");
       const cw = (pw - 2 * m) / 4;
       const ioCols = ["Time", "Intake", "Output", "Notes"];
-      pdf.setFillColor(230); row(ioCols, Array(4).fill(cw));
+      pdf.setFillColor(230, 230, 230); row(ioCols, Array(4).fill(cw));
       ios.forEach(io => row([
         format(new Date(io.recorded_at), "MMM d HH:mm"),
         io.intake_ml ? `${io.intake_ml} ml` : "\u2014",
