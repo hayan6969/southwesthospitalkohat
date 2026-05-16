@@ -236,7 +236,7 @@ export function AnesthesiaNotesDialog({ open, onOpenChange, otSchedule, admissio
   }, [otSchedule, admissionId]);
 
   useEffect(() => {
-    if (open && otSchedule) fetchExistingNotes();
+    if (open && (otSchedule || admissionId)) fetchExistingNotes();
     else if (!open) {
       setNotesId(null);
       setStatus("draft");
