@@ -16,9 +16,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import { AnesthesiaNotesDialog } from "@/components/dialogs/AnesthesiaNotesDialog";
-import { Loader2, Plus, Activity, StickyNote, Droplets, Pill, FlaskConical, Download, Syringe } from "lucide-react";
+import { Loader2, Plus, Activity, StickyNote, Droplets, Pill, FlaskConical, Printer, Syringe } from "lucide-react";
 import { format } from "date-fns";
-import jsPDF from "jspdf";
 
 interface Props {
   open: boolean;
@@ -41,6 +40,12 @@ export function TreatmentChartDialog({ open, onOpenChange, admissionId, patientN
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState<any>({});
   const [showAnesthesiaDialog, setShowAnesthesiaDialog] = useState(false);
+  const [admissionData, setAdmissionData] = useState<any>(null);
+  const [hospitalSettings, setHospitalSettings] = useState<any>(null);
+  const [patientData, setPatientData] = useState<any>(null);
+  const [doctorProfile, setDoctorProfile] = useState<any>(null);
+  const [wardData, setWardData] = useState<any>(null);
+  const [bedData, setBedData] = useState<any>(null);
 
   const canWrite = ["admin", "doctor", "nurse", "ota", "staff", "ipd"].includes(profile?.role as string);
   const isDoctor = profile?.role === "doctor";
@@ -49,11 +54,24 @@ export function TreatmentChartDialog({ open, onOpenChange, admissionId, patientN
     if (!admissionId) return;
     setLoading(true);
     
-    const { data: adm } = await supabase
-      .from("ipd_admissions")
-      .select("patient_id")
-      .eq("id", admissionId)
-      .maybeSingle();
+    const [{ data: adm }, { data: hs }] = await Promise.all([
+      supabase.from("ipd_admissions").select("*, beds(bed_number,daily_charge), wards(name)").eq("id", admissionId).maybeSingle(),
+      supabase.from("hospital_settings").select("hospital_name,hospital_address,contact_number,logo_url").maybeSingle(),
+    ]);
+    
+    if (adm) {
+      setAdmissionData(adm);
+      setHospitalSettings(hs);
+      setWardData(adm.wards || null);
+      setBedData(adm.beds || null);
+      
+      const [{ data: pat }, { data: docProf }] = await Promise.all([
+        supabase.from("patients").select("*").eq("id", adm.patient_id).maybeSingle(),
+        adm.doctor_id ? supabase.from("profiles").select("first_name,last_name").eq("id", adm.doctor_id).maybeSingle() : Promise.resolve({ data: null }),
+      ]);
+      setPatientData(pat);
+      setDoctorProfile(docProf);
+    }
     
     let otIds: string[] = [];
     if (adm?.patient_id) {
@@ -73,7 +91,7 @@ export function TreatmentChartDialog({ open, onOpenChange, admissionId, patientN
     anesthesiaQuery = anesthesiaQuery.order("created_at", { ascending: false });
     
     const [{ data: c }, { data: m }, { data: l }, { data: a }] = await Promise.all([
-      supabase.from("ipd_treatment_chart").select("*").eq("admission_id", admissionId).order("recorded_at", { ascending: false }),
+      supabase.from("ipd_treatment_chart").select("*").eq("admission_id", admissionId).order("recorded_at", { ascending: true }),
       supabase.from("ipd_medicine_orders").select("*").eq("admission_id", admissionId).order("created_at", { ascending: false }),
       supabase.from("ipd_lab_orders").select("*").eq("admission_id", admissionId).order("created_at", { ascending: false }),
       anesthesiaQuery,
@@ -202,114 +220,282 @@ export function TreatmentChartDialog({ open, onOpenChange, admissionId, patientN
     }
   };
 
-  const downloadFullPdf = () => {
-    const pdf = new jsPDF("p", "mm", "a4");
-    const pw = pdf.internal.pageSize.getWidth();
-    const m = 15;
-    let y = m;
+  const printClinicalSheet = () => {
+    const hn = hospitalSettings?.hospital_name || "Hospital";
+    const ha = hospitalSettings?.hospital_address || "";
+    const hc = hospitalSettings?.contact_number || "";
+    const a = admissionData;
+    const admNum = a?.admission_number || admissionNumber || admissionId;
+    const wName = wardData?.name || "";
+    const bNum = bedData?.bed_number || "";
+    const docName = doctorProfile ? `Dr. ${doctorProfile.first_name} ${doctorProfile.last_name}` : "";
+    const patPhone = patientData?.phone || "";
+    const patCnic = patientData?.cnic || "";
+    const patDob = patientData?.date_of_birth ? format(new Date(patientData.date_of_birth), "dd/MM/yyyy") : "";
+    const patBlood = patientData?.blood_type || "";
+    const patCity = patientData?.city || "";
+    const patAddress = patientData?.address || "";
+    const patProvince = patientData?.province || "";
+    const chiefComplaint = a?.chief_complaint || "";
+    const provisionalDx = a?.provisional_diagnosis || "";
+    const finalDx = a?.final_diagnosis || "";
+    const allergies = patientData?.allergies || "";
+    const patNotes = a?.notes || "";
+    const source = a?.source || "";
+    const admDate = a?.admission_date ? format(new Date(a.admission_date), "dd/MM/yyyy HH:mm") : "";
+    const now = format(new Date(), "dd/MM/yyyy HH:mm");
 
-    const header = () => {
-      pdf.setFontSize(14); pdf.setFont("helvetica", "bold");
-      pdf.text("Treatment Chart", pw / 2, y, { align: "center" }); y += 6;
-      pdf.setFontSize(9); pdf.setFont("helvetica", "normal");
-      pdf.text(`${patientName || ""} (${admissionNumber || admissionId})`, pw / 2, y, { align: "center" }); y += 5;
-      pdf.line(m, y, pw - m, y); y += 5;
-    };
+    const d = (v: any, fallback = "—") => v != null && v !== "" ? v : fallback;
 
-    const section = (title: string) => {
-      if (y > 272) { pdf.addPage(); y = m; }
-      pdf.setFillColor(50, 50, 50); pdf.rect(m, y - 1, pw - 2 * m, 6, "F");
-      pdf.setTextColor(255); pdf.setFont("helvetica", "bold"); pdf.setFontSize(10);
-      pdf.text(title, pw / 2, y + 4, { align: "center" });
-      pdf.setTextColor(0); pdf.setFont("helvetica", "normal");
-      y += 9;
-    };
-
-    const row = (cols: string[], widths: number[]) => {
-      if (y > 275) { pdf.addPage(); y = m; header(); }
-      let x = m;
-      cols.forEach((c, i) => {
-        pdf.rect(x, y, widths[i], 5);
-        pdf.setFontSize(8); pdf.text(c, x + 1, y + 3.5);
-        x += widths[i];
-      });
-      y += 5;
-    };
-
-    header();
-
-    // VITALS
-    const vitals = entries.filter(e => e.entry_type === "vitals");
-    if (vitals.length > 0) {
-      section("VITALS");
-      const cw = (pw - 2 * m) / 6;
-      const vCols = ["Time", "Temp", "Pulse", "BP", "RR", "SpO₂"];
-      pdf.setFillColor(230, 230, 230); row(vCols, Array(6).fill(cw));
-      vitals.forEach(v => row([
-        format(new Date(v.recorded_at), "MMM d HH:mm"),
-        v.temperature != null ? String(v.temperature) : "\u2014",
-        v.pulse != null ? String(v.pulse) : "\u2014",
-        v.bp_systolic && v.bp_diastolic ? `${v.bp_systolic}/${v.bp_diastolic}` : "\u2014",
-        v.respiratory_rate != null ? String(v.respiratory_rate) : "\u2014",
-        v.oxygen_saturation != null ? String(v.oxygen_saturation) : "\u2014",
-      ], Array(6).fill(cw)));
-    }
-
-    // IV FLUIDS
+    const vitals = entries.filter(e => e.entry_type === "vitals").sort((a, b) => new Date(a.recorded_at).getTime() - new Date(b.recorded_at).getTime());
     const ivs = entries.filter(e => e.entry_type === "iv_fluid");
-    if (ivs.length > 0) {
-      section("IV FLUIDS");
-      const cw = (pw - 2 * m) / 5;
-      const iCols = ["Time", "Fluid", "Volume", "Rate", "Notes"];
-      pdf.setFillColor(230, 230, 230); row(iCols, Array(5).fill(cw));
-      ivs.forEach(iv => row([
-        format(new Date(iv.recorded_at), "MMM d HH:mm"),
-        iv.fluid_type ?? "\u2014",
-        iv.fluid_volume_ml ? `${iv.fluid_volume_ml} ml` : "\u2014",
-        iv.fluid_rate ?? "\u2014",
-        iv.notes ?? "\u2014",
-      ], Array(5).fill(cw)));
-    }
-
-    // INTAKE/OUTPUT
     const ios = entries.filter(e => e.entry_type === "intake_output");
-    if (ios.length > 0) {
-      section("INTAKE / OUTPUT");
-      const cw = (pw - 2 * m) / 4;
-      const ioCols = ["Time", "Intake", "Output", "Notes"];
-      pdf.setFillColor(230, 230, 230); row(ioCols, Array(4).fill(cw));
-      ios.forEach(io => row([
-        format(new Date(io.recorded_at), "MMM d HH:mm"),
-        io.intake_ml ? `${io.intake_ml} ml` : "\u2014",
-        io.output_ml ? `${io.output_ml} ml` : "\u2014",
-        io.notes ?? "\u2014",
-      ], Array(4).fill(cw)));
-    }
+    const doctorNotes = entries.filter(e => e.entry_type === "doctor_note");
+    const nursingNotes = entries.filter(e => e.entry_type === "nursing_note");
 
-    // ANAESTHESIA NOTES
-    if (anesthesiaNotes.length > 0) {
-      section("ANAESTHESIA NOTES");
-      anesthesiaNotes.forEach(note => {
-        if (y > 260) { pdf.addPage(); y = m; header(); }
-        pdf.setFontSize(9); pdf.setFont("helvetica", "bold");
-        const line = (lbl: string, val: string) => {
-          if (y > 275) { pdf.addPage(); y = m; header(); }
-          pdf.setFont("helvetica", "bold"); pdf.text(lbl + ":", m, y);
-          pdf.setFont("helvetica", "normal"); pdf.text(val || "\u2014", m + 40, y);
-          y += 5;
-        };
-        line("Procedure", note.surgical_procedure);
-        line("Anesthesia", note.anesthesia_type);
-        line("History", note.brief_history);
-        line("Pre-Op Vitals", `HR: ${note.preop_hr ?? "\u2014"} BP: ${note.preop_bp || "\u2014"} SpO₂: ${note.preop_spo2 ?? "\u2014"}`);
-        line("Pre-Op Med", note.preop_medication);
-        line("Drugs Used", note.anesthesia_drugs);
-        line("Recovery", note.recovery_status);
-        if (note.postop_orders?.items?.length) line("Post-Op Orders", note.postop_orders.items.join(", "));
-      });
-    }
+    const vitalsRows = vitals.map(v => `<tr>
+      <td style="height:32px;padding:4px 6px;font-size:11px;border:1px solid #000;">${format(new Date(v.recorded_at), "dd/MM HH:mm")}</td>
+      <td style="height:32px;padding:4px 6px;font-size:11px;border:1px solid #000;">${d(v.temperature)}</td>
+      <td style="height:32px;padding:4px 6px;font-size:11px;border:1px solid #000;">${d(v.pulse)}</td>
+      <td style="height:32px;padding:4px 6px;font-size:11px;border:1px solid #000;">${v.bp_systolic && v.bp_diastolic ? `${v.bp_systolic}/${v.bp_diastolic}` : "—"}</td>
+      <td style="height:32px;padding:4px 6px;font-size:11px;border:1px solid #000;">${d(v.respiratory_rate)}</td>
+      <td style="height:32px;padding:4px 6px;font-size:11px;border:1px solid #000;">${d(v.oxygen_saturation)}</td>
+    </tr>`).join("");
+    const blankVitalsRows = Array.from({ length: Math.max(0, 12 - vitals.length) }, () =>
+      `<tr>${Array.from({ length: 6 }, () => '<td style="height:32px;padding:4px 6px;font-size:11px;border:1px solid #000;">&nbsp;</td>').join("")}</tr>`
+    ).join("");
 
-    pdf.save(`Treatment_Chart_${admissionNumber || admissionId}.pdf`);
+    const ivRows = ivs.map(iv => `<tr>
+      <td style="height:40px;padding:4px 6px;font-size:11px;border:1px solid #000;">${format(new Date(iv.recorded_at), "dd/MM HH:mm")}</td>
+      <td style="height:40px;padding:4px 6px;font-size:11px;border:1px solid #000;">${d(iv.fluid_type)}</td>
+      <td style="height:40px;padding:4px 6px;font-size:11px;border:1px solid #000;">${iv.fluid_volume_ml ? `${iv.fluid_volume_ml} ml` : "—"}</td>
+      <td style="height:40px;padding:4px 6px;font-size:11px;border:1px solid #000;">${d(iv.fluid_rate)}</td>
+      <td style="height:40px;padding:4px 6px;font-size:11px;border:1px solid #000;">${d(iv.notes)}</td>
+    </tr>`).join("");
+    const blankIvRows = Array.from({ length: Math.max(0, 15 - ivs.length) }, () =>
+      `<tr>${Array.from({ length: 5 }, () => '<td style="height:40px;padding:4px 6px;font-size:11px;border:1px solid #000;">&nbsp;</td>').join("")}</tr>`
+    ).join("");
+
+    const ioRows = ios.map(io => `<tr>
+      <td style="height:40px;padding:4px 6px;font-size:11px;border:1px solid #000;">${format(new Date(io.recorded_at), "dd/MM HH:mm")}</td>
+      <td style="height:40px;padding:4px 6px;font-size:11px;border:1px solid #000;">${io.intake_ml ? `${io.intake_ml} ml` : "—"}</td>
+      <td style="height:40px;padding:4px 6px;font-size:11px;border:1px solid #000;">${io.output_ml ? `${io.output_ml} ml` : "—"}</td>
+      <td style="height:40px;padding:4px 6px;font-size:11px;border:1px solid #000;">${d(io.notes)}</td>
+    </tr>`).join("");
+    const blankIoRows = Array.from({ length: Math.max(0, 15 - ios.length) }, () =>
+      `<tr>${Array.from({ length: 4 }, () => '<td style="height:40px;padding:4px 6px;font-size:11px;border:1px solid #000;">&nbsp;</td>').join("")}</tr>`
+    ).join("");
+
+    const anesthesiaHtml = anesthesiaNotes.map(note => {
+      const intraopRows = (note.intraop_assessment as any[] || []).map((row: any) => `<tr>
+        <td style="border:1px solid #000;padding:8px 4px;font-size:10px;">${d(row.time)}</td>
+        <td style="border:1px solid #000;padding:8px 4px;font-size:10px;">${d(row.hr)}</td>
+        <td style="border:1px solid #000;padding:8px 4px;font-size:10px;">${d(row.spo2)}</td>
+        <td style="border:1px solid #000;padding:8px 4px;font-size:10px;">${d(row.bp)}</td>
+      </tr>`).join("");
+      const blankIntraopRows = Array.from({ length: Math.max(0, 5 - (note.intraop_assessment?.length || 0)) }, () => `<tr>
+        <td style="border:1px solid #000;padding:8px 4px;font-size:10px;">&nbsp;</td>
+        <td style="border:1px solid #000;padding:8px 4px;font-size:10px;">&nbsp;</td>
+        <td style="border:1px solid #000;padding:8px 4px;font-size:10px;">&nbsp;</td>
+        <td style="border:1px solid #000;padding:8px 4px;font-size:10px;">&nbsp;</td>
+      </tr>`).join("");
+
+      const postOpItems = note.postop_orders?.items || [];
+      const postOpHtml = postOpItems.map((item: string) => `<div style="width:48%;padding:1px 0;">[✓] ${item}</div>`).join("");
+
+      return `<div style="margin-top:12px;border-top:1px solid #000;padding-top:6px;">
+        <div style="font-size:10px;color:#666;margin-bottom:4px;">Recorded: ${format(new Date(note.created_at), "dd/MM/yyyy HH:mm")} | Status: ${d(note.status)}</div>
+        <div style="margin-top:4px;"><strong>1. Surgical Procedure:</strong></div>
+        <div style="border-bottom:1px solid #000;min-height:22px;width:100%;margin:2px 0;padding:2px 0;">${d(note.surgical_procedure, "")}</div>
+
+        <div style="margin-top:4px;"><strong>2. Brief Medical and Surgical History:</strong></div>
+        <div style="border-bottom:1px solid #000;min-height:18px;width:100%;margin:2px 0;padding:2px 0;">${d(note.brief_history, "")}</div>
+
+        <div style="margin-top:4px;"><strong>3. Pre OP Vitals:</strong></div>
+        <div style="font-size:11px;margin:2px 0 4px 0;">
+          H.R: ${d(note.preop_hr)} &nbsp;&nbsp;&nbsp;&nbsp;
+          B.P: ${d(note.preop_bp)} &nbsp;&nbsp;&nbsp;&nbsp;
+          SPO2: ${d(note.preop_spo2)}%
+        </div>
+
+        <div style="margin-top:4px;"><strong>4. Pre OP Medication:</strong></div>
+        <div style="border-bottom:1px solid #000;min-height:18px;width:100%;margin:2px 0;padding:2px 0;">${d(note.preop_medication, "")}</div>
+
+        <div style="margin-top:4px;"><strong>5. Mode of Anaesthesia:</strong></div>
+        <div style="font-size:11px;margin:2px 0 4px 0;">${d(note.anesthesia_type)}</div>
+
+        <div style="margin-top:4px;"><strong>6. Drugs used in Induction of Anaesthesia:</strong></div>
+        <div style="border-bottom:1px solid #000;min-height:18px;width:100%;margin:2px 0;padding:2px 0;">${d(note.anesthesia_drugs, "")}</div>
+
+        <div style="text-align:center;font-weight:bold;font-size:12px;margin:8px 0 4px 0;border-top:1px solid #000;border-bottom:1px solid #000;padding:3px 0;">
+          Intra OP Assessment
+        </div>
+        <table style="width:100%;border-collapse:collapse;margin-bottom:6px;">
+          <tr>
+            <th style="border:1px solid #000;padding:3px 4px;font-size:10px;width:25%;">Time</th>
+            <th style="border:1px solid #000;padding:3px 4px;font-size:10px;width:25%;">H.R</th>
+            <th style="border:1px solid #000;padding:3px 4px;font-size:10px;width:25%;">SPO2</th>
+            <th style="border:1px solid #000;padding:3px 4px;font-size:10px;width:25%;">B.P</th>
+          </tr>
+          ${intraopRows}${blankIntraopRows}
+        </table>
+
+        <div style="margin-top:2px;"><strong>Input / Output record during Surgery:</strong></div>
+        <div style="border-bottom:1px solid #000;min-height:16px;width:100%;margin:2px 0;padding:2px 0;">${d(note.input_output_notes, "")}</div>
+
+        <div style="margin-top:2px;"><strong>Recovery Status:</strong></div>
+        <div style="border-bottom:1px solid #000;min-height:18px;width:100%;margin:2px 0;padding:2px 0;">${d(note.recovery_status)}</div>
+
+        <div style="margin-top:2px;"><strong>Post OP Orders:</strong></div>
+        <div style="font-size:10px;margin:2px 0;display:flex;flex-wrap:wrap;">
+          ${postOpHtml}
+        </div>
+        ${note.postop_orders?.notes ? `<div style="margin-top:4px;"><strong>Additional Notes:</strong></div><div style="border-bottom:1px solid #000;min-height:16px;width:100%;margin:2px 0;padding:2px 0;">${note.postop_orders.notes}</div>` : ""}
+      </div>`;
+    }).join("");
+
+    const doctorNotesHtml = doctorNotes.length > 0 ? doctorNotes.map(n => `<div style="margin:4px 0;padding:4px 8px;border-left:3px solid #3b82f6;background:#f8fafc;">
+      <div style="font-size:9px;color:#666;">${format(new Date(n.recorded_at), "dd/MM/yyyy HH:mm")}</div>
+      <div style="font-size:11px;white-space:pre-wrap;">${d(n.notes, "")}</div>
+    </div>`).join("") : '<div style="color:#999;font-size:11px;">No doctor notes</div>';
+
+    const nursingNotesHtml = nursingNotes.length > 0 ? nursingNotes.map(n => `<div style="margin:4px 0;padding:4px 8px;border-left:3px solid #10b981;background:#f0fdf4;">
+      <div style="font-size:9px;color:#666;">${format(new Date(n.recorded_at), "dd/MM/yyyy HH:mm")}</div>
+      <div style="font-size:11px;white-space:pre-wrap;">${d(n.notes, "")}</div>
+    </div>`).join("") : '<div style="color:#999;font-size:11px;">No nursing notes</div>';
+
+    const html = `<!DOCTYPE html><html><head><title>Treatment Chart — ${patientName || ""}</title>
+    <style>
+      @page { size: A4; margin: 10mm; }
+      body { font-family: Arial, sans-serif; font-size: 12px; margin: 0; padding: 0; color: #000; }
+      .header { text-align: center; margin-bottom: 12px; border-bottom: 2px solid #000; padding-bottom: 8px; }
+      .header h1 { margin: 0; font-size: 20px; font-weight: bold; }
+      .header p { margin: 2px 0; font-size: 11px; color: #333; }
+      .header h2 { margin: 6px 0 0; font-size: 15px; text-transform: uppercase; letter-spacing: 0.5px; font-weight: bold; }
+      table { width: 100%; border-collapse: collapse; margin-bottom: 8px; }
+      td, th { border: 1px solid #000; padding: 4px 6px; font-size: 11px; vertical-align: middle; }
+      th { font-weight: bold; text-align: center; font-size: 12px; background: transparent; }
+      .lbl { font-weight: bold; width: 120px; background: #f5f5f5; font-size: 11px; }
+      .section-title { font-weight: bold; font-size: 12px; text-align: center; padding: 5px; }
+      .blank-line { border-bottom: 1px solid #000; min-height: 28px; width: 100%; display: block; }
+      .blank-sm { border-bottom: 1px solid #000; min-height: 18px; width: 100%; display: block; }
+      .footer { text-align: center; font-size: 9px; color: #888; margin-top: 10px; border-top: 1px solid #ccc; padding-top: 4px; }
+      .page-break { page-break-before: always; }
+    </style></head><body>
+    <div class="header">
+      <h1>${hn}</h1>
+      ${ha ? `<p>${ha}</p>` : ""}
+      ${hc ? `<p>Phone: ${hc}</p>` : ""}
+      <h2>Treatment Chart</h2>
+    </div>
+    <table>
+      <tr><td class="lbl">Admission #</td><td style="width:23%">${admNum}</td>
+          <td class="lbl" style="width:80px">Date</td><td style="width:23%">${admDate}</td>
+          <td class="lbl" style="width:70px">Status</td><td>${a?.status || ""}</td></tr>
+      <tr><td class="lbl">Ward</td><td>${wName}</td>
+          <td class="lbl">Bed #</td><td>${bNum}</td>
+          <td class="lbl">Source</td><td>${source}</td></tr>
+      <tr><td class="lbl">Consultant</td><td colspan="5">${docName}</td></tr>
+    </table>
+    <table>
+      <tr><td class="section-title" colspan="6">PATIENT INFORMATION</td></tr>
+      <tr><td class="lbl">Patient Name</td><td style="width:23%">${patientName || ""}</td>
+          <td class="lbl" style="width:80px">Phone</td><td colspan="3">${patPhone}</td></tr>
+      <tr><td class="lbl">CNIC</td><td>${patCnic}</td>
+          <td class="lbl">DOB</td><td>${patDob}</td>
+          <td class="lbl">Blood</td><td>${patBlood}</td></tr>
+      <tr><td class="lbl">City</td><td>${patCity}</td>
+          <td class="lbl">Province</td><td>${patProvince}</td>
+          <td class="lbl">Address</td><td>${patAddress}</td></tr>
+    </table>
+    <table>
+      <tr><td class="section-title" colspan="6">MEDICAL INFORMATION</td></tr>
+      <tr><td class="lbl">Chief Complaint</td><td colspan="5">${chiefComplaint}</td></tr>
+      <tr><td class="lbl">Provisional Diagnosis</td><td colspan="5">${provisionalDx}</td></tr>
+      ${finalDx ? `<tr><td class="lbl">Final Diagnosis</td><td colspan="5">${finalDx}</td></tr>` : ""}
+      <tr><td class="lbl">Allergies</td><td colspan="5">${allergies || "None"}</td></tr>
+      ${patNotes ? `<tr><td class="lbl">Notes</td><td colspan="5">${patNotes}</td></tr>` : ""}
+    </table>
+    <table>
+      <tr><th style="font-size:14px;padding:8px" colspan="6">VITALS RECORD</th></tr>
+      <tr>
+        <th style="width:18%;padding:6px 4px;font-size:12px;">Date / Time</th>
+        <th style="width:14%;padding:6px 4px;font-size:12px;">Temp (°C)</th>
+        <th style="width:14%;padding:6px 4px;font-size:12px;">Pulse (/min)</th>
+        <th style="width:26%;padding:6px 4px;font-size:12px;">BP (Sys / Dia)</th>
+        <th style="width:14%;padding:6px 4px;font-size:12px;">RR (/min)</th>
+        <th style="width:14%;padding:6px 4px;font-size:12px;">SpO₂ (%)</th>
+      </tr>
+      ${vitalsRows}${blankVitalsRows}
+    </table>
+    <div class="page-break"></div>
+    <table>
+      <tr><th style="font-size:14px;padding:8px" colspan="5">IV FLUIDS</th></tr>
+      <tr>
+        <th style="width:20%;padding:6px 4px;font-size:12px;">Date / Time</th>
+        <th style="width:25%;padding:6px 4px;font-size:12px;">Fluid Type</th>
+        <th style="width:18%;padding:6px 4px;font-size:12px;">Volume (ml)</th>
+        <th style="width:17%;padding:6px 4px;font-size:12px;">Rate</th>
+        <th style="width:20%;padding:6px 4px;font-size:12px;">Notes</th>
+      </tr>
+      ${ivRows}${blankIvRows}
+    </table>
+    <div class="page-break"></div>
+    <table>
+      <tr><th style="font-size:14px;padding:8px" colspan="4">INTAKE / OUTPUT</th></tr>
+      <tr>
+        <th style="width:25%;padding:6px 4px;font-size:12px;">Date / Time</th>
+        <th style="width:25%;padding:6px 4px;font-size:12px;">Intake (ml)</th>
+        <th style="width:25%;padding:6px 4px;font-size:12px;">Output (ml)</th>
+        <th style="width:25%;padding:6px 4px;font-size:12px;">Notes</th>
+      </tr>
+      ${ioRows}${blankIoRows}
+    </table>
+    <div class="page-break"></div>
+    <div style="font-family:'Courier New',monospace;font-size:11px;padding:6px;">
+      <div style="text-align:center;margin-bottom:10px;">
+        <div style="font-size:14px;font-weight:bold;">${hn}</div>
+        ${ha ? `<div style="font-size:10px;">${ha}</div>` : ""}
+        <div style="font-size:13px;font-weight:bold;margin-top:8px;border-top:2px solid #000;border-bottom:2px solid #000;padding:4px 0;">ANAESTHESIA NOTES</div>
+      </div>
+      <table style="width:100%;margin-bottom:8px;">
+        <tr>
+          <td style="border:none;padding:1px 2px;width:45%;font-size:11px;">Pt's Name: <span style="border-bottom:1px solid #000;display:inline-block;width:200px;min-height:18px;">${patientName || ""}</span></td>
+          <td style="border:none;padding:1px 2px;width:18%;font-size:11px;">Age: <span style="border-bottom:1px solid #000;display:inline-block;width:50px;min-height:18px;">${patientData?.date_of_birth ? Math.floor((Date.now() - new Date(patientData.date_of_birth).getTime()) / 31557600000) : "—"}</span></td>
+          <td style="border:none;padding:1px 2px;width:17%;font-size:11px;">Gender: <span style="border-bottom:1px solid #000;display:inline-block;width:50px;min-height:18px;">${patientData?.gender || "—"}</span></td>
+          <td style="border:none;padding:1px 2px;width:20%;font-size:11px;">Date: <span style="border-bottom:1px solid #000;display:inline-block;width:70px;min-height:18px;">${format(new Date(), "dd/MM/yyyy")}</span></td>
+        </tr>
+      </table>
+      ${anesthesiaHtml || `<div style="text-align:center;color:#999;padding:20px;">No anaesthesia notes recorded</div>`}
+      <div style="margin-top:16px;border-top:1px solid #000;padding-top:4px;font-size:11px;">
+        Doctor / Anaesthetist Signature: <span style="border-bottom:1px solid #000;display:inline-block;width:220px;min-height:20px;"></span>
+      </div>
+      <div style="font-size:11px;margin-top:4px;">
+        Date &amp; Time: <span style="border-bottom:1px solid #000;display:inline-block;width:180px;min-height:20px;"></span>
+      </div>
+    </div>
+    <div class="page-break"></div>
+    <div style="padding:6px;">
+      <div style="text-align:center;margin-bottom:8px;">
+        <div style="font-size:13px;font-weight:bold;border-top:2px solid #000;border-bottom:2px solid #000;padding:4px 0;">DOCTOR NOTES</div>
+      </div>
+      ${doctorNotesHtml}
+    </div>
+    <div class="page-break"></div>
+    <div style="padding:6px;">
+      <div style="text-align:center;margin-bottom:8px;">
+        <div style="font-size:13px;font-weight:bold;border-top:2px solid #000;border-bottom:2px solid #000;padding:4px 0;">NURSING NOTES</div>
+      </div>
+      ${nursingNotesHtml}
+    </div>
+    <div class="footer">Generated on ${now} — ${hn} — ${patientName || ""} (${admNum})</div>
+    <script>window.print();</script>
+    </body></html>`;
+
+    const w = window.open("", "_blank");
+    if (!w) { toast.error("Pop-up blocked. Please allow pop-ups for this site."); return; }
+    w.document.write(html);
+    w.document.close();
   };
 
   return (
@@ -321,8 +507,8 @@ export function TreatmentChartDialog({ open, onOpenChange, admissionId, patientN
               Treatment Chart
               {patientName && <span className="ml-2 text-sm text-muted-foreground">— {patientName} ({admissionNumber})</span>}
             </DialogTitle>
-            <Button size="sm" variant="outline" onClick={downloadFullPdf} className="gap-1.5">
-              <Download className="w-4 h-4" /> Download PDF
+            <Button size="sm" variant="outline" onClick={printClinicalSheet} className="gap-1.5">
+              <Printer className="w-4 h-4" /> Print Clinical Sheet
             </Button>
           </div>
         </DialogHeader>
@@ -341,18 +527,6 @@ export function TreatmentChartDialog({ open, onOpenChange, admissionId, patientN
 
           {/* Vitals */}
           <TabsContent value="vitals" className="space-y-4 mt-4">
-            <div className="flex justify-end">
-              {filtered.length > 0 && (
-                <Button size="sm" variant="outline" onClick={() => downloadPdf(`Vitals_${patientName || admissionId}`, filtered, [
-                  { h: "Time", f: (r) => format(new Date(r.recorded_at), "MMM d HH:mm") },
-                  { h: "Temp", f: (r) => r.temperature ?? "—" },
-                  { h: "Pulse", f: (r) => r.pulse ?? "—" },
-                  { h: "BP", f: (r) => r.bp_systolic && r.bp_diastolic ? `${r.bp_systolic}/${r.bp_diastolic}` : "—" },
-                  { h: "RR", f: (r) => r.respiratory_rate ?? "—" },
-                  { h: "SpO₂", f: (r) => r.oxygen_saturation ?? "—" },
-                ])} className="gap-1"><Download className="w-3 h-3" />PDF</Button>
-              )}
-            </div>
             {canWrite && (
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3 p-4 border rounded-md">
                 <div><Label>Time</Label><Input type="time" value={form.time ?? ""} onChange={e => setForm({ ...form, time: e.target.value })} /></div>
@@ -412,17 +586,6 @@ export function TreatmentChartDialog({ open, onOpenChange, admissionId, patientN
 
           {/* IV Fluid */}
           <TabsContent value="iv_fluid" className="space-y-4 mt-4">
-            <div className="flex justify-end">
-              {filtered.length > 0 && (
-                <Button size="sm" variant="outline" onClick={() => downloadPdf(`IV_Fluids_${patientName || admissionId}`, filtered, [
-                  { h: "Time", f: (r) => format(new Date(r.recorded_at), "MMM d HH:mm") },
-                  { h: "Fluid", f: (r) => r.fluid_type ?? "—" },
-                  { h: "Volume", f: (r) => r.fluid_volume_ml ? `${r.fluid_volume_ml} ml` : "—" },
-                  { h: "Rate", f: (r) => r.fluid_rate ?? "—" },
-                  { h: "Notes", f: (r) => r.notes ?? "—" },
-                ])} className="gap-1"><Download className="w-3 h-3" />PDF</Button>
-              )}
-            </div>
             {canWrite && (
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3 p-4 border rounded-md">
                 <div><Label>Time</Label><Input type="time" value={form.time ?? ""} onChange={e => setForm({ ...form, time: e.target.value })} /></div>
@@ -444,16 +607,6 @@ export function TreatmentChartDialog({ open, onOpenChange, admissionId, patientN
 
           {/* I/O */}
           <TabsContent value="intake_output" className="space-y-4 mt-4">
-            <div className="flex justify-end">
-              {filtered.length > 0 && (
-                <Button size="sm" variant="outline" onClick={() => downloadPdf(`Intake_Output_${patientName || admissionId}`, filtered, [
-                  { h: "Time", f: (r) => format(new Date(r.recorded_at), "MMM d HH:mm") },
-                  { h: "Intake", f: (r) => r.intake_ml ? `${r.intake_ml} ml` : "—" },
-                  { h: "Output", f: (r) => r.output_ml ? `${r.output_ml} ml` : "—" },
-                  { h: "Notes", f: (r) => r.notes ?? "—" },
-                ])} className="gap-1"><Download className="w-3 h-3" />PDF</Button>
-              )}
-            </div>
             {canWrite && (
               <div className="grid grid-cols-2 md:grid-cols-3 gap-3 p-4 border rounded-md">
                 <div><Label>Intake (ml)</Label><Input type="number" value={form.intake_ml ?? ""} onChange={e => setForm({ ...form, intake_ml: e.target.value })} /></div>
@@ -585,21 +738,23 @@ export function TreatmentChartDialog({ open, onOpenChange, admissionId, patientN
 
           {/* Anaesthesia Notes */}
           <TabsContent value={"anesthesia" as any} className="space-y-4 mt-4">
-            {(profile?.role === "admin" || profile?.role === "doctor" || profile?.role === "anesthetist") && (
-              <div className="flex justify-end">
+            {/* Anaesthesia Notes - Add Button */}
+            <div className="flex justify-end">
+              {(profile?.role === "admin" || profile?.role === "doctor" || profile?.role === "anesthetist") ? (
                 <Button size="sm" onClick={() => setShowAnesthesiaDialog(true)} className="gap-1.5">
                   <Plus className="w-4 h-4" />
                   {anesthesiaNotes.length === 0 ? "Add Anaesthesia Notes" : "Edit / Add Notes"}
                 </Button>
-              </div>
-            )}
+              ) : (
+                <p className="text-xs text-muted-foreground">Contact your doctor or anesthetist to add anaesthesia notes.</p>
+              )}
+            </div>
             {loading ? (
               <div className="flex justify-center p-6"><Loader2 className="w-5 h-5 animate-spin" /></div>
             ) : anesthesiaNotes.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">
                 <Syringe className="w-8 h-8 mx-auto mb-2 opacity-40" />
                 <p className="text-sm">No anaesthesia notes found for this admission.</p>
-                <p className="text-xs mt-1">Click "Add Anaesthesia Notes" above (doctors/anesthetists only), or add from the Doctor OT page.</p>
               </div>
             ) : anesthesiaNotes.map((note) => (
               <div key={note.id} className="space-y-3 border rounded-lg p-4">
@@ -669,28 +824,6 @@ function EntriesTable({ rows, loading, columns }: { rows: any[]; loading: boolea
       </Table>
     </div>
   );
-}
-
-function downloadPdf(title: string, rows: any[], columns: { h: string; f: (r: any) => string }[]) {
-  const pdf = new jsPDF("l", "mm", "a4");
-  const pw = pdf.internal.pageSize.getWidth();
-  let y = 15;
-  pdf.setFontSize(14); pdf.setFont("helvetica", "bold");
-  pdf.text(title, pw / 2, y, { align: "center" }); y += 10;
-  pdf.setFontSize(9); pdf.setFont("helvetica", "normal");
-  const colW = (pw - 30) / columns.length;
-  // Header
-  pdf.setFillColor(50, 50, 50); pdf.setTextColor(255);
-  columns.forEach((c, i) => { pdf.text(c.h, 15 + i * colW + colW / 2, y + 3, { align: "center" }); });
-  pdf.rect(15, y - 1, pw - 30, 7, "F");
-  y += 8; pdf.setTextColor(0);
-  // Rows
-  rows.forEach((r) => {
-    if (y > 185) { pdf.addPage(); y = 15; }
-    columns.forEach((c, i) => { pdf.text(c.f(r), 15 + i * colW + colW / 2, y + 3, { align: "center" }); });
-    y += 6;
-  });
-  pdf.save(`${title.replace(/\s+/g, "_")}.pdf`);
 }
 
 function MedicinePicker({ value, onSelect }: { value: string; onSelect: (m: { id: string; name: string; selling_price: number }) => void }) {
