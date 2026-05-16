@@ -15,6 +15,7 @@ import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
+import { AnesthesiaNotesDialog } from "@/components/dialogs/AnesthesiaNotesDialog";
 import { Loader2, Plus, Activity, StickyNote, Droplets, Pill, FlaskConical, Download, Syringe } from "lucide-react";
 import { format } from "date-fns";
 import jsPDF from "jspdf";
@@ -39,6 +40,7 @@ export function TreatmentChartDialog({ open, onOpenChange, admissionId, patientN
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState<any>({});
+  const [showAnesthesiaDialog, setShowAnesthesiaDialog] = useState(false);
 
   const canWrite = ["admin", "doctor", "nurse", "ota", "staff", "ipd"].includes(profile?.role as string);
   const isDoctor = profile?.role === "doctor";
@@ -583,13 +585,21 @@ export function TreatmentChartDialog({ open, onOpenChange, admissionId, patientN
 
           {/* Anaesthesia Notes */}
           <TabsContent value={"anesthesia" as any} className="space-y-4 mt-4">
+            {(profile?.role === "admin" || profile?.role === "doctor" || profile?.role === "anesthetist") && (
+              <div className="flex justify-end">
+                <Button size="sm" onClick={() => setShowAnesthesiaDialog(true)} className="gap-1.5">
+                  <Plus className="w-4 h-4" />
+                  {anesthesiaNotes.length === 0 ? "Add Anaesthesia Notes" : "Edit / Add Notes"}
+                </Button>
+              </div>
+            )}
             {loading ? (
               <div className="flex justify-center p-6"><Loader2 className="w-5 h-5 animate-spin" /></div>
             ) : anesthesiaNotes.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">
                 <Syringe className="w-8 h-8 mx-auto mb-2 opacity-40" />
                 <p className="text-sm">No anaesthesia notes found for this admission.</p>
-                <p className="text-xs mt-1">Add anaesthesia notes from the Doctor OT page.</p>
+                <p className="text-xs mt-1">Click "Add Anaesthesia Notes" above (doctors/anesthetists only), or add from the Doctor OT page.</p>
               </div>
             ) : anesthesiaNotes.map((note) => (
               <div key={note.id} className="space-y-3 border rounded-lg p-4">
@@ -631,6 +641,13 @@ export function TreatmentChartDialog({ open, onOpenChange, admissionId, patientN
           </TabsContent>
         </Tabs>
       </DialogContent>
+      <AnesthesiaNotesDialog
+        open={showAnesthesiaDialog}
+        onOpenChange={setShowAnesthesiaDialog}
+        otSchedule={null}
+        admissionId={admissionId}
+        onSave={() => { setShowAnesthesiaDialog(false); load(); }}
+      />
     </Dialog>
   );
 }

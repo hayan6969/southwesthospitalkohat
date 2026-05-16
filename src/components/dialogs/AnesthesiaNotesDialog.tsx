@@ -92,6 +92,7 @@ export function AnesthesiaNotesDialog({ open, onOpenChange, otSchedule, admissio
   const [age, setAge] = useState("");
   const [gender, setGender] = useState("");
   const [consultantDoctor, setConsultantDoctor] = useState("");
+  const [admissionPatientId, setAdmissionPatientId] = useState<string | null>(null);
 
   // Form fields
   const [surgicalProcedure, setSurgicalProcedure] = useState("");
@@ -135,14 +136,14 @@ export function AnesthesiaNotesDialog({ open, onOpenChange, otSchedule, admissio
   };
 
   const fetchExistingNotes = useCallback(async () => {
-    if (!otSchedule) return;
+    if (!otSchedule && !admissionId) return;
     setLoading(true);
     try {
-      const { data, error } = await supabase
-        .from("anesthesia_notes")
-        .select("*")
-        .eq("ot_booking_id", otSchedule.id)
-        .maybeSingle();
+      let query = supabase.from("anesthesia_notes").select("*");
+      if (otSchedule) query = query.eq("ot_booking_id", otSchedule.id);
+      else if (admissionId) query = query.eq("admission_id", admissionId).order("created_at", { ascending: false }).limit(1);
+      const { data: rows, error } = await query;
+      const data = Array.isArray(rows) ? rows[0] : rows;
 
       if (error && error.code !== "PGRST116") throw error;
 
@@ -165,32 +166,67 @@ export function AnesthesiaNotesDialog({ open, onOpenChange, otSchedule, admissio
         if (orders?.notes) setPostopNotes(orders.notes);
       }
 
-      // Auto-fill patient info
-      const fullName = `${otSchedule.patient.profile.first_name} ${otSchedule.patient.profile.last_name}`;
-      setPatientName(fullName);
-      setMrNumber(otSchedule.patient.patient_number);
-      setConsultantDoctor(otSchedule.doctor_name);
-      setSurgicalProcedure(prev => prev || otSchedule.operation.operation_name);
-      setGender(prev => prev || otSchedule.patient.gender || "");
+      // Auto-fill patient info from otSchedule when available
+      if (otSchedule) {
+        const fullName = `${otSchedule.patient.profile.first_name} ${otSchedule.patient.profile.last_name}`;
+        setPatientName(fullName);
+        setMrNumber(otSchedule.patient.patient_number);
+        setConsultantDoctor(otSchedule.doctor_name);
+        setSurgicalProcedure(prev => prev || otSchedule.operation.operation_name);
+        setGender(prev => prev || otSchedule.patient.gender || "");
 
-      if (otSchedule.patient.date_of_birth) {
-        const dob = new Date(otSchedule.patient.date_of_birth);
-        const today = new Date();
-        let calcAge = today.getFullYear() - dob.getFullYear();
-        const m = today.getMonth() - dob.getMonth();
-        if (m < 0 || (m === 0 && today.getDate() < dob.getDate())) calcAge--;
-        setAge(prev => prev || calcAge.toString());
+        if (otSchedule.patient.date_of_birth) {
+          const dob = new Date(otSchedule.patient.date_of_birth);
+          const today = new Date();
+          let calcAge = today.getFullYear() - dob.getFullYear();
+          const m = today.getMonth() - dob.getMonth();
+          if (m < 0 || (m === 0 && today.getDate() < dob.getDate())) calcAge--;
+          setAge(prev => prev || calcAge.toString());
+        }
       }
 
-      // Fetch admission number if admissionId
+      // Fetch admission info if admissionId (and auto-fill patient when no otSchedule)
       if (admissionId) {
         const { data: adm } = await supabase
           .from("ipd_admissions")
-          .select("admission_number")
+          .select("admission_number, patient_id, doctor_id")
           .eq("id", admissionId)
           .maybeSingle();
-        if (adm) setAdmissionNo(adm.admission_number);
+        if (adm) {
+          setAdmissionNo(adm.admission_number);
+          if (adm.patient_id) setAdmissionPatientId(adm.patient_id);
+          if (!otSchedule && adm.patient_id) {
+            const { data: pt } = await supabase
+              .from("patients")
+              .select("patient_number, date_of_birth, gender, profile:profiles!patients_id_fkey(first_name, last_name)")
+              .eq("id", adm.patient_id)
+              .maybeSingle();
+            if (pt) {
+              const prof: any = (pt as any).profile;
+              if (prof) setPatientName(`${prof.first_name ?? ""} ${prof.last_name ?? ""}`.trim());
+              setMrNumber((pt as any).patient_number || "");
+              setGender(prev => prev || (pt as any).gender || "");
+              if ((pt as any).date_of_birth) {
+                const dob = new Date((pt as any).date_of_birth);
+                const today = new Date();
+                let calcAge = today.getFullYear() - dob.getFullYear();
+                const m = today.getMonth() - dob.getMonth();
+                if (m < 0 || (m === 0 && today.getDate() < dob.getDate())) calcAge--;
+                setAge(prev => prev || calcAge.toString());
+              }
+            }
+          }
+          if (!otSchedule && adm.doctor_id) {
+            const { data: doc } = await supabase
+              .from("profiles")
+              .select("first_name, last_name")
+              .eq("id", adm.doctor_id)
+              .maybeSingle();
+            if (doc) setConsultantDoctor(`Dr. ${doc.first_name ?? ""} ${doc.last_name ?? ""}`.trim());
+          }
+        }
       }
+
     } catch (e: any) {
       console.error("Failed to load anesthesia notes:", e);
       if (e?.code === "PGRST301" || e?.message?.includes("does not exist")) {
@@ -202,7 +238,7 @@ export function AnesthesiaNotesDialog({ open, onOpenChange, otSchedule, admissio
   }, [otSchedule, admissionId]);
 
   useEffect(() => {
-    if (open && otSchedule) fetchExistingNotes();
+    if (open && (otSchedule || admissionId)) fetchExistingNotes();
     else if (!open) {
       setNotesId(null);
       setStatus("draft");
@@ -220,12 +256,12 @@ export function AnesthesiaNotesDialog({ open, onOpenChange, otSchedule, admissio
       setPostopOrders([]);
       setPostopNotes("");
     }
-  }, [open, otSchedule, fetchExistingNotes]);
+  }, [open, otSchedule, admissionId, fetchExistingNotes]);
 
   const collectData = () => ({
-    patient_id: otSchedule?.patient_id,
+    patient_id: otSchedule?.patient_id || admissionPatientId,
     admission_id: admissionId || null,
-    ot_booking_id: otSchedule?.id,
+    ot_booking_id: otSchedule?.id || null,
     surgical_procedure: surgicalProcedure,
     brief_history: briefHistory,
     preop_hr: preopHr ? Number(preopHr) : null,
@@ -242,7 +278,7 @@ export function AnesthesiaNotesDialog({ open, onOpenChange, otSchedule, admissio
   });
 
   const handleSave = async (finalize: boolean = false) => {
-    if (!otSchedule || !isDoctorOrAnesthetist) return;
+    if ((!otSchedule && !admissionId) || !isDoctorOrAnesthetist) return;
     setSaving(true);
     try {
       const payload: any = { ...collectData(), status: finalize ? "finalized" : "draft" };
@@ -272,7 +308,7 @@ export function AnesthesiaNotesDialog({ open, onOpenChange, otSchedule, admissio
   };
 
   const handlePrint = () => {
-    if (!otSchedule) return;
+    if (!otSchedule && !admissionId) return;
     generateAnesthesiaNotesPDF({
       patientName,
       mrNumber,
