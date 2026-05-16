@@ -194,6 +194,7 @@ export function AnesthesiaNotesDialog({ open, onOpenChange, otSchedule, admissio
           .maybeSingle();
         if (adm) {
           setAdmissionNo(adm.admission_number);
+          if (adm.patient_id) setAdmissionPatientId(adm.patient_id);
           if (!otSchedule && adm.patient_id) {
             const { data: pt } = await supabase
               .from("patients")
