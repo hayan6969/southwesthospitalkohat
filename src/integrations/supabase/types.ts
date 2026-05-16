@@ -913,69 +913,113 @@ export type Database = {
         Row: {
           admission_date: string
           admission_number: string
+          advice_for_home: string | null
+          anesthesiologist_id: string | null
           bed_id: string | null
           chief_complaint: string | null
+          complication: string | null
+          condition_of_discharge: string | null
           created_at: string
           created_by: string | null
           discharge_date: string | null
           doctor_id: string | null
           final_diagnosis: string | null
           id: string
+          investigation: string | null
           notes: string | null
+          ota_id: string | null
+          pa_exam: string | null
           patient_id: string
+          procedure_performed: string | null
           provisional_diagnosis: string | null
           referring_appointment_id: string | null
           source: string
           status: string
+          treatment_given: string | null
+          ua_exam: string | null
           updated_at: string
           ward_id: string | null
         }
         Insert: {
           admission_date?: string
           admission_number: string
+          advice_for_home?: string | null
+          anesthesiologist_id?: string | null
           bed_id?: string | null
           chief_complaint?: string | null
+          complication?: string | null
+          condition_of_discharge?: string | null
           created_at?: string
           created_by?: string | null
           discharge_date?: string | null
           doctor_id?: string | null
           final_diagnosis?: string | null
           id?: string
+          investigation?: string | null
           notes?: string | null
+          ota_id?: string | null
+          pa_exam?: string | null
           patient_id: string
+          procedure_performed?: string | null
           provisional_diagnosis?: string | null
           referring_appointment_id?: string | null
           source?: string
           status?: string
+          treatment_given?: string | null
+          ua_exam?: string | null
           updated_at?: string
           ward_id?: string | null
         }
         Update: {
           admission_date?: string
           admission_number?: string
+          advice_for_home?: string | null
+          anesthesiologist_id?: string | null
           bed_id?: string | null
           chief_complaint?: string | null
+          complication?: string | null
+          condition_of_discharge?: string | null
           created_at?: string
           created_by?: string | null
           discharge_date?: string | null
           doctor_id?: string | null
           final_diagnosis?: string | null
           id?: string
+          investigation?: string | null
           notes?: string | null
+          ota_id?: string | null
+          pa_exam?: string | null
           patient_id?: string
+          procedure_performed?: string | null
           provisional_diagnosis?: string | null
           referring_appointment_id?: string | null
           source?: string
           status?: string
+          treatment_given?: string | null
+          ua_exam?: string | null
           updated_at?: string
           ward_id?: string | null
         }
         Relationships: [
           {
+            foreignKeyName: "ipd_admissions_anesthesiologist_id_fkey"
+            columns: ["anesthesiologist_id"]
+            isOneToOne: false
+            referencedRelation: "doctors"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "ipd_admissions_bed_id_fkey"
             columns: ["bed_id"]
             isOneToOne: false
             referencedRelation: "beds"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ipd_admissions_ota_id_fkey"
+            columns: ["ota_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
           {
@@ -991,11 +1035,14 @@ export type Database = {
         Row: {
           admission_id: string
           amount: number
+          anesthesiologist_id: string | null
+          assigned_to: string | null
           charge_date: string
           charge_type: string
           created_at: string
           created_by: string | null
           description: string
+          doctor_id: string | null
           id: string
           invoice_id: string | null
           quantity: number
@@ -1006,11 +1053,14 @@ export type Database = {
         Insert: {
           admission_id: string
           amount?: number
+          anesthesiologist_id?: string | null
+          assigned_to?: string | null
           charge_date?: string
           charge_type: string
           created_at?: string
           created_by?: string | null
           description: string
+          doctor_id?: string | null
           id?: string
           invoice_id?: string | null
           quantity?: number
@@ -1021,11 +1071,14 @@ export type Database = {
         Update: {
           admission_id?: string
           amount?: number
+          anesthesiologist_id?: string | null
+          assigned_to?: string | null
           charge_date?: string
           charge_type?: string
           created_at?: string
           created_by?: string | null
           description?: string
+          doctor_id?: string | null
           id?: string
           invoice_id?: string | null
           quantity?: number
@@ -1042,6 +1095,20 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "ipd_charges_anesthesiologist_id_fkey"
+            columns: ["anesthesiologist_id"]
+            isOneToOne: false
+            referencedRelation: "doctors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ipd_charges_doctor_id_fkey"
+            columns: ["doctor_id"]
+            isOneToOne: false
+            referencedRelation: "doctors"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "ipd_charges_invoice_id_fkey"
             columns: ["invoice_id"]
             isOneToOne: false
@@ -1050,9 +1117,77 @@ export type Database = {
           },
         ]
       }
+      ipd_doctor_payments: {
+        Row: {
+          admission_id: string | null
+          amount: number
+          charge_type: string
+          created_at: string
+          doctor_id: string
+          id: string
+          notes: string | null
+          ota_id: string | null
+          paid_at: string | null
+          paid_by: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          admission_id?: string | null
+          amount?: number
+          charge_type?: string
+          created_at?: string
+          doctor_id: string
+          id?: string
+          notes?: string | null
+          ota_id?: string | null
+          paid_at?: string | null
+          paid_by?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          admission_id?: string | null
+          amount?: number
+          charge_type?: string
+          created_at?: string
+          doctor_id?: string
+          id?: string
+          notes?: string | null
+          ota_id?: string | null
+          paid_at?: string | null
+          paid_by?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ipd_doctor_payments_admission_id_fkey"
+            columns: ["admission_id"]
+            isOneToOne: false
+            referencedRelation: "ipd_admissions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ipd_doctor_payments_doctor_id_fkey"
+            columns: ["doctor_id"]
+            isOneToOne: false
+            referencedRelation: "doctors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ipd_doctor_payments_ota_id_fkey"
+            columns: ["ota_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ipd_invoices: {
         Row: {
           admission_id: string
+          anesthesia_charges_total: number | null
           bed_charges_total: number
           created_at: string
           created_by: string | null
@@ -1064,6 +1199,8 @@ export type Database = {
           lab_charges_total: number
           medicine_charges_total: number
           nursing_charges_total: number
+          ot_charges_total: number | null
+          ota_charges_total: number | null
           other_charges_total: number
           paid_amount: number
           patient_id: string
@@ -1073,6 +1210,7 @@ export type Database = {
         }
         Insert: {
           admission_id: string
+          anesthesia_charges_total?: number | null
           bed_charges_total?: number
           created_at?: string
           created_by?: string | null
@@ -1084,6 +1222,8 @@ export type Database = {
           lab_charges_total?: number
           medicine_charges_total?: number
           nursing_charges_total?: number
+          ot_charges_total?: number | null
+          ota_charges_total?: number | null
           other_charges_total?: number
           paid_amount?: number
           patient_id: string
@@ -1093,6 +1233,7 @@ export type Database = {
         }
         Update: {
           admission_id?: string
+          anesthesia_charges_total?: number | null
           bed_charges_total?: number
           created_at?: string
           created_by?: string | null
@@ -1104,6 +1245,8 @@ export type Database = {
           lab_charges_total?: number
           medicine_charges_total?: number
           nursing_charges_total?: number
+          ot_charges_total?: number | null
+          ota_charges_total?: number | null
           other_charges_total?: number
           paid_amount?: number
           patient_id?: string
