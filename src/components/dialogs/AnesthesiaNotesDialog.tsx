@@ -193,6 +193,9 @@ export function AnesthesiaNotesDialog({ open, onOpenChange, otSchedule, admissio
       }
     } catch (e: any) {
       console.error("Failed to load anesthesia notes:", e);
+      if (e?.code === "PGRST301" || e?.message?.includes("does not exist")) {
+        toast({ title: "Database table missing", description: "The anesthesia_notes table needs to be created. Run the migration SQL on Lovable.", variant: "destructive" });
+      }
     } finally {
       setLoading(false);
     }
