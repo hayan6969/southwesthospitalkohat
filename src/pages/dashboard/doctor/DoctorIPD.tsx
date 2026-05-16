@@ -12,6 +12,7 @@ import { format } from "date-fns";
 import { toast } from "sonner";
 import { formatPkrAmount } from "@/utils/currency";
 import { TreatmentChartDialog } from "@/components/ipd/TreatmentChartDialog";
+import { ClinicalRecordSheetDialog } from "@/components/ipd/ClinicalRecordSheetDialog";
 import { DischargeWithSummaryDialog } from "@/components/ipd/DischargeWithSummaryDialog";
 import { usePatientNames, getPatientName } from "@/hooks/useDisplayHelpers";
 
@@ -46,6 +47,7 @@ export default function DoctorIPD() {
   const itemsPerPage = 20;
 
   const [chartFor, setChartFor] = useState<IPDAdmissionWithDetails | null>(null);
+  const [clinicalRecordFor, setClinicalRecordFor] = useState<IPDAdmissionWithDetails | null>(null);
   const [dischargeFor, setDischargeFor] = useState<IPDAdmissionWithDetails | null>(null);
   const [invoiceData, setInvoiceData] = useState<Record<string, any>>({});
 
@@ -152,6 +154,10 @@ export default function DoctorIPD() {
 
   const handleChart = (admission: IPDAdmissionWithDetails) => {
     setChartFor(admission);
+  };
+
+  const handleClinicalRecord = (admission: IPDAdmissionWithDetails) => {
+    setClinicalRecordFor(admission);
   };
 
   return (
@@ -263,11 +269,11 @@ export default function DoctorIPD() {
                               <Button
                                 size="sm"
                                 variant="outline"
-                                onClick={() => handleChart(a)}
+                                onClick={() => handleClinicalRecord(a)}
                                 className="flex items-center gap-1"
                               >
                                 <FileText className="w-3 h-3" />
-                                Treatment Chart
+                                Clinical Record
                               </Button>
                               <Button
                                 size="sm"
@@ -364,15 +370,15 @@ export default function DoctorIPD() {
                                   : "—"}
                               </TableCell>
                               <TableCell>
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={() => handleChart(a)}
-                                  className="flex items-center gap-1"
-                                >
-                                  <FileText className="w-3 h-3" />
-                                  View Chart
-                                </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleClinicalRecord(a)}
+                                className="flex items-center gap-1"
+                              >
+                                <FileText className="w-3 h-3" />
+                                Clinical Record
+                              </Button>
                               </TableCell>
                             </TableRow>
                           ))}
@@ -444,6 +450,14 @@ export default function DoctorIPD() {
         </CardContent>
       </Card>
 
+      {clinicalRecordFor && (
+        <ClinicalRecordSheetDialog
+          open={!!clinicalRecordFor}
+          onOpenChange={(o) => !o && setClinicalRecordFor(null)}
+          admission={clinicalRecordFor}
+          patientName={getPatientName(clinicalRecordFor.patient_id, patientNames || [])}
+        />
+      )}
       {chartFor && (
         <TreatmentChartDialog
           open={!!chartFor}
