@@ -641,6 +641,13 @@ export function TreatmentChartDialog({ open, onOpenChange, admissionId, patientN
           </TabsContent>
         </Tabs>
       </DialogContent>
+      <AnesthesiaNotesDialog
+        open={showAnesthesiaDialog}
+        onOpenChange={setShowAnesthesiaDialog}
+        otSchedule={null}
+        admissionId={admissionId}
+        onSave={() => { setShowAnesthesiaDialog(false); load(); }}
+      />
     </Dialog>
   );
 }
