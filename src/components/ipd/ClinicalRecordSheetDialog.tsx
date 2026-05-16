@@ -9,12 +9,13 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { format } from "date-fns";
-import { Loader2, FileText, ClipboardCheck, Activity, Heart, Stethoscope, TrendingUp, ChevronRight, User, Calendar, Hash, Clock } from "lucide-react";
+import { Loader2, FileText, ClipboardCheck, Activity, Heart, Stethoscope, TrendingUp, ChevronRight, User, Calendar, Hash, Clock, Pen } from "lucide-react";
 import { TreatmentChartDialog } from "@/components/ipd/TreatmentChartDialog";
 import { AnesthesiaNotesDialog } from "@/components/dialogs/AnesthesiaNotesDialog";
 import { OTNotesDialog } from "@/components/dialogs/OTNotesDialog";
 import { PostOperativeProgressDialog } from "@/components/dialogs/PostOperativeProgressDialog";
 import { AssessmentDialog } from "@/components/dialogs/AssessmentDialog";
+import { HandwritingPad } from "@/components/ipd/HandwritingPad";
 
 interface Props {
   open: boolean;
@@ -38,6 +39,23 @@ export function ClinicalRecordSheetDialog({ open, onOpenChange, admission, patie
   const [showOTNotes, setShowOTNotes] = useState(false);
   const [showProgress, setShowProgress] = useState(false);
   const [showAssessment, setShowAssessment] = useState(false);
+
+  // Handwriting state
+  const [handwrittenNote, setHandwrittenNote] = useState("");
+
+  useEffect(() => {
+    if (!open || !admission) return;
+    const stored = localStorage.getItem(`handwritten_${admission.id}`);
+    if (stored) setHandwrittenNote(stored);
+  }, [open, admission]);
+
+  const handleHandwritingChange = (dataUrl: string) => {
+    setHandwrittenNote(dataUrl);
+    if (admission?.id) {
+      if (dataUrl) localStorage.setItem(`handwritten_${admission.id}`, dataUrl);
+      else localStorage.removeItem(`handwritten_${admission.id}`);
+    }
+  };
 
   useEffect(() => {
     if (!open || !admission) return;
@@ -122,13 +140,14 @@ export function ClinicalRecordSheetDialog({ open, onOpenChange, admission, patie
               </Card>
 
               <Tabs defaultValue="assessment" className="w-full">
-                <TabsList className="grid w-full grid-cols-3 lg:grid-cols-6">
+                <TabsList className="grid w-full grid-cols-4 lg:grid-cols-7">
                   <TabsTrigger value="assessment" className="text-xs">Assessment</TabsTrigger>
                   <TabsTrigger value="treatment" className="text-xs">Treatment Chart</TabsTrigger>
                   <TabsTrigger value="vitals" className="text-xs">Vitals</TabsTrigger>
                   <TabsTrigger value="anesthesia" className="text-xs">Anesthesia</TabsTrigger>
                   <TabsTrigger value="otnotes" className="text-xs">OT Notes</TabsTrigger>
                   <TabsTrigger value="recovery" className="text-xs">Recovery</TabsTrigger>
+                  <TabsTrigger value="handwritten" className="text-xs">Handwritten</TabsTrigger>
                 </TabsList>
 
                 <ScrollArea className="h-[55vh] mt-4">
@@ -291,6 +310,23 @@ export function ClinicalRecordSheetDialog({ open, onOpenChange, admission, patie
                       <TrendingUp className="w-8 h-8 mx-auto mb-2 opacity-40" />
                       <p className="text-sm">Post-operative progress notes and recovery status</p>
                     </div>
+                  </TabsContent>
+
+                  {/* Handwritten Notes Tab */}
+                  <TabsContent value="handwritten" className="space-y-4">
+                    <div className="flex items-center gap-2">
+                      <Pen className="w-5 h-5 text-purple-600" />
+                      <h3 className="font-semibold">Handwritten Clinical Notes</h3>
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      Write freehand clinical notes using your mouse, stylus, or touch screen. These notes are saved locally on this device.
+                    </p>
+                    <HandwritingPad
+                      value={handwrittenNote}
+                      onChange={handleHandwritingChange}
+                      height={500}
+                      label="Freehand Notes"
+                    />
                   </TabsContent>
                 </ScrollArea>
               </Tabs>
