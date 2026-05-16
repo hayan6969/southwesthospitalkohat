@@ -38,26 +38,106 @@ export function PrintClinicalSheet({ open, onOpenChange, admission, patientName 
   }, [open, admission]);
 
   const print = () => {
-    const html = document.getElementById("clinical-sheet-print")?.outerHTML || "";
-    const w = window.open("", "_blank");
-    if (!w) return;
-    w.document.write(`<!DOCTYPE html><html><head><title>Clinical Record Sheet</title>
+    const hn = hs?.hospital_name || "Hospital";
+    const admNum = admission?.admission_number || "";
+    const wName = ward?.name || "";
+    const bNum = bed?.bed_number || "";
+    const docName = doctor ? `Dr. ${doctor.first_name} ${doctor.last_name}` : "";
+    const admDate = admission.admission_date ? format(new Date(admission.admission_date), "MMM d, yyyy HH:mm") : "";
+    const today = format(new Date(), "dd/MM/yyyy");
+    const now = format(new Date(), "dd/MM/yyyy HH:mm");
+
+    const vitalsRows = Array.from({ length: 10 }, () =>
+      `<tr>${Array.from({ length: 7 }, () => '<td class="vital-cell"></td>').join("")}</tr>`
+    ).join("");
+    const ivRows = Array.from({ length: 5 }, () =>
+      `<tr>${Array.from({ length: 5 }, () => '<td style="height:22px"></td>').join("")}</tr>`
+    ).join("");
+    const ioRows = Array.from({ length: 5 }, () =>
+      `<tr>${Array.from({ length: 4 }, () => '<td style="height:22px"></td>').join("")}</tr>`
+    ).join("");
+
+    const html = `<!DOCTYPE html><html><head><title>Clinical Record Sheet</title>
     <style>
       @page { size: A4 landscape; margin: 10mm; }
-      body { font-family: Arial, sans-serif; font-size: 11px; color: #000; margin: 0; padding: 0; }
+      body { font-family: Arial, sans-serif; font-size: 11px; margin: 0; padding: 0; }
       .header { text-align: center; margin-bottom: 12px; border-bottom: 2px solid #000; padding-bottom: 8px; }
-      .header h1 { margin: 0; font-size: 18px; }
-      .header h2 { margin: 4px 0 0; font-size: 14px; text-transform: uppercase; }
+      .header h1 { margin: 0; font-size: 18px; color: #000; }
+      .header h2 { margin: 4px 0 0; font-size: 14px; text-transform: uppercase; color: #000; }
       table { width: 100%; border-collapse: collapse; margin-bottom: 8px; }
       td, th { border: 1px solid #000; padding: 4px 6px; font-size: 10px; vertical-align: top; }
       th { background: transparent; color: #000; font-weight: bold; text-align: center; }
-      .info-label { font-weight: bold; width: 80px; }
+      .info-label { font-weight: bold; width: 80px; background: #f5f5f5; }
       .blank-line { border-bottom: 1px solid #000; min-height: 20px; width: 100%; display: block; }
       .vital-cell { min-height: 22px; }
       .footer { text-align: center; font-size: 9px; color: #888; margin-top: 10px; border-top: 1px solid #ccc; padding-top: 5px; }
       .sig-line { border-bottom: 1px solid #000; height: 30px; width: 200px; display: inline-block; margin-top: 5px; }
-    </style></head><body>${html}
-    <script>window.print();</script></body></html>`);
+    </style></head><body>
+    <div class="header">
+      <h1>${hn}</h1>
+      <h2>Clinical Record Sheet</h2>
+      <p style="margin:2px 0;font-size:11px">Admission #: ${admNum} | Patient: ${patientName}</p>
+    </div>
+    <table>
+      <tr><td class="info-label">Ward</td><td style="width:25%"><span class="blank-line">${wName}</span></td>
+          <td class="info-label">Bed</td><td style="width:25%"><span class="blank-line">${bNum}</span></td>
+          <td class="info-label">Doctor</td><td><span class="blank-line">${docName}</span></td></tr>
+      <tr><td class="info-label">Admitted</td><td colspan="5"><span class="blank-line">${admDate}</span></td></tr>
+    </table>
+    <table>
+      <tr><th colspan="7">VITALS RECORD</th></tr>
+      <tr>
+        <th style="width:14%">Date / Time</th>
+        <th style="width:14%">Temp (°C)</th>
+        <th style="width:14%">Pulse (/min)</th>
+        <th style="width:14%">BP Systolic</th>
+        <th style="width:14%">BP Diastolic</th>
+        <th style="width:14%">RR (/min)</th>
+        <th style="width:14%">SpO₂ (%)</th>
+      </tr>
+      ${vitalsRows}
+    </table>
+    <table>
+      <tr><th colspan="5">IV FLUIDS</th></tr>
+      <tr>
+        <th style="width:20%">Date / Time</th>
+        <th style="width:25%">Fluid Type</th>
+        <th style="width:18%">Volume (ml)</th>
+        <th style="width:17%">Rate</th>
+        <th style="width:20%">Notes</th>
+      </tr>
+      ${ivRows}
+    </table>
+    <table>
+      <tr><th colspan="4">INTAKE / OUTPUT</th></tr>
+      <tr>
+        <th style="width:25%">Date / Time</th>
+        <th style="width:25%">Intake (ml)</th>
+        <th style="width:25%">Output (ml)</th>
+        <th style="width:25%">Notes</th>
+      </tr>
+      ${ioRows}
+    </table>
+    <table>
+      <tr><td style="width:50%;padding:8px 10px;border:1px solid #000">
+        <strong>Nurse / Staff Signature:</strong>
+        <div class="sig-line"></div>
+      </td>
+      <td style="width:50%;padding:8px 10px;border:1px solid #000">
+        <strong>Doctor Signature:</strong>
+        <div class="sig-line"></div>
+      </td></tr>
+      <tr><td colspan="2" style="padding:6px 10px;border:1px solid #000;font-size:10px">
+        <strong>Date:</strong> ${today}
+      </td></tr>
+    </table>
+    <div class="footer">Generated on ${now} — ${hn}</div>
+    <script>window.print();</script>
+    </body></html>`;
+
+    const w = window.open("", "_blank");
+    if (!w) return;
+    w.document.write(html);
     w.document.close();
   };
 
@@ -91,80 +171,6 @@ export function PrintClinicalSheet({ open, onOpenChange, admission, patientName 
           <Button size="lg" onClick={print} className="gap-2">
             <Printer className="w-5 h-5" /> Print Clinical Sheet
           </Button>
-        </div>
-
-        <div id="clinical-sheet-print" style={{ display: "none" }}>
-          <div class="header">
-            <h1>{hs?.hospital_name || "Hospital"}</h1>
-            <h2>Clinical Record Sheet</h2>
-            <p style={{ margin: "2px 0", fontSize: 11 }}>Admission #: {admission?.admission_number} | Patient: {patientName}</p>
-          </div>
-
-          <table class="info-table">
-            <tr><td class="info-label">Ward</td><td style={{ width: "25%" }}><span class="blank-line">{ward?.name || ""}</span></td>
-                <td class="info-label">Bed</td><td style={{ width: "25%" }}><span class="blank-line">{bed?.bed_number || ""}</span></td>
-                <td class="info-label">Doctor</td><td><span class="blank-line">{doctor ? `Dr. ${doctor.first_name} ${doctor.last_name}` : ""}</span></td></tr>
-            <tr><td class="info-label">Admitted</td><td colspan="5"><span class="blank-line">{admission.admission_date ? format(new Date(admission.admission_date), "MMM d, yyyy HH:mm") : ""}</span></td></tr>
-          </table>
-
-          <table>
-            <tr><th colspan="7">VITALS RECORD</th></tr>
-            <tr>
-              <th style={{ width: "14%" }}>Date / Time</th>
-              <th style={{ width: "14%" }}>Temp (°C)</th>
-              <th style={{ width: "14%" }}>Pulse (/min)</th>
-              <th style={{ width: "14%" }}>BP Systolic</th>
-              <th style={{ width: "14%" }}>BP Diastolic</th>
-              <th style={{ width: "14%" }}>RR (/min)</th>
-              <th style={{ width: "14%" }}>SpO₂ (%)</th>
-            </tr>
-            {Array.from({ length: 10 }).map((_, i) => (
-              <tr key={i}>{Array.from({ length: 7 }).map((_, j) => (<td key={j} class="vital-cell"></td>))}</tr>
-            ))}
-          </table>
-
-          <table>
-            <tr><th colspan="5">IV FLUIDS</th></tr>
-            <tr>
-              <th style={{ width: "20%" }}>Date / Time</th>
-              <th style={{ width: "25%" }}>Fluid Type</th>
-              <th style={{ width: "18%" }}>Volume (ml)</th>
-              <th style={{ width: "17%" }}>Rate</th>
-              <th style={{ width: "20%" }}>Notes</th>
-            </tr>
-            {Array.from({ length: 5 }).map((_, i) => (
-              <tr key={i}>{Array.from({ length: 5 }).map((_, j) => (<td key={j} style={{ height: 22 }}></td>))}</tr>
-            ))}
-          </table>
-
-          <table>
-            <tr><th colspan="4">INTAKE / OUTPUT</th></tr>
-            <tr>
-              <th style={{ width: "25%" }}>Date / Time</th>
-              <th style={{ width: "25%" }}>Intake (ml)</th>
-              <th style={{ width: "25%" }}>Output (ml)</th>
-              <th style={{ width: "25%" }}>Notes</th>
-            </tr>
-            {Array.from({ length: 5 }).map((_, i) => (
-              <tr key={i}>{Array.from({ length: 4 }).map((_, j) => (<td key={j} style={{ height: 22 }}></td>))}</tr>
-            ))}
-          </table>
-
-          <table>
-            <tr><td style={{ width: "50%", padding: "8px 10px", border: "1px solid #000" }}>
-              <strong>Nurse / Staff Signature:</strong>
-              <div class="sig-line"></div>
-            </td>
-            <td style={{ width: "50%", padding: "8px 10px", border: "1px solid #000" }}>
-              <strong>Doctor Signature:</strong>
-              <div class="sig-line"></div>
-            </td></tr>
-            <tr><td colspan="2" style={{ padding: "6px 10px", border: "1px solid #000", fontSize: 10 }}>
-              <strong>Date:</strong> {format(new Date(), "dd/MM/yyyy")}
-            </td></tr>
-          </table>
-
-          <div class="footer">Generated on {format(new Date(), "dd/MM/yyyy HH:mm")} — {hs?.hospital_name || "Hospital"}</div>
         </div>
       </DialogContent>
     </Dialog>
