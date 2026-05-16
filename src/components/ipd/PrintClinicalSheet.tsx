@@ -47,19 +47,20 @@ export function PrintClinicalSheet({ open, onOpenChange, admission, patientName 
     const today = format(new Date(), "dd/MM/yyyy");
     const now = format(new Date(), "dd/MM/yyyy HH:mm");
 
+    const vitalsCell = '<td style="height:32px;padding:4px 6px;font-size:11px;border:1px solid #000;"></td>';
     const vitalsRows = (count: number) => Array.from({ length: count }, () =>
-      `<tr>${Array.from({ length: 6 }, () => '<td class="vital-cell"></td>').join("")}</tr>`
+      `<tr>${Array.from({ length: 6 }, () => vitalsCell).join("")}</tr>`
     ).join("");
     const ivRows = Array.from({ length: 5 }, () =>
       `<tr>${Array.from({ length: 5 }, () => '<td style="height:50px"></td>').join("")}</tr>`
     ).join("");
-    const ioRows = Array.from({ length: 5 }, () =>
-      `<tr>${Array.from({ length: 4 }, () => '<td style="height:50px"></td>').join("")}</tr>`
-    ).join("");
 
-    const intraOpRows = Array.from({ length: 5 }, () =>
-      `<tr>${Array.from({ length: 4 }, () => '<td class="vital-cell"></td>').join("")}</tr>`
-    ).join("");
+    const intraOpRow = (i: number) => `<tr>
+      <td style="border:1px solid #000;padding:8px 4px;font-size:10px;">&nbsp;</td>
+      <td style="border:1px solid #000;padding:8px 4px;font-size:10px;">&nbsp;</td>
+      <td style="border:1px solid #000;padding:8px 4px;font-size:10px;">&nbsp;</td>
+      <td style="border:1px solid #000;padding:8px 4px;font-size:10px;">&nbsp;</td>
+    </tr>`;
 
     const html = `<!DOCTYPE html><html><head><title>Clinical Record Sheet</title>
     <style>
@@ -93,39 +94,26 @@ export function PrintClinicalSheet({ open, onOpenChange, admission, patientName 
       <tr><td class="info-label">Admitted</td><td colspan="5"><span class="blank-line">${admDate}</span></td></tr>
     </table>
     <table>
-      <tr><th style="font-size:14px;padding:8px" colspan="6">VITALS RECORD (Page 1 of 4)</th></tr>
+      <tr><th style="font-size:14px;padding:8px" colspan="6">VITALS RECORD (Page 1 of 3)</th></tr>
       <tr>
-        <th style="width:18%">Date / Time</th>
-        <th style="width:14%">Temp (°C)</th>
-        <th style="width:14%">Pulse (/min)</th>
-        <th style="width:26%">BP (Sys / Dia)</th>
-        <th style="width:14%">RR (/min)</th>
-        <th style="width:14%">SpO₂ (%)</th>
+        <th style="width:18%;padding:6px 4px;font-size:12px;">Date / Time</th>
+        <th style="width:14%;padding:6px 4px;font-size:12px;">Temp (°C)</th>
+        <th style="width:14%;padding:6px 4px;font-size:12px;">Pulse (/min)</th>
+        <th style="width:26%;padding:6px 4px;font-size:12px;">BP (Sys / Dia)</th>
+        <th style="width:14%;padding:6px 4px;font-size:12px;">RR (/min)</th>
+        <th style="width:14%;padding:6px 4px;font-size:12px;">SpO₂ (%)</th>
       </tr>
-      ${vitalsRows(5)}
+      ${vitalsRows(10)}
     </table>
     <div class="page-break"></div>
     <table>
-      <tr><th style="font-size:14px;padding:8px" colspan="6">VITALS RECORD (Page 2 of 4)</th></tr>
+      <tr><th style="font-size:14px;padding:8px" colspan="5">IV FLUIDS (Page 2 of 3)</th></tr>
       <tr>
-        <th style="width:18%">Date / Time</th>
-        <th style="width:14%">Temp (°C)</th>
-        <th style="width:14%">Pulse (/min)</th>
-        <th style="width:26%">BP (Sys / Dia)</th>
-        <th style="width:14%">RR (/min)</th>
-        <th style="width:14%">SpO₂ (%)</th>
-      </tr>
-      ${vitalsRows(5)}
-    </table>
-    <div class="page-break"></div>
-    <table>
-      <tr><th style="font-size:14px;padding:8px" colspan="5">IV FLUIDS (Page 3 of 4)</th></tr>
-      <tr>
-        <th style="width:20%">Date / Time</th>
-        <th style="width:25%">Fluid Type</th>
-        <th style="width:18%">Volume (ml)</th>
-        <th style="width:17%">Rate</th>
-        <th style="width:20%">Notes</th>
+        <th style="width:20%;padding:6px 4px;font-size:12px;">Date / Time</th>
+        <th style="width:25%;padding:6px 4px;font-size:12px;">Fluid Type</th>
+        <th style="width:18%;padding:6px 4px;font-size:12px;">Volume (ml)</th>
+        <th style="width:17%;padding:6px 4px;font-size:12px;">Rate</th>
+        <th style="width:20%;padding:6px 4px;font-size:12px;">Notes</th>
       </tr>
       ${ivRows}
     </table>
@@ -258,7 +246,7 @@ export function PrintClinicalSheet({ open, onOpenChange, admission, patientName 
             Prints a clinical record sheet with:
           </p>
           <ul className="text-xs text-left text-muted-foreground space-y-1 max-w-xs mx-auto">
-            <li>• 10 blank Vitals rows (Time, Temp, Pulse, BP Sys/Dia, RR, SpO₂)</li>
+            <li>• 10 blank Vitals rows on 1 page</li>
             <li>• 5 blank IV Fluid rows</li>
             <li>• Anaesthesia Notes form (10 sections)</li>
             <li>• Doctor/Anaesthetist signature</li>
