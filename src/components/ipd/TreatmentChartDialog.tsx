@@ -46,11 +46,35 @@ export function TreatmentChartDialog({ open, onOpenChange, admissionId, patientN
   const load = async () => {
     if (!admissionId) return;
     setLoading(true);
+    
+    const { data: adm } = await supabase
+      .from("ipd_admissions")
+      .select("patient_id")
+      .eq("id", admissionId)
+      .maybeSingle();
+    
+    let otIds: string[] = [];
+    if (adm?.patient_id) {
+      const { data: ots } = await supabase
+        .from("ot_schedules")
+        .select("id")
+        .eq("patient_id", adm.patient_id);
+      otIds = (ots ?? []).map(o => o.id);
+    }
+    
+    let anesthesiaQuery = supabase.from("anesthesia_notes").select("*");
+    if (otIds.length > 0) {
+      anesthesiaQuery = anesthesiaQuery.or(`admission_id.eq.${admissionId},ot_booking_id.in.(${otIds.join(",")})`);
+    } else {
+      anesthesiaQuery = anesthesiaQuery.eq("admission_id", admissionId);
+    }
+    anesthesiaQuery = anesthesiaQuery.order("created_at", { ascending: false });
+    
     const [{ data: c }, { data: m }, { data: l }, { data: a }] = await Promise.all([
       supabase.from("ipd_treatment_chart").select("*").eq("admission_id", admissionId).order("recorded_at", { ascending: false }),
       supabase.from("ipd_medicine_orders").select("*").eq("admission_id", admissionId).order("created_at", { ascending: false }),
       supabase.from("ipd_lab_orders").select("*").eq("admission_id", admissionId).order("created_at", { ascending: false }),
-      supabase.from("anesthesia_notes").select("*").eq("admission_id", admissionId).order("created_at", { ascending: false }),
+      anesthesiaQuery,
     ]);
     setEntries(c ?? []);
     setMeds(m ?? []);
