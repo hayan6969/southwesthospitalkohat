@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Calendar, User, Building2, Banknote, Clock, FileText, Edit, UserCheck, ClipboardList, TrendingUp, ClipboardCheck, Search, ChevronLeft, ChevronRight } from "lucide-react";
+import { Calendar, User, Building2, Banknote, Clock, FileText, Edit, UserCheck, ClipboardList, TrendingUp, ClipboardCheck, Search, ChevronLeft, ChevronRight, Activity } from "lucide-react";
 import { format } from "date-fns";
 import { formatPkrAmount } from "@/utils/currency";
 import { toast } from "sonner";
@@ -17,6 +17,7 @@ import { PreOperationOrdersDialog } from "@/components/dialogs/PreOperationOrder
 import { TreatmentChartDialog } from "@/components/dialogs/TreatmentChartDialog";
 import { PostOperativeProgressDialog } from "@/components/dialogs/PostOperativeProgressDialog";
 import { AssessmentDialog } from "@/components/dialogs/AssessmentDialog";
+import { AnesthesiaNotesDialog } from "@/components/dialogs/AnesthesiaNotesDialog";
 import { useToast } from "@/hooks/use-toast";
 import { generateDischargeSlipPDF } from "@/utils/dischargeSlipPdfGenerator";
 
@@ -69,6 +70,7 @@ export default function DoctorOT() {
   const [showTreatmentChartDialog, setShowTreatmentChartDialog] = useState(false);
   const [showProgressDialog, setShowProgressDialog] = useState(false);
   const [showAssessmentDialog, setShowAssessmentDialog] = useState(false);
+  const [showAnesthesiaDialog, setShowAnesthesiaDialog] = useState(false);
   const [selectedOT, setSelectedOT] = useState<OTScheduleWithDetails | null>(null);
 
   useEffect(() => {
@@ -222,6 +224,11 @@ export default function DoctorOT() {
   const handleAssessment = (ot: OTScheduleWithDetails) => {
     setSelectedOT(ot);
     setShowAssessmentDialog(true);
+  };
+
+  const handleAnesthesia = (ot: OTScheduleWithDetails) => {
+    setSelectedOT(ot);
+    setShowAnesthesiaDialog(true);
   };
 
   const upcomingOTs = otSchedules.filter(ot => ot.status === 'pending');
@@ -415,18 +422,27 @@ export default function DoctorOT() {
                                  onClick={() => handleAssessment(ot)}
                                  className="flex items-center gap-1"
                                >
-                                 <ClipboardCheck className="w-3 h-3" />
-                                 Assessment
-                               </Button>
-                               <Button 
-                                 size="sm" 
-                                 variant="outline"
-                                 onClick={() => handleOTNotes(ot)}
-                                 className="flex items-center gap-1"
-                               >
-                                 <Edit className="w-3 h-3" />
-                                 OT Notes
-                               </Button>
+                                  <ClipboardCheck className="w-3 h-3" />
+                                  Assessment
+                                </Button>
+                                <Button 
+                                  size="sm" 
+                                  variant="outline"
+                                  onClick={() => handleAnesthesia(ot)}
+                                  className="flex items-center gap-1"
+                                >
+                                  <Activity className="w-3 h-3" />
+                                  Anesthesia
+                                </Button>
+                                <Button 
+                                  size="sm" 
+                                  variant="outline"
+                                  onClick={() => handleOTNotes(ot)}
+                                  className="flex items-center gap-1"
+                                >
+                                  <Edit className="w-3 h-3" />
+                                  OT Notes
+                                </Button>
                                <Button 
                                  size="sm" 
                                  onClick={() => handleDischarge(ot)}
@@ -577,6 +593,15 @@ export default function DoctorOT() {
                                   <Button 
                                     size="sm" 
                                     variant="outline"
+                                    onClick={() => handleAnesthesia(ot)}
+                                    className="flex items-center gap-1"
+                                  >
+                                    <Activity className="w-3 h-3" />
+                                    Anesthesia
+                                  </Button>
+                                  <Button 
+                                    size="sm" 
+                                    variant="outline"
                                     onClick={() => handleOTNotes(ot)}
                                     className="flex items-center gap-1"
                                   >
@@ -710,6 +735,14 @@ export default function DoctorOT() {
         open={showAssessmentDialog}
         onOpenChange={setShowAssessmentDialog}
         otSchedule={selectedOT}
+      />
+
+      {/* Anesthesia Notes Dialog */}
+      <AnesthesiaNotesDialog
+        open={showAnesthesiaDialog}
+        onOpenChange={setShowAnesthesiaDialog}
+        otSchedule={selectedOT}
+        onSave={() => {}}
       />
     </div>
   );
