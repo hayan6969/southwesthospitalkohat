@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Calendar, User, Building2, Clock, FileText, Search, ChevronLeft, ChevronRight, Activity, Banknote } from "lucide-react";
+import { Calendar, User, Building2, Clock, FileText, Search, ChevronLeft, ChevronRight, Activity, Banknote, LogOut } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { formatPkrAmount } from "@/utils/currency";
@@ -45,6 +45,7 @@ export default function DoctorIPD() {
   const itemsPerPage = 20;
 
   const [chartFor, setChartFor] = useState<IPDAdmissionWithDetails | null>(null);
+  const [invoiceData, setInvoiceData] = useState<Record<string, any>>({});
 
   useEffect(() => {
     fetchDoctorIPDAdmissions();
@@ -79,6 +80,18 @@ export default function DoctorIPD() {
       }
 
       setAdmissions(allAdmissions || []);
+
+      // Fetch invoice data for payment status check
+      const admIds = (allAdmissions || []).map(a => a.id);
+      if (admIds.length > 0) {
+        const { data: invData } = await supabase
+          .from("ipd_invoices")
+          .select("admission_id, total_amount, paid_amount, status")
+          .in("admission_id", admIds);
+        const invMap: Record<string, any> = {};
+        (invData ?? []).forEach((inv: any) => { invMap[inv.admission_id] = inv; });
+        setInvoiceData(invMap);
+      }
 
       // Calculate total IPD earnings for this doctor
       const dischargedIds = (allAdmissions || [])
@@ -131,6 +144,26 @@ export default function DoctorIPD() {
 
   const handleChart = (admission: IPDAdmissionWithDetails) => {
     setChartFor(admission);
+  };
+
+  const handleDischarge = async (admission: IPDAdmissionWithDetails) => {
+    const inv = invoiceData[admission.id];
+    if (inv && Number(inv.total_amount) > 0 && Number(inv.paid_amount) < Number(inv.total_amount)) {
+      toast.error("Cannot discharge — bill payment is not complete");
+      return;
+    }
+    if (!confirm(`Discharge ${getPatientName(admission.patient_id, patientNames || [])}?`)) return;
+    try {
+      const { error } = await supabase.from("ipd_admissions").update({
+        status: "discharged",
+        discharge_date: new Date().toISOString(),
+      }).eq("id", admission.id);
+      if (error) throw error;
+      toast.success("Patient discharged");
+      fetchDoctorIPDAdmissions();
+    } catch (e: any) {
+      toast.error(e.message || "Failed to discharge");
+    }
   };
 
   return (
@@ -238,15 +271,26 @@ export default function DoctorIPD() {
                             </div>
                           </TableCell>
                           <TableCell>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => handleChart(a)}
-                              className="flex items-center gap-1"
-                            >
-                              <FileText className="w-3 h-3" />
-                              Treatment Chart
-                            </Button>
+                            <div className="flex gap-2">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleChart(a)}
+                                className="flex items-center gap-1"
+                              >
+                                <FileText className="w-3 h-3" />
+                                Treatment Chart
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => handleDischarge(a)}
+                                className="flex items-center gap-1 text-red-600 hover:text-red-700"
+                              >
+                                <LogOut className="w-3 h-3" />
+                                Discharge
+                              </Button>
+                            </div>
                           </TableCell>
                         </TableRow>
                       ))}
