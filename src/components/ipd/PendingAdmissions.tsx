@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { format } from "date-fns";
 import { AdmitPatientDialog } from "./AdmitPatientDialog";
-import { AdmissionFormDialog } from "./AdmissionFormDialog";
+import { PostAdmissionEntry } from "./PostAdmissionEntry";
 import { Loader2 } from "lucide-react";
 import { usePatientNames, getPatientName } from "@/hooks/useDisplayHelpers";
 
@@ -14,7 +14,7 @@ export function PendingAdmissions() {
   const [rows, setRows] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<any | null>(null);
-  const [printAdmission, setPrintAdmission] = useState<any | null>(null);
+  const [postAdmission, setPostAdmission] = useState<any | null>(null);
   const { data: patientNames } = usePatientNames();
 
   const load = async () => {
@@ -84,17 +84,16 @@ export function PendingAdmissions() {
           admission={selected}
           onAdmitted={(admitted) => {
             load();
-            setPrintAdmission(admitted || selected);
+            setPostAdmission(admitted || selected);
           }}
         />
       )}
-      {printAdmission && (
-        <AdmissionFormDialog
-          open={!!printAdmission}
-          onOpenChange={(o) => !o && setPrintAdmission(null)}
-          admission={printAdmission}
-          patientName={getPatientName(printAdmission.patient_id, patientNames || [])}
-          autoPrint
+      {postAdmission && (
+        <PostAdmissionEntry
+          open={!!postAdmission}
+          onOpenChange={(o) => !o && setPostAdmission(null)}
+          admission={postAdmission}
+          patientName={getPatientName(postAdmission.patient_id, patientNames || [])}
         />
       )}
     </Card>
