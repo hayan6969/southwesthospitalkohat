@@ -1,9 +1,12 @@
 import { useEffect, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Loader2, Printer } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Loader2, Printer, Edit3, Save } from "lucide-react";
 import { format, differenceInYears } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 interface Props {
   open: boolean;
@@ -14,7 +17,18 @@ interface Props {
 
 export function DischargeSummaryDialog({ open, onOpenChange, admission, patientName }: Props) {
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [editing, setEditing] = useState(false);
   const [data, setData] = useState<any>(null);
+  // Editable fields
+  const [investigation, setInvestigation] = useState("");
+  const [paExam, setPaExam] = useState("");
+  const [uaExam, setUaExam] = useState("");
+  const [procedure, setProcedure] = useState("");
+  const [treatment, setTreatment] = useState("");
+  const [complication, setComplication] = useState("");
+  const [conditionOfDischarge, setConditionOfDischarge] = useState("");
+  const [adviceForHome, setAdviceForHome] = useState("");
 
   useEffect(() => {
     if (!open || !admission) return;
@@ -33,6 +47,15 @@ export function DischargeSummaryDialog({ open, onOpenChange, admission, patientN
         supabase.from("ipd_lab_orders").select("*").eq("admission_id", admission.id).order("created_at", { ascending: false }),
       ]);
       setData({ admission: admRes.data, profile: profRes.data, patient: patRes.data, chart: chartRes.data ?? [], medicines: medRes.data ?? [], labs: labRes.data ?? [] });
+      const a = admRes.data;
+      setInvestigation(a?.investigation || "");
+      setPaExam(a?.pa_exam || "");
+      setUaExam(a?.ua_exam || "");
+      setProcedure(a?.procedure_performed || "");
+      setTreatment(a?.treatment_given || "");
+      setComplication(a?.complication || "");
+      setConditionOfDischarge(a?.condition_of_discharge || "");
+      setAdviceForHome(a?.advice_for_home || "");
       setLoading(false);
     })();
   }, [open, admission]);
@@ -40,6 +63,29 @@ export function DischargeSummaryDialog({ open, onOpenChange, admission, patientN
   const calcAge = (dob: string) => {
     if (!dob) return null;
     return differenceInYears(new Date(), new Date(dob));
+  };
+
+  const saveDischargeFields = async () => {
+    setSaving(true);
+    try {
+      const { error } = await supabase.from("ipd_admissions").update({
+        investigation: investigation || null,
+        pa_exam: paExam || null,
+        ua_exam: uaExam || null,
+        procedure_performed: procedure || null,
+        treatment_given: treatment || null,
+        complication: complication || null,
+        condition_of_discharge: conditionOfDischarge || null,
+        advice_for_home: adviceForHome || null,
+      }).eq("id", admission.id);
+      if (error) throw error;
+      toast.success("Discharge summary updated");
+      setEditing(false);
+    } catch (e: any) {
+      toast.error(e.message || "Failed to save");
+    } finally {
+      setSaving(false);
+    }
   };
 
   const print = () => {
@@ -95,6 +141,11 @@ export function DischargeSummaryDialog({ open, onOpenChange, admission, patientN
         <DialogHeader className="flex-row items-center justify-between">
           <DialogTitle>Discharge Summary — {adm?.admission_number}</DialogTitle>
           <div className="flex gap-2">
+            {editing ? (
+              <Button size="sm" onClick={saveDischargeFields} disabled={saving}><Save className="w-4 h-4 mr-1" />{saving ? "Saving..." : "Save"}</Button>
+            ) : (
+              <Button size="sm" variant="outline" onClick={() => setEditing(true)}><Edit3 className="w-4 h-4 mr-1" />Edit</Button>
+            )}
             <Button size="sm" variant="outline" onClick={print}><Printer className="w-4 h-4 mr-1" />Print</Button>
           </div>
         </DialogHeader>
@@ -145,6 +196,14 @@ export function DischargeSummaryDialog({ open, onOpenChange, admission, patientN
             <tr><td className="lbl">Chief Complaint</td><td>{adm?.chief_complaint || "—"}</td></tr>
             <tr><td className="lbl">Provisional Diagnosis</td><td>{adm?.provisional_diagnosis || "—"}</td></tr>
             <tr><td className="lbl">Final Diagnosis</td><td>{adm?.final_diagnosis || "—"}</td></tr>
+            <tr><td className="lbl">Investigation</td><td>{editing ? <Input value={investigation} onChange={e => setInvestigation(e.target.value)} className="h-8 text-xs" /> : investigation || "—"}</td></tr>
+            <tr><td className="lbl">P/A</td><td>{editing ? <Input value={paExam} onChange={e => setPaExam(e.target.value)} className="h-8 text-xs" /> : paExam || "—"}</td></tr>
+            <tr><td className="lbl">U/A</td><td>{editing ? <Input value={uaExam} onChange={e => setUaExam(e.target.value)} className="h-8 text-xs" /> : uaExam || "—"}</td></tr>
+            <tr><td className="lbl">Procedure</td><td>{editing ? <Input value={procedure} onChange={e => setProcedure(e.target.value)} className="h-8 text-xs" /> : procedure || "—"}</td></tr>
+            <tr><td className="lbl">Treatment</td><td>{editing ? <Textarea value={treatment} onChange={e => setTreatment(e.target.value)} className="h-16 text-xs" /> : treatment || "—"}</td></tr>
+            <tr><td className="lbl">Complication</td><td>{editing ? <Input value={complication} onChange={e => setComplication(e.target.value)} className="h-8 text-xs" /> : complication || "—"}</td></tr>
+            <tr><td className="lbl">Condition of Discharge</td><td>{editing ? <Input value={conditionOfDischarge} onChange={e => setConditionOfDischarge(e.target.value)} className="h-8 text-xs" /> : conditionOfDischarge || "—"}</td></tr>
+            <tr><td className="lbl">Advice for Home</td><td>{editing ? <Textarea value={adviceForHome} onChange={e => setAdviceForHome(e.target.value)} className="h-16 text-xs" /> : adviceForHome || "—"}</td></tr>
             {adm?.notes && <tr><td className="lbl">Notes</td><td>{adm.notes}</td></tr>}
           </table>
 
