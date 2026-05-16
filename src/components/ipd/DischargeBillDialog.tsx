@@ -328,7 +328,7 @@ export function DischargeBillDialog({ open, onOpenChange, admission, patientName
               <div className="flex justify-between"><span>Initial Deposit</span><span>{formatPkrAmount(Number(deposit) || 0)}</span></div>
               <div className="flex justify-between"><span>Payment at Discharge</span><span>{formatPkrAmount(Number(paid) || 0)}</span></div>
               <div className="flex justify-between font-medium border-t pt-1"><span>Total Paid</span><span>{formatPkrAmount((Number(deposit) || 0) + (Number(paid) || 0))}</span></div>
-              <div className="flex justify-between font-medium"><span>Balance</span><span>{formatPkrAmount(Math.max(0, totals.total - (Number(deposit) || 0) - (Number(paid) || 0)))}</span></div>
+              <div className="flex justify-between font-medium"><span>Balance</span><span className={totals.total - (Number(deposit) || 0) - (Number(paid) || 0) > 0 ? "text-red-600" : "text-green-600"}>{formatPkrAmount(totals.total - (Number(deposit) || 0) - (Number(paid) || 0))}</span></div>
             </div>
 
             <div className="flex justify-end gap-2 pt-2">
