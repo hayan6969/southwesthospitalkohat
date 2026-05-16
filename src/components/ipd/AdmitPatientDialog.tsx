@@ -270,7 +270,6 @@ export function AdmitPatientDialog({ open, onOpenChange, admission, onAdmitted }
             <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={3} />
           </div>
         </div>
-        </div>
         <DialogFooter className="gap-2">
           <Button variant="destructive" onClick={cancel} disabled={busy}>Cancel Admission</Button>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Close</Button>
