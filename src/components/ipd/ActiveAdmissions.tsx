@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { format } from "date-fns";
-import { Loader2, Pill, Banknote, Search, ChevronLeft, ChevronRight } from "lucide-react";
+import { Loader2, Pill, Banknote, Search, ChevronLeft, ChevronRight, Printer } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 import { usePatientNames, getPatientName } from "@/hooks/useDisplayHelpers";
@@ -17,6 +17,7 @@ import { PharmacyOrderHistoryDialog } from "./PharmacyOrderHistoryDialog";
 import { AdmissionFormDialog } from "./AdmissionFormDialog";
 import { CollectAdvanceDialog } from "./CollectAdvanceDialog";
 import { InitialPaymentDialog } from "./InitialPaymentDialog";
+import { PrintClinicalSheet } from "./PrintClinicalSheet";
 import { formatPkrAmount } from "@/utils/currency";
 
 interface BalanceInfo {
@@ -35,6 +36,7 @@ export function ActiveAdmissions() {
   const [admissionFormFor, setAdmissionFormFor] = useState<any>(null);
   const [advanceFor, setAdvanceFor] = useState<any>(null);
   const [initialPaymentFor, setInitialPaymentFor] = useState<any>(null);
+  const [printSheetFor, setPrintSheetFor] = useState<any>(null);
   const [balances, setBalances] = useState<Record<string, BalanceInfo>>({});
   const [orderCounts, setOrderCounts] = useState<Record<string, { pending: number; dispensed: number }>>({});
   const [invoiceData, setInvoiceData] = useState<Record<string, any>>({});
@@ -276,6 +278,9 @@ export function ActiveAdmissions() {
                       <TableCell className="text-xs">{format(new Date(r.admission_date), "MMM d, HH:mm")}</TableCell>
                       <TableCell>
                         <div className="flex flex-wrap gap-1">
+                          <Button size="sm" variant="outline" onClick={() => setPrintSheetFor(r)} className="gap-1">
+                            <Printer className="w-3 h-3" />Sheet
+                          </Button>
                           {isStaff ? (
                             <>
                               {!upfrontCollected[r.id] && (
@@ -409,6 +414,14 @@ export function ActiveAdmissions() {
           admission={initialPaymentFor}
           patientName={getPatientName(initialPaymentFor.patient_id, patientNames || [])}
           onCollected={load}
+        />
+      )}
+      {printSheetFor && (
+        <PrintClinicalSheet
+          open={!!printSheetFor}
+          onOpenChange={(o) => !o && setPrintSheetFor(null)}
+          admission={printSheetFor}
+          patientName={getPatientName(printSheetFor.patient_id, patientNames || [])}
         />
       )}
     </Card>
