@@ -246,6 +246,18 @@ export function AnesthesiaNotesDialog({ open, onOpenChange, otSchedule, admissio
     setSaving(true);
     try {
       const payload: any = { ...collectData(), status: finalize ? "finalized" : "draft" };
+      
+      // Auto-lookup admission_id if not set (e.g. when saving from DoctorOT)
+      if (!payload.admission_id && otSchedule.patient_id) {
+        const { data: adm } = await supabase
+          .from("ipd_admissions")
+          .select("id")
+          .eq("patient_id", otSchedule.patient_id)
+          .eq("status", "active")
+          .maybeSingle();
+        if (adm) payload.admission_id = adm.id;
+      }
+      
       let error;
 
       if (notesId) {

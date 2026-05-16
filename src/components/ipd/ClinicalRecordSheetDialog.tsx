@@ -62,7 +62,7 @@ export function ClinicalRecordSheetDialog({ open, onOpenChange, admission, patie
     (async () => {
       setLoading(true);
       const [patRes, docRes, anesRes, otRes, assessRes] = await Promise.all([
-        supabase.from("patients").select("*, profiles(first_name, last_name, date_of_birth, phone)").eq("id", admission.patient_id).maybeSingle(),
+        supabase.from("patients").select("*, profiles!patients_id_fkey(first_name, last_name, date_of_birth, phone)").eq("id", admission.patient_id).maybeSingle(),
         admission.doctor_id ? supabase.from("profiles").select("first_name, last_name").eq("id", admission.doctor_id).maybeSingle() : Promise.resolve({ data: null }),
         admission.anesthesiologist_id ? supabase.from("profiles").select("first_name, last_name").eq("id", admission.anesthesiologist_id).maybeSingle() : Promise.resolve({ data: null }),
         supabase.from("ot_schedules").select("*, operation:ot_operations(operation_name)").eq("patient_id", admission.patient_id).order("operation_date", { ascending: false }).limit(1).maybeSingle(),
