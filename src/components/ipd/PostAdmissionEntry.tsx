@@ -249,21 +249,21 @@ export function PostAdmissionEntry({ open, onOpenChange, admission, patientName 
 
         {/* Print-friendly version - hidden on screen */}
         <div id="post-admission-print-content" style={{ display: "none" }}>
-          <div class="header">
+          <div className="header">
             <h1>{hs?.hospital_name || "Hospital"}</h1>
             <h2>Clinical Record Sheet</h2>
             <p style={{ margin: "2px 0", fontSize: 11 }}>Admission #: {admission?.admission_number} | Patient: {patientName}</p>
           </div>
 
-          <table class="info-table">
-            <tr><td class="info-label">Ward</td><td style={{ width: "25%" }}><span class="blank-line">{ward?.name || ""}</span></td>
-                <td class="info-label">Bed</td><td style={{ width: "25%" }}><span class="blank-line">{bed?.bed_number || ""}</span></td>
-                <td class="info-label">Doctor</td><td><span class="blank-line">{doctor ? `Dr. ${doctor.first_name} ${doctor.last_name}` : ""}</span></td></tr>
-            <tr><td class="info-label">Admitted</td><td colspan="5"><span class="blank-line">{admission.admission_date ? format(new Date(admission.admission_date), "MMM d, yyyy HH:mm") : ""}</span></td></tr>
+          <table className="info-table">
+            <tr><td className="info-label">Ward</td><td style={{ width: "25%" }}><span className="blank-line">{ward?.name || ""}</span></td>
+                <td className="info-label">Bed</td><td style={{ width: "25%" }}><span className="blank-line">{bed?.bed_number || ""}</span></td>
+                <td className="info-label">Doctor</td><td><span className="blank-line">{doctor ? `Dr. ${doctor.first_name} ${doctor.last_name}` : ""}</span></td></tr>
+            <tr><td className="info-label">Admitted</td><td colSpan={5}><span className="blank-line">{admission.admission_date ? format(new Date(admission.admission_date), "MMM d, yyyy HH:mm") : ""}</span></td></tr>
           </table>
 
           <table>
-            <tr><th colspan="7">VITALS RECORD</th></tr>
+            <tr><th colSpan={7}>VITALS RECORD</th></tr>
             <tr>
               <th style={{ width: "14%" }}>Date / Time</th>
               <th style={{ width: "14%" }}>Temp (°C)</th>
@@ -276,14 +276,14 @@ export function PostAdmissionEntry({ open, onOpenChange, admission, patientName 
             {Array.from({ length: 10 }).map((_, i) => (
               <tr key={i}>
                 {Array.from({ length: 7 }).map((_, j) => (
-                  <td key={j} class="vital-cell"></td>
+                  <td key={j} className="vital-cell"></td>
                 ))}
               </tr>
             ))}
           </table>
 
           <table>
-            <tr><th colspan="5">IV FLUIDS</th></tr>
+            <tr><th colSpan={5}>IV FLUIDS</th></tr>
             <tr>
               <th style={{ width: "20%" }}>Date / Time</th>
               <th style={{ width: "25%" }}>Fluid Type</th>
@@ -301,7 +301,7 @@ export function PostAdmissionEntry({ open, onOpenChange, admission, patientName 
           </table>
 
           <table>
-            <tr><th colspan="4">INTAKE / OUTPUT</th></tr>
+            <tr><th colSpan={4}>INTAKE / OUTPUT</th></tr>
             <tr>
               <th style={{ width: "25%" }}>Date / Time</th>
               <th style={{ width: "25%" }}>Intake (ml)</th>
@@ -320,18 +320,18 @@ export function PostAdmissionEntry({ open, onOpenChange, admission, patientName 
           <table>
             <tr><td style={{ width: "50%", padding: "8px 10px", border: "1px solid #000" }}>
               <strong>Nurse / Staff Signature:</strong>
-              <div class="sig-line"></div>
+              <div className="sig-line"></div>
             </td>
             <td style={{ width: "50%", padding: "8px 10px", border: "1px solid #000" }}>
               <strong>Doctor Signature:</strong>
-              <div class="sig-line"></div>
+              <div className="sig-line"></div>
             </td></tr>
-            <tr><td colspan="2" style={{ padding: "6px 10px", border: "1px solid #000", fontSize: 10 }}>
+            <tr><td colSpan={2} style={{ padding: "6px 10px", border: "1px solid #000", fontSize: 10 }}>
               <strong>Date:</strong> {format(new Date(), "dd/MM/yyyy")}
             </td></tr>
           </table>
 
-          <div class="footer">Generated on {format(new Date(), "dd/MM/yyyy HH:mm")} — {hs?.hospital_name || "Hospital"}</div>
+          <div className="footer">Generated on {format(new Date(), "dd/MM/yyyy HH:mm")} — {hs?.hospital_name || "Hospital"}</div>
         </div>
       </DialogContent>
     </Dialog>

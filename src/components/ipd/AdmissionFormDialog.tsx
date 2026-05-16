@@ -281,7 +281,7 @@ export function AdmissionFormDialog({ open, onOpenChange, admission, patientName
 
         {loading ? (
           <div className="flex justify-center p-12"><Loader2 className="w-6 h-6 animate-spin" /></div>
-        ) : (
+        ) : (<>
           <div id="admission-form-content" ref={printRef} style={{ fontFamily: "Arial, sans-serif", fontSize: "12px", color: "#000" }}>
             {/* ---- HEADER ---- */}
             <div style={{ textAlign: "center", borderBottom: "2px solid #000", paddingBottom: 10, marginBottom: 14 }}>
@@ -432,7 +432,7 @@ export function AdmissionFormDialog({ open, onOpenChange, admission, patientName
               </div>
             </div>
           )}
-        )}
+        </>)}
       </DialogContent>
     </Dialog>
   );
