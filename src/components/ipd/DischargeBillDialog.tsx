@@ -42,6 +42,7 @@ export function DischargeBillDialog({ open, onOpenChange, admission, patientName
   const [days, setDays] = useState(1);
   const [bedDailyRate, setBedDailyRate] = useState(0);
   const [freeFirstDay, setFreeFirstDay] = useState(true);
+  const [isFinalized, setIsFinalized] = useState(false);
 
   useEffect(() => {
     if (!open || !admission) return;
@@ -57,7 +58,7 @@ export function DischargeBillDialog({ open, onOpenChange, admission, patientName
         supabase.from("ipd_medicine_orders").select("medicine_name,quantity,unit_price,status").eq("admission_id", admission.id).in("status", ["dispensed", "received", "administered"]),
         supabase.from("ipd_lab_orders").select("test_name,charge,status").eq("admission_id", admission.id).eq("status", "completed"),
         admission.doctor_id ? supabase.from("doctors").select("consultation_fee").eq("id", admission.doctor_id).maybeSingle() : Promise.resolve({ data: null } as any),
-        supabase.from("ipd_invoices").select("id, paid_amount").eq("admission_id", admission.id).maybeSingle(),
+        supabase.from("ipd_invoices").select("id, paid_amount, finalized_at").eq("admission_id", admission.id).maybeSingle(),
         supabase.from("ipd_charges").select("charge_type, amount").eq("admission_id", admission.id),
       ]);
 
@@ -104,6 +105,7 @@ export function DischargeBillDialog({ open, onOpenChange, admission, patientName
       setStayCharges(baseStay);
       setItems(list);
       setDeposit(Number(invoiceRes.data?.paid_amount) || 0);
+      setIsFinalized(!!invoiceRes.data?.finalized_at);
       setLoading(false);
     })();
   }, [open, admission]);
@@ -244,6 +246,23 @@ export function DischargeBillDialog({ open, onOpenChange, admission, patientName
 
         {loading ? (
           <div className="flex justify-center p-8"><Loader2 className="w-5 h-5 animate-spin" /></div>
+        ) : isFinalized ? (
+          <div className="space-y-4">
+            <div className="bg-yellow-50 border border-yellow-200 rounded-md p-3 text-sm">
+              <p className="font-medium text-yellow-800">This invoice has already been finalized and cannot be modified.</p>
+            </div>
+            <div className="border-t pt-3 space-y-1 text-sm">
+              {existingDoctorFee > 0 && <div className="flex justify-between"><span>Doctor Fees</span><span>{formatPkrAmount(totals.doc)}</span></div>}
+              {existingAnesthesiaFee > 0 && <div className="flex justify-between"><span>Anesthesia</span><span>{formatPkrAmount(totals.anes)}</span></div>}
+              {existingOtaFee > 0 && <div className="flex justify-between"><span>OTA</span><span>{formatPkrAmount(totals.ota)}</span></div>}
+              {existingOtCharges > 0 && <div className="flex justify-between"><span>OT Charges</span><span>{formatPkrAmount(totals.ot)}</span></div>}
+              <div className="flex justify-between"><span>Stay Charges</span><span>{formatPkrAmount(totals.bed)}</span></div>
+              <div className="flex justify-between"><span>Medicine Charges</span><span>{formatPkrAmount(totals.med)}</span></div>
+              <div className="flex justify-between"><span>Lab Charges</span><span>{formatPkrAmount(totals.lab)}</span></div>
+              <div className="flex justify-between font-medium border-t pt-1"><span>Total</span><span>{formatPkrAmount(totals.total)}</span></div>
+              <div className="flex justify-between"><span>Paid</span><span>{formatPkrAmount(Number(deposit))}</span></div>
+            </div>
+          </div>
         ) : (
           <div className="space-y-4">
             <div className="text-xs text-muted-foreground">

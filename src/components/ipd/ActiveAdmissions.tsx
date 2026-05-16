@@ -38,6 +38,7 @@ export function ActiveAdmissions() {
   const [balances, setBalances] = useState<Record<string, BalanceInfo>>({});
   const [orderCounts, setOrderCounts] = useState<Record<string, { pending: number; dispensed: number }>>({});
   const [invoiceData, setInvoiceData] = useState<Record<string, any>>({});
+  const [upfrontCollected, setUpfrontCollected] = useState<Record<string, boolean>>({});
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 20;
@@ -98,7 +99,7 @@ export function ActiveAdmissions() {
     if (data && data.length > 0) {
       const ids = data.map((r: any) => r.id);
 
-      const [{ data: orders }, { data: invData }] = await Promise.all([
+      const [{ data: orders }, { data: invData }, { data: chgData }] = await Promise.all([
         supabase
           .from("ipd_medicine_orders")
           .select("admission_id, status")
@@ -108,6 +109,11 @@ export function ActiveAdmissions() {
           .from("ipd_invoices")
           .select("admission_id, total_amount, paid_amount, status, finalized_at")
           .in("admission_id", ids),
+        supabase
+          .from("ipd_charges")
+          .select("admission_id, charge_type")
+          .in("admission_id", ids)
+          .in("charge_type", ["doctor", "anesthesia", "ota", "ot"]),
       ]);
 
       const counts: Record<string, { pending: number; dispensed: number }> = {};
@@ -120,6 +126,10 @@ export function ActiveAdmissions() {
       const invMap: Record<string, any> = {};
       (invData ?? []).forEach((inv: any) => { invMap[inv.admission_id] = inv; });
       setInvoiceData(invMap);
+
+      const upfront: Record<string, boolean> = {};
+      (chgData ?? []).forEach((c: any) => { upfront[c.admission_id] = true; });
+      setUpfrontCollected(upfront);
 
       const balanceMap: Record<string, BalanceInfo> = {};
       await Promise.all(
@@ -268,9 +278,11 @@ export function ActiveAdmissions() {
                         <div className="flex flex-wrap gap-1">
                           {isStaff ? (
                             <>
-                              <Button size="sm" variant="outline" onClick={() => setInitialPaymentFor(r)} className="gap-1">
-                                <Banknote className="w-3 h-3" />Initial Payment
-                              </Button>
+                              {!upfrontCollected[r.id] && (
+                                <Button size="sm" variant="outline" onClick={() => setInitialPaymentFor(r)} className="gap-1">
+                                  <Banknote className="w-3 h-3" />Initial Payment
+                                </Button>
+                              )}
                               <Button size="sm" onClick={() => setBillFor(r)} className="gap-1">
                                 <Banknote className="w-3 h-3" />Finalize Bill
                               </Button>
