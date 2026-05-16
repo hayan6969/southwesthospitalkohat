@@ -308,7 +308,7 @@ export function AnesthesiaNotesDialog({ open, onOpenChange, otSchedule, admissio
   };
 
   const handlePrint = () => {
-    if (!otSchedule) return;
+    if (!otSchedule && !admissionId) return;
     generateAnesthesiaNotesPDF({
       patientName,
       mrNumber,
