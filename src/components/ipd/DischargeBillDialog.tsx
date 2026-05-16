@@ -3,7 +3,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -34,10 +33,14 @@ export function DischargeBillDialog({ open, onOpenChange, admission, patientName
   const [discount, setDiscount] = useState(0);
   const [paid, setPaid] = useState(0);
   const [deposit, setDeposit] = useState(0);
-  const [otherDesc, setOtherDesc] = useState("");
-  const [otherAmt, setOtherAmt] = useState(0);
   const [docFee, setDocFee] = useState(0);
+  const [anesthesiaFee, setAnesthesiaFee] = useState(0);
+  const [otaFee, setOtaFee] = useState(0);
+  const [otCharges, setOtCharges] = useState(0);
+  const [stayCharges, setStayCharges] = useState(0);
   const [days, setDays] = useState(1);
+  const [bedDailyRate, setBedDailyRate] = useState(0);
+  const [freeFirstDay, setFreeFirstDay] = useState(true);
 
   useEffect(() => {
     if (!open || !admission) return;
@@ -57,15 +60,8 @@ export function DischargeBillDialog({ open, onOpenChange, admission, patientName
       ]);
 
       const list: LineItem[] = [];
-      if (bedRes.data?.daily_charge) {
-        list.push({
-          category: "Bed",
-          description: `Bed ${bedRes.data.bed_number} × ${d} day(s)`,
-          qty: d,
-          unit: Number(bedRes.data.daily_charge),
-          amount: d * Number(bedRes.data.daily_charge),
-        });
-      }
+      const daily = Number(bedRes.data?.daily_charge || 0);
+      setBedDailyRate(daily);
       (medRes.data ?? []).forEach((m: any) => {
         list.push({
           category: "Medicine",
@@ -85,6 +81,8 @@ export function DischargeBillDialog({ open, onOpenChange, admission, patientName
         });
       });
 
+      const baseStay = Math.max(0, d - (freeFirstDay ? 1 : 0)) * daily;
+      setStayCharges(baseStay);
       setDocFee(Number(docRes.data?.consultation_fee) || 0);
       setItems(list);
       setDeposit(Number(invoiceRes.data?.paid_amount) || 0);
@@ -93,15 +91,28 @@ export function DischargeBillDialog({ open, onOpenChange, admission, patientName
   }, [open, admission]);
 
   const totals = useMemo(() => {
-    const bed = items.filter(i => i.category === "Bed").reduce((s, i) => s + i.amount, 0);
+    const bed = Number(stayCharges) || 0;
     const doc = Number(docFee) || 0;
+    const anes = Number(anesthesiaFee) || 0;
+    const ota = Number(otaFee) || 0;
+    const ot = Number(otCharges) || 0;
     const med = items.filter(i => i.category === "Medicine").reduce((s, i) => s + i.amount, 0);
     const lab = items.filter(i => i.category === "Lab").reduce((s, i) => s + i.amount, 0);
-    const other = Number(otherAmt) || 0;
-    const subtotal = bed + doc + med + lab + other;
+    const subtotal = bed + doc + anes + ota + ot + med + lab;
     const total = Math.max(0, subtotal - (Number(discount) || 0));
-    return { bed, doc, med, lab, other, subtotal, total };
-  }, [items, docFee, otherAmt, discount]);
+    return { bed, doc, anes, ota, ot, med, lab, subtotal, total };
+  }, [items, docFee, anesthesiaFee, otaFee, otCharges, stayCharges, discount]);
+
+  const paidDays = () => {
+    if (freeFirstDay) return Math.max(0, days - 1);
+    return days;
+  };
+
+  // Auto-recalculate stay charges when days or freeFirstDay changes
+  useEffect(() => {
+    const chargeableDays = Math.max(0, days - (freeFirstDay ? 1 : 0));
+    setStayCharges(chargeableDays * bedDailyRate);
+  }, [days, freeFirstDay, bedDailyRate]);
 
   const finalize = async () => {
     if (saving) return;
@@ -126,7 +137,7 @@ export function DischargeBillDialog({ open, onOpenChange, admission, patientName
         medicine_charges_total: totals.med,
         lab_charges_total: totals.lab,
         nursing_charges_total: 0,
-        other_charges_total: totals.other,
+        other_charges_total: totals.anes + totals.ota + totals.ot + 0,
         discount: Number(discount) || 0,
         total_amount: totals.total,
         paid_amount: totalDeposit,
@@ -151,10 +162,15 @@ export function DischargeBillDialog({ open, onOpenChange, admission, patientName
 
       // Persist line items as ipd_charges
       await supabase.from("ipd_charges").delete().eq("admission_id", admission.id).eq("invoice_id", invoiceId);
+      const manualCharges: LineItem[] = [];
+      if (docFee > 0) manualCharges.push({ category: "Doctor", description: "Doctor fees", qty: 1, unit: docFee, amount: docFee });
+      if (anesthesiaFee > 0) manualCharges.push({ category: "Anesthesia", description: "Anesthesia/Anesthetist fees", qty: 1, unit: anesthesiaFee, amount: anesthesiaFee });
+      if (otaFee > 0) manualCharges.push({ category: "OTA", description: "OT Assistant fees", qty: 1, unit: otaFee, amount: otaFee });
+      if (otCharges > 0) manualCharges.push({ category: "OT", description: "Operation Theatre charges", qty: 1, unit: otCharges, amount: otCharges });
+      if (stayCharges > 0) manualCharges.push({ category: "Stay", description: `Stay charges ${freeFirstDay ? `(${paidDays()} chargeable day(s), 1st free)` : `(${days} day(s))`}`, qty: paidDays(), unit: bedDailyRate, amount: stayCharges });
       const chargeRows = [
         ...items,
-        ...(docFee > 0 ? [{ category: "Doctor", description: `Consultation fee`, qty: 1, unit: docFee, amount: docFee }] : []),
-        ...(otherAmt > 0 ? [{ category: "Other", description: otherDesc || "Other", qty: 1, unit: Number(otherAmt), amount: Number(otherAmt) }] : []),
+        ...manualCharges,
       ].map(i => ({
         admission_id: admission.id,
         invoice_id: invoiceId,
@@ -247,39 +263,58 @@ export function DischargeBillDialog({ open, onOpenChange, admission, patientName
               </table>
             </div>
 
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-              <div>
-                <Label>Doctor Fee (manual)</Label>
-                <Input type="number" value={docFee} onChange={(e) => setDocFee(Number(e.target.value))} placeholder="Enter fee" />
-              </div>
-              <div>
-                <Label>Other Charge — Description</Label>
-                <Input value={otherDesc} onChange={(e) => setOtherDesc(e.target.value)} placeholder="e.g. ICU fee" />
-              </div>
-              <div>
-                <Label>Other Charge — Amount</Label>
-                <Input type="number" value={otherAmt} onChange={(e) => setOtherAmt(Number(e.target.value))} />
-              </div>
-              <div>
-                <Label>Discount</Label>
-                <Input type="number" value={discount} onChange={(e) => setDiscount(Number(e.target.value))} />
-              </div>
-              <div>
-                <Label>Initial Deposit (paid earlier)</Label>
-                <Input type="number" value={deposit} onChange={(e) => setDeposit(Number(e.target.value))} placeholder="0" />
-              </div>
-              <div>
-                <Label>Payment at Discharge</Label>
-                <Input type="number" value={paid} onChange={(e) => setPaid(Number(e.target.value))} placeholder="0" />
+            <div className="border-t pt-3">
+              <h4 className="font-semibold text-sm mb-3">Charge Breakdown</h4>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                <div>
+                  <Label>Doctor Fees</Label>
+                  <Input type="number" value={docFee} onChange={(e) => setDocFee(Number(e.target.value) || 0)} placeholder="0" />
+                </div>
+                <div>
+                  <Label>Anesthesia / Anesthetist</Label>
+                  <Input type="number" value={anesthesiaFee} onChange={(e) => setAnesthesiaFee(Number(e.target.value) || 0)} placeholder="0" />
+                </div>
+                <div>
+                  <Label>OTA (OT Assistant)</Label>
+                  <Input type="number" value={otaFee} onChange={(e) => setOtaFee(Number(e.target.value) || 0)} placeholder="0" />
+                </div>
+                <div>
+                  <Label>OT Charges</Label>
+                  <Input type="number" value={otCharges} onChange={(e) => setOtCharges(Number(e.target.value) || 0)} placeholder="0" />
+                </div>
+                <div>
+                  <Label>Stay Charges</Label>
+                  <Input type="number" value={stayCharges} onChange={(e) => setStayCharges(Number(e.target.value) || 0)} placeholder="0" />
+                </div>
+                <div>
+                  <Label>Discount</Label>
+                  <Input type="number" value={discount} onChange={(e) => setDiscount(Number(e.target.value) || 0)} placeholder="0" />
+                </div>
+                <div>
+                  <Label>Initial Deposit (paid earlier)</Label>
+                  <Input type="number" value={deposit} onChange={(e) => setDeposit(Number(e.target.value) || 0)} placeholder="0" />
+                </div>
+                <div>
+                  <Label>Payment at Discharge</Label>
+                  <Input type="number" value={paid} onChange={(e) => setPaid(Number(e.target.value) || 0)} placeholder="0" />
+                </div>
+                <div className="flex items-end pb-2">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" checked={freeFirstDay} onChange={(e) => setFreeFirstDay(e.target.checked)} className="rounded" />
+                    <span className="text-sm">1st day stay free</span>
+                  </label>
+                </div>
               </div>
             </div>
 
             <div className="border-t pt-3 space-y-1 text-sm">
-              <div className="flex justify-between"><span>Bed Charges</span><span>{formatPkrAmount(totals.bed)}</span></div>
-              <div className="flex justify-between"><span>Doctor Charges (manual)</span><span>{formatPkrAmount(totals.doc)}</span></div>
+              <div className="flex justify-between"><span>Stay Charges ({paidDays()} day(s) @ Rs {bedDailyRate.toLocaleString()})</span><span>{formatPkrAmount(totals.bed)}</span></div>
+              <div className="flex justify-between"><span>Doctor Fees</span><span>{formatPkrAmount(totals.doc)}</span></div>
+              <div className="flex justify-between"><span>Anesthesia</span><span>{formatPkrAmount(totals.anes)}</span></div>
+              <div className="flex justify-between"><span>OTA (OT Assistant)</span><span>{formatPkrAmount(totals.ota)}</span></div>
+              <div className="flex justify-between"><span>OT Charges</span><span>{formatPkrAmount(totals.ot)}</span></div>
               <div className="flex justify-between"><span>Medicine Charges</span><span>{formatPkrAmount(totals.med)}</span></div>
               <div className="flex justify-between"><span>Lab Charges</span><span>{formatPkrAmount(totals.lab)}</span></div>
-              <div className="flex justify-between"><span>Other</span><span>{formatPkrAmount(totals.other)}</span></div>
               <div className="flex justify-between font-medium"><span>Subtotal</span><span>{formatPkrAmount(totals.subtotal)}</span></div>
               <div className="flex justify-between text-destructive"><span>Discount</span><span>- {formatPkrAmount(Number(discount) || 0)}</span></div>
               <div className="flex justify-between text-lg font-bold border-t pt-2"><span>Total Due</span><span>{formatPkrAmount(totals.total)}</span></div>
