@@ -14,7 +14,7 @@ export function PendingAdmissions() {
   const [rows, setRows] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<any | null>(null);
-  const [clinicalEntry, setClinicalEntry] = useState<any | null>(null);
+  const [printAdmission, setPrintAdmission] = useState<any | null>(null);
   const { data: patientNames } = usePatientNames();
 
   const load = async () => {
@@ -84,17 +84,17 @@ export function PendingAdmissions() {
           admission={selected}
           onAdmitted={(admitted) => {
             load();
-            setClinicalEntry(admitted || selected);
+            setPrintAdmission(admitted || selected);
           }}
         />
       )}
-      {clinicalEntry && (
+      {printAdmission && (
         <AdmissionFormDialog
-          open={!!clinicalEntry}
-          onOpenChange={(o) => !o && setClinicalEntry(null)}
-          admission={clinicalEntry}
-          patientName={getPatientName(clinicalEntry.patient_id, patientNames || [])}
-          clinicalEntry
+          open={!!printAdmission}
+          onOpenChange={(o) => !o && setPrintAdmission(null)}
+          admission={printAdmission}
+          patientName={getPatientName(printAdmission.patient_id, patientNames || [])}
+          autoPrint
         />
       )}
     </Card>
