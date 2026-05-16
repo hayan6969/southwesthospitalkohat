@@ -67,7 +67,7 @@ export function PrintClinicalSheet({ open, onOpenChange, admission, patientName 
 
     const html = `<!DOCTYPE html><html><head><title>Clinical Record Sheet</title>
     <style>
-      @page { size: A4 landscape; margin: 8mm; }
+      @page { size: A4; margin: 10mm; }
       body { font-family: Arial, sans-serif; font-size: 12px; margin: 0; padding: 0; color: #000; }
       .header { text-align: center; margin-bottom: 14px; border-bottom: 2px solid #000; padding-bottom: 8px; }
       .header h1 { margin: 0; font-size: 20px; font-weight: bold; }
