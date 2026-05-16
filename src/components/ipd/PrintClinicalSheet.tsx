@@ -51,10 +51,10 @@ export function PrintClinicalSheet({ open, onOpenChange, admission, patientName 
       `<tr>${Array.from({ length: 7 }, () => '<td class="vital-cell"></td>').join("")}</tr>`
     ).join("");
     const ivRows = Array.from({ length: 5 }, () =>
-      `<tr>${Array.from({ length: 5 }, () => '<td style="height:22px"></td>').join("")}</tr>`
+      `<tr>${Array.from({ length: 5 }, () => '<td style="height:32px"></td>').join("")}</tr>`
     ).join("");
     const ioRows = Array.from({ length: 5 }, () =>
-      `<tr>${Array.from({ length: 4 }, () => '<td style="height:22px"></td>').join("")}</tr>`
+      `<tr>${Array.from({ length: 4 }, () => '<td style="height:32px"></td>').join("")}</tr>`
     ).join("");
 
     const html = `<!DOCTYPE html><html><head><title>Clinical Record Sheet</title>
@@ -65,11 +65,11 @@ export function PrintClinicalSheet({ open, onOpenChange, admission, patientName 
       .header h1 { margin: 0; font-size: 18px; color: #000; }
       .header h2 { margin: 4px 0 0; font-size: 14px; text-transform: uppercase; color: #000; }
       table { width: 100%; border-collapse: collapse; margin-bottom: 8px; }
-      td, th { border: 1px solid #000; padding: 4px 6px; font-size: 10px; vertical-align: top; }
-      th { background: transparent; color: #000; font-weight: bold; text-align: center; }
+      td, th { border: 1px solid #000; padding: 6px 8px; font-size: 11px; vertical-align: middle; }
+      th { background: transparent; color: #000; font-weight: bold; text-align: center; font-size: 12px; }
       .info-label { font-weight: bold; width: 80px; background: #f5f5f5; }
-      .blank-line { border-bottom: 1px solid #000; min-height: 20px; width: 100%; display: block; }
-      .vital-cell { min-height: 22px; }
+      .blank-line { border-bottom: 1px solid #000; min-height: 26px; width: 100%; display: block; }
+      .vital-cell { min-height: 28px; }
       .footer { text-align: center; font-size: 9px; color: #888; margin-top: 10px; border-top: 1px solid #ccc; padding-top: 5px; }
       .sig-line { border-bottom: 1px solid #000; height: 30px; width: 200px; display: inline-block; margin-top: 5px; }
     </style></head><body>
