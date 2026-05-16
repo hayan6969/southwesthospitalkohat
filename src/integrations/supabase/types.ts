@@ -1119,7 +1119,7 @@ export type Database = {
       }
       ipd_doctor_payments: {
         Row: {
-          admission_id: string
+          admission_id: string | null
           amount: number
           charge_type: string
           created_at: string
@@ -1133,9 +1133,9 @@ export type Database = {
           updated_at: string
         }
         Insert: {
-          admission_id: string
+          admission_id?: string | null
           amount?: number
-          charge_type: string
+          charge_type?: string
           created_at?: string
           doctor_id: string
           id?: string
@@ -1147,7 +1147,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
-          admission_id?: string
+          admission_id?: string | null
           amount?: number
           charge_type?: string
           created_at?: string
