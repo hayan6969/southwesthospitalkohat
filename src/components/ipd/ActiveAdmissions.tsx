@@ -67,7 +67,7 @@ export function ActiveAdmissions() {
         : Promise.resolve({ data: null } as any),
       supabase
         .from("ipd_invoices")
-        .select("paid_amount")
+        .select("paid_amount, finalized_at")
         .eq("admission_id", admission.id)
         .maybeSingle(),
     ]);
@@ -102,7 +102,7 @@ export function ActiveAdmissions() {
           .in("status", ["pending", "dispensed"]),
         supabase
           .from("ipd_invoices")
-          .select("admission_id, total_amount, paid_amount, status")
+          .select("admission_id, total_amount, paid_amount, status, finalized_at")
           .in("admission_id", ids),
       ]);
 
@@ -161,7 +161,11 @@ export function ActiveAdmissions() {
 
   const discharge = async (id: string) => {
     const inv = invoiceData[id];
-    if (inv && Number(inv.total_amount) > 0 && Number(inv.paid_amount) < Number(inv.total_amount)) {
+    if (!inv || !inv.finalized_at) {
+      toast.error("Cannot discharge — bill has not been finalized by staff");
+      return;
+    }
+    if (Number(inv.paid_amount) < Number(inv.total_amount)) {
       toast.error("Cannot discharge — bill payment is not complete");
       return;
     }

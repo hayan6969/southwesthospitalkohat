@@ -86,7 +86,7 @@ export default function DoctorIPD() {
       if (admIds.length > 0) {
         const { data: invData } = await supabase
           .from("ipd_invoices")
-          .select("admission_id, total_amount, paid_amount, status")
+          .select("admission_id, total_amount, paid_amount, status, finalized_at")
           .in("admission_id", admIds);
         const invMap: Record<string, any> = {};
         (invData ?? []).forEach((inv: any) => { invMap[inv.admission_id] = inv; });
@@ -148,7 +148,11 @@ export default function DoctorIPD() {
 
   const handleDischarge = async (admission: IPDAdmissionWithDetails) => {
     const inv = invoiceData[admission.id];
-    if (inv && Number(inv.total_amount) > 0 && Number(inv.paid_amount) < Number(inv.total_amount)) {
+    if (!inv || !inv.finalized_at) {
+      toast.error("Cannot discharge — bill has not been finalized by staff");
+      return;
+    }
+    if (Number(inv.paid_amount) < Number(inv.total_amount)) {
       toast.error("Cannot discharge — bill payment is not complete");
       return;
     }
