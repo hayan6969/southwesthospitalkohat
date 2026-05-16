@@ -26,6 +26,7 @@ export function AdmitPatientDialog({ open, onOpenChange, admission, onAdmitted }
   const [wardId, setWardId] = useState<string>(admission?.ward_id ?? "");
   const [bedId, setBedId] = useState<string>(admission?.bed_id ?? "");
   const [doctorId, setDoctorId] = useState<string>(admission?.doctor_id ?? "");
+  const [anesthesiologistId, setAnesthesiologistId] = useState<string>(admission?.anesthesiologist_id ?? "");
   const [chiefComplaint, setChiefComplaint] = useState("");
   const [provisionalDiagnosis, setProvisionalDiagnosis] = useState("");
   const [notes, setNotes] = useState("");
@@ -41,6 +42,7 @@ export function AdmitPatientDialog({ open, onOpenChange, admission, onAdmitted }
     setWardId(admission?.ward_id ?? "");
     setBedId(admission?.bed_id ?? "");
     setDoctorId(admission?.doctor_id ?? "");
+    setAnesthesiologistId(admission?.anesthesiologist_id ?? "");
     setChiefComplaint("");
     setProvisionalDiagnosis("");
     setNotes("");
@@ -88,7 +90,7 @@ export function AdmitPatientDialog({ open, onOpenChange, admission, onAdmitted }
 
   const admit = async () => {
     if (!wardId || !bedId) { toast.error("Pick a ward and bed"); return; }
-    if (!doctorId) { toast.error("Select an attending doctor"); return; }
+    if (!doctorId) { toast.error("Select a surgeon"); return; }
     if (busy) return;
     setBusy(true);
     try {
@@ -96,6 +98,7 @@ export function AdmitPatientDialog({ open, onOpenChange, admission, onAdmitted }
         ward_id: wardId,
         bed_id: bedId,
         doctor_id: doctorId || null,
+        anesthesiologist_id: anesthesiologistId || null,
         chief_complaint: chiefComplaint || null,
         provisional_diagnosis: provisionalDiagnosis || null,
         notes: notes || null,
@@ -241,9 +244,21 @@ export function AdmitPatientDialog({ open, onOpenChange, admission, onAdmitted }
             </Select>
           </div>
           <div className="sm:col-span-2">
-            <Label>Attending Doctor <span className="text-red-500">*</span></Label>
+            <Label>Surgeon <span className="text-red-500">*</span></Label>
             <Select value={doctorId} onValueChange={setDoctorId}>
-              <SelectTrigger><SelectValue placeholder="Select doctor" /></SelectTrigger>
+              <SelectTrigger><SelectValue placeholder="Select surgeon" /></SelectTrigger>
+              <SelectContent className="z-[10000]">
+                {doctors.map((d: any) => {
+                  const n = `${d.first_name ?? ""} ${d.last_name ?? ""}`.trim() || "Doctor";
+                  return <SelectItem key={d.id} value={d.id}>Dr. {n}{d.specialization ? ` — ${d.specialization}` : ""}</SelectItem>;
+                })}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="sm:col-span-2">
+            <Label>Anesthesiologist</Label>
+            <Select value={anesthesiologistId} onValueChange={setAnesthesiologistId}>
+              <SelectTrigger><SelectValue placeholder="Select anesthesiologist (optional)" /></SelectTrigger>
               <SelectContent className="z-[10000]">
                 {doctors.map((d: any) => {
                   const n = `${d.first_name ?? ""} ${d.last_name ?? ""}`.trim() || "Doctor";
