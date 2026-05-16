@@ -66,7 +66,7 @@ export default function DoctorIPD() {
         const { data, error } = await supabase
           .from("ipd_admissions")
           .select("*, beds(bed_number), wards(name)")
-          .eq("doctor_id", profile.id)
+          .or(`doctor_id.eq.${profile.id},anesthesiologist_id.eq.${profile.id}`)
           .range(start, start + batchSize - 1)
           .order("admission_date", { ascending: false });
 
@@ -96,18 +96,24 @@ export default function DoctorIPD() {
       }
 
       // Calculate total IPD earnings for this doctor
-      const dischargedIds = (allAdmissions || [])
-        .filter(a => a.status === "discharged")
+      const myIds = (allAdmissions || [])
+        .filter(a => a.status === "discharged" && (a.doctor_id === profile.id || a.anesthesiologist_id === profile.id))
         .map(a => a.id);
 
-      if (dischargedIds.length > 0) {
+      if (myIds.length > 0) {
         const { data: charges } = await supabase
           .from("ipd_charges")
-          .select("amount")
-          .in("admission_id", dischargedIds)
-          .eq("charge_type", "doctor");
+          .select("amount, charge_type, admission_id")
+          .in("admission_id", myIds);
 
-        const earned = (charges || []).reduce((sum, c) => sum + Number(c.amount), 0);
+        const earned = (charges || []).reduce((sum, c) => {
+          const adm = (allAdmissions || []).find(a => a.id === c.admission_id);
+          if (!adm) return sum;
+          // Doctor fees go to the surgeon, anesthesia fees go to the anesthesiologist
+          if (c.charge_type === "doctor" && adm.doctor_id === profile.id) return sum + Number(c.amount);
+          if (c.charge_type === "anesthesia" && adm.anesthesiologist_id === profile.id) return sum + Number(c.amount);
+          return sum;
+        }, 0);
         setTotalEarnings(earned);
       }
     } catch (error) {
