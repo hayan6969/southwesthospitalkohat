@@ -6,7 +6,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { BedDouble, Banknote } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
+import { formatPkrAmount } from "@/utils/currency";
 
 interface Props {
   patientId: string;
@@ -17,27 +19,30 @@ interface Props {
 }
 
 export function ReferToIPDDialog({ patientId, doctorId, appointmentId, trigger, onReferred }: Props) {
+  const { profile } = useAuth();
   const [open, setOpen] = useState(false);
   const [chiefComplaint, setChiefComplaint] = useState("");
   const [provisionalDiagnosis, setProvisionalDiagnosis] = useState("");
   const [notes, setNotes] = useState("");
-  const [depositAmount, setDepositAmount] = useState<number>(0);
+  const [doctorFee, setDoctorFee] = useState(0);
+  const [anesthesiaFee, setAnesthesiaFee] = useState(0);
+  const [otaFee, setOtaFee] = useState(0);
+  const [otCharges, setOtCharges] = useState(0);
+  const [paymentAmount, setPaymentAmount] = useState(0);
   const [submitting, setSubmitting] = useState(false);
+
+  const totalUpfront = doctorFee + anesthesiaFee + otaFee + otCharges;
 
   const submit = async () => {
     if (submitting) return;
+    if (totalUpfront > 0 && paymentAmount <= 0) { toast.error("Enter payment amount to collect charges"); return; }
     setSubmitting(true);
     try {
       const { data: numData, error: numErr } = await supabase.rpc("generate_admission_number");
       if (numErr) throw numErr;
       const { data: { user } } = await supabase.auth.getUser();
 
-      // Store deposit in notes with a parseable prefix
-      const notesToSave = depositAmount > 0
-        ? `__DEPOSIT__:${depositAmount}\n${notes}`.trim()
-        : notes || null;
-
-      const { error } = await supabase.from("ipd_admissions").insert({
+      const { data: admissionData, error: admErr } = await supabase.from("ipd_admissions").insert({
         admission_number: numData as string,
         patient_id: patientId,
         doctor_id: doctorId ?? null,
@@ -46,17 +51,53 @@ export function ReferToIPDDialog({ patientId, doctorId, appointmentId, trigger, 
         status: "pending",
         chief_complaint: chiefComplaint || null,
         provisional_diagnosis: provisionalDiagnosis || null,
-        notes: notesToSave,
+        notes: notes || null,
         created_by: user?.id ?? null,
-      });
-      if (error) throw error;
+      }).select("id").single();
+      if (admErr) throw admErr;
+
+      // Create invoice if charges are being collected
+      if (totalUpfront > 0 && paymentAmount > 0) {
+        const { data: invNum } = await supabase.rpc("generate_ipd_invoice_number");
+        const { data: invData, error: invErr } = await supabase.from("ipd_invoices").insert({
+          invoice_number: invNum as string,
+          admission_id: admissionData.id,
+          patient_id: patientId,
+          paid_amount: paymentAmount,
+        }).select("id").single();
+        if (invErr) throw invErr;
+
+        const chargeRows: { charge_type: string; description: string; amount: number }[] = [];
+        if (doctorFee > 0) chargeRows.push({ charge_type: "doctor", description: "Doctor fees", amount: doctorFee });
+        if (anesthesiaFee > 0) chargeRows.push({ charge_type: "anesthesia", description: "Anesthesia/Anesthetist fees", amount: anesthesiaFee });
+        if (otaFee > 0) chargeRows.push({ charge_type: "ota", description: "OT Assistant fees", amount: otaFee });
+        if (otCharges > 0) chargeRows.push({ charge_type: "ot", description: "Operation Theatre charges", amount: otCharges });
+
+        if (chargeRows.length > 0) {
+          const { error: chgErr } = await supabase.from("ipd_charges").insert(
+            chargeRows.map(c => ({
+              admission_id: admissionData.id,
+              invoice_id: invData.id,
+              charge_type: c.charge_type,
+              description: c.description,
+              quantity: 1,
+              unit_price: c.amount,
+              amount: c.amount,
+              created_by: profile?.id,
+            }))
+          );
+          if (chgErr) throw chgErr;
+        }
+      }
+
       toast.success(
-        depositAmount > 0
-          ? `Pending admission created with Rs ${depositAmount.toLocaleString()} deposit intent`
+        paymentAmount > 0
+          ? `Pending admission created with Rs ${paymentAmount.toLocaleString()} payment collected`
           : "Patient referred to IPD — pending admission created"
       );
       setOpen(false);
-      setChiefComplaint(""); setProvisionalDiagnosis(""); setNotes(""); setDepositAmount(0);
+      setChiefComplaint(""); setProvisionalDiagnosis(""); setNotes("");
+      setDoctorFee(0); setAnesthesiaFee(0); setOtaFee(0); setOtCharges(0); setPaymentAmount(0);
       onReferred?.();
     } catch (e: any) {
       toast.error(e.message || "Failed to refer to IPD");
@@ -87,34 +128,41 @@ export function ReferToIPDDialog({ patientId, doctorId, appointmentId, trigger, 
             <Label>Provisional Diagnosis</Label>
             <Input value={provisionalDiagnosis} onChange={(e) => setProvisionalDiagnosis(e.target.value)} placeholder="e.g. Acute appendicitis" />
           </div>
+
           <div className="border-t pt-3">
             <h4 className="font-semibold text-sm mb-2 flex items-center gap-1.5">
-              <Banknote className="w-4 h-4" /> Advance Payment (Optional)
+              <Banknote className="w-4 h-4" /> Upfront Payment
             </h4>
+            <p className="text-xs text-muted-foreground mb-3">Collect operation charges upfront. Remaining charges (stay, pharmacy, lab) will be collected at discharge.</p>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <Label>Initial Deposit (PKR)</Label>
-                <Input
-                  type="number"
-                  min={0}
-                  value={depositAmount || ""}
-                  onChange={(e) => setDepositAmount(Number(e.target.value) || 0)}
-                  placeholder="0"
-                />
-                <p className="text-xs text-muted-foreground mt-1">
-                  This deposit intent will carry forward to admission
-                </p>
+                <Label>Doctor Fees</Label>
+                <Input type="number" min={0} value={doctorFee || ""} onChange={(e) => setDoctorFee(Number(e.target.value) || 0)} placeholder="0" />
               </div>
-              <div className="flex items-end pb-2">
-                <div className="bg-green-50 border border-green-200 rounded-md p-3 w-full">
-                  <p className="text-xs text-green-700 font-medium">Deposit Intent</p>
-                  <p className="text-lg font-bold text-green-700">
-                    Rs {(depositAmount || 0).toLocaleString()}
-                  </p>
-                </div>
+              <div>
+                <Label>Anesthesia / Anesthetist</Label>
+                <Input type="number" min={0} value={anesthesiaFee || ""} onChange={(e) => setAnesthesiaFee(Number(e.target.value) || 0)} placeholder="0" />
+              </div>
+              <div>
+                <Label>OTA (OT Assistant)</Label>
+                <Input type="number" min={0} value={otaFee || ""} onChange={(e) => setOtaFee(Number(e.target.value) || 0)} placeholder="0" />
+              </div>
+              <div>
+                <Label>OT Charges</Label>
+                <Input type="number" min={0} value={otCharges || ""} onChange={(e) => setOtCharges(Number(e.target.value) || 0)} placeholder="0" />
               </div>
             </div>
+            {totalUpfront > 0 && (
+              <div className="bg-muted rounded-md p-2 mt-2 text-sm space-y-1">
+                <div className="flex justify-between font-medium"><span>Total Upfront</span><span>{formatPkrAmount(totalUpfront)}</span></div>
+                <div>
+                  <Label className="text-xs">Payment Amount</Label>
+                  <Input type="number" min={0} value={paymentAmount || ""} onChange={(e) => setPaymentAmount(Number(e.target.value) || 0)} placeholder="0" className="h-8 mt-1" />
+                </div>
+              </div>
+            )}
           </div>
+
           <div>
             <Label>Notes</Label>
             <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} />
@@ -123,7 +171,7 @@ export function ReferToIPDDialog({ patientId, doctorId, appointmentId, trigger, 
         <DialogFooter>
           <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
           <Button onClick={submit} disabled={submitting}>
-            {submitting ? "Referring..." : depositAmount > 0 ? `Create Pending (Rs ${depositAmount.toLocaleString()} deposit)` : "Create Pending Admission"}
+            {submitting ? "Referring..." : paymentAmount > 0 ? `Create & Collect Rs ${paymentAmount.toLocaleString()}` : "Create Pending Admission"}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -114,15 +114,31 @@ export function AdmitPatientDialog({ open, onOpenChange, admission, onAdmitted }
         await supabase.from("patients").update(patientUpdate).eq("id", admission.patient_id);
       }
 
-      // Create open invoice
-      const { data: invNum } = await supabase.rpc("generate_ipd_invoice_number");
-      const { data: invoiceData, error: invErr } = await supabase.from("ipd_invoices").insert({
-        invoice_number: invNum as string,
-        admission_id: admission.id,
-        patient_id: admission.patient_id,
-        paid_amount: advanceAmount > 0 ? advanceAmount : 0,
-      }).select("id").single();
-      if (invErr) throw invErr;
+      // Create or use existing invoice
+      const { data: existingInvoice } = await supabase
+        .from("ipd_invoices")
+        .select("id, paid_amount")
+        .eq("admission_id", admission.id)
+        .maybeSingle();
+
+      let invoiceData: any = existingInvoice;
+      if (!existingInvoice) {
+        const { data: invNum } = await supabase.rpc("generate_ipd_invoice_number");
+        const { data: inv, error: invErr } = await supabase.from("ipd_invoices").insert({
+          invoice_number: invNum as string,
+          admission_id: admission.id,
+          patient_id: admission.patient_id,
+          paid_amount: advanceAmount > 0 ? advanceAmount : 0,
+        }).select("id").single();
+        if (invErr) throw invErr;
+        invoiceData = inv;
+      } else if (advanceAmount > 0) {
+        // Add advance to existing paid_amount
+        const { error: invErr } = await supabase.from("ipd_invoices").update({
+          paid_amount: (Number(existingInvoice.paid_amount) || 0) + advanceAmount,
+        }).eq("id", existingInvoice.id);
+        if (invErr) throw invErr;
+      }
 
       // Record deposit as a charge line item for tracking
       if (advanceAmount > 0) {
