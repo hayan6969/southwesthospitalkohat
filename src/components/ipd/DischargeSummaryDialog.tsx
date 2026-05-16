@@ -79,6 +79,7 @@ export function DischargeSummaryDialog({ open, onOpenChange, admission, patientN
   const chart = data?.chart || [];
   const vitals = chart.filter((e: any) => e.entry_type === "vitals");
   const ivFluids = chart.filter((e: any) => e.entry_type === "iv_fluid");
+  const intakeOutput = chart.filter((e: any) => e.entry_type === "intake_output");
   const doctorNotes = chart.filter((e: any) => e.entry_type === "doctor_note");
   const medicines = data?.medicines || [];
   const labs = data?.labs || [];
@@ -201,6 +202,26 @@ export function DischargeSummaryDialog({ open, onOpenChange, admission, patientN
                   <td style={{ fontSize: 10, padding: 3 }}>{v.fluid_volume_ml ? `${v.fluid_volume_ml} ml` : "—"}</td>
                   <td style={{ fontSize: 10, padding: 3 }}>{v.fluid_rate || "—"}</td>
                   <td style={{ fontSize: 10, padding: 3 }}>{v.notes || "—"}</td>
+                </tr>
+              ))}
+            </table>
+          )}
+
+          {intakeOutput.length > 0 && (
+            <table cellPadding={0} cellSpacing={0}>
+              <tr><th colSpan={4}>INTAKE / OUTPUT RECORD</th></tr>
+              <tr>
+                <th style={{ fontSize: 10, padding: 3 }}>Date/Time</th>
+                <th style={{ fontSize: 10, padding: 3 }}>Intake (ml)</th>
+                <th style={{ fontSize: 10, padding: 3 }}>Output (ml)</th>
+                <th style={{ fontSize: 10, padding: 3 }}>Notes</th>
+              </tr>
+              {intakeOutput.slice(0, 10).map((io: any) => (
+                <tr key={io.id}>
+                  <td style={{ fontSize: 10, padding: 3 }}>{format(new Date(io.recorded_at), "MMM d HH:mm")}</td>
+                  <td style={{ fontSize: 10, padding: 3 }}>{io.intake_ml ?? "—"}</td>
+                  <td style={{ fontSize: 10, padding: 3 }}>{io.output_ml ?? "—"}</td>
+                  <td style={{ fontSize: 10, padding: 3 }}>{io.notes || "—"}</td>
                 </tr>
               ))}
             </table>
