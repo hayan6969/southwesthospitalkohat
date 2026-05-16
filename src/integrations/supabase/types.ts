@@ -914,6 +914,7 @@ export type Database = {
           admission_date: string
           admission_number: string
           advice_for_home: string | null
+          anesthesiologist_id: string | null
           bed_id: string | null
           chief_complaint: string | null
           complication: string | null
@@ -943,6 +944,7 @@ export type Database = {
           admission_date?: string
           admission_number: string
           advice_for_home?: string | null
+          anesthesiologist_id?: string | null
           bed_id?: string | null
           chief_complaint?: string | null
           complication?: string | null
@@ -972,6 +974,7 @@ export type Database = {
           admission_date?: string
           admission_number?: string
           advice_for_home?: string | null
+          anesthesiologist_id?: string | null
           bed_id?: string | null
           chief_complaint?: string | null
           complication?: string | null
@@ -998,6 +1001,13 @@ export type Database = {
           ward_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "ipd_admissions_anesthesiologist_id_fkey"
+            columns: ["anesthesiologist_id"]
+            isOneToOne: false
+            referencedRelation: "doctors"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "ipd_admissions_bed_id_fkey"
             columns: ["bed_id"]
