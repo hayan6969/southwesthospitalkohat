@@ -247,11 +247,11 @@ export function TreatmentChartDialog({ open, onOpenChange, admissionId, patientN
       pdf.setFillColor(230); row(vCols, Array(6).fill(cw));
       vitals.forEach(v => row([
         format(new Date(v.recorded_at), "MMM d HH:mm"),
-        v.temperature ?? "\u2014",
-        v.pulse ?? "\u2014",
+        v.temperature != null ? String(v.temperature) : "\u2014",
+        v.pulse != null ? String(v.pulse) : "\u2014",
         v.bp_systolic && v.bp_diastolic ? `${v.bp_systolic}/${v.bp_diastolic}` : "\u2014",
-        v.respiratory_rate ?? "\u2014",
-        v.oxygen_saturation ?? "\u2014",
+        v.respiratory_rate != null ? String(v.respiratory_rate) : "\u2014",
+        v.oxygen_saturation != null ? String(v.oxygen_saturation) : "\u2014",
       ], Array(6).fill(cw)));
     }
 
