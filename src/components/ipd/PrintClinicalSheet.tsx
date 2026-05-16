@@ -54,6 +54,9 @@ export function PrintClinicalSheet({ open, onOpenChange, admission, patientName 
     const ivRows = Array.from({ length: 5 }, () =>
       `<tr>${Array.from({ length: 5 }, () => '<td style="height:50px"></td>').join("")}</tr>`
     ).join("");
+    const ioRows = Array.from({ length: 5 }, () =>
+      `<tr>${Array.from({ length: 4 }, () => '<td style="height:50px"></td>').join("")}</tr>`
+    ).join("");
 
     const intraOpRow = (i: number) => `<tr>
       <td style="border:1px solid #000;padding:8px 4px;font-size:10px;">&nbsp;</td>
@@ -116,6 +119,16 @@ export function PrintClinicalSheet({ open, onOpenChange, admission, patientName 
         <th style="width:20%;padding:6px 4px;font-size:12px;">Notes</th>
       </tr>
       ${ivRows}
+    </table>
+    <table style="margin-top:6px;">
+      <tr><th style="font-size:14px;padding:8px" colspan="4">INTAKE / OUTPUT</th></tr>
+      <tr>
+        <th style="width:25%;padding:6px 4px;font-size:12px;">Date / Time</th>
+        <th style="width:25%;padding:6px 4px;font-size:12px;">Intake (ml)</th>
+        <th style="width:25%;padding:6px 4px;font-size:12px;">Output (ml)</th>
+        <th style="width:25%;padding:6px 4px;font-size:12px;">Notes</th>
+      </tr>
+      ${ioRows}
     </table>
     <div class="page-break"></div>
     <div style="font-family:'Courier New',monospace;font-size:11px;padding:6px;">
@@ -248,6 +261,7 @@ export function PrintClinicalSheet({ open, onOpenChange, admission, patientName 
           <ul className="text-xs text-left text-muted-foreground space-y-1 max-w-xs mx-auto">
             <li>• 10 blank Vitals rows on 1 page</li>
             <li>• 5 blank IV Fluid rows</li>
+            <li>• 5 blank Intake/Output rows</li>
             <li>• Anaesthesia Notes form (10 sections)</li>
             <li>• Doctor/Anaesthetist signature</li>
           </ul>
