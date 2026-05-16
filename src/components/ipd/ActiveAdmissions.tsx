@@ -12,6 +12,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { usePatientNames, getPatientName } from "@/hooks/useDisplayHelpers";
 import { TreatmentChartDialog } from "./TreatmentChartDialog";
 import { DischargeBillDialog } from "./DischargeBillDialog";
+import { DischargeWithSummaryDialog } from "./DischargeWithSummaryDialog";
 import { PharmacyOrderHistoryDialog } from "./PharmacyOrderHistoryDialog";
 import { AdmissionFormDialog } from "./AdmissionFormDialog";
 import { CollectAdvanceDialog } from "./CollectAdvanceDialog";
@@ -28,6 +29,7 @@ export function ActiveAdmissions() {
   const [loading, setLoading] = useState(true);
   const [chartFor, setChartFor] = useState<any>(null);
   const [billFor, setBillFor] = useState<any>(null);
+  const [dischargeFor, setDischargeFor] = useState<any>(null);
   const [pharmacyFor, setPharmacyFor] = useState<any>(null);
   const [admissionFormFor, setAdmissionFormFor] = useState<any>(null);
   const [advanceFor, setAdvanceFor] = useState<any>(null);
@@ -281,11 +283,16 @@ export function ActiveAdmissions() {
                                   <Banknote className="w-3 h-3" />Finalize Bill
                                 </Button>
                               )}
-                              {isDoctor && !isAdmin && (
-                                <Button size="sm" variant="ghost" onClick={() => discharge(r.id)}>
-                                  Discharge
-                                </Button>
-                              )}
+                          {isDoctor && !isAdmin && (
+                            <Button size="sm" variant="ghost" onClick={() => {
+                              const inv = invoiceData[r.id];
+                              if (!inv || !inv.finalized_at) { toast.error("Cannot discharge — bill has not been finalized by staff"); return; }
+                              if (Number(inv.paid_amount) < Number(inv.total_amount)) { toast.error("Cannot discharge — bill payment is not complete"); return; }
+                              setDischargeFor(r);
+                            }}>
+                              Discharge
+                            </Button>
+                          )}
                               {isAdmin && (
                                 <>
                                   <Button size="sm" onClick={() => setBillFor(r)}>Discharge & Bill</Button>
@@ -365,6 +372,15 @@ export function ActiveAdmissions() {
           admission={advanceFor}
           currentDeposit={balances[advanceFor.id]?.deposit || 0}
           onCollected={load}
+        />
+      )}
+      {dischargeFor && (
+        <DischargeWithSummaryDialog
+          open={!!dischargeFor}
+          onOpenChange={(o) => !o && setDischargeFor(null)}
+          admission={dischargeFor}
+          patientName={getPatientName(dischargeFor.patient_id, patientNames || [])}
+          onDischarged={load}
         />
       )}
     </Card>

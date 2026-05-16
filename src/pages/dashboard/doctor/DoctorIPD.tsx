@@ -12,6 +12,7 @@ import { format } from "date-fns";
 import { toast } from "sonner";
 import { formatPkrAmount } from "@/utils/currency";
 import { TreatmentChartDialog } from "@/components/ipd/TreatmentChartDialog";
+import { DischargeWithSummaryDialog } from "@/components/ipd/DischargeWithSummaryDialog";
 import { usePatientNames, getPatientName } from "@/hooks/useDisplayHelpers";
 
 interface IPDAdmissionWithDetails {
@@ -45,6 +46,7 @@ export default function DoctorIPD() {
   const itemsPerPage = 20;
 
   const [chartFor, setChartFor] = useState<IPDAdmissionWithDetails | null>(null);
+  const [dischargeFor, setDischargeFor] = useState<IPDAdmissionWithDetails | null>(null);
   const [invoiceData, setInvoiceData] = useState<Record<string, any>>({});
 
   useEffect(() => {
@@ -144,30 +146,6 @@ export default function DoctorIPD() {
 
   const handleChart = (admission: IPDAdmissionWithDetails) => {
     setChartFor(admission);
-  };
-
-  const handleDischarge = async (admission: IPDAdmissionWithDetails) => {
-    const inv = invoiceData[admission.id];
-    if (!inv || !inv.finalized_at) {
-      toast.error("Cannot discharge — bill has not been finalized by staff");
-      return;
-    }
-    if (Number(inv.paid_amount) < Number(inv.total_amount)) {
-      toast.error("Cannot discharge — bill payment is not complete");
-      return;
-    }
-    if (!confirm(`Discharge ${getPatientName(admission.patient_id, patientNames || [])}?`)) return;
-    try {
-      const { error } = await supabase.from("ipd_admissions").update({
-        status: "discharged",
-        discharge_date: new Date().toISOString(),
-      }).eq("id", admission.id);
-      if (error) throw error;
-      toast.success("Patient discharged");
-      fetchDoctorIPDAdmissions();
-    } catch (e: any) {
-      toast.error(e.message || "Failed to discharge");
-    }
   };
 
   return (
@@ -288,7 +266,12 @@ export default function DoctorIPD() {
                               <Button
                                 size="sm"
                                 variant="ghost"
-                                onClick={() => handleDischarge(a)}
+                                onClick={() => {
+                                  const inv = invoiceData[a.id];
+                                  if (!inv || !inv.finalized_at) { toast.error("Cannot discharge — bill has not been finalized by staff"); return; }
+                                  if (Number(inv.paid_amount) < Number(inv.total_amount)) { toast.error("Cannot discharge — bill payment is not complete"); return; }
+                                  setDischargeFor(a);
+                                }}
                                 className="flex items-center gap-1 text-red-600 hover:text-red-700"
                               >
                                 <LogOut className="w-3 h-3" />
@@ -462,6 +445,15 @@ export default function DoctorIPD() {
           admissionId={chartFor.id}
           patientName={getPatientName(chartFor.patient_id, patientNames || [])}
           admissionNumber={chartFor.admission_number}
+        />
+      )}
+      {dischargeFor && (
+        <DischargeWithSummaryDialog
+          open={!!dischargeFor}
+          onOpenChange={(o) => !o && setDischargeFor(null)}
+          admission={dischargeFor}
+          patientName={getPatientName(dischargeFor.patient_id, patientNames || [])}
+          onDischarged={fetchDoctorIPDAdmissions}
         />
       )}
     </div>
