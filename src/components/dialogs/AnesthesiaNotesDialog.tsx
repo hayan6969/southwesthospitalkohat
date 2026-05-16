@@ -135,14 +135,14 @@ export function AnesthesiaNotesDialog({ open, onOpenChange, otSchedule, admissio
   };
 
   const fetchExistingNotes = useCallback(async () => {
-    if (!otSchedule) return;
+    if (!otSchedule && !admissionId) return;
     setLoading(true);
     try {
-      const { data, error } = await supabase
-        .from("anesthesia_notes")
-        .select("*")
-        .eq("ot_booking_id", otSchedule.id)
-        .maybeSingle();
+      let query = supabase.from("anesthesia_notes").select("*");
+      if (otSchedule) query = query.eq("ot_booking_id", otSchedule.id);
+      else if (admissionId) query = query.eq("admission_id", admissionId).order("created_at", { ascending: false }).limit(1);
+      const { data: rows, error } = await query;
+      const data = Array.isArray(rows) ? rows[0] : rows;
 
       if (error && error.code !== "PGRST116") throw error;
 
