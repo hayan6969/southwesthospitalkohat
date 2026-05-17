@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useCreatePatientWithProfile, useDoctors } from "@/hooks/useDatabase";
+import { useCreatePatientWithProfile } from "@/hooks/useDatabase";
 import { useSearchPatientsWithNames, useDoctorNames } from "@/hooks/useDisplayHelpers";
 import { useAuditLogger } from "@/hooks/useAuditLogger";
 import { useAuth } from "@/hooks/useAuth";
@@ -63,7 +63,6 @@ export function OTScheduleDialog() {
   const submissionLockRef = useRef(false);
 
   const createPatientWithProfile = useCreatePatientWithProfile();
-  const { data: doctors } = useDoctors();
   const { data: doctorNames } = useDoctorNames();
   const { data: searchResults } = useSearchPatientsWithNames(searchTerm);
   const { logAction } = useAuditLogger();
@@ -391,14 +390,11 @@ export function OTScheduleDialog() {
                 <Select value={doctorId} onValueChange={setDoctorId}>
                   <SelectTrigger><SelectValue placeholder="Select doctor..." /></SelectTrigger>
                   <SelectContent>
-                    {doctors?.map((doctor) => {
-                      const doctorProfile = doctorNames?.find((d) => d.id === doctor.id);
-                      return (
-                        <SelectItem key={doctor.id} value={doctor.id}>
-                          Dr. {doctorProfile?.first_name} {doctorProfile?.last_name}
-                        </SelectItem>
-                      );
-                    })}
+                    {doctorNames?.map((doctor) => (
+                      <SelectItem key={doctor.id} value={doctor.id}>
+                        Dr. {doctor.first_name} {doctor.last_name}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
