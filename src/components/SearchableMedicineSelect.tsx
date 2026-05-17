@@ -20,6 +20,7 @@ import { formatPkrAmount } from "@/utils/currency";
 interface Medicine {
   id: string;
   name: string;
+  batch_number?: string | null;
   selling_price: number;
   stock_quantity: number;
 }
@@ -64,7 +65,7 @@ export function SearchableMedicineSelect({
           disabled={isLoading}
         >
           {selectedMedicine
-            ? `${selectedMedicine.name} - ${formatPkrAmount(selectedMedicine.selling_price)} (Stock: ${selectedMedicine.stock_quantity})`
+            ? `${selectedMedicine.name}${selectedMedicine.batch_number ? ` (Batch: ${selectedMedicine.batch_number})` : ""} - ${formatPkrAmount(selectedMedicine.selling_price)} (Stock: ${selectedMedicine.stock_quantity})`
             : placeholder}
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
@@ -101,7 +102,7 @@ export function SearchableMedicineSelect({
                   <div className="flex flex-col flex-1">
                     <span className="font-medium">{medicine.name}</span>
                     <span className="text-sm text-muted-foreground">
-                      {formatPkrAmount(medicine.selling_price)} • Stock: {medicine.stock_quantity}
+                      {medicine.batch_number && `Batch: ${medicine.batch_number} • `}{formatPkrAmount(medicine.selling_price)} • Stock: {medicine.stock_quantity}
                     </span>
                   </div>
                 </CommandItem>
