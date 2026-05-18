@@ -175,16 +175,24 @@ export const useDoctors = () => {
   return useQuery({
     queryKey: ['doctors'],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data: doctors, error } = await supabase
         .from('doctors')
-        .select(`
-          *,
-          profiles(first_name, last_name, email, phone)
-        `)
+        .select('*')
         .order('id');
 
       if (error) throw error;
-      return data;
+      if (!doctors || doctors.length === 0) return [];
+
+      const ids = doctors.map((d: any) => d.id);
+      const { data: profiles, error: pErr } = await supabase
+        .from('profiles')
+        .select('id, first_name, last_name, email, phone')
+        .in('id', ids);
+
+      if (pErr) throw pErr;
+
+      const pMap = new Map((profiles || []).map((p: any) => [p.id, p]));
+      return doctors.map((d: any) => ({ ...d, profiles: pMap.get(d.id) || null }));
     }
   });
 };
