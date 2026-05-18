@@ -1,0 +1,1 @@
+UPDATE public.ot_schedules SET status='scheduled' WHERE id='a30b831e-c3cb-48d4-a78f-a06c8b66eb5c';
