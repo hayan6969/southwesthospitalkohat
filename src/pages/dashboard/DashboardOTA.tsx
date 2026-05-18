@@ -265,7 +265,7 @@ export default function DashboardOTA() {
     setShowAssessmentDialog(true);
   };
 
-  const pendingOTs = otSchedules.filter(ot => ot.status === 'pending' || ot.status === 'in_progress');
+  const pendingOTs = otSchedules.filter(ot => ot.status === 'pending' || ot.status === 'scheduled' || ot.status === 'in_progress');
   const pastOTs = otSchedules.filter(ot => ot.status === 'completed' || ot.status === 'cancelled');
 
   return (
