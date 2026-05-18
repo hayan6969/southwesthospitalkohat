@@ -25,8 +25,5 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-// Pass through all requests without caching
-self.addEventListener('fetch', (event) => {
-  // Just fetch from network, no caching
-  event.respondWith(fetch(event.request));
-});
+// Service Worker disabled — do not intercept any requests
+// Let the browser handle all fetches naturally

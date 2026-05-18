@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useCreateAppointmentWithInvoice, useCreatePatientWithProfile, useDoctors } from "@/hooks/useDatabase";
-import { useSearchPatientsWithNames, useDoctorNames } from "@/hooks/useDisplayHelpers";
+import { useSearchPatientsWithNames } from "@/hooks/useDisplayHelpers";
 import { useDoctorAvailability, useCheckDoctorAvailability } from "@/hooks/useDoctorAvailability";
 import { useAuditLogger } from "@/hooks/useAuditLogger";
 import { useAuth } from "@/hooks/useAuth";
@@ -64,7 +64,6 @@ export function EnhancedAppointmentDialog() {
   const createAppointmentWithInvoice = useCreateAppointmentWithInvoice();
   const createPatientWithProfile = useCreatePatientWithProfile();
   const { data: doctors } = useDoctors();
-  const { data: doctorNames } = useDoctorNames();
   const { data: searchResults } = useSearchPatientsWithNames(searchTerm);
   const { logAction } = useAuditLogger();
   const { user } = useAuth();
@@ -72,7 +71,7 @@ export function EnhancedAppointmentDialog() {
   const { data: availability } = useDoctorAvailability(doctorId, appointmentDate);
 
   const selectedDoctor = doctors?.find(d => d.id === doctorId);
-  const selectedDoctorName = doctorNames?.find(d => d.id === doctorId);
+  const selectedDoctorName = selectedDoctor?.profiles as { first_name?: string; last_name?: string } | undefined;
   const consultationFee = selectedDoctor?.consultation_fee || 0;
 
   const resetForm = () => {
@@ -437,10 +436,10 @@ export function EnhancedAppointmentDialog() {
               </SelectTrigger>
               <SelectContent portal={false} className="z-[9999] max-h-[300px] bg-popover">
                 {doctors?.map((doctor) => {
-                  const doctorName = doctorNames?.find(d => d.id === doctor.id);
+                  const p = doctor.profiles as { first_name?: string; last_name?: string } | null;
                   return (
                     <SelectItem key={doctor.id} value={doctor.id}>
-                      Dr. {doctorName?.first_name} {doctorName?.last_name} - {doctor.specialization} ({formatCurrency(doctor.consultation_fee || 0)})
+                      Dr. {p?.first_name} {p?.last_name} - {doctor.specialization} ({formatCurrency(doctor.consultation_fee || 0)})
                     </SelectItem>
                   );
                 })}

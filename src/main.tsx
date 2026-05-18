@@ -31,30 +31,13 @@ const updateFavicon = async () => {
   }
 };
 
-// Register service worker for PWA functionality
+// Unregister any existing service worker to prevent it from interfering with fetch requests
 if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js')
-      .then((registration) => {
-        console.log('✅ Service Worker registered successfully:', registration);
-        
-        // Listen for updates
-        registration.addEventListener('updatefound', () => {
-          console.log('🔄 Service Worker update found');
-        });
-      })
-      .catch((registrationError) => {
-        console.error('❌ Service Worker registration failed:', registrationError);
-      });
-  });
-
-  // Listen for offline/online events
-  window.addEventListener('online', () => {
-    console.log('🌐 App is back online');
-  });
-  
-  window.addEventListener('offline', () => {
-    console.log('📱 App is now offline');
+  navigator.serviceWorker.getRegistrations().then(registrations => {
+    for (const registration of registrations) {
+      registration.unregister();
+      console.log('🗑️ Service Worker unregistered');
+    }
   });
 }
 
