@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -9,12 +10,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { History, Search, Printer, Eye, Filter } from "lucide-react";
+import { History, Search, Printer, Eye, Filter, Lock, Edit } from "lucide-react";
 import { format } from "date-fns";
 import { generatePathologyReportPDF, type PathologyPdfData } from "@/utils/pathologyPdfGenerator";
 import { toast } from "sonner";
+import { isReportLocked, formatRemainingTime } from "@/utils/reportLock";
 
 export function PathologyReportHistory() {
+  const navigate = useNavigate();
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState<string>("all");
   const [from, setFrom] = useState<string>("");
@@ -183,9 +186,21 @@ export function PathologyReportHistory() {
                     </TableCell>
                     <TableCell className="text-xs">{r.referred_by || "—"}</TableCell>
                     <TableCell className="text-xs">{r.created_at ? format(new Date(r.created_at), "dd MMM yyyy") : "—"}</TableCell>
-                    <TableCell><Badge variant={r.status === "final" ? "default" : r.status === "partial" ? "outline" : "secondary"} className={r.status === "partial" ? "border-amber-500 text-amber-700" : ""}>{r.status}</Badge></TableCell>
+                    <TableCell>
+                      <div className="flex flex-col gap-1 items-start">
+                        <Badge variant={r.status === "final" ? "default" : r.status === "partial" ? "outline" : "secondary"} className={r.status === "partial" ? "border-amber-500 text-amber-700" : ""}>{r.status}</Badge>
+                        {r.created_at && isReportLocked(r.created_at) ? (
+                          <Badge variant="outline" className="border-red-400 text-red-600 text-[10px] flex items-center gap-0.5"><Lock className="w-3 h-3" /> Locked</Badge>
+                        ) : r.created_at && r.status === "final" ? (
+                          <Badge variant="outline" className="border-green-400 text-green-600 text-[10px]">{formatRemainingTime(r.created_at)}</Badge>
+                        ) : null}
+                      </div>
+                    </TableCell>
                     <TableCell className="text-right space-x-1">
                       <Button size="sm" variant="ghost" onClick={() => setViewingId(r.id)}><Eye className="w-3.5 h-3.5" /></Button>
+                      {r.created_at && !isReportLocked(r.created_at) && r.status === "final" && (
+                        <Button size="sm" variant="outline" onClick={() => navigate(`?tab=pathology&edit=${r.id}`)}><Edit className="w-3.5 h-3.5" /></Button>
+                      )}
                       <Button size="sm" variant="outline" onClick={() => reprintReport(r.id)}><Printer className="w-3.5 h-3.5" /></Button>
                     </TableCell>
                   </TableRow>

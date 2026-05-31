@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useSearchPatientsWithNames } from "@/hooks/useDisplayHelpers";
@@ -13,11 +14,12 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Search, ChevronLeft, ChevronRight, FileText, Printer, Save, X, History, FlaskConical, Receipt, CheckCircle, Clock } from "lucide-react";
+import { Search, ChevronLeft, ChevronRight, FileText, Printer, Save, X, History, FlaskConical, Receipt, CheckCircle, Clock, Lock } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { getFlag, flagBadgeClass, type PathologyFlag } from "@/utils/pathologyFlag";
 import { generatePathologyReportPDF, type PathologyPdfData } from "@/utils/pathologyPdfGenerator";
+import { isReportLocked, formatRemainingTime } from "@/utils/reportLock";
 
 interface TestType {
   id: string;
@@ -91,6 +93,11 @@ export function PathologyReportWizard() {
   const [results, setResults] = useState<Record<string, ResultRow>>({});
   const [interpretation, setInterpretation] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [isLocked, setIsLocked] = useState(false);
+  const [reportsCreatedAt, setReportsCreatedAt] = useState("");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const editReportId = searchParams.get("edit");
+  const isEditMode = !!editReportId;
 
   // Auto-generate next sequential report number (LAB-XXXXX) — skip when editing existing
   useEffect(() => {
@@ -243,6 +250,76 @@ export function PathologyReportWizard() {
       setSubmitting(false);
     }
   };
+
+  // Load a finalized (or any) report for editing within the 24h window
+  const loadReportForEdit = async (reportId: string) => {
+    setSubmitting(true);
+    try {
+      const { data: report, error: e1 } = await supabase
+        .from("lab_pathology_reports").select("*").eq("id", reportId).single();
+      if (e1) throw e1;
+
+      const locked = isReportLocked(report.created_at);
+      setIsLocked(locked);
+      setReportsCreatedAt(report.created_at);
+
+      const { data: pat } = await supabase.from("patients").select("*").eq("id", report.patient_id).maybeSingle();
+      const { data: prof } = await supabase.from("profiles").select("*").eq("id", report.patient_id).maybeSingle();
+      if (pat) setSelectedPatient({ ...pat, profile: prof });
+
+      const { data: tts } = await supabase
+        .from("lab_pathology_report_test_types").select("test_type_id").eq("report_id", reportId);
+      const { data: existingResults } = await supabase
+        .from("lab_pathology_report_results").select("*").eq("report_id", reportId);
+
+      const allTestIds: string[] = (tts ?? []).map((t: any) => t.test_type_id);
+
+      setExistingReportId(reportId);
+      setSelectedTestIds(allTestIds);
+      setCompletedTestIds(new Set());
+      setPendingTestIds(new Set());
+      setMeta((m) => ({
+        ...m,
+        report_number: report.report_number,
+        sample_type: report.sample_type ?? m.sample_type,
+        instrument: report.instrument ?? "",
+        referred_by: report.referred_by ?? "",
+        collection_address: report.collection_address ?? "",
+        registered_at: report.registered_at ? new Date(report.registered_at).toISOString().slice(0, 16) : m.registered_at,
+        collected_at: report.collected_at ? new Date(report.collected_at).toISOString().slice(0, 16) : m.collected_at,
+        reported_at: new Date().toISOString().slice(0, 16),
+        age: report.patient_age_snapshot != null ? String(report.patient_age_snapshot) : "",
+        sex: report.patient_sex_snapshot ?? "",
+      }));
+      setInterpretation(report.interpretation ?? "");
+
+      const seeded: Record<string, ResultRow> = {};
+      (existingResults ?? []).forEach((r: any) => {
+        seeded[r.parameter_id] = {
+          parameter_id: r.parameter_id,
+          result_value: r.result_value ?? "",
+          flag: (r.flag ?? null) as PathologyFlag,
+          subrange_id: r.subrange_id ?? null,
+          skipped: false,
+        };
+      });
+      setResults(seeded);
+
+      toast.success(locked ? "Report is locked — view only" : "Editing report");
+      setStep(3);
+    } catch (e: any) {
+      toast.error(e?.message || "Failed to load report");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  // Load report when edit param is present
+  useEffect(() => {
+    if (editReportId && editReportId !== existingReportId) {
+      loadReportForEdit(editReportId);
+    }
+  }, [editReportId]);
 
   const { data: searchedPatients } = useSearchPatientsWithNames(searchTerm);
 
@@ -447,8 +524,8 @@ export function PathologyReportWizard() {
         const { error: ttErr } = await supabase.from("lab_pathology_report_test_types").insert(ttRows);
         if (ttErr) throw ttErr;
       } else {
-        // UPDATE existing partial report meta + status
-        const newStatus = pendingTestIds.size > 0 ? "partial" : "final";
+        // UPDATE existing report meta + status
+        const newStatus = isEditMode ? "final" : (pendingTestIds.size > 0 ? "partial" : "final");
         const { error: upErr } = await supabase
           .from("lab_pathology_reports")
           .update({
@@ -461,9 +538,18 @@ export function PathologyReportWizard() {
             status: newStatus,
           }).eq("id", reportId);
         if (upErr) throw upErr;
+
+        // In edit mode, delete old results before re-inserting
+        if (isEditMode) {
+          const { error: delErr } = await supabase
+            .from("lab_pathology_report_results")
+            .delete()
+            .eq("report_id", reportId);
+          if (delErr) throw delErr;
+        }
       }
 
-      // Insert result rows ONLY for tests being filled now
+      // Insert result rows — in edit mode all params are filling
       const fillingParamIds = new Set(
         (parameters ?? []).filter((p) => fillingTestIds.includes(p.test_type_id)).map((p) => p.id)
       );
@@ -615,6 +701,14 @@ export function PathologyReportWizard() {
     setPdfIncludeTestIds(new Set());
     setResults({});
     setInterpretation("");
+    setIsLocked(false);
+    setReportsCreatedAt("");
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      next.delete("edit");
+      next.set("tab", isEditMode ? "pathology-history" : "pathology");
+      return next;
+    }, { replace: true });
     refetchOrders();
   };
 
@@ -894,13 +988,33 @@ export function PathologyReportWizard() {
         {/* STEP 3: Results */}
         {step === 3 && (
           <div className="space-y-6">
-            <div className="rounded-lg border bg-blue-50/40 p-3 text-xs space-y-1">
-              <div className="font-semibold text-blue-900">Some tests now, others later?</div>
-              <div className="text-muted-foreground">
-                Mark a test as <b>Pending</b> if its results aren't ready yet — you'll be able to come back later from the patient search to add them.
-                Choose which completed tests to include in the printed PDF using the checkboxes.
+            {isLocked ? (
+              <div className="rounded-lg border border-red-300 bg-red-50 p-3 flex items-start gap-3">
+                <Lock className="w-5 h-5 text-red-500 mt-0.5 shrink-0" />
+                <div>
+                  <div className="font-semibold text-red-800 text-sm">Report Locked</div>
+                  <div className="text-xs text-red-700">This report was created over 24 hours ago and is now locked. Viewing in read-only mode.</div>
+                </div>
               </div>
-            </div>
+            ) : isEditMode ? (
+              <div className="rounded-lg border border-green-300 bg-green-50 p-3 flex items-start gap-3">
+                <Clock className="w-5 h-5 text-green-600 mt-0.5 shrink-0" />
+                <div>
+                  <div className="font-semibold text-green-800 text-sm">Editing Mode</div>
+                  <div className="text-xs text-green-700">
+                    You can edit this report for {formatRemainingTime(reportsCreatedAt || "")}. After that, it will be locked permanently.
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="rounded-lg border bg-blue-50/40 p-3 text-xs space-y-1">
+                <div className="font-semibold text-blue-900">Some tests now, others later?</div>
+                <div className="text-muted-foreground">
+                  Mark a test as <b>Pending</b> if its results aren't ready yet — you'll be able to come back later from the patient search to add them.
+                  Choose which completed tests to include in the printed PDF using the checkboxes.
+                </div>
+              </div>
+            )}
 
             {testTypes
               ?.filter((t) => selectedTestIds.includes(t.id))
@@ -917,7 +1031,7 @@ export function PathologyReportWizard() {
                         {isPending && <Badge variant="outline" className="border-amber-500 text-amber-700">Pending</Badge>}
                       </div>
                       <div className="flex items-center gap-3">
-                        {!isCompleted && (
+                        {!isCompleted && !isLocked && !isEditMode && (
                           <label className="flex items-center gap-1.5 text-xs cursor-pointer">
                             <Checkbox checked={isPending} onCheckedChange={() => togglePending(t.id)} />
                             <Clock className="w-3 h-3" /> Results pending
@@ -927,7 +1041,7 @@ export function PathologyReportWizard() {
                           <Checkbox
                             checked={pdfIncludeTestIds.has(t.id)}
                             onCheckedChange={() => togglePdfInclude(t.id)}
-                            disabled={isPending}
+                            disabled={isPending || isLocked}
                           />
                           <Printer className="w-3 h-3" /> Include in PDF
                         </label>
@@ -965,6 +1079,7 @@ export function PathologyReportWizard() {
                                         value={row.subrange_id ?? ""}
                                         onValueChange={(v) => updateResult(p.id, { subrange_id: v })}
                                         className="mt-2 gap-1"
+                                        disabled={isLocked}
                                       >
                                         {subs.map((s) => (
                                           <label key={s.id} htmlFor={`sr-${p.id}-${s.id}`} className="flex items-center gap-2 text-xs cursor-pointer">
@@ -975,16 +1090,16 @@ export function PathologyReportWizard() {
                                         ))}
                                       </RadioGroup>
                                     )}
-                                    {p.is_optional && !isCompleted && (
+                                    {p.is_optional && !isCompleted && !isLocked && (
                                       <label className="flex items-center gap-1 mt-1 text-xs text-muted-foreground">
-                                        <Checkbox checked={row.skipped} onCheckedChange={(v) => updateResult(p.id, { skipped: !!v })} /> Skip
+                                        <Checkbox checked={row.skipped} disabled={isLocked} onCheckedChange={(v) => updateResult(p.id, { skipped: !!v })} /> Skip
                                       </label>
                                     )}
                                   </TableCell>
                                   <TableCell className="text-xs">{range.display ?? "—"}</TableCell>
                                   <TableCell className="text-xs">{p.unit ?? "—"}</TableCell>
                                   <TableCell>
-                                    <Input value={row.result_value} disabled={row.skipped || isCompleted} onChange={(e) => updateResult(p.id, { result_value: e.target.value })} placeholder="e.g. 5.2 or <0.1" />
+                                    <Input value={row.result_value} disabled={row.skipped || isCompleted || isLocked} onChange={(e) => updateResult(p.id, { result_value: e.target.value })} placeholder="e.g. 5.2 or <0.1" />
                                   </TableCell>
                                   <TableCell>{row.flag && <Badge variant="outline" className={flagBadgeClass(row.flag)}>{row.flag}</Badge>}</TableCell>
                                 </TableRow>
@@ -1000,7 +1115,7 @@ export function PathologyReportWizard() {
 
             <div>
               <Label>Interpretation / Notes</Label>
-              <Textarea rows={4} value={interpretation} onChange={(e) => setInterpretation(e.target.value)} placeholder="Clinical interpretation, advice, etc." />
+              <Textarea rows={4} value={interpretation} onChange={(e) => setInterpretation(e.target.value)} disabled={isLocked} placeholder="Clinical interpretation, advice, etc." />
             </div>
           </div>
         )}
@@ -1009,14 +1124,16 @@ export function PathologyReportWizard() {
         {step === 4 && (
           <div className="text-center py-10 space-y-4">
             <FileText className="w-14 h-14 mx-auto text-blue-600" />
-            <h3 className="text-xl font-semibold">Saved</h3>
+            <h3 className="text-xl font-semibold">{isEditMode ? "Updated" : "Saved"}</h3>
             <p className="text-sm text-muted-foreground">
-              {pendingTestIds.size > 0
+              {isEditMode
+                ? "Report has been updated successfully."
+                : pendingTestIds.size > 0
                 ? `Saved as PARTIAL — ${pendingTestIds.size} test(s) still pending. You can come back via patient search to add them.`
                 : "Report finalized."}
             </p>
             <div className="flex gap-3 justify-center">
-              <Button variant="outline" onClick={resetWizard}>Start New Report</Button>
+              <Button variant="outline" onClick={resetWizard}>{isEditMode ? "Back to History" : "Start New Report"}</Button>
             </div>
           </div>
         )}
@@ -1024,23 +1141,38 @@ export function PathologyReportWizard() {
         {/* Footer nav */}
         {step < 4 && (
           <div className="flex justify-between pt-4 border-t">
-            <Button variant="ghost" disabled={step === 1} onClick={() => setStep((s) => s - 1)}>
-              <ChevronLeft className="w-4 h-4 mr-1" /> Back
-            </Button>
+            {isEditMode ? (
+              <Button variant="ghost" onClick={() => {
+                setSearchParams((prev) => {
+                  const next = new URLSearchParams(prev);
+                  next.delete("edit");
+                  next.set("tab", "pathology-history");
+                  return next;
+                }, { replace: true });
+              }}>
+                <X className="w-4 h-4 mr-1" /> Back to History
+              </Button>
+            ) : (
+              <Button variant="ghost" disabled={step === 1} onClick={() => setStep((s) => s - 1)}>
+                <ChevronLeft className="w-4 h-4 mr-1" /> Back
+              </Button>
+            )}
             <div className="flex gap-2">
               {step === 3 && (
                 <>
-                  {pendingTestIds.size > 0 && (
+                  {!isLocked && pendingTestIds.size > 0 && (
                     <Button variant="outline" disabled={submitting || (!canSave && fillingTestIds.length > 0)} onClick={() => saveReport("partial")}>
                       <Save className="w-4 h-4 mr-1" /> Save Partial
                     </Button>
                   )}
-                  <Button disabled={submitting || pendingTestIds.size > 0 || !canSave} onClick={() => saveReport("final")}>
-                    <Save className="w-4 h-4 mr-1" /> Save
-                  </Button>
+                  {!isLocked && (
+                    <Button disabled={submitting || pendingTestIds.size > 0 || !canSave} onClick={() => saveReport("final")}>
+                      <Save className="w-4 h-4 mr-1" /> {isEditMode ? "Update Report" : "Save"}
+                    </Button>
+                  )}
                 </>
               )}
-              {step < 3 && (
+              {step < 3 && !isEditMode && (
                 <Button disabled={(step === 1 && !canNextFromStep1) || (step === 2 && !canNextFromStep2)} onClick={() => setStep((s) => s + 1)}>
                   Next <ChevronRight className="w-4 h-4 ml-1" />
                 </Button>
