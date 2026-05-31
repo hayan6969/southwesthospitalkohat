@@ -8,7 +8,8 @@ const numericFromString = (value: string | null | undefined): number | null => {
   const trimmed = String(value).trim();
   if (!trimmed) return null;
   // Allow values like "<0.1" or ">200" — treat the boundary number as the value
-  const cleaned = trimmed.replace(/^[<>≤≥]=?/, '').trim();
+  // Strip thousands separators (commas) so "4,600" parses as 4600 instead of 4
+  const cleaned = trimmed.replace(/^[<>≤≥]=?/, '').replace(/,/g, '').trim();
   const n = parseFloat(cleaned);
   if (Number.isNaN(n)) return null;
   // For "<x" the value is technically below x. For ">x" it's above.
