@@ -97,12 +97,6 @@ export function EmergencyConsultationDialog() {
       return;
     }
 
-    // Basic validation for contact number
-    if (contactNumber.length < 11) {
-      toast.error("Please enter a valid contact number");
-      return;
-    }
-
     setIsProcessing(true);
 
     try {
