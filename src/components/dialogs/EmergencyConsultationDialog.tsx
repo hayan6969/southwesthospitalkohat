@@ -129,46 +129,30 @@ export function EmergencyConsultationDialog() {
         }
       }
       
-      // Create invoice for emergency consultation with total amount
+      // Create invoice for emergency consultation with total amount.
+      // Emergency invoices reference the fixed EMERGENCY placeholder patient, whose
+      // existence is guaranteed by migration 20260602120000 (it restores the row and
+      // guards delete_user_safely so it can never be deleted again).
       const { data: { user: currentUser } } = await supabase.auth.getUser();
-
-      // Emergency invoices are attached to the fixed EMERGENCY placeholder patient.
-      // If that placeholder row has been deleted (e.g. via the admin "delete user"
-      // flow, which bypasses the deletion-prevention policies), the patient_id
-      // foreign key would fail. In that case fall back to the current user's profile
-      // id, which always exists. The real patient details live in
-      // emergency_patient_data either way, so the invoice and PDF are unaffected.
-      const EMERGENCY_PLACEHOLDER_ID = '00000000-0000-0000-0000-000000000001';
-      const invoicePayload = {
-        invoice_number: invoiceNumber,
-        amount: grandTotal,
-        description: description,
-        status: 'paid',
-        paid_at: new Date().toISOString(),
-        due_date: new Date().toISOString().split('T')[0],
-        created_by: currentUser?.id || null,
-        emergency_patient_data: {
-          name: patientName,
-          cnic: cnic,
-          phone: contactNumber
-        }
-      };
-
-      let { data: invoiceData, error: invoiceError } = await supabase
+      const { data: invoiceData, error: invoiceError } = await supabase
         .from('invoices')
-        .insert({ ...invoicePayload, patient_id: EMERGENCY_PLACEHOLDER_ID })
+        .insert({
+          patient_id: '00000000-0000-0000-0000-000000000001',
+          invoice_number: invoiceNumber,
+          amount: grandTotal,
+          description: description,
+          status: 'paid',
+          paid_at: new Date().toISOString(),
+          due_date: new Date().toISOString().split('T')[0],
+          created_by: currentUser?.id || null,
+          emergency_patient_data: {
+            name: patientName,
+            cnic: cnic,
+            phone: contactNumber
+          }
+        })
         .select()
         .single();
-
-      // 23503 = foreign_key_violation → the EMERGENCY placeholder patient is missing.
-      // Retry with the current user as the patient reference so the invoice succeeds.
-      if (invoiceError?.code === '23503' && currentUser?.id) {
-        ({ data: invoiceData, error: invoiceError } = await supabase
-          .from('invoices')
-          .insert({ ...invoicePayload, patient_id: currentUser.id })
-          .select()
-          .single());
-      }
 
       if (invoiceError) throw invoiceError;
 
