@@ -106,18 +106,25 @@ export function StaffPathologyBilling() {
     },
   });
 
-  const { data: orders } = useQuery({
-    queryKey: ["pathology_orders_recent"],
+  const ORDERS_PAGE_SIZE = 10;
+  const [ordersPage, setOrdersPage] = useState(1);
+  const { data: ordersResult } = useQuery({
+    queryKey: ["pathology_orders_recent", ordersPage],
+    placeholderData: (prev) => prev, // keep the current page visible while the next loads
     queryFn: async () => {
-      const { data, error } = await supabase
+      const fromIdx = (ordersPage - 1) * ORDERS_PAGE_SIZE;
+      const { data, error, count } = await supabase
         .from("lab_pathology_orders")
-        .select("*")
+        .select("*", { count: "exact" })
         .order("created_at", { ascending: false })
-        .limit(30);
+        .range(fromIdx, fromIdx + ORDERS_PAGE_SIZE - 1);
       if (error) throw error;
-      return data as PathologyOrder[];
+      return { rows: (data as PathologyOrder[]) ?? [], count: count ?? 0 };
     },
   });
+  const orders = ordersResult?.rows;
+  const ordersTotal = ordersResult?.count ?? 0;
+  const ordersTotalPages = Math.max(1, Math.ceil(ordersTotal / ORDERS_PAGE_SIZE));
 
   const filteredTests = useMemo(() => {
     if (!testTypes) return [];
@@ -722,6 +729,32 @@ export function StaffPathologyBilling() {
               )}
             </TableBody>
           </Table>
+
+          {ordersTotal > 0 && (
+            <div className="flex items-center justify-between pt-4 flex-wrap gap-2">
+              <div className="text-xs text-muted-foreground">
+                Page {ordersPage} of {ordersTotalPages} · {ordersTotal} order{ordersTotal === 1 ? "" : "s"}
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={ordersPage <= 1}
+                  onClick={() => setOrdersPage((p) => Math.max(1, p - 1))}
+                >
+                  Previous
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={ordersPage >= ordersTotalPages}
+                  onClick={() => setOrdersPage((p) => Math.min(ordersTotalPages, p + 1))}
+                >
+                  Next
+                </Button>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

@@ -54,9 +54,14 @@ export interface PathologyPdfData {
   testTypes: PathologyPdfTestType[];
 }
 
+// Cache hospital settings for the session (5 min TTL) so every print doesn't re-query.
+let cachedHospital: any;
+let cachedHospitalAt = 0;
 const fetchHospital = async () => {
+  if (cachedHospital !== undefined && Date.now() - cachedHospitalAt < 5 * 60 * 1000) return cachedHospital;
   try {
     const { data } = await supabase.from('hospital_settings').select('*').limit(1).single();
+    cachedHospital = data; cachedHospitalAt = Date.now();
     return data;
   } catch {
     return null;
@@ -72,39 +77,54 @@ const fmt = (iso: string | null | undefined) => {
   }
 };
 
+// Cache the encoded logo per URL — fetching + base64-encoding it on every print is the
+// single most expensive repeated step.
+const logoCache = new Map<string, string | null>();
 const loadImageDataUrl = async (url: string): Promise<string | null> => {
+  if (logoCache.has(url)) return logoCache.get(url) ?? null;
   try {
     const res = await fetch(url);
     const blob = await res.blob();
-    return await new Promise<string>((resolve) => {
+    const dataUrl = await new Promise<string>((resolve) => {
       const reader = new FileReader();
       reader.onloadend = () => resolve(reader.result as string);
       reader.readAsDataURL(blob);
     });
+    logoCache.set(url, dataUrl);
+    return dataUrl;
   } catch {
+    logoCache.set(url, null);
     return null;
   }
 };
 
 export async function generatePathologyReportPDF(data: PathologyPdfData) {
-  const hospital = await fetchHospital();
-
-  // ── Fetch previous results ────────────────────────────────────────────────
-  const previousByParam = new Map<string, Array<{ value: string; date: string }>>();
-  try {
-    const paramIds: string[] = [];
-    for (const tt of data.testTypes) {
-      for (const p of tt.parameters) {
-        if (p.parameter_id) paramIds.push(p.parameter_id);
-      }
+  // Collect parameter ids up-front (sync) so the previous-results lookup can run in
+  // parallel with the hospital-settings fetch instead of waiting for it.
+  const priorParamIds: string[] = [];
+  for (const tt of data.testTypes) {
+    for (const p of tt.parameters) {
+      if (p.parameter_id) priorParamIds.push(p.parameter_id);
     }
-    if (data.patientDbId && paramIds.length > 0) {
-      const { data: priorRows } = await supabase
-        .from('lab_pathology_report_results')
-        .select('parameter_id, result_value, report_id, lab_pathology_reports!inner(patient_id, reported_at, created_at, id)')
-        .in('parameter_id', paramIds)
-        .eq('lab_pathology_reports.patient_id', data.patientDbId);
+  }
 
+  // ── Fetch hospital settings + previous results in parallel ─────────────────
+  const previousByParam = new Map<string, Array<{ value: string; date: string }>>();
+  const [hospital, priorRows] = await Promise.all([
+    fetchHospital(),
+    (data.patientDbId && priorParamIds.length > 0)
+      ? supabase
+          .from('lab_pathology_report_results')
+          .select('parameter_id, result_value, report_id, lab_pathology_reports!inner(patient_id, reported_at, created_at, id)')
+          .in('parameter_id', priorParamIds)
+          .eq('lab_pathology_reports.patient_id', data.patientDbId)
+          .then((res) => res.data ?? [])
+          .then((rows) => rows, () => [])
+      : Promise.resolve([] as any[]),
+  ]);
+
+  try {
+    if (priorRows && priorRows.length > 0) {
       const grouped = new Map<string, Array<{ value: string; date: string; rid: string }>>();
       for (const row of (priorRows ?? []) as any[]) {
         if (data.currentReportId && row.report_id === data.currentReportId) continue;

@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { History, Search, Printer, Eye, Filter, Lock, Edit } from "lucide-react";
+import { History, Search, Printer, Eye, Filter, Lock, Edit, Loader2 } from "lucide-react";
 import { format } from "date-fns";
 import { generatePathologyReportPDF, type PathologyPdfData } from "@/utils/pathologyPdfGenerator";
 import { toast } from "sonner";
@@ -24,6 +24,7 @@ export function PathologyReportHistory() {
   const [to, setTo] = useState<string>("");
   const [testTypeFilter, setTestTypeFilter] = useState<string>("all");
   const [viewingId, setViewingId] = useState<string | null>(null);
+  const [printingId, setPrintingId] = useState<string | null>(null);
 
   const { data: testTypes } = useQuery({
     queryKey: ["lab_test_types_filter"],
@@ -34,54 +35,86 @@ export function PathologyReportHistory() {
     },
   });
 
-  const { data: reports, isLoading } = useQuery({
-    queryKey: ["pathology_reports", search, status, from, to, testTypeFilter],
+  // Debounce the search box so we don't refetch on every keystroke
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(search.trim()), 250);
+    return () => clearTimeout(t);
+  }, [search]);
+
+  const REPORTS_PAGE_SIZE = 10;
+  const [page, setPage] = useState(1);
+  // Jump back to the first page whenever the filters change
+  useEffect(() => { setPage(1); }, [debouncedSearch, status, from, to, testTypeFilter]);
+
+  const { data: reportsResult, isLoading } = useQuery({
+    queryKey: ["pathology_reports", debouncedSearch, status, from, to, testTypeFilter, page],
+    placeholderData: (prev) => prev, // keep current page visible while the next loads
+    staleTime: 30_000,
+    refetchOnWindowFocus: false,
     queryFn: async () => {
-      // If search looks like a patient ID, resolve matching patient UUIDs first
-      let patientIdMatches: string[] | null = null;
-      const trimmed = search.trim();
+      const trimmed = debouncedSearch;
+
+      // Resolve patient-number matches → patient ids (so search covers the Patient ID column)
+      let patientIdMatches: string[] = [];
       if (trimmed) {
         const { data: pats } = await supabase
           .from("patients")
           .select("id")
           .ilike("patient_number", `%${trimmed}%`)
           .limit(50);
-        if (pats && pats.length > 0) patientIdMatches = pats.map((p: any) => p.id);
+        patientIdMatches = (pats ?? []).map((p: any) => p.id);
       }
 
-      let q = supabase
-        .from("lab_pathology_reports")
-        .select("id, report_number, patient_id, patient_name_snapshot, patient_age_snapshot, patient_sex_snapshot, referred_by, status, reported_at, created_at, lab_pathology_report_test_types(test_type_id, lab_test_types(name)), lab_pathology_report_results(result_value, lab_test_parameters(test_type_id))")
-        .order("created_at", { ascending: false })
-        .limit(200);
+      const fromIdx = (page - 1) * REPORTS_PAGE_SIZE;
 
-      if (status !== "all") q = q.eq("status", status);
-      if (from) q = q.gte("created_at", new Date(from).toISOString());
+      // Step 1: server-side filter + paginate → just the matching report ids for this page + total count.
+      // Lightweight (no heavy joins), so search/paging is fast even with thousands of reports.
+      let idq = supabase
+        .from("lab_pathology_reports")
+        .select(
+          testTypeFilter !== "all" ? "id, lab_pathology_report_test_types!inner(test_type_id)" : "id",
+          { count: "exact" }
+        )
+        .order("created_at", { ascending: false });
+
+      if (status !== "all") idq = idq.eq("status", status);
+      if (from) idq = idq.gte("created_at", new Date(from).toISOString());
       if (to) {
         const end = new Date(to); end.setHours(23, 59, 59, 999);
-        q = q.lte("created_at", end.toISOString());
+        idq = idq.lte("created_at", end.toISOString());
       }
-      const { data, error } = await q;
-      if (error) throw error;
-
-      let filtered = data as any[];
+      if (testTypeFilter !== "all") idq = idq.eq("lab_pathology_report_test_types.test_type_id", testTypeFilter);
       if (trimmed) {
-        const s = trimmed.toLowerCase();
-        const idSet = new Set(patientIdMatches ?? []);
-        filtered = filtered.filter((r) =>
-          (r.report_number || "").toLowerCase().includes(s) ||
-          (r.patient_name_snapshot || "").toLowerCase().includes(s) ||
-          (r.patient_id && idSet.has(r.patient_id))
-        );
+        // Sanitize for PostgREST or() syntax (commas/parens break the filter string)
+        const safe = trimmed.replace(/[,()]/g, " ").trim();
+        const orParts: string[] = [];
+        if (safe) {
+          orParts.push(`report_number.ilike.%${safe}%`);
+          orParts.push(`patient_name_snapshot.ilike.%${safe}%`);
+        }
+        if (patientIdMatches.length) orParts.push(`patient_id.in.(${patientIdMatches.join(",")})`);
+        if (orParts.length) idq = idq.or(orParts.join(","));
       }
-      if (testTypeFilter !== "all") {
-        filtered = filtered.filter((r) =>
-          (r.lab_pathology_report_test_types || []).some((tt: any) => tt.test_type_id === testTypeFilter)
-        );
-      }
-      return filtered;
+
+      const { data: idRows, error: idErr, count } = await idq.range(fromIdx, fromIdx + REPORTS_PAGE_SIZE - 1);
+      if (idErr) throw idErr;
+      const ids = (idRows ?? []).map((r: any) => r.id);
+      if (ids.length === 0) return { rows: [] as any[], count: count ?? 0 };
+
+      // Step 2: fetch the full nested data for just this page's ids (≤10 rows)
+      const { data: full, error: fErr } = await supabase
+        .from("lab_pathology_reports")
+        .select("id, report_number, patient_id, patient_name_snapshot, patient_age_snapshot, patient_sex_snapshot, referred_by, status, reported_at, created_at, lab_pathology_report_test_types(test_type_id, lab_test_types(name)), lab_pathology_report_results(result_value, lab_test_parameters(test_type_id))")
+        .in("id", ids)
+        .order("created_at", { ascending: false });
+      if (fErr) throw fErr;
+      return { rows: (full as any[]) ?? [], count: count ?? 0 };
     },
   });
+  const reports = reportsResult?.rows;
+  const reportsTotal = reportsResult?.count ?? 0;
+  const reportsTotalPages = Math.max(1, Math.ceil(reportsTotal / REPORTS_PAGE_SIZE));
 
   const getTestStatuses = (r: any): { name: string; done: boolean }[] => {
     const tts = r.lab_pathology_report_test_types || [];
@@ -201,13 +234,53 @@ export function PathologyReportHistory() {
                       {r.created_at && !isReportLocked(r.created_at) && r.status === "final" && (
                         <Button size="sm" variant="outline" onClick={() => navigate(`?tab=pathology&edit=${r.id}`)}><Edit className="w-3.5 h-3.5" /></Button>
                       )}
-                      <Button size="sm" variant="outline" onClick={() => reprintReport(r.id)}><Printer className="w-3.5 h-3.5" /></Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled={printingId === r.id}
+                        onClick={async () => {
+                          if (printingId) return;
+                          setPrintingId(r.id);
+                          try { await reprintReport(r.id); }
+                          finally { setPrintingId(null); }
+                        }}
+                      >
+                        {printingId === r.id
+                          ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          : <Printer className="w-3.5 h-3.5" />}
+                      </Button>
                     </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
             </Table>
           </div>
+
+          {reportsTotal > 0 && (
+            <div className="flex items-center justify-between pt-4 flex-wrap gap-2">
+              <div className="text-xs text-muted-foreground">
+                Page {page} of {reportsTotalPages} · {reportsTotal} report{reportsTotal === 1 ? "" : "s"}
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={page <= 1 || isLoading}
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                >
+                  Previous
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={page >= reportsTotalPages || isLoading}
+                  onClick={() => setPage((p) => Math.min(reportsTotalPages, p + 1))}
+                >
+                  Next
+                </Button>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -217,18 +290,33 @@ export function PathologyReportHistory() {
 }
 
 async function loadFullReport(reportId: string): Promise<PathologyPdfData | null> {
-  const { data: r, error: e1 } = await supabase.from("lab_pathology_reports").select("*").eq("id", reportId).single();
-  if (e1 || !r) { toast.error("Report not found"); return null; }
-  const { data: tts } = await supabase.from("lab_pathology_report_test_types").select("test_type_id, sort_order, lab_test_types(*)").eq("report_id", reportId).order("sort_order");
-  const testTypeIds = (tts ?? []).map((t: any) => t.test_type_id);
-  const { data: params } = await supabase.from("lab_test_parameters").select("*").in("test_type_id", testTypeIds).order("sort_order");
-  const { data: results } = await supabase.from("lab_pathology_report_results").select("*").eq("report_id", reportId);
-  const paramIds = (params ?? []).map((p: any) => p.id);
+  // Wave 1: everything that only needs reportId runs in parallel
+  const [reportRes, ttsRes, resultsRes] = await Promise.all([
+    supabase.from("lab_pathology_reports").select("*").eq("id", reportId).single(),
+    supabase.from("lab_pathology_report_test_types").select("test_type_id, sort_order, lab_test_types(*)").eq("report_id", reportId).order("sort_order"),
+    supabase.from("lab_pathology_report_results").select("*").eq("report_id", reportId),
+  ]);
+  const r = reportRes.data;
+  if (reportRes.error || !r) { toast.error("Report not found"); return null; }
+  const tts = ttsRes.data ?? [];
+  const results = resultsRes.data ?? [];
+  const testTypeIds = tts.map((t: any) => t.test_type_id);
+
+  // Wave 2: params (needs testTypeIds) and phone (needs patient_id) in parallel
+  const [paramsRes, phoneRes] = await Promise.all([
+    testTypeIds.length > 0
+      ? supabase.from("lab_test_parameters").select("*").in("test_type_id", testTypeIds).order("sort_order")
+      : Promise.resolve({ data: [] as any[] }),
+    supabase.from("profiles").select("phone").eq("id", r.patient_id).single(),
+  ]);
+  const params = paramsRes.data ?? [];
+  const phone = phoneRes.data?.phone ?? null;
+
+  // Wave 3: subranges (needs paramIds)
+  const paramIds = params.map((p: any) => p.id);
   const { data: subrangesAll } = paramIds.length > 0
     ? await supabase.from("lab_parameter_subranges").select("*").in("parameter_id", paramIds).order("sort_order")
     : { data: [] as any[] };
-
-  const phone = (await supabase.from("profiles").select("phone").eq("id", r.patient_id).single()).data?.phone ?? null;
 
   return {
     reportNumber: r.report_number,
@@ -293,6 +381,7 @@ function ReportViewer({ reportId, onClose }: { reportId: string | null; onClose:
   });
 
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [printing, setPrinting] = useState(false);
 
   // Default = all tests that have at least one filled result
   useEffect(() => {
@@ -315,18 +404,22 @@ function ReportViewer({ reportId, onClose }: { reportId: string | null; onClose:
   };
 
   const printSelected = async () => {
-    if (!data) return;
+    if (!data || printing) return;
     if (selected.size === 0) { toast.error("Select at least one test"); return; }
     const filtered: PathologyPdfData = { ...data, testTypes: data.testTypes.filter((t) => selected.has(t.name)) };
-    await generatePathologyReportPDF(filtered);
+    setPrinting(true);
+    try { await generatePathologyReportPDF(filtered); }
+    finally { setPrinting(false); }
   };
 
   const printCombined = async () => {
-    if (!data) return;
+    if (!data || printing) return;
     // Combined = only tests that have results
     const ready = data.testTypes.filter((t) => t.parameters.some((p) => p.result_value !== null && p.result_value !== ""));
     if (ready.length === 0) { toast.error("No completed tests to print"); return; }
-    await generatePathologyReportPDF({ ...data, testTypes: ready });
+    setPrinting(true);
+    try { await generatePathologyReportPDF({ ...data, testTypes: ready }); }
+    finally { setPrinting(false); }
   };
 
   return (
@@ -364,19 +457,31 @@ function ReportViewer({ reportId, onClose }: { reportId: string | null; onClose:
                   <table className="w-full text-xs">
                     <thead><tr className="border-b"><th className="text-left py-1">Parameter</th><th>Result</th><th>Unit</th><th>Reference</th><th>Flag</th></tr></thead>
                     <tbody>
-                      {tt.parameters.map((p, j) => (
-                        p.category_heading ? (
-                          <tr key={j}><td colSpan={5} className="font-semibold pt-2 text-amber-800">{p.category_heading}</td></tr>
-                        ) : (
-                          <tr key={j} className="border-b last:border-b-0">
-                            <td className="py-1">{p.parameter_name}</td>
-                            <td className="text-center font-medium">{p.result_value ?? "—"}</td>
-                            <td className="text-center">{p.unit ?? "—"}</td>
-                            <td className="text-xs">{p.ref_display ?? "—"}{p.subrange_used ? ` (${p.subrange_used})` : ""}</td>
-                            <td className="text-center">{p.flag ?? ""}</td>
-                          </tr>
-                        )
-                      ))}
+                      {(() => {
+                        // Match the PDF: show a category heading once when it changes, and
+                        // ALWAYS show the parameter's data row underneath (a parameter can
+                        // have both a heading and its own result/unit/reference).
+                        let lastHeading: string | null = null;
+                        return tt.parameters.flatMap((p, j) => {
+                          const out = [];
+                          if (p.category_heading && p.category_heading !== lastHeading) {
+                            lastHeading = p.category_heading;
+                            out.push(
+                              <tr key={`${j}-h`}><td colSpan={5} className="font-semibold pt-2 text-amber-800">{p.category_heading}</td></tr>
+                            );
+                          }
+                          out.push(
+                            <tr key={j} className="border-b last:border-b-0">
+                              <td className="py-1">{p.parameter_name}</td>
+                              <td className="text-center font-medium">{p.result_value ?? "—"}</td>
+                              <td className="text-center">{p.unit ?? "—"}</td>
+                              <td className="text-xs">{p.ref_display ?? "—"}{p.subrange_used ? ` (${p.subrange_used})` : ""}</td>
+                              <td className="text-center">{p.flag ?? ""}</td>
+                            </tr>
+                          );
+                          return out;
+                        });
+                      })()}
                     </tbody>
                   </table>
                 </div>
@@ -384,9 +489,15 @@ function ReportViewer({ reportId, onClose }: { reportId: string | null; onClose:
             })}
             {data.interpretation && <div><b>Interpretation:</b> <div className="whitespace-pre-wrap text-muted-foreground">{data.interpretation}</div></div>}
             <div className="flex justify-end gap-2 pt-2 border-t flex-wrap">
-              <Button variant="outline" onClick={onClose}>Close</Button>
-              <Button variant="outline" onClick={printSelected}><Printer className="w-4 h-4 mr-1" /> Print Selected ({selected.size})</Button>
-              <Button onClick={printCombined}><Printer className="w-4 h-4 mr-1" /> Combined PDF (all completed)</Button>
+              <Button variant="outline" onClick={onClose} disabled={printing}>Close</Button>
+              <Button variant="outline" onClick={printSelected} disabled={printing}>
+                {printing ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Printer className="w-4 h-4 mr-1" />}
+                {printing ? "Generating…" : `Print Selected (${selected.size})`}
+              </Button>
+              <Button onClick={printCombined} disabled={printing}>
+                {printing ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Printer className="w-4 h-4 mr-1" />}
+                {printing ? "Generating…" : "Combined PDF (all completed)"}
+              </Button>
             </div>
           </div>
         )}
