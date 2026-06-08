@@ -15,6 +15,9 @@ import NotFound from "./pages/NotFound";
 import OfflineMode from "./pages/OfflineMode";
 import OfflineModePharmacy from "./pages/OfflineModePharmacy";
 import VerifyReport from "./pages/VerifyReport";
+// TRIAL LOCK — remove these 2 lines and the block in <App/> below to unlock the site.
+import TrialEnded from "./pages/TrialEnded";
+const TRIAL_ENDED = true;
 
 // Dashboard main pages
 import DashboardPatient from "./pages/dashboard/DashboardPatient";
@@ -87,7 +90,12 @@ const RealTimeProvider = ({ children }: { children: React.ReactNode }) => {
   return <>{children}</>;
 };
 
-const App = () => (
+const App = () => {
+  // TRIAL LOCK — delete this if-block to restore normal app.
+  if (TRIAL_ENDED) {
+    return <TrialEnded />;
+  }
+  return (
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
       <TooltipProvider>
@@ -358,6 +366,7 @@ const App = () => (
       </TooltipProvider>
     </AuthProvider>
   </QueryClientProvider>
-);
+  );
+};
 
 export default App;
