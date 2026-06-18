@@ -268,6 +268,36 @@ export function StaffPathologyBilling() {
       if (itErr) throw itErr;
 
       toast.success(`Order ${orderNumber} created (${formatPkrAmount(total)})`);
+
+      // Auto-print thermal lab receipt
+      try {
+        const patientName =
+          selectedPatient
+            ? `${selectedPatient.first_name ?? ""} ${selectedPatient.last_name ?? ""}`.trim() ||
+              (selectedPatient.full_name ?? "Patient")
+            : `${newPatient.first_name} ${newPatient.last_name}`.trim();
+        const patientPhone = selectedPatient?.phone ?? newPatient.phone ?? "";
+        const patientDisplayId = selectedPatient?.patient_id ?? selectedPatient?.id ?? "";
+        const tests = selectedTestIds.map((id) => {
+          const t = testTypes!.find((x) => x.id === id)!;
+          return { name: t.name, price: Number(t.price ?? 0) };
+        });
+        await generateLabInvoicePDF({
+          invoiceNumber,
+          patientName: patientName || "Patient",
+          patientEmail: "",
+          patientId: patientDisplayId,
+          patientPhone,
+          tests,
+          totalAmount: total,
+          issueDate: format(new Date(), "dd-MMM-yyyy hh:mm a"),
+          createdBy: user?.id,
+        });
+      } catch (printErr) {
+        console.error("Receipt print failed:", printErr);
+        toast.error("Order saved but receipt failed to open");
+      }
+
       qc.invalidateQueries({ queryKey: ["pathology_orders_recent"] });
       qc.invalidateQueries({ queryKey: ["pathology_orders_ready"] });
       reset();
