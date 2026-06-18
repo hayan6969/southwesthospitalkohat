@@ -4,6 +4,18 @@ import { formatPkrAmount } from './currency';
 import { supabase } from '@/integrations/supabase/client';
 import { getPatientContactNumber } from './patientUtils';
 import { formatInPakistanTime } from './timezone';
+import {
+  THERMAL_WIDTH,
+  THERMAL_MARGIN,
+  THERMAL_CONTENT_WIDTH,
+  THERMAL_CENTER,
+  getHospitalSettings as getThermalHospitalSettings,
+  createThermalDoc,
+  drawThermalHeader,
+  thermalDivider,
+  thermalLine,
+  openThermalPDF,
+} from './thermalReceipt';
 
 // Deduplicate hospital invoices: same patient, same amount, within 2 minutes
 const DEDUP_WINDOW_MS = 2 * 60 * 1000;
@@ -167,175 +179,102 @@ export const generateLabInvoicePDF = async (data: {
   createdBy?: string;
 }) => {
   const createdByName = await fetchCreatorName(data.createdBy);
-  const doc = new jsPDF();
-  const pageWidth = doc.internal.pageSize.width;
+  const settings = await getThermalHospitalSettings();
 
-  // Add hospital header
-  let yPosition = await addHospitalHeader(doc, 'LAB TEST INVOICE');
-  yPosition += 10;
+  // Estimate receipt height (mirrors pharmacy generator approach)
+  const baseHeight = 120;
+  const perItemHeight = 12;
+  const hasDiscount = !!(data.discount && data.discount.discountApplied > 0);
+  const pageHeight =
+    baseHeight + data.tests.length * perItemHeight + (hasDiscount ? 8 : 0) + (createdByName ? 6 : 0);
 
-  // Invoice details box (exactly like staff dashboard)
-  doc.setDrawColor(0, 0, 0);
-  doc.rect(15, yPosition - 5, pageWidth - 30, 50);
-  
-  doc.setFontSize(11);
-  doc.setFont('helvetica', 'bold');
-  doc.setTextColor(40, 40, 40);
-  
-  // First row
-  doc.text('Invoice #:', 20, yPosition + 5);
-  doc.setFont('helvetica', 'normal');
-  doc.text(data.invoiceNumber, 60, yPosition + 5);
-  
-  doc.setFont('helvetica', 'bold');
-  doc.text('Date:', 120, yPosition + 5);
-  doc.setFont('helvetica', 'normal');
-  doc.text(data.issueDate, 140, yPosition + 5);
-  
-  yPosition += 10;
-  
-  // Second row
-  doc.setFont('helvetica', 'bold');
-  doc.text('Patient:', 20, yPosition + 5);
-  doc.setFont('helvetica', 'normal');
-  doc.text(data.patientName, 60, yPosition + 5);
-  
-  doc.setFont('helvetica', 'bold');
-  doc.text('Patient ID:', 120, yPosition + 5);
-  doc.setFont('helvetica', 'normal');
-  doc.text(data.patientId || 'N/A', 160, yPosition + 5);
-  
-  yPosition += 10;
-  
-  // Third row
-  doc.setFont('helvetica', 'bold');
-  doc.text('Status:', 20, yPosition + 5);
-  doc.setFont('helvetica', 'normal');
-  doc.text('COMPLETED', 60, yPosition + 5);
+  const pdf = createThermalDoc(pageHeight);
+  let y = await drawThermalHeader(pdf, settings, 'LAB INVOICE');
 
-  yPosition += 50;
+  // Invoice meta
+  pdf.setFont('helvetica', 'normal');
+  pdf.setFontSize(7.5);
+  y = thermalLine(pdf, `Invoice #: ${data.invoiceNumber}`, y);
+  y = thermalLine(pdf, `Date: ${data.issueDate}`, y);
+  y = thermalLine(pdf, `Patient: ${data.patientName}`, y);
+  if (data.patientId) y = thermalLine(pdf, `Patient ID: ${data.patientId}`, y);
+  if (data.patientPhone) y = thermalLine(pdf, `Phone: ${data.patientPhone}`, y);
+  y = thermalLine(pdf, 'Status: COMPLETED', y);
 
-  // Tests table
-  const tableStartY = yPosition;
-  const colWidths = [100, 40, 40];
-  const headers = ['Test Name', 'Description', 'Price'];
-  
-  // Table header
-  doc.setFillColor(240, 240, 240);
-  doc.rect(15, yPosition, pageWidth - 30, 10, 'F');
-  
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(10);
-  let xPosition = 20;
-  headers.forEach((header, index) => {
-    doc.text(header, xPosition, yPosition + 7);
-    xPosition += colWidths[index];
-  });
-  
-  yPosition += 15; // More spacing before first item
-  
-  // Test items with proper text wrapping
-  doc.setFont('helvetica', 'normal');
+  y = thermalDivider(pdf, y);
+
+  // Items header
+  pdf.setFont('helvetica', 'bold');
+  pdf.setFontSize(7.5);
+  pdf.text('Test', THERMAL_MARGIN, y);
+  pdf.text('Price', THERMAL_WIDTH - THERMAL_MARGIN, y, { align: 'right' });
+  y += 2;
+  y = thermalDivider(pdf, y, 0.1);
+
+  // Test items
+  pdf.setFont('helvetica', 'normal');
   data.tests.forEach((test) => {
-    xPosition = 20;
-    
-    // Check if we need a new page
-    if (yPosition > 250) {
-      doc.addPage();
-      yPosition = 20;
+    const nameLines = pdf.splitTextToSize(test.name, THERMAL_CONTENT_WIDTH - 16);
+    pdf.text(nameLines[0], THERMAL_MARGIN, y);
+    pdf.text(formatPkrAmount(test.price), THERMAL_WIDTH - THERMAL_MARGIN, y, { align: 'right' });
+    y += 3.5;
+    for (let i = 1; i < nameLines.length; i++) {
+      pdf.text(nameLines[i], THERMAL_MARGIN, y);
+      y += 3.2;
     }
-    
-    // Test name with text wrapping
-    const testNameLines = doc.splitTextToSize(test.name, colWidths[0] - 5);
-    const testNameHeight = testNameLines.length * 5;
-    
-    // Description with text wrapping
-    const description = test.description || '-';
-    const descLines = doc.splitTextToSize(description, colWidths[1] - 5);
-    const descHeight = descLines.length * 5;
-    
-    // Calculate row height based on the tallest cell content
-    const rowHeight = Math.max(testNameHeight, descHeight, 8);
-    
-    // Test name (wrapped)
-    doc.text(testNameLines, xPosition, yPosition);
-    xPosition += colWidths[0];
-    
-    // Description (wrapped)
-    doc.text(descLines, xPosition, yPosition);
-    xPosition += colWidths[1];
-    
-    // Price (aligned to top of row)
-    doc.text(formatPkrAmount(test.price), xPosition, yPosition);
-    
-    yPosition += rowHeight + 2; // Add some padding between rows
+    if (test.description) {
+      pdf.setFont('helvetica', 'italic');
+      pdf.setFontSize(6.5);
+      const descLines = pdf.splitTextToSize(test.description, THERMAL_CONTENT_WIDTH);
+      descLines.forEach((line: string) => {
+        pdf.text(line, THERMAL_MARGIN, y);
+        y += 3;
+      });
+      pdf.setFont('helvetica', 'normal');
+      pdf.setFontSize(7.5);
+    }
+    y += 1;
   });
-  
-  // Draw table border
-  doc.setDrawColor(0, 0, 0);
-  doc.rect(15, tableStartY, pageWidth - 30, yPosition - tableStartY);
-  
-  // Vertical lines for table
-  xPosition = 15;
-  for (let i = 0; i < colWidths.length - 1; i++) {
-    xPosition += colWidths[i];
-    doc.line(xPosition, tableStartY, xPosition, yPosition);
+
+  y = thermalDivider(pdf, y, 0.2);
+  y += 1;
+
+  // Totals
+  pdf.setFontSize(8);
+  if (hasDiscount && data.discount) {
+    pdf.setFont('helvetica', 'normal');
+    pdf.text('Subtotal:', THERMAL_MARGIN, y);
+    pdf.text(formatPkrAmount(data.discount.originalAmount), THERMAL_WIDTH - THERMAL_MARGIN, y, { align: 'right' });
+    y += 4;
+    pdf.text(`Discount${data.discount.discountLabel ? ` (${data.discount.discountLabel})` : ''}:`, THERMAL_MARGIN, y);
+    pdf.text(`-${formatPkrAmount(data.discount.discountApplied)}`, THERMAL_WIDTH - THERMAL_MARGIN, y, { align: 'right' });
+    y += 2;
+    y = thermalDivider(pdf, y, 0.1);
   }
+  pdf.setFont('helvetica', 'bold');
+  pdf.setFontSize(9.5);
+  pdf.text('TOTAL:', THERMAL_MARGIN, y + 1);
+  const totalAmount = hasDiscount && data.discount ? data.discount.discountedAmount : data.totalAmount;
+  pdf.text(formatPkrAmount(totalAmount), THERMAL_WIDTH - THERMAL_MARGIN, y + 1, { align: 'right' });
+  y += 5;
+  y = thermalDivider(pdf, y, 0.2);
 
-  yPosition += 15;
-
-  // Total section
-  yPosition += 15;
-  const totalsX = pageWidth - 85;
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(12);
-  doc.setTextColor(40, 40, 40);
-
-  if (data.discount && data.discount.discountApplied > 0) {
-    // Show subtotal, discount, and final total
-    const boxHeight = 38;
-    doc.rect(totalsX, yPosition - 5, 80, boxHeight);
-    
-    doc.setFontSize(10);
-    doc.text('Subtotal:', totalsX + 5, yPosition + 4);
-    doc.setFont('helvetica', 'normal');
-    doc.text(formatPkrAmount(data.discount.originalAmount), totalsX + 45, yPosition + 4);
-    
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(0, 128, 0);
-    doc.text(`Discount (${data.discount.discountLabel}):`, totalsX + 5, yPosition + 14);
-    doc.setFont('helvetica', 'normal');
-    doc.text(`-${formatPkrAmount(data.discount.discountApplied)}`, totalsX + 45, yPosition + 14);
-    
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(12);
-    doc.setTextColor(40, 40, 40);
-    doc.line(totalsX + 5, yPosition + 19, totalsX + 75, yPosition + 19);
-    doc.text('Total Amount:', totalsX + 5, yPosition + 26);
-    doc.text(formatPkrAmount(data.discount.discountedAmount), totalsX + 5, yPosition + 33);
-  } else {
-    doc.rect(totalsX, yPosition - 5, 80, 18);
-    doc.text('Total Amount:', totalsX + 5, yPosition + 4);
-    doc.text(formatPkrAmount(data.totalAmount), totalsX + 5, yPosition + 12);
+  // Served by
+  if (createdByName) {
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(7);
+    y = thermalLine(pdf, `Served by: ${createdByName}`, y, 3.5);
   }
-
-  // Created By attribution
-  yPosition = addCreatedByLine(doc, yPosition, createdByName);
 
   // Footer
-  yPosition += 15;
-  doc.setFontSize(9);
-  doc.setFont('helvetica', 'italic');
-  doc.setTextColor(100, 100, 100);
-  doc.text('Please bring this invoice when coming for your lab tests.', pageWidth / 2, yPosition, { align: 'center' });
-  doc.text('Payment is due before test collection.', pageWidth / 2, yPosition + 8, { align: 'center' });
+  y += 2;
+  pdf.setFont('helvetica', 'italic');
+  pdf.setFontSize(7);
+  pdf.text('Payment is due before test collection.', THERMAL_CENTER, y, { align: 'center' });
+  y += 3.2;
+  pdf.text('Thank you for your visit!', THERMAL_CENTER, y, { align: 'center' });
 
-  // Open PDF in new tab
-  const pdfBlob = doc.output('blob');
-  const pdfUrl = URL.createObjectURL(pdfBlob);
-  window.open(pdfUrl, '_blank');
-  
-  return pdfBlob;
+  return openThermalPDF(pdf);
 };
 
 export const generateInvoicePDF = async (invoice: any) => {
@@ -554,172 +493,106 @@ export const generateXrayInvoicePDF = async (data: {
   createdBy?: string;
 }) => {
   const createdByName = await fetchCreatorName(data.createdBy);
-  const doc = new jsPDF();
-  const pageWidth = doc.internal.pageSize.width;
+  const settings = await getThermalHospitalSettings();
 
-  // Add hospital header
-  let yPosition = await addHospitalHeader(doc, 'X-RAY EXAMINATION INVOICE');
-  yPosition += 10;
+  // Estimate receipt height (mirrors pharmacy generator approach)
+  const baseHeight = 125;
+  const perItemHeight = 12;
+  const notesLineCount = data.notes ? Math.ceil(data.notes.length / 40) + 1 : 0;
+  const pageHeight =
+    baseHeight +
+    data.tests.length * perItemHeight +
+    notesLineCount * 3.2 +
+    (createdByName ? 6 : 0);
 
-  // Invoice details box
-  doc.setDrawColor(0, 0, 0);
-  doc.rect(15, yPosition - 5, pageWidth - 30, 60);
-  
-  doc.setFontSize(11);
-  doc.setFont('helvetica', 'bold');
-  doc.setTextColor(40, 40, 40);
-  
-  // First row
-  doc.text('Invoice #:', 20, yPosition + 5);
-  doc.setFont('helvetica', 'normal');
-  doc.text(data.invoiceNumber, 60, yPosition + 5);
-  
-  doc.setFont('helvetica', 'bold');
-  doc.text('Issue Date:', 120, yPosition + 5);
-  doc.setFont('helvetica', 'normal');
-  doc.text(data.issueDate, 160, yPosition + 5);
-  
-  yPosition += 10;
-  
-  // Second row
-  doc.setFont('helvetica', 'bold');
-  doc.text('Patient:', 20, yPosition + 5);
-  doc.setFont('helvetica', 'normal');
-  doc.text(data.patientName, 60, yPosition + 5);
-  
-  doc.setFont('helvetica', 'bold');
-  doc.text('Patient ID:', 120, yPosition + 5);
-  doc.setFont('helvetica', 'normal');
-  doc.text(data.patientId || 'N/A', 160, yPosition + 5);
-  
-  yPosition += 10;
-  
-  // Third row
-  doc.setFont('helvetica', 'bold');
-  doc.text('X-ray Date:', 20, yPosition + 5);
-  doc.setFont('helvetica', 'normal');
-  doc.text(data.xrayDate, 70, yPosition + 5);
-  
-  if (data.doctorName) {
-    doc.setFont('helvetica', 'bold');
-    doc.text('Doctor:', 120, yPosition + 5);
-    doc.setFont('helvetica', 'normal');
-    doc.text(data.doctorName, 150, yPosition + 5);
-  }
-  
-  yPosition += 10;
-  
-  // Fourth row - Status
-  doc.setFont('helvetica', 'bold');
-  doc.text('Status:', 20, yPosition + 5);
-  doc.setFont('helvetica', 'normal');
-  doc.text('SCHEDULED', 60, yPosition + 5);
+  const pdf = createThermalDoc(pageHeight);
+  let y = await drawThermalHeader(pdf, settings, 'X-RAY INVOICE');
 
-  yPosition += 65;
+  // Invoice meta
+  pdf.setFont('helvetica', 'normal');
+  pdf.setFontSize(7.5);
+  y = thermalLine(pdf, `Invoice #: ${data.invoiceNumber}`, y);
+  y = thermalLine(pdf, `Issue Date: ${data.issueDate}`, y);
+  y = thermalLine(pdf, `Patient: ${data.patientName}`, y);
+  if (data.patientId) y = thermalLine(pdf, `Patient ID: ${data.patientId}`, y);
+  if (data.patientPhone) y = thermalLine(pdf, `Phone: ${data.patientPhone}`, y);
+  y = thermalLine(pdf, `X-ray Date: ${data.xrayDate}`, y);
+  if (data.doctorName) y = thermalLine(pdf, `Doctor: ${data.doctorName}`, y);
+  y = thermalLine(pdf, 'Status: SCHEDULED', y);
 
-  // Tests table
-  const tableStartY = yPosition;
-  const colWidths = [100, 40, 40];
-  const headers = ['X-ray Test', 'Description', 'Price'];
-  
-  // Table header
-  doc.setFillColor(240, 240, 240);
-  doc.rect(15, yPosition, pageWidth - 30, 10, 'F');
-  
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(10);
-  let xPosition = 20;
-  headers.forEach((header, index) => {
-    doc.text(header, xPosition, yPosition + 7);
-    xPosition += colWidths[index];
-  });
-  
-  yPosition += 15;
-  
+  y = thermalDivider(pdf, y);
+
+  // Items header
+  pdf.setFont('helvetica', 'bold');
+  pdf.setFontSize(7.5);
+  pdf.text('X-ray Test', THERMAL_MARGIN, y);
+  pdf.text('Price', THERMAL_WIDTH - THERMAL_MARGIN, y, { align: 'right' });
+  y += 2;
+  y = thermalDivider(pdf, y, 0.1);
+
   // Test items
-  doc.setFont('helvetica', 'normal');
+  pdf.setFont('helvetica', 'normal');
   data.tests.forEach((test) => {
-    xPosition = 20;
-    
-    if (yPosition > 250) {
-      doc.addPage();
-      yPosition = 20;
+    const nameLines = pdf.splitTextToSize(test.name, THERMAL_CONTENT_WIDTH - 16);
+    pdf.text(nameLines[0], THERMAL_MARGIN, y);
+    pdf.text(formatPkrAmount(test.price), THERMAL_WIDTH - THERMAL_MARGIN, y, { align: 'right' });
+    y += 3.5;
+    for (let i = 1; i < nameLines.length; i++) {
+      pdf.text(nameLines[i], THERMAL_MARGIN, y);
+      y += 3.2;
     }
-    
-    const testNameLines = doc.splitTextToSize(test.name, colWidths[0] - 5);
-    const testNameHeight = testNameLines.length * 5;
-    
-    const description = test.description || '-';
-    const descLines = doc.splitTextToSize(description, colWidths[1] - 5);
-    const descHeight = descLines.length * 5;
-    
-    const rowHeight = Math.max(testNameHeight, descHeight, 8);
-    
-    doc.text(testNameLines, xPosition, yPosition);
-    xPosition += colWidths[0];
-    
-    doc.text(descLines, xPosition, yPosition);
-    xPosition += colWidths[1];
-    
-    doc.text(formatPkrAmount(test.price), xPosition, yPosition);
-    
-    yPosition += rowHeight + 2;
+    if (test.description) {
+      pdf.setFont('helvetica', 'italic');
+      pdf.setFontSize(6.5);
+      const descLines = pdf.splitTextToSize(test.description, THERMAL_CONTENT_WIDTH);
+      descLines.forEach((line: string) => {
+        pdf.text(line, THERMAL_MARGIN, y);
+        y += 3;
+      });
+      pdf.setFont('helvetica', 'normal');
+      pdf.setFontSize(7.5);
+    }
+    y += 1;
   });
-  
-  // Draw table border
-  doc.setDrawColor(0, 0, 0);
-  doc.rect(15, tableStartY, pageWidth - 30, yPosition - tableStartY);
-  
-  // Vertical lines for table
-  xPosition = 15;
-  for (let i = 0; i < colWidths.length - 1; i++) {
-    xPosition += colWidths[i];
-    doc.line(xPosition, tableStartY, xPosition, yPosition);
-  }
 
-  yPosition += 15;
+  y = thermalDivider(pdf, y, 0.2);
+  y += 1;
 
-  // Notes section if available
+  // Total
+  pdf.setFont('helvetica', 'bold');
+  pdf.setFontSize(9.5);
+  pdf.text('TOTAL:', THERMAL_MARGIN, y + 1);
+  pdf.text(formatPkrAmount(data.totalAmount), THERMAL_WIDTH - THERMAL_MARGIN, y + 1, { align: 'right' });
+  y += 5;
+  y = thermalDivider(pdf, y, 0.2);
+
+  // Notes
   if (data.notes) {
-    yPosition += 10;
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(11);
-    doc.text('Notes:', 20, yPosition);
-    yPosition += 8;
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(10);
-    const notesLines = doc.splitTextToSize(data.notes, pageWidth - 40);
-    doc.text(notesLines, 20, yPosition);
-    yPosition += notesLines.length * 5 + 10;
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(7);
+    pdf.text('Notes:', THERMAL_MARGIN, y);
+    y += 3.2;
+    pdf.setFont('helvetica', 'normal');
+    y = thermalLine(pdf, data.notes, y, 3.2);
+    y += 1;
   }
 
-  // Total section
-  yPosition += 15;
-  const totalsX = pageWidth - 85;
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(12);
-  doc.setTextColor(40, 40, 40);
-  doc.rect(totalsX, yPosition - 5, 80, 18);
-  doc.text('Total Amount:', totalsX + 5, yPosition + 4);
-  doc.text(formatPkrAmount(data.totalAmount), totalsX + 5, yPosition + 12);
-
-  // Created By attribution
-  yPosition = addCreatedByLine(doc, yPosition, createdByName);
+  // Served by
+  if (createdByName) {
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(7);
+    y = thermalLine(pdf, `Served by: ${createdByName}`, y, 3.5);
+  }
 
   // Footer
-  yPosition += 15;
-  doc.setFontSize(9);
-  doc.setFont('helvetica', 'italic');
-  doc.setTextColor(100, 100, 100);
-  doc.text('Please arrive 15 minutes before your scheduled X-ray appointment.', pageWidth / 2, yPosition, { align: 'center' });
-  doc.text('Payment is required before the examination.', pageWidth / 2, yPosition + 8, { align: 'center' });
+  y += 2;
+  pdf.setFont('helvetica', 'italic');
+  pdf.setFontSize(7);
+  pdf.text('Please arrive 15 minutes before your appointment.', THERMAL_CENTER, y, { align: 'center' });
+  y += 3.2;
+  pdf.text('Payment is required before the examination.', THERMAL_CENTER, y, { align: 'center' });
 
-  // Open PDF in new tab
-  const pdfBlob = doc.output('blob');
-  const pdfUrl = URL.createObjectURL(pdfBlob);
-  window.open(pdfUrl, '_blank');
-  
-  return pdfBlob;
+  return openThermalPDF(pdf);
 };
 
 export const generateOTPDF = async (data: {
@@ -742,182 +615,111 @@ export const generateOTPDF = async (data: {
   createdBy?: string;
 }) => {
   const createdByName = await fetchCreatorName(data.createdBy);
-  const doc = new jsPDF();
-  const pageWidth = doc.internal.pageSize.width;
+  const settings = await getThermalHospitalSettings();
 
-  // Add hospital header
-  let yPosition = await addHospitalHeader(doc, 'OT OPERATION INVOICE');
-  yPosition += 5; // Reduced spacing
+  const maxItems = 40; // safety cap
+  const itemCount = Math.min(data.items.length, maxItems);
 
-  // Invoice details in a more compact box
-  doc.setDrawColor(0, 0, 0);
-  doc.rect(15, yPosition, pageWidth - 30, 45); // Reduced height
-  
-  doc.setFontSize(10); // Smaller font
-  doc.setFont('helvetica', 'bold');
-  doc.setTextColor(40, 40, 40);
-  
-  // First row
-  doc.text('Invoice #:', 20, yPosition + 8);
-  doc.setFont('helvetica', 'normal');
-  doc.text(data.invoiceNumber, 55, yPosition + 8);
-  
-  doc.setFont('helvetica', 'bold');
-  doc.text('Date:', 120, yPosition + 8);
-  doc.setFont('helvetica', 'normal');
-  doc.text(data.date, 140, yPosition + 8);
-  
-  // Second row
-  yPosition += 10;
-  doc.setFont('helvetica', 'bold');
-  doc.text('Patient:', 20, yPosition + 8);
-  doc.setFont('helvetica', 'normal');
-  doc.text(data.patientName, 50, yPosition + 8);
-  
-  doc.setFont('helvetica', 'bold');
-  doc.text('ID:', 120, yPosition + 8);
-  doc.setFont('helvetica', 'normal');
-  doc.text(data.patientId || 'N/A', 135, yPosition + 8);
-  
-  // Third row
-  yPosition += 10;
-  doc.setFont('helvetica', 'bold');
-  doc.text('Doctor:', 20, yPosition + 8);
-  doc.setFont('helvetica', 'normal');
-  doc.text(data.doctorName, 50, yPosition + 8);
-  
-  doc.setFont('helvetica', 'bold');
-  doc.text('Room:', 120, yPosition + 8);
-  doc.setFont('helvetica', 'normal');
-  doc.text(data.room, 140, yPosition + 8);
-  
-  // Fourth row
-  yPosition += 10;
-  doc.setFont('helvetica', 'bold');
-  doc.text('Procedure:', 20, yPosition + 8);
-  doc.setFont('helvetica', 'normal');
-  doc.text(data.procedure.length > 50 ? data.procedure.substring(0, 47) + '...' : data.procedure, 60, yPosition + 8);
+  // Estimate receipt height (mirrors pharmacy generator approach)
+  const baseHeight = 130;
+  const perItemHeight = 8;
+  const pageHeight = baseHeight + itemCount * perItemHeight + (createdByName ? 6 : 0);
 
-  yPosition += 50; // Move to table start
+  const pdf = createThermalDoc(pageHeight);
+  let y = await drawThermalHeader(pdf, settings, 'OT OPERATION INVOICE');
 
-  // Items table with better spacing
-  const tableStartY = yPosition;
-  const colWidths = [80, 25, 35, 35]; // Adjusted column widths
-  const headers = ['Description', 'Qty', 'Unit Price', 'Total'];
-  
-  // Table header with better styling
-  doc.setFillColor(230, 230, 230);
-  doc.rect(15, yPosition, pageWidth - 30, 8, 'F');
-  doc.setDrawColor(0, 0, 0);
-  doc.rect(15, yPosition, pageWidth - 30, 8);
-  
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(9);
-  doc.setTextColor(40, 40, 40);
-  let xPosition = 20;
-  headers.forEach((header, index) => {
-    doc.text(header, xPosition, yPosition + 6);
-    xPosition += colWidths[index];
-  });
-  
-  yPosition += 8;
-  
-  // Items with controlled spacing
-  doc.setFont('helvetica', 'normal');
-  doc.setTextColor(60, 60, 60);
-  doc.setFontSize(8);
-  
-  let itemsAdded = 0;
-  const maxItems = 20; // Limit items to ensure single page
-  
-  data.items.forEach((item, index) => {
-    if (itemsAdded >= maxItems) return; // Skip if too many items
-    
-    xPosition = 20;
-    
+  // Invoice meta
+  pdf.setFont('helvetica', 'normal');
+  pdf.setFontSize(7.5);
+  y = thermalLine(pdf, `Invoice #: ${data.invoiceNumber}`, y);
+  y = thermalLine(pdf, `Date: ${data.date}`, y);
+  y = thermalLine(pdf, `Patient: ${data.patientName}`, y);
+  if (data.patientId) y = thermalLine(pdf, `Patient ID: ${data.patientId}`, y);
+  if (data.patientPhone) y = thermalLine(pdf, `Phone: ${data.patientPhone}`, y);
+  y = thermalLine(pdf, `Doctor: ${data.doctorName}`, y);
+  if (data.room) y = thermalLine(pdf, `Room: ${data.room}`, y);
+  if (data.procedure) y = thermalLine(pdf, `Procedure: ${data.procedure}`, y);
+
+  y = thermalDivider(pdf, y);
+
+  // Items header
+  pdf.setFont('helvetica', 'bold');
+  pdf.setFontSize(7.5);
+  pdf.text('Item', THERMAL_MARGIN, y);
+  pdf.text('Total', THERMAL_WIDTH - THERMAL_MARGIN, y, { align: 'right' });
+  y += 2;
+  y = thermalDivider(pdf, y, 0.1);
+
+  // Items
+  pdf.setFontSize(7.5);
+  data.items.slice(0, maxItems).forEach((item) => {
     if (item.isHeader) {
-      // Header styling - more compact
-      doc.setFont('helvetica', 'bold');
-      doc.setTextColor(20, 20, 20);
-      doc.setFontSize(8);
-      doc.text(item.description, xPosition, yPosition + 5);
-      doc.setFont('helvetica', 'normal');
-      doc.setTextColor(60, 60, 60);
+      // Category / section header row
+      pdf.setFont('helvetica', 'bold');
+      pdf.setFontSize(7.5);
+      const headerLines = pdf.splitTextToSize(item.description, THERMAL_CONTENT_WIDTH);
+      headerLines.forEach((line: string) => {
+        pdf.text(line, THERMAL_MARGIN, y);
+        y += 3.5;
+      });
+      pdf.setFont('helvetica', 'normal');
+      y += 0.5;
     } else {
-      // Description
-      const description = item.description.length > 45 ? item.description.substring(0, 42) + '...' : item.description;
-      doc.text(description, xPosition, yPosition + 5);
-      xPosition += colWidths[0];
-      
-      // Quantity
-      doc.text(item.quantity.toString(), xPosition + 5, yPosition + 5);
-      xPosition += colWidths[1];
-      
-      // Unit Price
-      doc.text(formatPkrAmount(Number(item.unitPrice)), xPosition, yPosition + 5);
-      xPosition += colWidths[2];
-      
-      // Total Price
-      doc.text(formatPkrAmount(Number(item.totalPrice)), xPosition, yPosition + 5);
+      // Description (wrapped) with total on the first line
+      const nameLines = pdf.splitTextToSize(item.description, THERMAL_CONTENT_WIDTH - 18);
+      pdf.text(nameLines[0], THERMAL_MARGIN, y);
+      pdf.text(formatPkrAmount(Number(item.totalPrice)), THERMAL_WIDTH - THERMAL_MARGIN, y, { align: 'right' });
+      y += 3.5;
+      for (let i = 1; i < nameLines.length; i++) {
+        pdf.text(nameLines[i], THERMAL_MARGIN, y);
+        y += 3.2;
+      }
+      // Qty x unit price sub-line
+      pdf.setFont('helvetica', 'italic');
+      pdf.setFontSize(6.5);
+      pdf.text(`${item.quantity} x ${formatPkrAmount(Number(item.unitPrice))}`, THERMAL_MARGIN + 2, y);
+      pdf.setFont('helvetica', 'normal');
+      pdf.setFontSize(7.5);
+      y += 3.5;
     }
-    
-    yPosition += 6; // Reduced line height for more compact layout
-    itemsAdded++;
   });
-  
-  // Table border
-  const tableEndY = yPosition;
-  doc.setDrawColor(0, 0, 0);
-  doc.rect(15, tableStartY, pageWidth - 30, tableEndY - tableStartY);
-  
-  // Vertical lines for table columns
-  xPosition = 15;
-  for (let i = 0; i < colWidths.length - 1; i++) {
-    xPosition += colWidths[i];
-    doc.line(xPosition, tableStartY, xPosition, tableEndY);
+
+  if (data.items.length > maxItems) {
+    pdf.setFont('helvetica', 'italic');
+    pdf.setFontSize(6.5);
+    pdf.text(`(+${data.items.length - maxItems} more item(s))`, THERMAL_MARGIN, y);
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(7.5);
+    y += 3.5;
   }
-  
-  // Horizontal line after header
-  doc.line(15, tableStartY + 8, pageWidth - 15, tableStartY + 8);
 
-  yPosition += 10;
+  y = thermalDivider(pdf, y, 0.2);
+  y += 1;
 
-  // Total section - clean and prominent but compact
-  const totalBoxWidth = 70;
-  const totalBoxHeight = 15;
-  const totalsX = pageWidth - totalBoxWidth - 15;
-  
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(12);
-  doc.setTextColor(0, 0, 0);
-  
-  // Total box with border
-  doc.setFillColor(245, 245, 245);
-  doc.setDrawColor(0, 0, 0);
-  doc.rect(totalsX, yPosition, totalBoxWidth, totalBoxHeight, 'FD');
-  
-  // Total text
-  doc.setFontSize(10);
-  doc.text('TOTAL AMOUNT:', totalsX + 3, yPosition + 6);
-  doc.setFontSize(12);
-  doc.setTextColor(0, 100, 0);
-  doc.text(formatPkrAmount(data.totalAmount), totalsX + 3, yPosition + 12);
+  // Total
+  pdf.setFont('helvetica', 'bold');
+  pdf.setFontSize(9.5);
+  pdf.text('TOTAL:', THERMAL_MARGIN, y + 1);
+  pdf.text(formatPkrAmount(data.totalAmount), THERMAL_WIDTH - THERMAL_MARGIN, y + 1, { align: 'right' });
+  y += 5;
+  y = thermalDivider(pdf, y, 0.2);
 
-  // Created By attribution
-  yPosition = addCreatedByLine(doc, yPosition, createdByName);
+  // Served by
+  if (createdByName) {
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(7);
+    y = thermalLine(pdf, `Served by: ${createdByName}`, y, 3.5);
+  }
 
-  // Footer - compact
-  yPosition += 15;
-  doc.setFontSize(8);
-  doc.setFont('helvetica', 'italic');
-  doc.setTextColor(100, 100, 100);
-  doc.text('Thank you for choosing our medical services!', pageWidth / 2, yPosition, { align: 'center' });
-  doc.text('This invoice serves as proof of completed operation.', pageWidth / 2, yPosition + 6, { align: 'center' });
+  // Footer
+  y += 2;
+  pdf.setFont('helvetica', 'italic');
+  pdf.setFontSize(7);
+  pdf.text('Thank you for choosing our services!', THERMAL_CENTER, y, { align: 'center' });
+  y += 3.2;
+  pdf.text('Proof of completed operation.', THERMAL_CENTER, y, { align: 'center' });
 
-  // Open PDF in new tab
-  const pdfBlob = doc.output('blob');
-  const pdfUrl = URL.createObjectURL(pdfBlob);
-  window.open(pdfUrl, '_blank');
+  openThermalPDF(pdf);
 };
 
 // Helper function to query transaction data for a specific date

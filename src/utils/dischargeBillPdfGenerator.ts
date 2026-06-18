@@ -1,5 +1,15 @@
-import jsPDF from "jspdf";
-import { supabase } from "@/integrations/supabase/client";
+import {
+  THERMAL_WIDTH,
+  THERMAL_MARGIN,
+  THERMAL_CONTENT_WIDTH,
+  THERMAL_CENTER,
+  getHospitalSettings,
+  createThermalDoc,
+  drawThermalHeader,
+  thermalDivider,
+  thermalLine,
+  openThermalPDF,
+} from "./thermalReceipt";
 
 interface BillItem { description: string; qty: number; unit: number; amount: number; }
 interface BillData {
@@ -21,73 +31,85 @@ interface BillData {
 const fmt = (n: number) => `Rs. ${Number(n).toLocaleString("en-PK", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 export async function generateDischargeBillPDF(d: BillData) {
-  const { data: hs } = await supabase.from("hospital_settings").select("hospital_name,contact_number,logo_url").maybeSingle();
+  const settings = await getHospitalSettings();
 
-  const pdf = new jsPDF("p", "mm", "a4");
-  const pw = pdf.internal.pageSize.getWidth();
-  const margin = 15;
-  let y = margin;
+  // Estimate receipt height (mirrors pharmacy generator approach)
+  const baseHeight = 150;
+  const perItemHeight = 9;
+  const pageHeight = baseHeight + d.items.length * perItemHeight;
 
-  pdf.setFontSize(15); pdf.setFont("helvetica", "bold");
-  pdf.text(hs?.hospital_name || "Hospital", pw / 2, y, { align: "center" }); y += 6;
-  pdf.setFontSize(11); pdf.setFont("helvetica", "normal");
-  pdf.text("IPD DISCHARGE BILL", pw / 2, y, { align: "center" }); y += 5;
-  if (hs?.contact_number) { pdf.setFontSize(9); pdf.text(`Phone: ${hs.contact_number}`, pw / 2, y, { align: "center" }); y += 5; }
+  const pdf = createThermalDoc(pageHeight);
+  let y = await drawThermalHeader(pdf, settings, "IPD DISCHARGE BILL");
 
-  pdf.setLineWidth(0.3); pdf.line(margin, y, pw - margin, y); y += 5;
-
-  pdf.setFontSize(9);
-  const col2 = pw / 2 + 5;
-  const row = (l1: string, v1: string, l2?: string, v2?: string) => {
-    pdf.setFont("helvetica", "bold"); pdf.text(l1, margin, y);
-    pdf.setFont("helvetica", "normal"); pdf.text(v1, margin + 35, y);
-    if (l2) { pdf.setFont("helvetica", "bold"); pdf.text(l2, col2, y); pdf.setFont("helvetica", "normal"); pdf.text(v2 || "", col2 + 35, y); }
-    y += 5;
-  };
-  row("Invoice #:", d.invoiceNumber, "Admission #:", d.admissionNumber);
-  row("Patient:", d.patientName, "Ward / Bed:", `${d.wardName || "-"} / ${d.bedNumber || "-"}`);
-  row("Admitted:", new Date(d.admissionDate).toLocaleString(), "Discharged:", new Date(d.dischargeDate).toLocaleString());
-  row("Stay (days):", String(d.days));
-
-  y += 3;
-  pdf.setFillColor(40, 40, 40); pdf.rect(margin, y, pw - margin * 2, 7, "F");
-  pdf.setTextColor(255, 255, 255); pdf.setFont("helvetica", "bold"); pdf.setFontSize(9);
-  pdf.text("Description", margin + 2, y + 5);
-  pdf.text("Qty", pw - margin - 60, y + 5, { align: "right" });
-  pdf.text("Unit", pw - margin - 30, y + 5, { align: "right" });
-  pdf.text("Amount", pw - margin - 2, y + 5, { align: "right" });
-  pdf.setTextColor(0, 0, 0);
-  y += 9;
-
+  // Bill meta
   pdf.setFont("helvetica", "normal");
+  pdf.setFontSize(7.5);
+  y = thermalLine(pdf, `Invoice #: ${d.invoiceNumber}`, y);
+  y = thermalLine(pdf, `Admission #: ${d.admissionNumber}`, y);
+  y = thermalLine(pdf, `Patient: ${d.patientName}`, y);
+  y = thermalLine(pdf, `Ward / Bed: ${d.wardName || "-"} / ${d.bedNumber || "-"}`, y);
+  y = thermalLine(pdf, `Admitted: ${new Date(d.admissionDate).toLocaleString()}`, y);
+  y = thermalLine(pdf, `Discharged: ${new Date(d.dischargeDate).toLocaleString()}`, y);
+  y = thermalLine(pdf, `Stay (days): ${d.days}`, y);
+
+  y = thermalDivider(pdf, y);
+
+  // Items header
+  pdf.setFont("helvetica", "bold");
+  pdf.setFontSize(7.5);
+  pdf.text("Description", THERMAL_MARGIN, y);
+  pdf.text("Amount", THERMAL_WIDTH - THERMAL_MARGIN, y, { align: "right" });
+  y += 2;
+  y = thermalDivider(pdf, y, 0.1);
+
+  // Items
+  pdf.setFont("helvetica", "normal");
+  pdf.setFontSize(7.5);
   d.items.forEach((it) => {
-    if (y > 260) { pdf.addPage(); y = margin; }
-    const desc = pdf.splitTextToSize(it.description, pw - margin * 2 - 70);
-    pdf.text(desc, margin + 2, y);
-    pdf.text(String(it.qty), pw - margin - 60, y, { align: "right" });
-    pdf.text(fmt(it.unit), pw - margin - 30, y, { align: "right" });
-    pdf.text(fmt(it.amount), pw - margin - 2, y, { align: "right" });
-    y += Math.max(5, desc.length * 4);
+    const nameLines = pdf.splitTextToSize(it.description, THERMAL_CONTENT_WIDTH - 18);
+    pdf.text(nameLines[0], THERMAL_MARGIN, y);
+    pdf.text(fmt(it.amount), THERMAL_WIDTH - THERMAL_MARGIN, y, { align: "right" });
+    y += 3.5;
+    for (let i = 1; i < nameLines.length; i++) {
+      pdf.text(nameLines[i], THERMAL_MARGIN, y);
+      y += 3.2;
+    }
+    if (it.qty > 1) {
+      pdf.setFont("helvetica", "italic");
+      pdf.setFontSize(6.5);
+      pdf.text(`${it.qty} x ${fmt(it.unit)}`, THERMAL_MARGIN + 2, y);
+      pdf.setFont("helvetica", "normal");
+      pdf.setFontSize(7.5);
+      y += 3.2;
+    }
+    y += 1;
   });
 
-  y += 3; pdf.line(margin, y, pw - margin, y); y += 5;
-  const totalRow = (l: string, v: string, bold = false) => {
+  y = thermalDivider(pdf, y, 0.2);
+  y += 1;
+
+  // Totals
+  const totalRow = (label: string, value: string, bold = false) => {
     pdf.setFont("helvetica", bold ? "bold" : "normal");
-    pdf.text(l, pw - margin - 60, y, { align: "right" });
-    pdf.text(v, pw - margin - 2, y, { align: "right" });
-    y += 5;
+    pdf.setFontSize(bold ? 9 : 7.5);
+    pdf.text(label, THERMAL_MARGIN, y);
+    pdf.text(value, THERMAL_WIDTH - THERMAL_MARGIN, y, { align: "right" });
+    y += bold ? 4.5 : 3.8;
   };
   totalRow("Subtotal:", fmt(d.subtotal));
-  totalRow("Discount:", `- ${fmt(d.discount)}`);
+  if (d.discount > 0) totalRow("Discount:", `- ${fmt(d.discount)}`);
   totalRow("Total Due:", fmt(d.total), true);
   totalRow("Paid:", fmt(d.paid));
+  y = thermalDivider(pdf, y, 0.1);
   totalRow("Balance:", fmt(Math.max(0, d.total - d.paid)), true);
 
-  y += 15;
-  pdf.setFont("helvetica", "normal"); pdf.setFontSize(9);
-  pdf.line(pw - margin - 60, y, pw - margin, y);
-  pdf.text("Authorized Signature", pw - margin - 30, y + 5, { align: "center" });
+  y = thermalDivider(pdf, y, 0.2);
 
-  const blob = pdf.output("blob");
-  window.open(URL.createObjectURL(blob), "_blank");
+  // Footer
+  y += 3;
+  pdf.setFont("helvetica", "italic");
+  pdf.setFontSize(7);
+  pdf.text("Thank you. Get well soon!", THERMAL_CENTER, y, { align: "center" });
+
+  openThermalPDF(pdf);
 }
