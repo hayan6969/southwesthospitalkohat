@@ -44,6 +44,7 @@ import {
 import { toast } from "sonner";
 import { formatPkrAmount } from "@/utils/currency";
 import { format } from "date-fns";
+import { generateLabInvoicePDF } from "@/utils/pdfGenerator";
 
 interface TestType {
   id: string;
