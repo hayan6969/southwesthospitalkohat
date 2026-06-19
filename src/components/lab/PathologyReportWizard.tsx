@@ -474,7 +474,7 @@ export function PathologyReportWizard() {
     });
   };
 
-  const saveReport = async (mode: "final" | "partial") => {
+  const saveReport = async (mode: "final" | "partial", reportOpts: { print?: boolean } = {}) => {
     if (submitting) return;
     if (!selectedPatient) return toast.error("Select a patient");
     if (selectedTestIds.length === 0) return toast.error("Select at least one test");
@@ -596,7 +596,7 @@ export function PathologyReportWizard() {
 
       // Generate PDF for selected tests (combined)
       if (pdfIncludeTestIds.size > 0) {
-        await downloadPdfForReport(reportId!, Array.from(pdfIncludeTestIds));
+        await downloadPdfForReport(reportId!, Array.from(pdfIncludeTestIds), { autoPrint: !!reportOpts.print });
       }
 
       if (isFinal) {
@@ -616,7 +616,7 @@ export function PathologyReportWizard() {
   };
 
   // Build PDF data from DB for a specific report, optionally filtered to selected test types
-  const downloadPdfForReport = async (reportId: string, includeTestTypeIds?: string[]) => {
+  const downloadPdfForReport = async (reportId: string, includeTestTypeIds?: string[], opts: { autoPrint?: boolean } = {}) => {
     const { data: r } = await supabase.from("lab_pathology_reports").select("*").eq("id", reportId).single();
     if (!r) return;
     const { data: tts } = await supabase
@@ -685,7 +685,7 @@ export function PathologyReportWizard() {
         }),
       })),
     };
-    await generatePathologyReportPDF(data);
+    await generatePathologyReportPDF(data, opts);
   };
 
   const resetWizard = () => {
@@ -1166,8 +1166,13 @@ export function PathologyReportWizard() {
                     </Button>
                   )}
                   {!isLocked && (
-                    <Button disabled={submitting || pendingTestIds.size > 0 || !canSave} onClick={() => saveReport("final")}>
+                    <Button variant="outline" disabled={submitting || pendingTestIds.size > 0 || !canSave} onClick={() => saveReport("final")}>
                       <Save className="w-4 h-4 mr-1" /> {isEditMode ? "Update Report" : "Save"}
+                    </Button>
+                  )}
+                  {!isLocked && (
+                    <Button disabled={submitting || pendingTestIds.size > 0 || !canSave} onClick={() => saveReport("final", { print: true })}>
+                      <Printer className="w-4 h-4 mr-1" /> Save &amp; Print
                     </Button>
                   )}
                 </>

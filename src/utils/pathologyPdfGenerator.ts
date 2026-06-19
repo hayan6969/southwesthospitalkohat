@@ -98,7 +98,10 @@ const loadImageDataUrl = async (url: string): Promise<string | null> => {
   }
 };
 
-export async function generatePathologyReportPDF(data: PathologyPdfData) {
+export async function generatePathologyReportPDF(
+  data: PathologyPdfData,
+  opts: { autoPrint?: boolean } = {}
+) {
   // Collect parameter ids up-front (sync) so the previous-results lookup can run in
   // parallel with the hospital-settings fetch instead of waiting for it.
   const priorParamIds: string[] = [];
@@ -699,10 +702,30 @@ export async function generatePathologyReportPDF(data: PathologyPdfData) {
 
   // ── Output ────────────────────────────────────────────────────────────────
   try {
-    doc.autoPrint();
-    const blobUrl = doc.output('bloburl');
-    const w = window.open(blobUrl as unknown as string, '_blank');
-    if (!w) doc.save(`Lab_${data.reportNumber}.pdf`);
+    if (opts.autoPrint) {
+      // Reliable auto-print: embed a print action and load into a hidden iframe,
+      // then trigger the dialog directly (no preview tab, no manual Ctrl+P).
+      try { doc.autoPrint(); } catch { /* ignore */ }
+      const blob = doc.output('blob');
+      const url = URL.createObjectURL(blob);
+      const iframe = document.createElement('iframe');
+      iframe.style.cssText = 'position:fixed;left:-9999px;top:0;width:1px;height:1px;border:0;';
+      iframe.src = url;
+      iframe.onload = () => {
+        try {
+          iframe.contentWindow?.focus();
+          iframe.contentWindow?.print();
+        } catch {
+          // OpenAction will still trigger the dialog
+        }
+      };
+      document.body.appendChild(iframe);
+    } else {
+      // Open in a new tab to review; user prints manually.
+      const blobUrl = doc.output('bloburl');
+      const w = window.open(blobUrl as unknown as string, '_blank');
+      if (!w) doc.save(`Lab_${data.reportNumber}.pdf`);
+    }
   } catch {
     doc.save(`Lab_${data.reportNumber}.pdf`);
   }
