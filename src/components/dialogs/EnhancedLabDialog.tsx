@@ -319,7 +319,7 @@ export function EnhancedLabDialog() {
         createdBy: user?.id
       };
 
-      await generateLabInvoicePDF(invoiceData);
+      await generateLabInvoicePDF(invoiceData, { autoPrint: true });
 
       // Reset form and close dialogs
       resetForm();

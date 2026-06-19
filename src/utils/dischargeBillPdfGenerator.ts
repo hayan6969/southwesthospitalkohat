@@ -10,12 +10,14 @@ import {
   thermalLine,
   openThermalPDF,
 } from "./thermalReceipt";
+import { supabase } from "@/integrations/supabase/client";
 
 interface BillItem { description: string; qty: number; unit: number; amount: number; }
 interface BillData {
   invoiceNumber: string;
   admissionNumber: string;
   patientName: string;
+  patientId?: string; // patient UUID; the human-readable patient_number is looked up
   wardName?: string;
   bedNumber?: string;
   admissionDate: string;
@@ -33,6 +35,21 @@ const fmt = (n: number) => `Rs. ${Number(n).toLocaleString("en-PK", { minimumFra
 export async function generateDischargeBillPDF(d: BillData) {
   const settings = await getHospitalSettings();
 
+  // Look up the human-readable patient number from the patient UUID
+  let patientNumber = "";
+  if (d.patientId) {
+    try {
+      const { data } = await supabase
+        .from("patients")
+        .select("patient_number")
+        .eq("id", d.patientId)
+        .maybeSingle();
+      patientNumber = data?.patient_number || "";
+    } catch {
+      // ignore lookup failure; receipt still prints without patient ID
+    }
+  }
+
   // Estimate receipt height (mirrors pharmacy generator approach)
   const baseHeight = 150;
   const perItemHeight = 9;
@@ -47,6 +64,7 @@ export async function generateDischargeBillPDF(d: BillData) {
   y = thermalLine(pdf, `Invoice #: ${d.invoiceNumber}`, y);
   y = thermalLine(pdf, `Admission #: ${d.admissionNumber}`, y);
   y = thermalLine(pdf, `Patient: ${d.patientName}`, y);
+  if (patientNumber) y = thermalLine(pdf, `Patient ID: ${patientNumber}`, y);
   y = thermalLine(pdf, `Ward / Bed: ${d.wardName || "-"} / ${d.bedNumber || "-"}`, y);
   y = thermalLine(pdf, `Admitted: ${new Date(d.admissionDate).toLocaleString()}`, y);
   y = thermalLine(pdf, `Discharged: ${new Date(d.dischargeDate).toLocaleString()}`, y);

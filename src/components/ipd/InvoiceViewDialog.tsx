@@ -51,6 +51,7 @@ export function InvoiceViewDialog({ open, onOpenChange, admission }: Props) {
       invoiceNumber: invoice.invoice_number,
       admissionNumber: admission.admission_number,
       patientName,
+      patientId: admission.patient_id,
       wardName: bedWard?.wards?.name,
       bedNumber: bedWard?.beds?.bed_number,
       admissionDate: admission.admission_date,

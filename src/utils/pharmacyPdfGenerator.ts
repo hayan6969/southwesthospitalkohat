@@ -249,3 +249,138 @@ export const generatePharmacyInvoicePDF = async (
   const pdfUrl = URL.createObjectURL(pdfBlob);
   window.open(pdfUrl, '_blank');
 };
+
+// A4 (full-page) pharmacy invoice — used by the Staff Invoices "PDF" option.
+export const generatePharmacyInvoiceA4PDF = async (
+  invoiceData: PharmacyInvoiceData
+): Promise<void> => {
+  const settings = await getHospitalSettings();
+  const doc = new jsPDF();
+  const pageWidth = doc.internal.pageSize.width;
+  let y = 20;
+
+  // Logo
+  if (settings.logo_url) {
+    try {
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      await new Promise((resolve) => {
+        img.onload = () => {
+          try {
+            doc.addImage(img, 'JPEG', 20, y - 5, 30, 20);
+            resolve(true);
+          } catch {
+            resolve(false);
+          }
+        };
+        img.onerror = () => resolve(false);
+        setTimeout(() => resolve(false), 5000);
+        img.src = settings.logo_url as string;
+      });
+    } catch {
+      // skip logo
+    }
+  }
+
+  // Header
+  doc.setFontSize(18);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(40, 40, 40);
+  doc.text(`${settings.hospital_name} - Pharmacy`, pageWidth / 2, y + 8, { align: 'center' });
+  y += 16;
+  doc.setFontSize(10);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(60, 60, 60);
+  doc.text(settings.hospital_address || '', pageWidth / 2, y, { align: 'center' });
+  y += 6;
+  doc.text(`Phone: ${settings.contact_number || ''}`, pageWidth / 2, y, { align: 'center' });
+  y += 15;
+  doc.setFontSize(16);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(40, 40, 40);
+  doc.text('PHARMACY INVOICE', pageWidth / 2, y, { align: 'center' });
+  y += 15;
+
+  // Details box
+  doc.setDrawColor(0, 0, 0);
+  doc.rect(15, y - 5, pageWidth - 30, 25);
+  doc.setFontSize(11);
+  doc.setFont('helvetica', 'bold');
+  doc.text('Invoice #:', 20, y + 4);
+  doc.setFont('helvetica', 'normal');
+  doc.text(invoiceData.invoice_number, 60, y + 4);
+  doc.setFont('helvetica', 'bold');
+  doc.text('Date:', 120, y + 4);
+  doc.setFont('helvetica', 'normal');
+  doc.text(new Date(invoiceData.created_at).toLocaleString(), 140, y + 4);
+  y += 10;
+  doc.setFont('helvetica', 'bold');
+  doc.text('Customer:', 20, y + 4);
+  doc.setFont('helvetica', 'normal');
+  doc.text(invoiceData.customer_name || 'Walk-in Customer', 60, y + 4);
+  if (invoiceData.customer_phone) {
+    doc.setFont('helvetica', 'bold');
+    doc.text('Phone:', 120, y + 4);
+    doc.setFont('helvetica', 'normal');
+    doc.text(invoiceData.customer_phone, 145, y + 4);
+  }
+  y += 25;
+
+  // Items table
+  const tableStartY = y;
+  const colX = [20, 105, 135, 170];
+  doc.setFillColor(240, 240, 240);
+  doc.rect(15, y, pageWidth - 30, 10, 'F');
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(10);
+  doc.text('Medicine', colX[0], y + 7);
+  doc.text('Qty', colX[1], y + 7);
+  doc.text('Unit Price', colX[2], y + 7);
+  doc.text('Total', colX[3], y + 7);
+  y += 15;
+
+  doc.setFont('helvetica', 'normal');
+  invoiceData.items.forEach((it) => {
+    if (y > 270) {
+      doc.addPage();
+      y = 20;
+    }
+    const nameLines = doc.splitTextToSize(it.medicine_name, 80);
+    doc.text(nameLines, colX[0], y);
+    doc.text(String(it.quantity), colX[1], y);
+    doc.text(formatPkrAmount(it.unit_price), colX[2], y);
+    doc.text(formatPkrAmount(it.total_price), colX[3], y);
+    y += Math.max(nameLines.length * 5, 8);
+  });
+
+  doc.setDrawColor(0, 0, 0);
+  doc.rect(15, tableStartY, pageWidth - 30, y - tableStartY);
+
+  // Totals
+  y += 15;
+  const totalsX = pageWidth - 90;
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(11);
+  doc.setTextColor(40, 40, 40);
+  doc.text('Subtotal:', totalsX, y);
+  doc.text(formatPkrAmount(invoiceData.total_amount), totalsX + 50, y);
+  y += 7;
+  if (invoiceData.discount_amount && invoiceData.discount_amount > 0) {
+    doc.text('Discount:', totalsX, y);
+    doc.text(`-${formatPkrAmount(invoiceData.discount_amount)}`, totalsX + 50, y);
+    y += 7;
+  }
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(12);
+  doc.text('Total:', totalsX, y);
+  doc.text(formatPkrAmount(invoiceData.final_amount), totalsX + 50, y);
+  y += 20;
+
+  doc.setFontSize(9);
+  doc.setFont('helvetica', 'italic');
+  doc.setTextColor(100, 100, 100);
+  doc.text('Thank you for your visit!', pageWidth / 2, y, { align: 'center' });
+
+  const pdfBlob = doc.output('blob');
+  window.open(URL.createObjectURL(pdfBlob), '_blank');
+};

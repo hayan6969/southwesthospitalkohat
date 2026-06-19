@@ -79,6 +79,7 @@ export function DischargedPatients() {
         invoiceNumber: inv.invoice_number,
         admissionNumber: admission.admission_number,
         patientName: getPatientName(admission.patient_id, patientNames || []),
+        patientId: admission.patient_id,
         wardName: admission.wards?.name,
         bedNumber: admission.beds?.bed_number,
         admissionDate: admission.admission_date,

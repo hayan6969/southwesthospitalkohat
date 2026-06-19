@@ -10,8 +10,8 @@ import { useInvoices } from "@/hooks/useDatabase";
 import { usePatientNames, getPatientName } from "@/hooks/useDisplayHelpers";
 import { format } from "date-fns";
 import { formatPkrAmount } from "@/utils/currency";
-import { generateInvoicePDF, generateOTPDF } from "@/utils/pdfGenerator";
-import { generatePharmacyInvoicePDF } from "@/utils/pharmacyPdfGenerator";
+import { generateInvoicePDF, generateInvoiceThermalPDF, generateLabInvoicePDF, generateLabInvoiceA4PDF, generateXrayInvoicePDF, generateXrayInvoiceA4PDF, generateOTPDF, generateOTA4PDF } from "@/utils/pdfGenerator";
+import { generatePharmacyInvoicePDF, generatePharmacyInvoiceA4PDF } from "@/utils/pharmacyPdfGenerator";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from '@tanstack/react-query';
@@ -508,26 +508,31 @@ export function StaffInvoices() {
     window.open(pdfUrl, '_blank');
   };
 
-  const handleDownloadPDF = async (invoice: any) => {
+  const printInvoice = async (invoice: any, mode: 'a4' | 'thermal' = 'a4') => {
     try {
       if (invoice.type === 'pharmacy') {
-        await generatePharmacyInvoicePDF(invoice);
+        if (mode === 'thermal') await generatePharmacyInvoicePDF(invoice);
+        else await generatePharmacyInvoiceA4PDF(invoice);
       } else if (invoice.type === 'lab') {
-        // For lab invoices, fetch patient data first then use the same detailed PDF generation logic as finance
+        // For lab invoices, fetch patient data first
         const [patientRes, patientProfileRes] = await Promise.all([
           supabase.from('patients').select('patient_number').eq('id', invoice.patient_id).single(),
-          supabase.from('profiles').select('first_name, last_name').eq('id', invoice.patient_id).single()
+          supabase.from('profiles').select('first_name, last_name, phone').eq('id', invoice.patient_id).single()
         ]);
-
-        await generateDetailedInvoicePDF({
-          ...invoice,
-          test_name: invoice.description || 'Laboratory Service',
-          type: 'lab',
-          patient: {
-            patient_number: patientRes.data?.patient_number || 'Walk-in',
-            profiles: patientProfileRes.data
-          }
-        });
+        const prof = patientProfileRes.data;
+        const labData = {
+          invoiceNumber: invoice.invoice_number,
+          patientName: prof ? `${prof.first_name || ''} ${prof.last_name || ''}`.trim() : 'Walk-in Patient',
+          patientEmail: '',
+          patientId: patientRes.data?.patient_number || 'Walk-in',
+          patientPhone: prof?.phone || '',
+          tests: [{ name: invoice.description || 'Laboratory Service', price: invoice.amount || invoice.price || 0 }],
+          totalAmount: invoice.amount || invoice.price || 0,
+          issueDate: format(new Date(invoice.created_at), 'dd-MMM-yyyy'),
+          createdBy: invoice.created_by,
+        };
+        if (mode === 'thermal') await generateLabInvoicePDF(labData);
+        else await generateLabInvoiceA4PDF(labData);
       } else if (invoice.type === 'xray') {
         // For X-ray invoices, fetch patient and doctor data for proper PDF generation
         const [patientRes, patientProfileRes, doctorRes] = await Promise.all([
@@ -545,10 +550,7 @@ export function StaffInvoices() {
         const doctorName = invoice.external_doctor_name || 
           (doctorProfile ? `Dr. ${doctorProfile.first_name} ${doctorProfile.last_name}` : 'External Doctor');
 
-        // Import the generateXrayInvoicePDF function
-        const { generateXrayInvoicePDF } = await import('@/utils/pdfGenerator');
-        
-        await generateXrayInvoicePDF({
+        const xrayData = {
           invoiceNumber: invoice.invoice_number,
           patientName: patientName,
           patientEmail: 'Not provided',
@@ -565,7 +567,9 @@ export function StaffInvoices() {
           xrayDate: format(new Date(invoice.xray_date || invoice.created_at), 'MMM dd, yyyy'),
           notes: invoice.notes,
           createdBy: invoice.created_by
-        });
+        };
+        if (mode === 'thermal') await generateXrayInvoicePDF(xrayData);
+        else await generateXrayInvoiceA4PDF(xrayData);
       } else if (invoice.type === 'ot') {
         // For OT invoices, use the exact same PDF generator as when scheduling OT
         const otExpenses = invoice.ot_expenses || [];
@@ -660,7 +664,8 @@ export function StaffInvoices() {
           createdBy: invoice.created_by
         };
 
-        await generateOTPDF(otInvoiceData);
+        if (mode === 'thermal') await generateOTPDF(otInvoiceData);
+        else await generateOTA4PDF(otInvoiceData);
       } else {
         // For consultation/appointment invoices, fetch proper patient data
         const [patientRes, patientProfileRes] = await Promise.all([
@@ -683,7 +688,8 @@ export function StaffInvoices() {
           }
         };
 
-        await generateInvoicePDF(properInvoice);
+        if (mode === 'thermal') await generateInvoiceThermalPDF(properInvoice);
+        else await generateInvoicePDF(properInvoice);
       }
     } catch (error) {
       console.error('Error generating PDF:', error);
@@ -916,15 +922,28 @@ export function StaffInvoices() {
                         {getStatusBadge(invoice.status)}
                       </TableCell>
                       <TableCell>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleDownloadPDF(invoice)}
-                          className="flex items-center gap-1"
-                        >
-                          <Download className="w-3 h-3" />
-                          View PDF
-                        </Button>
+                        <div className="flex items-center gap-1">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => printInvoice(invoice, 'a4')}
+                            className="flex items-center gap-1"
+                            title="Full-page A4 invoice"
+                          >
+                            <FileText className="w-3 h-3" />
+                            PDF
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => printInvoice(invoice, 'thermal')}
+                            className="flex items-center gap-1"
+                            title="80mm thermal receipt"
+                          >
+                            <Receipt className="w-3 h-3" />
+                            Thermal
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))

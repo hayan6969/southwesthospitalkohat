@@ -87,6 +87,7 @@ export function PatientIPDView() {
         invoiceNumber: inv.invoice_number,
         admissionNumber: adm?.admission_number ?? "",
         patientName: `${profile?.first_name ?? ""} ${profile?.last_name ?? ""}`.trim(),
+        patientId: profile?.id,
         wardName: adm?.wards?.name,
         bedNumber: adm?.beds?.bed_number,
         admissionDate: adm?.admission_date ?? new Date().toISOString(),

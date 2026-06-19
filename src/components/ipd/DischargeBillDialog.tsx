@@ -263,6 +263,7 @@ export function DischargeBillDialog({ open, onOpenChange, admission, patientName
         invoiceNumber: invoiceNumber!,
         admissionNumber: admission.admission_number,
         patientName,
+        patientId: admission.patient_id,
         wardName: admission.wards?.name,
         bedNumber: admission.beds?.bed_number,
         admissionDate: admission.admission_date,

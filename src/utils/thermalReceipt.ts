@@ -5,7 +5,9 @@ import { supabase } from '@/integrations/supabase/client';
 // Used by the Lab, X-ray, OT and IPD discharge invoice generators so they all
 // produce consistent thermal receipts (same look as the pharmacy receipt).
 
-export const THERMAL_WIDTH = 80; // mm (standard thermal paper)
+// Size the page to the *printable* width of an 80mm roll (~72mm), so content
+// never lands in the printer's unprintable edge margin and gets clipped.
+export const THERMAL_WIDTH = 72; // mm (printable area of an 80mm thermal roll)
 export const THERMAL_MARGIN = 4;
 export const THERMAL_CONTENT_WIDTH = THERMAL_WIDTH - THERMAL_MARGIN * 2;
 export const THERMAL_CENTER = THERMAL_WIDTH / 2;
@@ -80,7 +82,7 @@ export const drawThermalHeader = async (
 
   // Hospital name
   pdf.setFont('helvetica', 'bold');
-  pdf.setFontSize(11);
+  pdf.setFontSize(10);
   const name = `${settings.hospital_name}${options.nameSuffix || ''}`;
   pdf.splitTextToSize(name, THERMAL_CONTENT_WIDTH).forEach((line: string) => {
     pdf.text(line, THERMAL_CENTER, y, { align: 'center' });
@@ -137,9 +139,33 @@ export const thermalLine = (
   return y;
 };
 
-// Open the finished receipt in a new tab for printing.
-export const openThermalPDF = (pdf: jsPDF): Blob => {
+// Output the finished receipt.
+// - default: open in a new tab to review, then print manually.
+// - { autoPrint: true }: send straight to the print dialog via a hidden iframe
+//   (no visible tab), e.g. right after creating/confirming an order.
+export const openThermalPDF = (pdf: jsPDF, opts: { autoPrint?: boolean } = {}): Blob => {
+  if (opts.autoPrint) {
+    // Embed a /Print OpenAction so the PDF viewer opens the print dialog itself.
+    try { (pdf as unknown as { autoPrint: () => void }).autoPrint(); } catch { /* ignore */ }
+  }
   const blob = pdf.output('blob');
-  window.open(URL.createObjectURL(blob), '_blank');
+  const url = URL.createObjectURL(blob);
+
+  if (opts.autoPrint) {
+    const iframe = document.createElement('iframe');
+    iframe.style.cssText = 'position:fixed;left:-9999px;top:0;width:1px;height:1px;border:0;';
+    iframe.src = url;
+    iframe.onload = () => {
+      try {
+        iframe.contentWindow?.focus();
+        iframe.contentWindow?.print();
+      } catch {
+        // OpenAction will still trigger the dialog
+      }
+    };
+    document.body.appendChild(iframe);
+  } else {
+    window.open(url, '_blank');
+  }
   return blob;
 };

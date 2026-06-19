@@ -266,7 +266,7 @@ export function OTScheduleDialog() {
         totalAmount: totalCost,
         items,
         createdBy: user?.id,
-      });
+      }, { autoPrint: true });
 
       await logAction(
         "Scheduled OT operations",

@@ -316,7 +316,7 @@ export function XrayDialog({ open, onOpenChange, onSuccess }: XrayDialogProps) {
           xrayDate: xrayDate ? format(xrayDate, "MMM dd, yyyy") : new Date().toLocaleDateString(),
           notes: notes.trim(),
           createdBy: user?.id
-        });
+        }, { autoPrint: true });
       }
 
       toast.success(`${selectedTests.length} X-ray examination(s) scheduled successfully`);
