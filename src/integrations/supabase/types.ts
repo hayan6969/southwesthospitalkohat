@@ -1771,6 +1771,13 @@ export type Database = {
             referencedRelation: "lab_pathology_reports"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "lab_pathology_report_results_subrange_id_fkey"
+            columns: ["subrange_id"]
+            isOneToOne: false
+            referencedRelation: "lab_parameter_subranges"
+            referencedColumns: ["id"]
+          },
         ]
       }
       lab_pathology_report_test_types: {
