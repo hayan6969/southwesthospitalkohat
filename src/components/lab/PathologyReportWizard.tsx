@@ -1221,7 +1221,7 @@ export function PathologyReportWizard() {
                               });
                             }}
                           >
-                            <Pencil className="w-3 h-3 mr-1" /> Edit
+                            Edit
                           </Button>
                         )}
                       </div>
@@ -1378,12 +1378,12 @@ export function PathologyReportWizard() {
                     </Button>
                   )}
                   {!isLocked && (
-                    <Button variant="outline" disabled={submitting || pendingTestIds.size > 0 || !canSave} onClick={() => saveReport("final")}>
+                    <Button variant="outline" disabled={submitting || (isEditMode ? !canUpdateExistingReport : (pendingTestIds.size > 0 || !canSave))} onClick={() => saveReport("final")}>
                       <Save className="w-4 h-4 mr-1" /> {isEditMode ? "Update Report" : "Save"}
                     </Button>
                   )}
                   {!isLocked && (
-                    <Button disabled={submitting || pendingTestIds.size > 0 || !canSave} onClick={() => saveReport("final", { print: true })}>
+                    <Button disabled={submitting || (isEditMode ? !canUpdateExistingReport : (pendingTestIds.size > 0 || !canSave))} onClick={() => saveReport("final", { print: true })}>
                       <Printer className="w-4 h-4 mr-1" /> Save &amp; Print
                     </Button>
                   )}
