@@ -109,6 +109,8 @@ export default function PatientLabs() {
               parameter_name: p.parameter_name,
               unit: p.unit,
               ref_display: p.ref_display,
+              ref_min: p.ref_min,
+              ref_max: p.ref_max,
               result_value: res?.result_value ?? null,
               flag: (res?.flag ?? null) as "Low" | "High" | "Borderline" | null,
               subrange_used: res?.subrange_used ?? null,

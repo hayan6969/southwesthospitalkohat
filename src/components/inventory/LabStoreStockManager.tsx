@@ -9,7 +9,8 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { PackagePlus, ChevronDown, ChevronRight, AlertTriangle } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { PackagePlus, ChevronDown, ChevronRight, AlertTriangle, Plus } from "lucide-react";
 import { toast } from "sonner";
 
 // lab_store_batches isn't in the generated Supabase types yet — use a loose handle.
@@ -112,15 +113,30 @@ export function LabStoreStockManager() {
     setRecvDialog(true);
   };
 
+  // Top-level "Add Stock" — opens the receive dialog with an item picker (first item preselected).
+  const openAddStock = () => {
+    const first = (items ?? [])[0] ?? null;
+    setRecvItem(first);
+    setRecvForm({ batch_number: "", manufacturing_date: "", expiry_date: "", units_received: 1, tests_per_unit: first?.default_tests_per_unit || 1 });
+    setRecvDialog(true);
+  };
+
   const toggleExpand = (id: string) => setExpanded((s) => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n; });
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Store Lab Stock (bulk, by units)</CardTitle>
-        <p className="text-sm text-muted-foreground">
-          Receive bulk lab supplies into the store, batch-wise. When you provide a lab request, units are dispatched (soonest-expiry first) and the lab receives them into its own stock.
-        </p>
+        <div className="flex flex-row items-start justify-between gap-2">
+          <div>
+            <CardTitle>Store Lab Stock (bulk, by units)</CardTitle>
+            <p className="text-sm text-muted-foreground">
+              Receive bulk lab supplies into the store, batch-wise. When you provide a lab request, units are dispatched (soonest-expiry first) and the lab receives them into its own stock.
+            </p>
+          </div>
+          <Button size="sm" disabled={(items ?? []).length === 0} onClick={openAddStock}>
+            <Plus className="w-4 h-4 mr-1" /> Add Stock
+          </Button>
+        </div>
       </CardHeader>
       <CardContent>
         <Table>
@@ -204,6 +220,22 @@ export function LabStoreStockManager() {
         <DialogContent className="z-[9999]">
           <DialogHeader><DialogTitle>Receive into Store — {recvItem?.name}</DialogTitle></DialogHeader>
           <div className="space-y-3">
+            <div>
+              <Label>Item</Label>
+              <Select
+                value={recvItem?.id ?? ""}
+                onValueChange={(v) => {
+                  const it = (items ?? []).find((i: any) => i.id === v) ?? null;
+                  setRecvItem(it);
+                  setRecvForm((f) => ({ ...f, tests_per_unit: it?.default_tests_per_unit || f.tests_per_unit || 1 }));
+                }}
+              >
+                <SelectTrigger><SelectValue placeholder="Select an item" /></SelectTrigger>
+                <SelectContent className="z-[10000]">
+                  {(items ?? []).map((i: any) => <SelectItem key={i.id} value={i.id}>{i.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
             <div><Label>Batch / Lot number</Label><Input value={recvForm.batch_number} onChange={(e) => setRecvForm({ ...recvForm, batch_number: e.target.value })} /></div>
             <div className="grid grid-cols-2 gap-3">
               <div>
@@ -225,7 +257,7 @@ export function LabStoreStockManager() {
               Receiving <b>{Number(recvForm.units_received) || 0}</b> {recvItem?.unit || "units"}
               {" "}(≈ {(Number(recvForm.units_received) || 0) * (Number(recvForm.tests_per_unit) || 0)} tests when dispatched to the lab)
             </div>
-            <Button className="w-full" disabled={receive.isPending} onClick={() => receive.mutate()}>Receive into store</Button>
+            <Button className="w-full" disabled={!recvItem || receive.isPending} onClick={() => receive.mutate()}>Receive into store</Button>
           </div>
         </DialogContent>
       </Dialog>

@@ -16,6 +16,8 @@ export interface PathologyPdfParameter {
   parameter_name: string;
   unit: string | null;
   ref_display: string | null;
+  ref_min?: number | null;
+  ref_max?: number | null;
   result_value: string | null;
   flag: 'Low' | 'High' | 'Borderline' | null;
   subrange_used?: string | null;
@@ -502,6 +504,11 @@ export async function generatePathologyReportPDF(
 
       // Subranges — grouped interpretation scale (e.g. HbA1c value ↔ reading ↔ control)
       if (p.display_all_subranges && p.subranges && p.subranges.length > 0) {
+        // A "reference scale" is a parameter with its own numeric range (e.g. HbA1c 4.5-6.5):
+        // the subranges are shown for reference only and are NOT selected, so never highlight a
+        // row. Only "pick-one" parameters (no own range — the subranges ARE the ranges) highlight
+        // the chosen one.
+        const isReferenceScale = p.ref_min != null || p.ref_max != null;
         // Parse "12% (Very Poor Control)" → reading "12%" + interpretation group "Very Poor Control".
         const parsed = p.subranges.map((sr) => {
           const raw = sr.ref_display ||
@@ -512,9 +519,10 @@ export async function generatePathologyReportPDF(
             value: sr.label || '—',
             reading: (m ? m[1] : raw).trim(),
             group: (m ? m[2] : '').trim(),
-            selected:
+            selected: !isReferenceScale && (
               (p.subrange_id && sr.id === p.subrange_id) ||
-              (!p.subrange_id && !!p.subrange_used && sr.label === p.subrange_used),
+              (!p.subrange_id && !!p.subrange_used && sr.label === p.subrange_used)
+            ),
           };
         });
         const hasGroups = parsed.some((x) => x.group);

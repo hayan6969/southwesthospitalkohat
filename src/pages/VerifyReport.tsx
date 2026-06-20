@@ -188,7 +188,9 @@ export default function VerifyReport() {
                             <td className="p-2">{p.unit || "—"}</td>
                           </tr>
                           {showAllSubs && p.subranges?.map((sr) => {
-                            const isSel = (p.subrange_id && sr.id === p.subrange_id) || (!p.subrange_id && p.subrange_used === sr.label);
+                            // Reference-scale params (own numeric range) are read-only — never highlight a row.
+                            const isReferenceScale = p.ref_min != null || p.ref_max != null;
+                            const isSel = !isReferenceScale && ((p.subrange_id && sr.id === p.subrange_id) || (!p.subrange_id && p.subrange_used === sr.label));
                             return (
                               <tr key={sr.id} className={`border-t text-xs ${isSel ? "bg-yellow-50" : ""}`}>
                                 <td className="p-2 pl-6 text-muted-foreground">{sr.label}</td>
