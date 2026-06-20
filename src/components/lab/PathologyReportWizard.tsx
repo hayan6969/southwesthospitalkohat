@@ -16,7 +16,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Search, ChevronLeft, ChevronRight, ChevronDown, FileText, Printer, Save, X, History, FlaskConical, Receipt, CheckCircle, Clock, Lock, Check, ChevronsUpDown, FlaskRound, Pencil } from "lucide-react";
+import { Search, ChevronLeft, ChevronRight, ChevronDown, FileText, Printer, Save, X, History, FlaskConical, Receipt, CheckCircle, Clock, Lock, Check, ChevronsUpDown, FlaskRound } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { getFlag, flagBadgeClass, type PathologyFlag } from "@/utils/pathologyFlag";
@@ -555,6 +555,7 @@ export function PathologyReportWizard() {
       return r.result_value.trim() !== "";
     });
   })();
+  const canUpdateExistingReport = isEditMode && !!existingReportId && !isLocked && !!parameters && selectedTestIds.length > 0;
 
   // Default PDF-include set = tests being filled now + already completed
   useEffect(() => {
@@ -581,7 +582,7 @@ export function PathologyReportWizard() {
     if (mode === "final" && pendingTestIds.size > 0) {
       return toast.error("Some tests are still marked Pending. Fill them or use 'Save Partial'.");
     }
-    if (!canSave && fillingTestIds.length > 0) {
+    if (!isEditMode && !canSave && fillingTestIds.length > 0) {
       return toast.error("Fill all values for the tests being saved");
     }
 
@@ -1220,7 +1221,7 @@ export function PathologyReportWizard() {
                               });
                             }}
                           >
-                            <Pencil className="w-3 h-3 mr-1" /> Edit
+                            Edit
                           </Button>
                         )}
                       </div>
@@ -1377,12 +1378,12 @@ export function PathologyReportWizard() {
                     </Button>
                   )}
                   {!isLocked && (
-                    <Button variant="outline" disabled={submitting || pendingTestIds.size > 0 || !canSave} onClick={() => saveReport("final")}>
+                    <Button variant="outline" disabled={submitting || (isEditMode ? !canUpdateExistingReport : (pendingTestIds.size > 0 || !canSave))} onClick={() => saveReport("final")}>
                       <Save className="w-4 h-4 mr-1" /> {isEditMode ? "Update Report" : "Save"}
                     </Button>
                   )}
                   {!isLocked && (
-                    <Button disabled={submitting || pendingTestIds.size > 0 || !canSave} onClick={() => saveReport("final", { print: true })}>
+                    <Button disabled={submitting || (isEditMode ? !canUpdateExistingReport : (pendingTestIds.size > 0 || !canSave))} onClick={() => saveReport("final", { print: true })}>
                       <Printer className="w-4 h-4 mr-1" /> Save &amp; Print
                     </Button>
                   )}
