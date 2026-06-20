@@ -54,6 +54,7 @@ export function PathologyTestTypeManager({ priceEditable = true }: { priceEditab
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [showTestDialog, setShowTestDialog] = useState(false);
   const [editingTest, setEditingTest] = useState<Partial<TestType> | null>(null);
+  const [search, setSearch] = useState("");
 
   const { data: testTypes } = useQuery({
     queryKey: ["lab_test_types_admin"],
