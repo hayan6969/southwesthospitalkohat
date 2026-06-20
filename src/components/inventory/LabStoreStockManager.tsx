@@ -9,8 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { PackagePlus, ChevronDown, ChevronRight, AlertTriangle, Plus } from "lucide-react";
+import { PackagePlus, ChevronDown, ChevronRight, AlertTriangle, Plus, Search } from "lucide-react";
 import { toast } from "sonner";
 
 // lab_store_batches isn't in the generated Supabase types yet — use a loose handle.
@@ -38,7 +37,9 @@ export function LabStoreStockManager() {
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
 
   const [recvDialog, setRecvDialog] = useState(false);
-  const [recvItem, setRecvItem] = useState<any>(null);
+  const [recvItem, setRecvItem] = useState<any>(null); // matched existing catalog item (null = will create)
+  const [itemName, setItemName] = useState("");        // typed item name (search/create)
+  const [showSuggestions, setShowSuggestions] = useState(false);
   const [recvForm, setRecvForm] = useState({ batch_number: "", manufacturing_date: "", expiry_date: "", units_received: 1, tests_per_unit: 1 });
 
   const { data: items } = useQuery({
@@ -82,25 +83,61 @@ export function LabStoreStockManager() {
     return map;
   }, [batches]);
 
+  const itemSuggestions = useMemo(() => {
+    const q = itemName.trim().toLowerCase();
+    if (!q) return [] as any[];
+    return (items ?? []).filter((i: any) => String(i.name).toLowerCase().includes(q)).slice(0, 8);
+  }, [items, itemName]);
+  const hasExactMatch = useMemo(
+    () => (items ?? []).some((i: any) => String(i.name).toLowerCase() === itemName.trim().toLowerCase()),
+    [items, itemName]
+  );
+
   const receive = useMutation({
     mutationFn: async () => {
+      const name = itemName.trim();
+      if (!name) throw new Error("Enter or select an item name");
       const units = Number(recvForm.units_received) || 0;
-      const tpu = Number(recvForm.tests_per_unit) || 0;
       if (units <= 0) throw new Error("Units received must be at least 1");
+
+      // Resolve the catalog item by exact name (case-insensitive); create it if it doesn't exist.
+      // The store does NOT set tests-per-unit — that's a lab detail. New items get tests-per-unit
+      // left for the lab to define; the store only handles bulk units.
+      let item = (items ?? []).find((i: any) => String(i.name).toLowerCase() === name.toLowerCase());
+      let itemId = item?.id;
+      if (!itemId) {
+        const { data: created, error: ce } = await supabase
+          .from("lab_inventory_items")
+          .insert({
+            name,
+            category: "consumable",
+            unit: "pieces",
+            track_by_tests: true,
+            minimum_tests_level: 0,
+          } as any)
+          .select("*").single();
+        if (ce) throw ce;
+        item = created;
+        itemId = created.id;
+      }
+
       const { error } = await db.from("lab_store_batches").insert({
-        item_id: recvItem.id,
+        item_id: itemId,
         batch_number: recvForm.batch_number || null,
         manufacturing_date: recvForm.manufacturing_date || null,
         expiry_date: recvForm.expiry_date || null,
         units_received: units,
         units_remaining: units,
-        tests_per_unit: tpu || 1,
+        // Carry the lab's configured tests-per-unit if known (store never edits it); defaults to 1.
+        tests_per_unit: item?.default_tests_per_unit || 1,
         received_by: user?.id ?? null,
       });
       if (error) throw error;
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["lab-store-batches"] });
+      qc.invalidateQueries({ queryKey: ["lab-inventory-items"] });
+      qc.invalidateQueries({ queryKey: ["lab-stock-items"] });
       toast.success("Stock received into store");
       setRecvDialog(false);
     },
@@ -109,16 +146,27 @@ export function LabStoreStockManager() {
 
   const openReceive = (item: any) => {
     setRecvItem(item);
+    setItemName(item.name);
+    setShowSuggestions(false);
     setRecvForm({ batch_number: "", manufacturing_date: "", expiry_date: "", units_received: 1, tests_per_unit: item.default_tests_per_unit || 1 });
     setRecvDialog(true);
   };
 
-  // Top-level "Add Stock" — opens the receive dialog with an item picker (first item preselected).
+  // Top-level "Add Stock" — opens the receive dialog with a blank, searchable item field
+  // (pick an existing item or type a new name to create it).
   const openAddStock = () => {
-    const first = (items ?? [])[0] ?? null;
-    setRecvItem(first);
-    setRecvForm({ batch_number: "", manufacturing_date: "", expiry_date: "", units_received: 1, tests_per_unit: first?.default_tests_per_unit || 1 });
+    setRecvItem(null);
+    setItemName("");
+    setShowSuggestions(false);
+    setRecvForm({ batch_number: "", manufacturing_date: "", expiry_date: "", units_received: 1, tests_per_unit: 1 });
     setRecvDialog(true);
+  };
+
+  const selectItem = (item: any) => {
+    setRecvItem(item);
+    setItemName(item.name);
+    setShowSuggestions(false);
+    setRecvForm((f) => ({ ...f, tests_per_unit: item.default_tests_per_unit || f.tests_per_unit || 1 }));
   };
 
   const toggleExpand = (id: string) => setExpanded((s) => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n; });
@@ -145,7 +193,6 @@ export function LabStoreStockManager() {
               <TableHead className="w-8"></TableHead>
               <TableHead>Item</TableHead>
               <TableHead>Units On Hand</TableHead>
-              <TableHead>Tests / Unit</TableHead>
               <TableHead>Batches</TableHead>
               <TableHead>Soonest Expiry</TableHead>
               <TableHead>Status</TableHead>
@@ -154,7 +201,7 @@ export function LabStoreStockManager() {
           </TableHeader>
           <TableBody>
             {(items ?? []).length === 0 ? (
-              <TableRow><TableCell colSpan={8} className="text-center text-muted-foreground py-8">No lab items in the catalog yet — add them in "Lab Inventory Items".</TableCell></TableRow>
+              <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-8">No lab items yet — use "Add Stock" to receive one.</TableCell></TableRow>
             ) : (items ?? []).flatMap((item) => {
               const s = stats.get(item.id) ?? { unitsRemaining: 0, expired: 0, soonest: null, batchCount: 0 };
               const low = s.unitsRemaining <= (item.minimum_stock_level ?? 0);
@@ -180,7 +227,6 @@ export function LabStoreStockManager() {
                       <span className="text-xs text-muted-foreground"> {item.unit || "units"}</span>
                       {s.expired > 0 && <span className="text-xs text-destructive ml-1">(+{s.expired} expired)</span>}
                     </TableCell>
-                    <TableCell>{item.default_tests_per_unit ?? "—"}</TableCell>
                     <TableCell>{s.batchCount}</TableCell>
                     <TableCell className={expiringSoon ? "text-amber-600 font-medium" : ""}>{s.soonest || "—"}</TableCell>
                     <TableCell>
@@ -202,7 +248,6 @@ export function LabStoreStockManager() {
                       <TableCell></TableCell>
                       <TableCell className="pl-6 text-muted-foreground">Batch {b.batch_number || "—"}</TableCell>
                       <TableCell>{b.units_remaining}/{b.units_received} {item.unit || "units"}</TableCell>
-                      <TableCell>{b.tests_per_unit}</TableCell>
                       <TableCell></TableCell>
                       <TableCell className={exp ? "text-destructive font-medium" : ""}>{b.expiry_date || "—"}{exp && " (expired)"}</TableCell>
                       <TableCell colSpan={2}></TableCell>
@@ -218,46 +263,70 @@ export function LabStoreStockManager() {
       {/* Receive into store dialog */}
       <Dialog open={recvDialog} onOpenChange={setRecvDialog}>
         <DialogContent className="z-[9999]">
-          <DialogHeader><DialogTitle>Receive into Store — {recvItem?.name}</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>Receive into Store</DialogTitle></DialogHeader>
           <div className="space-y-3">
-            <div>
+            <div className="relative">
               <Label>Item</Label>
-              <Select
-                value={recvItem?.id ?? ""}
-                onValueChange={(v) => {
-                  const it = (items ?? []).find((i: any) => i.id === v) ?? null;
-                  setRecvItem(it);
-                  setRecvForm((f) => ({ ...f, tests_per_unit: it?.default_tests_per_unit || f.tests_per_unit || 1 }));
-                }}
-              >
-                <SelectTrigger><SelectValue placeholder="Select an item" /></SelectTrigger>
-                <SelectContent className="z-[10000]">
-                  {(items ?? []).map((i: any) => <SelectItem key={i.id} value={i.id}>{i.name}</SelectItem>)}
-                </SelectContent>
-              </Select>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  className="pl-9"
+                  value={itemName}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    setItemName(v);
+                    const exact = (items ?? []).find((i: any) => String(i.name).toLowerCase() === v.trim().toLowerCase()) ?? null;
+                    setRecvItem(exact);
+                    if (exact) setRecvForm((f) => ({ ...f, tests_per_unit: exact.default_tests_per_unit || f.tests_per_unit || 1 }));
+                    setShowSuggestions(true);
+                  }}
+                  onFocus={() => setShowSuggestions(true)}
+                  onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
+                  placeholder="Search an item, or type a new name to create it…"
+                />
+              </div>
+              {showSuggestions && itemName.trim() && (itemSuggestions.length > 0 || !hasExactMatch) && (
+                <div className="absolute z-[10001] w-full mt-1 bg-background border border-border rounded-md shadow-lg max-h-48 overflow-y-auto">
+                  {itemSuggestions.map((i: any) => (
+                    <button
+                      key={i.id}
+                      type="button"
+                      className="w-full px-3 py-2 text-left hover:bg-accent flex items-center justify-between text-sm"
+                      onMouseDown={() => selectItem(i)}
+                    >
+                      <span className="font-medium">{i.name}</span>
+                      <Badge variant="outline" className="text-xs">{i.category}</Badge>
+                    </button>
+                  ))}
+                  {!hasExactMatch && (
+                    <button
+                      type="button"
+                      className="w-full px-3 py-2 text-left hover:bg-accent text-sm flex items-center gap-2 border-t"
+                      onMouseDown={() => { setRecvItem(null); setShowSuggestions(false); }}
+                    >
+                      <Plus className="w-3.5 h-3.5" /> Create new item “{itemName.trim()}”
+                    </button>
+                  )}
+                </div>
+              )}
+              {!recvItem && itemName.trim() && !hasExactMatch && (
+                <p className="text-[11px] text-amber-600 mt-1">New item “{itemName.trim()}” will be created on receive.</p>
+              )}
             </div>
             <div><Label>Batch / Lot number</Label><Input value={recvForm.batch_number} onChange={(e) => setRecvForm({ ...recvForm, batch_number: e.target.value })} /></div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <Label>Units received</Label>
-                <Input type="number" min="1" value={recvForm.units_received} onChange={(e) => setRecvForm({ ...recvForm, units_received: e.target.value === "" ? 0 : parseInt(e.target.value) || 0 })} />
-                <p className="text-[11px] text-muted-foreground mt-1">e.g. number of bottles/boxes</p>
-              </div>
-              <div>
-                <Label>Tests per unit</Label>
-                <Input type="number" min="1" value={recvForm.tests_per_unit} onChange={(e) => setRecvForm({ ...recvForm, tests_per_unit: e.target.value === "" ? 0 : parseInt(e.target.value) || 0 })} />
-                <p className="text-[11px] text-muted-foreground mt-1">tests the lab gets per unit</p>
-              </div>
+            <div>
+              <Label>Units received</Label>
+              <Input type="number" min="1" value={recvForm.units_received} onChange={(e) => setRecvForm({ ...recvForm, units_received: e.target.value === "" ? 0 : parseInt(e.target.value) || 0 })} />
+              <p className="text-[11px] text-muted-foreground mt-1">e.g. number of bottles/boxes</p>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div><Label>Manufacturing date</Label><Input type="date" value={recvForm.manufacturing_date} onChange={(e) => setRecvForm({ ...recvForm, manufacturing_date: e.target.value })} /></div>
               <div><Label>Expiry date</Label><Input type="date" value={recvForm.expiry_date} onChange={(e) => setRecvForm({ ...recvForm, expiry_date: e.target.value })} /></div>
             </div>
             <div className="text-sm text-muted-foreground">
-              Receiving <b>{Number(recvForm.units_received) || 0}</b> {recvItem?.unit || "units"}
-              {" "}(≈ {(Number(recvForm.units_received) || 0) * (Number(recvForm.tests_per_unit) || 0)} tests when dispatched to the lab)
+              Receiving <b>{Number(recvForm.units_received) || 0}</b> {recvItem?.unit || "units"} into store.
             </div>
-            <Button className="w-full" disabled={!recvItem || receive.isPending} onClick={() => receive.mutate()}>Receive into store</Button>
+            <Button className="w-full" disabled={!itemName.trim() || receive.isPending} onClick={() => receive.mutate()}>Receive into store</Button>
           </div>
         </DialogContent>
       </Dialog>
