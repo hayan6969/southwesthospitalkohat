@@ -353,7 +353,7 @@ async function loadFullReport(reportId: string): Promise<PathologyPdfData | null
           flag: (res?.flag ?? null) as "Low" | "High" | "Borderline" | null,
           subrange_used: res?.subrange_used ?? null,
           subrange_id: res?.subrange_id ?? null,
-          display_all_subranges: !!p.display_all_subranges,
+          display_all_subranges: psubs.length > 0 || !!p.display_all_subranges,
           subranges: psubs.map((s: any) => ({
             id: s.id,
             label: s.label,

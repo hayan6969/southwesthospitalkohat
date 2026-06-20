@@ -105,7 +105,7 @@ const navsByRole: Record<string, { label: string; to: string; icon: React.Elemen
     { label: "Lab", to: "/dashboard/lab?tab=pathology", icon: TestTube },
     { label: "Lab History", to: "/dashboard/lab?tab=pathology-history", icon: FileText },
     { label: "Manage Tests", to: "/dashboard/lab?tab=manage-tests", icon: FlaskConical },
-    { label: "Lab Item Supply", to: "/dashboard/lab?tab=inventory", icon: FlaskConical },
+    { label: "Lab Stock", to: "/dashboard/lab?tab=stock", icon: FlaskConical },
     { label: "Request Supplies", to: "/dashboard/lab?tab=supplies", icon: Package },
   ],
   ipd: [

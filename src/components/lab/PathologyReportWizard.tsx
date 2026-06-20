@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -12,9 +12,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Search, ChevronLeft, ChevronRight, FileText, Printer, Save, X, History, FlaskConical, Receipt, CheckCircle, Clock, Lock } from "lucide-react";
+import { Search, ChevronLeft, ChevronRight, ChevronDown, FileText, Printer, Save, X, History, FlaskConical, Receipt, CheckCircle, Clock, Lock, Check, ChevronsUpDown, FlaskRound } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { getFlag, flagBadgeClass, type PathologyFlag } from "@/utils/pathologyFlag";
@@ -92,6 +94,62 @@ export function PathologyReportWizard() {
   const [pdfIncludeTestIds, setPdfIncludeTestIds] = useState<Set<string>>(new Set());
   const [results, setResults] = useState<Record<string, ResultRow>>({});
   const [interpretation, setInterpretation] = useState("");
+  // Collapsible "Last reports (comparison)" panel — closed by default, opens on click.
+  const [showComparison, setShowComparison] = useState(false);
+  // Instruments/kits used for this report (item IDs) — deducted from stock on final save.
+  const [selectedInstruments, setSelectedInstruments] = useState<string[]>([]);
+  // True once the user has hand-edited the instrument list (stops auto-prefill from overriding).
+  const instrumentsTouched = useRef(false);
+
+  // Lab stock items (kits) + default test->kit mapping (for consume-on-save)
+  const { data: stockItems } = useQuery({
+    queryKey: ["wizard-lab-stock-items"],
+    queryFn: async () => {
+      const { data } = await (supabase as any).from("lab_inventory_items").select("id, name, track_by_tests").order("name");
+      return (data ?? []) as any[];
+    },
+  });
+  const { data: testConsumables } = useQuery({
+    queryKey: ["wizard-lab-test-consumables"],
+    queryFn: async () => {
+      const { data } = await (supabase as any).from("lab_test_consumables").select("*");
+      return (data ?? []) as any[];
+    },
+  });
+  // A test may use several instruments; each (test, instrument) pair has its own tests-per-run.
+  const defaultItemsByTest = useMemo(() => {
+    const m: Record<string, string[]> = {};
+    (testConsumables ?? []).forEach((c: any) => {
+      if (c.is_default) (m[c.test_type_id] ??= []).push(c.item_id);
+    });
+    return m;
+  }, [testConsumables]);
+  const runByTestItem = useMemo(() => {
+    const m = new Map<string, number>();
+    (testConsumables ?? []).forEach((c: any) => m.set(`${c.test_type_id}|${c.item_id}`, c.tests_per_run || 1));
+    return m;
+  }, [testConsumables]);
+
+  // Human-readable list of the chosen instruments (stored on the report for printing).
+  const instrumentText = useMemo(
+    () => selectedInstruments.map((id) => (stockItems ?? []).find((i: any) => i.id === id)?.name).filter(Boolean).join(", "),
+    [selectedInstruments, stockItems]
+  );
+
+  // Auto-fill instruments from each selected test's default kit (new reports) or from
+  // the saved instrument text (loaded reports), until the user edits the list themselves.
+  useEffect(() => {
+    if (instrumentsTouched.current || selectedInstruments.length > 0) return;
+    if (selectedTestIds.length === 0 && !meta.instrument) return;
+    const ids = new Set<string>();
+    selectedTestIds.forEach((tid) => (defaultItemsByTest[tid] ?? []).forEach((id) => ids.add(id)));
+    if (ids.size === 0 && meta.instrument) {
+      // Loaded report: match saved instrument names back to stock items.
+      const names = meta.instrument.split(",").map((s) => s.trim().toLowerCase());
+      (stockItems ?? []).forEach((i: any) => { if (names.includes(String(i.name).toLowerCase())) ids.add(i.id); });
+    }
+    if (ids.size > 0) setSelectedInstruments(Array.from(ids));
+  }, [selectedTestIds.join(","), defaultItemsByTest, stockItems, meta.instrument]); // eslint-disable-line
   const [submitting, setSubmitting] = useState(false);
   const [isLocked, setIsLocked] = useState(false);
   const [reportsCreatedAt, setReportsCreatedAt] = useState("");
@@ -403,7 +461,12 @@ export function PathologyReportWizard() {
   }, [parameters]);
 
   const getActiveRange = (p: Parameter, row: ResultRow) => {
-    if (p.has_subranges && row.subrange_id) {
+    const hasOwnRange = p.ref_min != null || p.ref_max != null;
+    // Sub-ranges drive the flag only when the parameter has no range of its own
+    // (e.g. sex/age-based ranges you must pick from). When the parameter has its own
+    // range, the sub-ranges are just a reference scale and the flag is computed against
+    // the main range — the result is entered in the main Result box.
+    if (p.has_subranges && row.subrange_id && !hasOwnRange) {
       const sr = subranges?.find((s) => s.id === row.subrange_id);
       if (sr) return { min: sr.ref_min, max: sr.ref_max, display: sr.ref_display, label: sr.label };
     }
@@ -454,7 +517,9 @@ export function PathologyReportWizard() {
       const r = results[p.id];
       if (!r) return false;
       if (r.skipped && p.is_optional) return true;
-      if (p.has_subranges && !r.subrange_id) return false;
+      // Picking a sub-range is mandatory only for "pick-one" parameters (no own range).
+      const hasOwnRange = p.ref_min != null || p.ref_max != null;
+      if (p.has_subranges && !hasOwnRange && !r.subrange_id) return false;
       return r.result_value.trim() !== "";
     });
   })();
@@ -506,7 +571,7 @@ export function PathologyReportWizard() {
             referred_by: meta.referred_by || null,
             collection_address: meta.collection_address || null,
             sample_type: meta.sample_type || null,
-            instrument: meta.instrument || null,
+            instrument: instrumentText || meta.instrument || null,
             interpretation: interpretation || null,
             registered_at: meta.registered_at ? new Date(meta.registered_at).toISOString() : null,
             collected_at: meta.collected_at ? new Date(meta.collected_at).toISOString() : null,
@@ -530,7 +595,7 @@ export function PathologyReportWizard() {
           .from("lab_pathology_reports")
           .update({
             interpretation: interpretation || null,
-            instrument: meta.instrument || null,
+            instrument: instrumentText || meta.instrument || null,
             sample_type: meta.sample_type || null,
             referred_by: meta.referred_by || null,
             collection_address: meta.collection_address || null,
@@ -592,6 +657,40 @@ export function PathologyReportWizard() {
         }).eq("report_id", reportId);
         queryClient.invalidateQueries({ queryKey: ["pathology_orders_ready"] });
         queryClient.invalidateQueries({ queryKey: ["pathology_orders_recent"] });
+      }
+
+      // Deduct each chosen instrument/kit from stock on finalize (FEFO, soonest-expiry first).
+      // Quantity per instrument = sum of "tests per run" for the finalized tests it's the kit
+      // for (Test→Kit mapping); instruments not mapped to any test deduct 1 unit.
+      if (mode === "final" && reportId && selectedInstruments.length > 0) {
+        for (const itemId of selectedInstruments) {
+          if (!itemId) continue;
+          let qty = 0;
+          let firstTid: string | null = null;
+          for (const tid of fillingTestIds) {
+            const run = runByTestItem.get(`${tid}|${itemId}`);
+            if (run != null) {
+              qty += run;
+              if (!firstTid) firstTid = tid;
+            }
+          }
+          if (qty <= 0) qty = 1;
+          try {
+            const { data: consumed } = await (supabase as any).rpc("consume_lab_test_stock", {
+              p_item_id: itemId,
+              p_tests: qty,
+              p_test_type_id: firstTid,
+              p_report_id: reportId,
+            });
+            if (typeof consumed === "number" && consumed < qty) {
+              const iname = (stockItems ?? []).find((i: any) => i.id === itemId)?.name ?? "instrument";
+              toast.warning(`Low stock: only ${consumed}/${qty} deducted for ${iname}`);
+            }
+          } catch {
+            // never block report saving on a stock-deduction problem
+          }
+        }
+        queryClient.invalidateQueries({ queryKey: ["lab-stock-batches"] });
       }
 
       // Generate PDF for selected tests (combined)
@@ -672,7 +771,8 @@ export function PathologyReportWizard() {
             flag: (res?.flag ?? null) as "Low" | "High" | "Borderline" | null,
             subrange_used: res?.subrange_used ?? null,
             subrange_id: res?.subrange_id ?? null,
-            display_all_subranges: !!p.display_all_subranges,
+            // Show the full subrange scale on the report whenever the parameter has subranges.
+            display_all_subranges: psubs.length > 0 || !!p.display_all_subranges,
             subranges: psubs.map((s: any) => ({
               id: s.id,
               label: s.label,
@@ -701,6 +801,8 @@ export function PathologyReportWizard() {
     setPdfIncludeTestIds(new Set());
     setResults({});
     setInterpretation("");
+    setSelectedInstruments([]);
+    instrumentsTouched.current = false;
     setIsLocked(false);
     setReportsCreatedAt("");
     setSearchParams((prev) => {
@@ -893,9 +995,17 @@ export function PathologyReportWizard() {
 
             {selectedPatient && lastReports && lastReports.length > 0 && (
               <Card className="border-blue-200">
-                <CardHeader className="py-3">
-                  <CardTitle className="text-sm flex items-center gap-2"><History className="w-4 h-4" /> Last {lastReports.length} Report{lastReports.length > 1 ? "s" : ""} (Comparison)</CardTitle>
+                <CardHeader
+                  className="py-3 cursor-pointer select-none"
+                  onClick={() => setShowComparison((v) => !v)}
+                >
+                  <CardTitle className="text-sm flex items-center gap-2">
+                    {showComparison ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                    <History className="w-4 h-4" /> Last {lastReports.length} Report{lastReports.length > 1 ? "s" : ""} (Comparison)
+                    <span className="text-xs font-normal text-muted-foreground ml-auto">{showComparison ? "Click to hide" : "Click to compare"}</span>
+                  </CardTitle>
                 </CardHeader>
+                {showComparison && (
                 <CardContent className="overflow-x-auto">
                   <Table>
                     <TableHeader>
@@ -932,6 +1042,7 @@ export function PathologyReportWizard() {
                     </TableBody>
                   </Table>
                 </CardContent>
+                )}
               </Card>
             )}
           </div>
@@ -974,9 +1085,13 @@ export function PathologyReportWizard() {
                 <Label>Sample Type</Label>
                 <Input value={meta.sample_type} onChange={(e) => setMeta((m) => ({ ...m, sample_type: e.target.value }))} />
               </div>
-              <div>
-                <Label>Instrument</Label>
-                <Input value={meta.instrument} onChange={(e) => setMeta((m) => ({ ...m, instrument: e.target.value }))} />
+              <div className="md:col-span-1">
+                <Label>Instruments / Kits Used</Label>
+                <InstrumentPicker
+                  items={stockItems ?? []}
+                  value={selectedInstruments}
+                  onChange={(ids) => { instrumentsTouched.current = true; setSelectedInstruments(ids); }}
+                />
               </div>
               <div><Label>Registered At</Label><Input type="datetime-local" value={meta.registered_at} onChange={(e) => setMeta((m) => ({ ...m, registered_at: e.target.value }))} /></div>
               <div><Label>Collected At</Label><Input type="datetime-local" value={meta.collected_at} onChange={(e) => setMeta((m) => ({ ...m, collected_at: e.target.value }))} /></div>
@@ -1030,7 +1145,7 @@ export function PathologyReportWizard() {
                         {isCompleted && <Badge className="bg-green-600">Saved</Badge>}
                         {isPending && <Badge variant="outline" className="border-amber-500 text-amber-700">Pending</Badge>}
                       </div>
-                      <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-3 flex-wrap">
                         {!isCompleted && !isLocked && !isEditMode && (
                           <label className="flex items-center gap-1.5 text-xs cursor-pointer">
                             <Checkbox checked={isPending} onCheckedChange={() => togglePending(t.id)} />
@@ -1074,22 +1189,39 @@ export function PathologyReportWizard() {
                                 <TableRow key={p.id}>
                                   <TableCell>
                                     <div className="font-medium">{p.parameter_name}</div>
-                                    {p.has_subranges && subs.length > 0 && (
-                                      <RadioGroup
-                                        value={row.subrange_id ?? ""}
-                                        onValueChange={(v) => updateResult(p.id, { subrange_id: v })}
-                                        className="mt-2 gap-1"
-                                        disabled={isLocked}
-                                      >
-                                        {subs.map((s) => (
-                                          <label key={s.id} htmlFor={`sr-${p.id}-${s.id}`} className="flex items-center gap-2 text-xs cursor-pointer">
-                                            <RadioGroupItem value={s.id} id={`sr-${p.id}-${s.id}`} />
-                                            <span className="font-medium">{s.label}</span>
-                                            <span className="text-muted-foreground">{s.ref_display ?? `${s.ref_min ?? ''} - ${s.ref_max ?? ''}`}</span>
-                                          </label>
-                                        ))}
-                                      </RadioGroup>
-                                    )}
+                                    {p.has_subranges && subs.length > 0 && ((p.ref_min != null || p.ref_max != null) ? (
+                                      // Reference scale: read-only, no selection. Result goes in the Result box.
+                                      <div className="mt-2">
+                                        <div className="text-[11px] text-muted-foreground mb-1">Reference scale (for the report)</div>
+                                        <div className="space-y-0.5">
+                                          {subs.map((s) => (
+                                            <div key={s.id} className="flex items-center gap-2 text-xs text-muted-foreground">
+                                              <span className="font-medium text-foreground">{s.label}</span>
+                                              <span>{s.ref_display ?? `${s.ref_min ?? ''} - ${s.ref_max ?? ''}`}</span>
+                                            </div>
+                                          ))}
+                                        </div>
+                                      </div>
+                                    ) : (
+                                      // Pick-one ranges (e.g. sex/age based): a selection is required.
+                                      <div className="mt-2">
+                                        <div className="text-[11px] text-muted-foreground mb-1">Select the applicable reference range.</div>
+                                        <RadioGroup
+                                          value={row.subrange_id ?? ""}
+                                          onValueChange={(v) => updateResult(p.id, { subrange_id: v })}
+                                          className="gap-1"
+                                          disabled={isLocked}
+                                        >
+                                          {subs.map((s) => (
+                                            <label key={s.id} htmlFor={`sr-${p.id}-${s.id}`} className="flex items-center gap-2 text-xs cursor-pointer">
+                                              <RadioGroupItem value={s.id} id={`sr-${p.id}-${s.id}`} />
+                                              <span className="font-medium">{s.label}</span>
+                                              <span className="text-muted-foreground">{s.ref_display ?? `${s.ref_min ?? ''} - ${s.ref_max ?? ''}`}</span>
+                                            </label>
+                                          ))}
+                                        </RadioGroup>
+                                      </div>
+                                    ))}
                                     {p.is_optional && !isCompleted && !isLocked && (
                                       <label className="flex items-center gap-1 mt-1 text-xs text-muted-foreground">
                                         <Checkbox checked={row.skipped} disabled={isLocked} onCheckedChange={(v) => updateResult(p.id, { skipped: !!v })} /> Skip
@@ -1187,5 +1319,69 @@ export function PathologyReportWizard() {
         )}
       </CardContent>
     </Card>
+  );
+}
+
+// Searchable multi-select for the instruments/kits used on a report.
+// Chips show the current selection; the popover lets staff search and toggle items.
+function InstrumentPicker({
+  items,
+  value,
+  onChange,
+}: {
+  items: any[];
+  value: string[];
+  onChange: (ids: string[]) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const selected = items.filter((i) => value.includes(i.id));
+  const toggle = (id: string) =>
+    onChange(value.includes(id) ? value.filter((v) => v !== id) : [...value, id]);
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button variant="outline" role="combobox" className="w-full justify-between font-normal h-auto min-h-10 py-1.5">
+          <span className="flex flex-wrap gap-1 items-center">
+            {selected.length === 0 ? (
+              <span className="text-muted-foreground">Select instruments…</span>
+            ) : (
+              selected.map((i) => (
+                <Badge key={i.id} variant="secondary" className="gap-1">
+                  {i.name}
+                  <X
+                    className="w-3 h-3 cursor-pointer hover:text-destructive"
+                    onClick={(e) => { e.stopPropagation(); toggle(i.id); }}
+                  />
+                </Badge>
+              ))
+            )}
+          </span>
+          <ChevronsUpDown className="w-4 h-4 shrink-0 opacity-50" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-[--radix-popover-trigger-width] p-0 z-[9999]" align="start">
+        <Command>
+          <CommandInput placeholder="Search instruments…" />
+          <CommandList>
+            <CommandEmpty>
+              {items.length === 0 ? "No stock items — add them in Lab Item Supply." : "No match."}
+            </CommandEmpty>
+            <CommandGroup>
+              {items.map((i) => {
+                const isSel = value.includes(i.id);
+                return (
+                  <CommandItem key={i.id} value={i.name} onSelect={() => toggle(i.id)}>
+                    <Check className={`mr-2 h-4 w-4 ${isSel ? "opacity-100" : "opacity-0"}`} />
+                    <FlaskRound className="mr-2 h-3.5 w-3.5 text-muted-foreground" />
+                    {i.name}
+                  </CommandItem>
+                );
+              })}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
   );
 }

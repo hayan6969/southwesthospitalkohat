@@ -3,11 +3,11 @@ import { useAuth } from "@/hooks/useAuth";
 import { useSearchParams } from "react-router-dom";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MySupplyRequests } from "@/components/inventory/MySupplyRequests";
-import { LabItemSupply } from "@/components/inventory/LabItemSupply";
 import { PathologyReportWizard } from "@/components/lab/PathologyReportWizard";
 import { PathologyReportHistory } from "@/components/lab/PathologyReportHistory";
 import { PathologyTestTypeManager } from "@/components/lab/PathologyTestTypeManager";
-import { ShoppingCart, FlaskConical, Microscope, History, Settings2, BedDouble } from "lucide-react";
+import { LabStockManager } from "@/components/lab/LabStockManager";
+import { ShoppingCart, Microscope, History, Settings2, BedDouble, Boxes } from "lucide-react";
 import AppLayout from "@/layouts/AppLayout";
 import { IPDLabQueue } from "@/components/ipd/IPDLabQueue";
 
@@ -44,9 +44,9 @@ export default function DashboardLab() {
             <Settings2 className="w-3.5 h-3.5" />
             <span>Manage Tests</span>
           </TabsTrigger>
-          <TabsTrigger value="inventory" className="flex items-center gap-1.5 text-xs sm:text-sm">
-            <FlaskConical className="w-3.5 h-3.5" />
-            <span>Lab Item Supply</span>
+          <TabsTrigger value="stock" className="flex items-center gap-1.5 text-xs sm:text-sm">
+            <Boxes className="w-3.5 h-3.5" />
+            <span>Lab Stock</span>
           </TabsTrigger>
           <TabsTrigger value="ipd" className="flex items-center gap-1.5 text-xs sm:text-sm">
             <BedDouble className="w-3.5 h-3.5" />
@@ -74,8 +74,8 @@ export default function DashboardLab() {
           <PathologyTestTypeManager priceEditable={false} />
         </TabsContent>
 
-        <TabsContent value="inventory">
-          <LabItemSupply />
+        <TabsContent value="stock">
+          <LabStockManager />
         </TabsContent>
 
         <TabsContent value="supplies">

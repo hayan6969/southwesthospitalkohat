@@ -250,7 +250,8 @@ export async function generatePathologyReportPDF(
     let h = 5 * Math.max(nameLines.length, refLines.length, 1);
 
     if (p.display_all_subranges && p.subranges && p.subranges.length > 0) {
-      h += p.subranges.length * 4 + 1;
+      // sub-table header + one row per subrange + small inter-group gaps + padding
+      h += 6 + p.subranges.length * 4.6 + 4;
     }
 
     const prev = p.parameter_id ? previousByParam.get(p.parameter_id) : undefined;
@@ -499,46 +500,105 @@ export async function generatePathologyReportPDF(
 
       y += 5 * Math.max(nameLines.length, refLines.length, 1);
 
-      // Subranges
+      // Subranges — grouped interpretation scale (e.g. HbA1c value ↔ reading ↔ control)
       if (p.display_all_subranges && p.subranges && p.subranges.length > 0) {
-        for (const sr of p.subranges) {
-          if (y > safeBottom()) {
-            closeTableSegment(y);
-            y = newPage();
-            segHeaderTop = y;
-            doc.setFillColor(245, 245, 245);
-            doc.rect(marginX, segHeaderTop, contentWidth, headerHeight, 'F');
-            doc.setFont('helvetica', 'bold'); doc.setFontSize(9);
-            doc.text('Investigation',   COL_NAME_START, y + 5.5);
-            doc.text('Result',          COL_RESULT,     y + 5.5);
-            doc.text('Reference Value', COL_REF,        y + 5.5);
-            doc.text('Unit',            COL_UNIT,       y + 5.5);
-            segHeaderBottom = segHeaderTop + headerHeight;
-            doc.setDrawColor(200, 200, 200);
-            doc.line(marginX, segHeaderBottom, pageWidth - marginX, segHeaderBottom);
-            y = segHeaderBottom + 5;
-          }
-          const isSelected =
-            (p.subrange_id && sr.id === p.subrange_id) ||
-            (!p.subrange_id && p.subrange_used && sr.label === p.subrange_used);
-          if (isSelected) {
-            doc.setFillColor(255, 249, 196);
-            doc.rect(marginX + 0.3, y - 3.5, contentWidth - 0.6, 4.6, 'F');
-          }
-          doc.setFont('helvetica', isSelected ? 'bold' : 'normal');
-          doc.setFontSize(8);
-          doc.setTextColor(70, 70, 70);
-          doc.text(sr.label, COL_NAME_START + 4, y);
-          const srRef = sr.ref_display ||
-            (sr.ref_min != null && sr.ref_max != null ? `${sr.ref_min} - ${sr.ref_max}` : '—');
-          doc.text(srRef, COL_REF, y);
-          // Unit intentionally omitted on subrange rows (shown once on parameter row)
+        // Parse "12% (Very Poor Control)" → reading "12%" + interpretation group "Very Poor Control".
+        const parsed = p.subranges.map((sr) => {
+          const raw = sr.ref_display ||
+            (sr.ref_min != null && sr.ref_max != null ? `${sr.ref_min} - ${sr.ref_max}` : '');
+          const m = raw.match(/^(.*?)\s*\(([^)]*)\)\s*$/);
+          return {
+            sr,
+            value: sr.label || '—',
+            reading: (m ? m[1] : raw).trim(),
+            group: (m ? m[2] : '').trim(),
+            selected:
+              (p.subrange_id && sr.id === p.subrange_id) ||
+              (!p.subrange_id && !!p.subrange_used && sr.label === p.subrange_used),
+          };
+        });
+        const hasGroups = parsed.some((x) => x.group);
+        const rowH = 4.6;
+        // Keep each sub-column inside a real table column so the vertical dividers
+        // (at COL_RESULT_DIV / COL_REF_DIV / COL_UNIT_DIV) never cut through the text/boxes.
+        const cValue = COL_NAME_START + 4; // Investigation column
+        const cRead  = COL_RESULT;         // Result column
+        const cGroup = COL_REF;            // Reference column
+        const groupBoxLeft = cGroup - 3;
+        const groupRight = COL_UNIT_DIV - 1; // stay left of the Unit divider
+
+        const drawSubHeader = () => {
+          doc.setFont('helvetica', 'bold'); doc.setFontSize(7.5); doc.setTextColor(110, 110, 110);
+          doc.text('Value', cValue, y);
+          doc.text(p.unit ? `Reading (${p.unit})` : 'Reading', cRead, y);
+          if (hasGroups) doc.text('Interpretation', cGroup, y);
+          doc.setDrawColor(215, 215, 215); doc.setLineWidth(0.2);
+          doc.line(marginX + 2, y + 1.4, groupRight, y + 1.4);
+          y += 4.6;
           doc.setTextColor(0, 0, 0);
-          doc.setFont('helvetica', 'normal');
-          doc.setFontSize(9);
-          y += 4;
+        };
+
+        const newPageInSub = () => {
+          closeTableSegment(y);
+          y = newPage();
+          segHeaderTop = y;
+          doc.setFillColor(245, 245, 245);
+          doc.rect(marginX, segHeaderTop, contentWidth, headerHeight, 'F');
+          doc.setFont('helvetica', 'bold'); doc.setFontSize(9); doc.setTextColor(0, 0, 0);
+          doc.text('Investigation',   COL_NAME_START, y + 5.5);
+          doc.text('Result',          COL_RESULT,     y + 5.5);
+          doc.text('Reference Value', COL_REF,        y + 5.5);
+          doc.text('Unit',            COL_UNIT,       y + 5.5);
+          segHeaderBottom = segHeaderTop + headerHeight;
+          doc.setDrawColor(200, 200, 200);
+          doc.line(marginX, segHeaderBottom, pageWidth - marginX, segHeaderBottom);
+          y = segHeaderBottom + 5;
+          drawSubHeader();
+        };
+
+        const drawGroupBox = (topY: number, grp: string) => {
+          if (!hasGroups || !grp) return;
+          const boxBottom = y - 3.3;
+          doc.setDrawColor(150, 150, 150); doc.setLineWidth(0.2);
+          doc.rect(groupBoxLeft, topY, groupRight - groupBoxLeft, boxBottom - topY);
+          doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5); doc.setTextColor(0, 0, 0);
+          const lines = doc.splitTextToSize(grp, groupRight - cGroup - 1);
+          doc.text(lines, cGroup, topY + (boxBottom - topY) / 2 - (lines.length - 1) * 1.5 + 1.4);
+        };
+
+        drawSubHeader();
+
+        let i = 0;
+        while (i < parsed.length) {
+          const grp = parsed[i].group;
+          let segTop = y - 3.3;
+          let k = i;
+          while (k < parsed.length && parsed[k].group === grp) {
+            if (y > safeBottom()) {
+              drawGroupBox(segTop, grp);
+              newPageInSub();
+              segTop = y - 3.3;
+            }
+            const x = parsed[k];
+            if (x.selected) {
+              doc.setFillColor(255, 249, 196);
+              doc.rect(marginX + 0.3, y - 3.3, contentWidth - 0.6, rowH, 'F');
+            }
+            doc.setFont('helvetica', x.selected ? 'bold' : 'normal');
+            doc.setFontSize(8); doc.setTextColor(55, 55, 55);
+            doc.text(x.value, cValue, y);
+            if (x.reading) doc.text(x.reading, cRead, y);
+            doc.setTextColor(0, 0, 0); doc.setFont('helvetica', 'normal'); doc.setFontSize(9);
+            y += rowH;
+            k++;
+          }
+          drawGroupBox(segTop, grp);
+          i = k;
+          if (i < parsed.length) y += 1.6; // gap between interpretation boxes
         }
-        y += 1;
+        y += 2;
+        doc.setLineWidth(0.3);
+        doc.setTextColor(0, 0, 0); doc.setFont('helvetica', 'normal'); doc.setFontSize(9);
       }
 
       // ── Previous results chips (confined to Investigation column) ─────────

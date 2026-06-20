@@ -169,7 +169,8 @@ export default function VerifyReport() {
                   </thead>
                   <tbody>
                     {tt.parameters?.map((p, pi) => {
-                      const refText = p.display_all_subranges
+                      const showAllSubs = p.display_all_subranges || (p.subranges?.length ?? 0) > 0;
+                      const refText = showAllSubs
                         ? (p.ref_display || "( See Below )")
                         : (p.subrange_used ? `${p.subrange_used}: ${p.ref_display || "—"}` : (p.ref_display || "—"));
                       return (
@@ -186,7 +187,7 @@ export default function VerifyReport() {
                             <td className="p-2">{refText}</td>
                             <td className="p-2">{p.unit || "—"}</td>
                           </tr>
-                          {p.display_all_subranges && p.subranges?.map((sr) => {
+                          {showAllSubs && p.subranges?.map((sr) => {
                             const isSel = (p.subrange_id && sr.id === p.subrange_id) || (!p.subrange_id && p.subrange_used === sr.label);
                             return (
                               <tr key={sr.id} className={`border-t text-xs ${isSel ? "bg-yellow-50" : ""}`}>
