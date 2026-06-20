@@ -346,9 +346,27 @@ export function PathologyReportWizard() {
 
       const allTestIds: string[] = (tts ?? []).map((t: any) => t.test_type_id);
 
+      // Classify each test type: "completed" if it already has at least one
+      // saved result row, otherwise it's still pending (to be filled now).
+      const tidsWithResults = new Set<string>();
+      {
+        const paramTtMap = new Map<string, string>();
+        const { data: pRows } = await supabase
+          .from("lab_test_parameters")
+          .select("id, test_type_id")
+          .in("test_type_id", allTestIds.length ? allTestIds : ["00000000-0000-0000-0000-000000000000"]);
+        (pRows ?? []).forEach((p: any) => paramTtMap.set(p.id, p.test_type_id));
+        (existingResults ?? []).forEach((r: any) => {
+          if (r.result_value != null && String(r.result_value).trim() !== "") {
+            const tid = paramTtMap.get(r.parameter_id);
+            if (tid) tidsWithResults.add(tid);
+          }
+        });
+      }
+
       setExistingReportId(reportId);
       setSelectedTestIds(allTestIds);
-      setCompletedTestIds(new Set());
+      setCompletedTestIds(new Set(tidsWithResults));
       setPendingTestIds(new Set());
       setMeta((m) => ({
         ...m,
@@ -604,7 +622,7 @@ export function PathologyReportWizard() {
         if (ttErr) throw ttErr;
       } else {
         // UPDATE existing report meta + status
-        const newStatus = isEditMode ? "final" : (pendingTestIds.size > 0 ? "partial" : "final");
+        const newStatus = pendingTestIds.size > 0 ? "partial" : "final";
         const { error: upErr } = await supabase
           .from("lab_pathology_reports")
           .update({
@@ -618,7 +636,8 @@ export function PathologyReportWizard() {
           }).eq("id", reportId);
         if (upErr) throw upErr;
 
-        // In edit mode, delete old results before re-inserting
+        // In edit mode, delete old results before re-inserting (covers both
+        // previously-completed tests and tests being filled now from a pending state).
         if (isEditMode) {
           const { error: delErr } = await supabase
             .from("lab_pathology_report_results")
@@ -628,12 +647,18 @@ export function PathologyReportWizard() {
         }
       }
 
-      // Insert result rows — in edit mode all params are filling
-      const fillingParamIds = new Set(
-        (parameters ?? []).filter((p) => fillingTestIds.includes(p.test_type_id)).map((p) => p.id)
+      // Insert result rows.
+      // - New report flow: only params for tests being filled now.
+      // - Edit mode: re-insert params for ALL non-pending tests (completed kept + filling),
+      //   since the prior delete wiped them all.
+      const tidsToPersist = isEditMode
+        ? selectedTestIds.filter((id) => !pendingTestIds.has(id))
+        : fillingTestIds;
+      const persistParamIds = new Set(
+        (parameters ?? []).filter((p) => tidsToPersist.includes(p.test_type_id)).map((p) => p.id)
       );
       const resultRows = (parameters ?? [])
-        .filter((p) => fillingParamIds.has(p.id))
+        .filter((p) => persistParamIds.has(p.id))
         .map((p) => results[p.id])
         .filter((r) => r && (r.result_value.trim() !== "" || r.skipped))
         .map((r) => {
@@ -1183,7 +1208,7 @@ export function PathologyReportWizard() {
                         {isPending && <Badge variant="outline" className="border-amber-500 text-amber-700">Pending</Badge>}
                       </div>
                       <div className="flex items-center gap-3 flex-wrap">
-                        {!isCompleted && !isLocked && !isEditMode && (
+                        {!isCompleted && !isLocked && (
                           <label className="flex items-center gap-1.5 text-xs cursor-pointer">
                             <Checkbox checked={isPending} onCheckedChange={() => togglePending(t.id)} />
                             <Clock className="w-3 h-3" /> Results pending

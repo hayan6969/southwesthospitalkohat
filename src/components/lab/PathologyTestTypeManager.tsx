@@ -54,6 +54,7 @@ export function PathologyTestTypeManager({ priceEditable = true }: { priceEditab
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [showTestDialog, setShowTestDialog] = useState(false);
   const [editingTest, setEditingTest] = useState<Partial<TestType> | null>(null);
+  const [search, setSearch] = useState("");
 
   const { data: testTypes } = useQuery({
     queryKey: ["lab_test_types_admin"],
@@ -136,6 +137,14 @@ export function PathologyTestTypeManager({ priceEditable = true }: { priceEditab
           </Button>
         </CardHeader>
         <CardContent>
+          <div className="mb-3">
+            <Input
+              placeholder="Search test by name, category or method..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="max-w-md"
+            />
+          </div>
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
@@ -150,7 +159,17 @@ export function PathologyTestTypeManager({ priceEditable = true }: { priceEditab
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {testTypes?.map((t) => (
+                {testTypes
+                  ?.filter((t) => {
+                    const q = search.trim().toLowerCase();
+                    if (!q) return true;
+                    return (
+                      t.name?.toLowerCase().includes(q) ||
+                      (t.report_category ?? "").toLowerCase().includes(q) ||
+                      (t.method ?? "").toLowerCase().includes(q)
+                    );
+                  })
+                  .map((t) => (
                   <TableRow key={t.id} className={selectedId === t.id ? "bg-blue-50" : ""}>
                     <TableCell className="font-medium">{t.name}</TableCell>
                     <TableCell>{t.report_category || "—"}</TableCell>

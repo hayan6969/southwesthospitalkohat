@@ -1538,39 +1538,48 @@ export type Database = {
         Row: {
           category: string
           created_at: string | null
+          default_tests_per_unit: number | null
           description: string | null
           expiry_date: string | null
           id: string
           manufacturing_date: string | null
           minimum_stock_level: number
+          minimum_tests_level: number
           name: string
           stock_quantity: number
+          track_by_tests: boolean
           unit: string
           updated_at: string | null
         }
         Insert: {
           category?: string
           created_at?: string | null
+          default_tests_per_unit?: number | null
           description?: string | null
           expiry_date?: string | null
           id?: string
           manufacturing_date?: string | null
           minimum_stock_level?: number
+          minimum_tests_level?: number
           name: string
           stock_quantity?: number
+          track_by_tests?: boolean
           unit?: string
           updated_at?: string | null
         }
         Update: {
           category?: string
           created_at?: string | null
+          default_tests_per_unit?: number | null
           description?: string | null
           expiry_date?: string | null
           id?: string
           manufacturing_date?: string | null
           minimum_stock_level?: number
+          minimum_tests_level?: number
           name?: string
           stock_quantity?: number
+          track_by_tests?: boolean
           unit?: string
           updated_at?: string | null
         }
@@ -1935,6 +1944,126 @@ export type Database = {
           },
         ]
       }
+      lab_stock_batches: {
+        Row: {
+          batch_number: string | null
+          created_at: string
+          expiry_date: string | null
+          id: string
+          is_active: boolean
+          item_id: string
+          manufacturing_date: string | null
+          notes: string | null
+          received_by: string | null
+          request_id: string | null
+          tests_per_unit: number
+          tests_remaining: number
+          tests_total: number
+          units_received: number
+          updated_at: string
+        }
+        Insert: {
+          batch_number?: string | null
+          created_at?: string
+          expiry_date?: string | null
+          id?: string
+          is_active?: boolean
+          item_id: string
+          manufacturing_date?: string | null
+          notes?: string | null
+          received_by?: string | null
+          request_id?: string | null
+          tests_per_unit?: number
+          tests_remaining?: number
+          tests_total?: number
+          units_received?: number
+          updated_at?: string
+        }
+        Update: {
+          batch_number?: string | null
+          created_at?: string
+          expiry_date?: string | null
+          id?: string
+          is_active?: boolean
+          item_id?: string
+          manufacturing_date?: string | null
+          notes?: string | null
+          received_by?: string | null
+          request_id?: string | null
+          tests_per_unit?: number
+          tests_remaining?: number
+          tests_total?: number
+          units_received?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lab_stock_batches_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "lab_inventory_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lab_stock_consumption: {
+        Row: {
+          batch_id: string | null
+          consumed_at: string
+          consumed_by: string | null
+          id: string
+          item_id: string | null
+          notes: string | null
+          report_id: string | null
+          test_type_id: string | null
+          tests_consumed: number
+        }
+        Insert: {
+          batch_id?: string | null
+          consumed_at?: string
+          consumed_by?: string | null
+          id?: string
+          item_id?: string | null
+          notes?: string | null
+          report_id?: string | null
+          test_type_id?: string | null
+          tests_consumed?: number
+        }
+        Update: {
+          batch_id?: string | null
+          consumed_at?: string
+          consumed_by?: string | null
+          id?: string
+          item_id?: string | null
+          notes?: string | null
+          report_id?: string | null
+          test_type_id?: string | null
+          tests_consumed?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lab_stock_consumption_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "lab_stock_batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lab_stock_consumption_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "lab_inventory_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lab_stock_consumption_test_type_id_fkey"
+            columns: ["test_type_id"]
+            isOneToOne: false
+            referencedRelation: "lab_test_types"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       lab_stock_usage: {
         Row: {
           created_at: string | null
@@ -1961,6 +2090,104 @@ export type Database = {
           used_by?: string
         }
         Relationships: []
+      }
+      lab_store_batches: {
+        Row: {
+          batch_number: string | null
+          created_at: string
+          expiry_date: string | null
+          id: string
+          is_active: boolean
+          item_id: string
+          manufacturing_date: string | null
+          notes: string | null
+          received_by: string | null
+          tests_per_unit: number
+          units_received: number
+          units_remaining: number
+          updated_at: string
+        }
+        Insert: {
+          batch_number?: string | null
+          created_at?: string
+          expiry_date?: string | null
+          id?: string
+          is_active?: boolean
+          item_id: string
+          manufacturing_date?: string | null
+          notes?: string | null
+          received_by?: string | null
+          tests_per_unit?: number
+          units_received?: number
+          units_remaining?: number
+          updated_at?: string
+        }
+        Update: {
+          batch_number?: string | null
+          created_at?: string
+          expiry_date?: string | null
+          id?: string
+          is_active?: boolean
+          item_id?: string
+          manufacturing_date?: string | null
+          notes?: string | null
+          received_by?: string | null
+          tests_per_unit?: number
+          units_received?: number
+          units_remaining?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lab_store_batches_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "lab_inventory_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lab_test_consumables: {
+        Row: {
+          created_at: string
+          id: string
+          is_default: boolean
+          item_id: string
+          test_type_id: string
+          tests_per_run: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_default?: boolean
+          item_id: string
+          test_type_id: string
+          tests_per_run?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_default?: boolean
+          item_id?: string
+          test_type_id?: string
+          tests_per_run?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lab_test_consumables_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "lab_inventory_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lab_test_consumables_test_type_id_fkey"
+            columns: ["test_type_id"]
+            isOneToOne: false
+            referencedRelation: "lab_test_types"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       lab_test_parameters: {
         Row: {
@@ -3461,6 +3688,15 @@ export type Database = {
           total_earnings: number
         }[]
       }
+      consume_lab_test_stock: {
+        Args: {
+          p_item_id: string
+          p_report_id?: string
+          p_test_type_id?: string
+          p_tests: number
+        }
+        Returns: number
+      }
       create_daily_closing: {
         Args: {
           p_closing_date: string
@@ -3498,6 +3734,10 @@ export type Database = {
         Returns: string
       }
       delete_user_safely: { Args: { user_uuid: string }; Returns: boolean }
+      dispatch_lab_store_to_lab: {
+        Args: { p_item_id: string; p_request_id?: string; p_units: number }
+        Returns: number
+      }
       generate_admission_number: { Args: never; Returns: string }
       generate_daily_doctor_payments: {
         Args: { target_date: string }
