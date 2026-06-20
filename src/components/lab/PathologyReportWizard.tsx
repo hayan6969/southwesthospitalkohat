@@ -1208,7 +1208,7 @@ export function PathologyReportWizard() {
                         {isPending && <Badge variant="outline" className="border-amber-500 text-amber-700">Pending</Badge>}
                       </div>
                       <div className="flex items-center gap-3 flex-wrap">
-                        {!isCompleted && !isLocked && !isEditMode && (
+                        {!isCompleted && !isLocked && (
                           <label className="flex items-center gap-1.5 text-xs cursor-pointer">
                             <Checkbox checked={isPending} onCheckedChange={() => togglePending(t.id)} />
                             <Clock className="w-3 h-3" /> Results pending
