@@ -2,7 +2,7 @@
 import AppLayout from "@/layouts/AppLayout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { InventoryItemsManager } from "@/components/inventory/InventoryItemsManager";
-import { LabInventoryManager } from "@/components/inventory/LabInventoryManager";
+import { LabStoreStockManager } from "@/components/inventory/LabStoreStockManager";
 import { InventoryRequestsManager } from "@/components/inventory/InventoryRequestsManager";
 import { StoreRequestsView } from "@/components/inventory/StoreRequestsView";
 import { LowStockAlerts } from "@/components/inventory/LowStockAlerts";
@@ -57,7 +57,7 @@ const DashboardStore = () => {
             <InventoryItemsManager />
           </TabsContent>
           <TabsContent value="lab">
-            <LabInventoryManager />
+            <LabStoreStockManager />
           </TabsContent>
           <TabsContent value="provide">
             <StoreRequestsView />

@@ -108,6 +108,8 @@ export function PathologyReportWizard() {
       const { data } = await (supabase as any).from("lab_inventory_items").select("id, name, track_by_tests").order("name");
       return (data ?? []) as any[];
     },
+    staleTime: 0,
+    refetchOnMount: "always",
   });
   const { data: testConsumables } = useQuery({
     queryKey: ["wizard-lab-test-consumables"],
@@ -115,6 +117,10 @@ export function PathologyReportWizard() {
       const { data } = await (supabase as any).from("lab_test_consumables").select("*");
       return (data ?? []) as any[];
     },
+    // Always pull the latest test→instrument mappings so a kit just configured in
+    // "Instrument Usage" auto-fills onto the report (otherwise the 30s cache hides it).
+    staleTime: 0,
+    refetchOnMount: "always",
   });
   // A test may use several instruments; each (test, instrument) pair has its own tests-per-run.
   const defaultItemsByTest = useMemo(() => {
@@ -138,17 +144,25 @@ export function PathologyReportWizard() {
 
   // Auto-fill instruments from each selected test's default kit (new reports) or from
   // the saved instrument text (loaded reports), until the user edits the list themselves.
+  // Merges (never clobbers) so instruments from mappings that load in a later refetch
+  // phase still get added — otherwise a multi-test report could under-deduct.
   useEffect(() => {
-    if (instrumentsTouched.current || selectedInstruments.length > 0) return;
+    if (instrumentsTouched.current) return;
     if (selectedTestIds.length === 0 && !meta.instrument) return;
-    const ids = new Set<string>();
-    selectedTestIds.forEach((tid) => (defaultItemsByTest[tid] ?? []).forEach((id) => ids.add(id)));
-    if (ids.size === 0 && meta.instrument) {
+    const want = new Set<string>();
+    selectedTestIds.forEach((tid) => (defaultItemsByTest[tid] ?? []).forEach((id) => want.add(id)));
+    if (want.size === 0 && meta.instrument) {
       // Loaded report: match saved instrument names back to stock items.
       const names = meta.instrument.split(",").map((s) => s.trim().toLowerCase());
-      (stockItems ?? []).forEach((i: any) => { if (names.includes(String(i.name).toLowerCase())) ids.add(i.id); });
+      (stockItems ?? []).forEach((i: any) => { if (names.includes(String(i.name).toLowerCase())) want.add(i.id); });
     }
-    if (ids.size > 0) setSelectedInstruments(Array.from(ids));
+    if (want.size === 0) return;
+    setSelectedInstruments((prev) => {
+      const merged = new Set(prev);
+      let changed = false;
+      want.forEach((id) => { if (!merged.has(id)) { merged.add(id); changed = true; } });
+      return changed ? Array.from(merged) : prev;
+    });
   }, [selectedTestIds.join(","), defaultItemsByTest, stockItems, meta.instrument]); // eslint-disable-line
   const [submitting, setSubmitting] = useState(false);
   const [isLocked, setIsLocked] = useState(false);
@@ -662,12 +676,28 @@ export function PathologyReportWizard() {
       // Deduct each chosen instrument/kit from stock on finalize (FEFO, soonest-expiry first).
       // Quantity per instrument = sum of "tests per run" for the finalized tests it's the kit
       // for (Test→Kit mapping); instruments not mapped to any test deduct 1 unit.
-      if (mode === "final" && reportId && selectedInstruments.length > 0) {
+      if (mode === "final" && reportId) {
+        // Instruments already deducted for this report (so editing/re-saving never
+        // double-deducts; a newly-added instrument on edit still deducts once).
+        let alreadyConsumed = new Set<string>();
+        try {
+          const { data: priorCons } = await (supabase as any)
+            .from("lab_stock_consumption")
+            .select("item_id")
+            .eq("report_id", reportId);
+          alreadyConsumed = new Set((priorCons ?? []).map((c: any) => c.item_id).filter(Boolean));
+        } catch {
+          // If the log can't be read, fall back to deducting (better than silently never deducting).
+        }
+        // Deduct for ALL finalized tests in this report — those filled now PLUS those
+        // completed in an earlier partial save — so multi-save reports don't under-deduct.
+        const finalizedTids = [...fillingTestIds, ...Array.from(completedTestIds)];
         for (const itemId of selectedInstruments) {
           if (!itemId) continue;
+          if (alreadyConsumed.has(itemId)) continue; // already deducted for this report
           let qty = 0;
           let firstTid: string | null = null;
-          for (const tid of fillingTestIds) {
+          for (const tid of finalizedTids) {
             const run = runByTestItem.get(`${tid}|${itemId}`);
             if (run != null) {
               qty += run;
@@ -675,19 +705,26 @@ export function PathologyReportWizard() {
             }
           }
           if (qty <= 0) qty = 1;
+          const iname = (stockItems ?? []).find((i: any) => i.id === itemId)?.name ?? "instrument";
           try {
-            const { data: consumed } = await (supabase as any).rpc("consume_lab_test_stock", {
+            const { data: consumed, error } = await (supabase as any).rpc("consume_lab_test_stock", {
               p_item_id: itemId,
               p_tests: qty,
               p_test_type_id: firstTid,
               p_report_id: reportId,
             });
-            if (typeof consumed === "number" && consumed < qty) {
-              const iname = (stockItems ?? []).find((i: any) => i.id === itemId)?.name ?? "instrument";
-              toast.warning(`Low stock: only ${consumed}/${qty} deducted for ${iname}`);
+            if (error) throw error;
+            const n = typeof consumed === "number" ? consumed : 0;
+            if (n <= 0) {
+              toast.warning(`No stock deducted for ${iname} — no received, non-expired batches available.`);
+            } else if (n < qty) {
+              toast.warning(`Low stock: only ${n}/${qty} deducted for ${iname}`);
+            } else {
+              toast.success(`Deducted ${n} from ${iname}`);
             }
-          } catch {
-            // never block report saving on a stock-deduction problem
+          } catch (err: any) {
+            // Surface (but don't block saving) so a missing migration/RPC isn't invisible.
+            toast.error(`Stock not deducted for ${iname}: ${err?.message || "stock tracking unavailable"}`);
           }
         }
         queryClient.invalidateQueries({ queryKey: ["lab-stock-batches"] });
@@ -1174,18 +1211,18 @@ export function PathologyReportWizard() {
                           </TableRow>
                         </TableHeader>
                         <TableBody>
-                          {params.map((p) => {
+                          {params.flatMap((p) => {
                             const row = results[p.id];
-                            if (!row) return null;
+                            if (!row) return [];
                             const subs = subranges?.filter((s) => s.parameter_id === p.id) ?? [];
                             const range = getActiveRange(p, row);
-                            return (
-                              <>
-                                {p.category_heading && (
-                                  <TableRow key={`${p.id}-h`} className="bg-muted/40">
-                                    <TableCell colSpan={5} className="font-bold text-xs">{p.category_heading}</TableCell>
-                                  </TableRow>
-                                )}
+                            return [
+                              p.category_heading ? (
+                                <TableRow key={`${p.id}-h`} className="bg-muted/40">
+                                  <TableCell colSpan={5} className="font-bold text-xs">{p.category_heading}</TableCell>
+                                </TableRow>
+                              ) : null,
+                              (
                                 <TableRow key={p.id}>
                                   <TableCell>
                                     <div className="font-medium">{p.parameter_name}</div>
@@ -1235,8 +1272,8 @@ export function PathologyReportWizard() {
                                   </TableCell>
                                   <TableCell>{row.flag && <Badge variant="outline" className={flagBadgeClass(row.flag)}>{row.flag}</Badge>}</TableCell>
                                 </TableRow>
-                              </>
-                            );
+                              ),
+                            ];
                           })}
                         </TableBody>
                       </Table>

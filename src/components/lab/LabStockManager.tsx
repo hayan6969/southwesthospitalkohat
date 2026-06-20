@@ -15,6 +15,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Plus, PackagePlus, ShoppingCart, ChevronDown, ChevronRight, Trash2, AlertTriangle, Pencil, PackageCheck, Search } from "lucide-react";
 import { toast } from "sonner";
 import { LabItemSupply } from "@/components/inventory/LabItemSupply";
+import { LabInventoryManager } from "@/components/inventory/LabInventoryManager";
 
 // The new lab-stock tables aren't in the generated Supabase types yet, so use a
 // loosely-typed handle for them (the typed `supabase` is still used elsewhere).
@@ -70,6 +71,10 @@ export function LabStockManager() {
       if (error) throw error;
       return data as any[];
     },
+    // Always show current stock — deductions happen elsewhere (report finalize).
+    staleTime: 0,
+    refetchOnMount: "always",
+    refetchOnWindowFocus: true,
   });
 
   const { data: batches } = useQuery({
@@ -79,6 +84,9 @@ export function LabStockManager() {
       if (error) throw error;
       return (data ?? []) as Batch[];
     },
+    staleTime: 0,
+    refetchOnMount: "always",
+    refetchOnWindowFocus: true,
   });
 
   // Lab orders the store has dispatched (status "provided") — the lab receives these into batch stock.
@@ -287,6 +295,7 @@ export function LabStockManager() {
       <TabsList>
         <TabsTrigger value="stock">Stock &amp; Batches</TabsTrigger>
         <TabsTrigger value="usage">Instrument Usage</TabsTrigger>
+        <TabsTrigger value="catalog">Lab Items</TabsTrigger>
         <TabsTrigger value="requests">Request from Store</TabsTrigger>
       </TabsList>
 
@@ -351,18 +360,18 @@ export function LabStockManager() {
               <TableBody>
                 {(items ?? []).length === 0 ? (
                   <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-8">No lab items yet</TableCell></TableRow>
-                ) : (items ?? []).map((item) => {
+                ) : (items ?? []).flatMap((item) => {
                   const s = stats.get(item.id) ?? { testsRemaining: 0, expired: 0, soonest: null, batchCount: 0 };
-                  const low = item.track_by_tests
-                    ? s.testsRemaining <= (item.minimum_tests_level || 0)
-                    : (item.stock_quantity ?? 0) <= (item.minimum_stock_level ?? 0);
+                  // Lab stock is the batch ledger (tests). stock_quantity is the store's flat
+                  // field and is NOT used for lab on-hand anymore.
+                  const low = s.testsRemaining <= (item.minimum_tests_level || 0);
                   const expiringSoon = s.soonest ? (new Date(s.soonest).getTime() - today().getTime()) <= 30 * DAY : false;
                   const itemBatches = (batches ?? []).filter((b) => b.item_id === item.id);
                   const isOpen = expanded.has(item.id);
                   // Receive is only allowed against a store-dispatched ("provided") order for this item.
                   const pendingOrder = awaitingReceipt.find((r) => String(r.item_name).toLowerCase() === String(item.name).toLowerCase());
-                  return (
-                    <>
+                  return [
+                    (
                       <TableRow key={item.id} className={low ? "bg-destructive/5" : ""}>
                         <TableCell>
                           {itemBatches.length > 0 && (
@@ -376,8 +385,8 @@ export function LabStockManager() {
                           <span className="text-xs text-muted-foreground ml-2">({item.category})</span>
                         </TableCell>
                         <TableCell>
-                          <span className="font-semibold">{item.track_by_tests ? s.testsRemaining : (item.stock_quantity ?? 0)}</span>
-                          {item.track_by_tests && <span className="text-xs text-muted-foreground"> tests</span>}
+                          <span className="font-semibold">{s.testsRemaining}</span>
+                          <span className="text-xs text-muted-foreground"> tests</span>
                           {s.expired > 0 && <span className="text-xs text-destructive ml-1">(+{s.expired} expired)</span>}
                         </TableCell>
                         <TableCell>{s.batchCount}</TableCell>
@@ -407,21 +416,21 @@ export function LabStockManager() {
                           <Button variant="ghost" size="icon" onClick={() => { if (confirm(`Delete ${item.name}?`)) deleteItem.mutate(item.id); }}><Trash2 className="w-4 h-4 text-destructive" /></Button>
                         </TableCell>
                       </TableRow>
-                      {isOpen && itemBatches.map((b) => {
-                        const exp = b.expiry_date ? new Date(b.expiry_date) < today() : false;
-                        return (
-                          <TableRow key={b.id} className="bg-muted/30 text-xs">
-                            <TableCell></TableCell>
-                            <TableCell className="pl-6 text-muted-foreground">Batch {b.batch_number || "—"}</TableCell>
-                            <TableCell>{b.tests_remaining}/{b.tests_total}</TableCell>
-                            <TableCell>{b.units_received} × {b.tests_per_unit}</TableCell>
-                            <TableCell className={exp ? "text-destructive font-medium" : ""}>{b.expiry_date || "—"}{exp && " (expired)"}</TableCell>
-                            <TableCell colSpan={2}></TableCell>
-                          </TableRow>
-                        );
-                      })}
-                    </>
-                  );
+                    ),
+                    ...(isOpen ? itemBatches.map((b) => {
+                      const exp = b.expiry_date ? new Date(b.expiry_date) < today() : false;
+                      return (
+                        <TableRow key={b.id} className="bg-muted/30 text-xs">
+                          <TableCell></TableCell>
+                          <TableCell className="pl-6 text-muted-foreground">Batch {b.batch_number || "—"}</TableCell>
+                          <TableCell>{b.tests_remaining}/{b.tests_total}</TableCell>
+                          <TableCell>{b.units_received} × {b.tests_per_unit}</TableCell>
+                          <TableCell className={exp ? "text-destructive font-medium" : ""}>{b.expiry_date || "—"}{exp && " (expired)"}</TableCell>
+                          <TableCell colSpan={2}></TableCell>
+                        </TableRow>
+                      );
+                    }) : []),
+                  ];
                 })}
               </TableBody>
             </Table>
@@ -458,7 +467,7 @@ export function LabStockManager() {
                     <TableRow key={item.id}>
                       <TableCell className="font-medium">{item.name} <span className="text-xs text-muted-foreground">({item.category})</span></TableCell>
                       <TableCell>{item.track_by_tests ? <span><b>{item.default_tests_per_unit ?? "—"}</b> tests</span> : "—"}</TableCell>
-                      <TableCell>{item.track_by_tests ? (s?.testsRemaining ?? 0) : (item.stock_quantity ?? 0)}</TableCell>
+                      <TableCell>{s?.testsRemaining ?? 0}</TableCell>
                       <TableCell className="max-w-[320px]">
                         {used.length === 0 ? (
                           <span className="text-muted-foreground text-sm">Not assigned</span>
@@ -479,6 +488,11 @@ export function LabStockManager() {
             </Table>
           </CardContent>
         </Card>
+      </TabsContent>
+
+      {/* ── LAB ITEMS (catalog) ───────────────────────────────────────────── */}
+      <TabsContent value="catalog">
+        <LabInventoryManager />
       </TabsContent>
 
       {/* ── REQUEST FROM STORE ────────────────────────────────────────────── */}

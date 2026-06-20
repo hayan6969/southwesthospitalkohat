@@ -60,18 +60,40 @@ export function StoreRequestsView() {
   }, [requests, departments]);
 
   const deductStock = async (req: any) => {
-    const table = req.item_type === "lab" ? "lab_inventory_items" : "inventory_items";
+    // Lab items: dispatch UNITS from the store's batch stock (FEFO). The lab then
+    // receives them into its own batch stock (units -> tests). Throws on hard
+    // failure so the request is NOT marked provided; warns on partial dispatch.
+    if (req.item_type === "lab") {
+      const { data: items } = await supabase
+        .from("lab_inventory_items").select("id").eq("name", req.item_name).limit(1);
+      if (!items || items.length === 0) {
+        throw new Error(`Lab item "${req.item_name}" not found in the catalog`);
+      }
+      const reqUnits = Number(req.quantity) || 0;
+      const { data: dispatched, error } = await (supabase as any).rpc("dispatch_lab_store_to_lab", {
+        p_item_id: items[0].id,
+        p_units: reqUnits,
+        p_request_id: req.id,
+      });
+      if (error) throw error;
+      const n = typeof dispatched === "number" ? dispatched : 0;
+      if (n <= 0) throw new Error(`No store stock available for "${req.item_name}"`);
+      if (n < reqUnits) toast.warning(`Only ${n}/${reqUnits} ${req.item_name} units in store — provided what was available.`);
+      return;
+    }
+
+    // General items: flat stock_quantity deduction (unchanged).
     const { data: items } = await supabase
-      .from(table)
+      .from("inventory_items")
       .select("id, stock_quantity")
       .eq("name", req.item_name)
       .limit(1);
-    
+
     if (items && items.length > 0) {
       const currentStock = items[0].stock_quantity;
       const deductQty = Number(req.quantity) || 0;
       const newQty = Math.max(0, currentStock - deductQty);
-      await supabase.from(table).update({ stock_quantity: newQty }).eq("id", items[0].id);
+      await supabase.from("inventory_items").update({ stock_quantity: newQty }).eq("id", items[0].id);
     }
   };
 
@@ -102,6 +124,9 @@ export function StoreRequestsView() {
       queryClient.invalidateQueries({ queryKey: ["lab-inventory-items"] });
       queryClient.invalidateQueries({ queryKey: ["low-stock-general"] });
       queryClient.invalidateQueries({ queryKey: ["low-stock-lab"] });
+      queryClient.invalidateQueries({ queryKey: ["lab-store-batches"] });
+      queryClient.invalidateQueries({ queryKey: ["lab-stock-batches"] });
+      queryClient.invalidateQueries({ queryKey: ["lab-dispatched-requests"] });
       toast.success("Marked as provided & stock updated");
     },
     onError: (e: any, { id }) => {
