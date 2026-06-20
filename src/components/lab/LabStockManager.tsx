@@ -15,7 +15,6 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Plus, PackagePlus, ShoppingCart, ChevronDown, ChevronRight, Trash2, AlertTriangle, Pencil, PackageCheck, Search } from "lucide-react";
 import { toast } from "sonner";
 import { LabItemSupply } from "@/components/inventory/LabItemSupply";
-import { LabInventoryManager } from "@/components/inventory/LabInventoryManager";
 
 // The new lab-stock tables aren't in the generated Supabase types yet, so use a
 // loosely-typed handle for them (the typed `supabase` is still used elsewhere).
@@ -295,7 +294,6 @@ export function LabStockManager() {
       <TabsList>
         <TabsTrigger value="stock">Stock &amp; Batches</TabsTrigger>
         <TabsTrigger value="usage">Instrument Usage</TabsTrigger>
-        <TabsTrigger value="catalog">Lab Items</TabsTrigger>
         <TabsTrigger value="requests">Request from Store</TabsTrigger>
       </TabsList>
 
@@ -488,11 +486,6 @@ export function LabStockManager() {
             </Table>
           </CardContent>
         </Card>
-      </TabsContent>
-
-      {/* ── LAB ITEMS (catalog) ───────────────────────────────────────────── */}
-      <TabsContent value="catalog">
-        <LabInventoryManager />
       </TabsContent>
 
       {/* ── REQUEST FROM STORE ────────────────────────────────────────────── */}
