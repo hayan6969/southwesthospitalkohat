@@ -346,9 +346,27 @@ export function PathologyReportWizard() {
 
       const allTestIds: string[] = (tts ?? []).map((t: any) => t.test_type_id);
 
+      // Classify each test type: "completed" if it already has at least one
+      // saved result row, otherwise it's still pending (to be filled now).
+      const tidsWithResults = new Set<string>();
+      {
+        const paramTtMap = new Map<string, string>();
+        const { data: pRows } = await supabase
+          .from("lab_test_parameters")
+          .select("id, test_type_id")
+          .in("test_type_id", allTestIds.length ? allTestIds : ["00000000-0000-0000-0000-000000000000"]);
+        (pRows ?? []).forEach((p: any) => paramTtMap.set(p.id, p.test_type_id));
+        (existingResults ?? []).forEach((r: any) => {
+          if (r.result_value != null && String(r.result_value).trim() !== "") {
+            const tid = paramTtMap.get(r.parameter_id);
+            if (tid) tidsWithResults.add(tid);
+          }
+        });
+      }
+
       setExistingReportId(reportId);
       setSelectedTestIds(allTestIds);
-      setCompletedTestIds(new Set());
+      setCompletedTestIds(new Set(tidsWithResults));
       setPendingTestIds(new Set());
       setMeta((m) => ({
         ...m,
