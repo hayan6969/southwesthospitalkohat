@@ -16,7 +16,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Search, ChevronLeft, ChevronRight, ChevronDown, FileText, Printer, Save, X, History, FlaskConical, Receipt, CheckCircle, Clock, Lock, Check, ChevronsUpDown, FlaskRound } from "lucide-react";
+import { Search, ChevronLeft, ChevronRight, ChevronDown, FileText, Printer, Save, X, History, FlaskConical, Receipt, CheckCircle, Clock, Lock, Check, ChevronsUpDown, FlaskRound, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { getFlag, flagBadgeClass, type PathologyFlag } from "@/utils/pathologyFlag";
@@ -1206,6 +1206,23 @@ export function PathologyReportWizard() {
                         {t.name} <span className="text-xs text-muted-foreground">({t.report_category})</span>
                         {isCompleted && <Badge className="bg-green-600">Saved</Badge>}
                         {isPending && <Badge variant="outline" className="border-amber-500 text-amber-700">Pending</Badge>}
+                        {isCompleted && isEditMode && !isLocked && (
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            className="h-6 px-2 text-xs"
+                            onClick={() => {
+                              setCompletedTestIds((s) => {
+                                const n = new Set(s);
+                                n.delete(t.id);
+                                return n;
+                              });
+                            }}
+                          >
+                            <Pencil className="w-3 h-3 mr-1" /> Edit
+                          </Button>
+                        )}
                       </div>
                       <div className="flex items-center gap-3 flex-wrap">
                         {!isCompleted && !isLocked && (
