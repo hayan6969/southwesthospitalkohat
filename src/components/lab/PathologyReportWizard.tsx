@@ -16,7 +16,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Search, ChevronLeft, ChevronRight, ChevronDown, FileText, Printer, Save, X, History, FlaskConical, Receipt, CheckCircle, Clock, Lock, Check, ChevronsUpDown, FlaskRound } from "lucide-react";
+import { Search, ChevronLeft, ChevronRight, ChevronDown, FileText, Printer, Save, X, History, FlaskConical, Receipt, CheckCircle, Clock, Lock, Check, ChevronsUpDown, FlaskRound, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { getFlag, flagBadgeClass, type PathologyFlag } from "@/utils/pathologyFlag";
