@@ -1662,6 +1662,13 @@ export type Database = {
             referencedRelation: "lab_pathology_orders"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "lab_pathology_order_items_test_type_id_fkey"
+            columns: ["test_type_id"]
+            isOneToOne: false
+            referencedRelation: "lab_test_types"
+            referencedColumns: ["id"]
+          },
         ]
       }
       lab_pathology_orders: {

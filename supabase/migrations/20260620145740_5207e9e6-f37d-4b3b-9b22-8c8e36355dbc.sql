@@ -1,0 +1,3 @@
+ALTER TABLE public.lab_pathology_report_test_types DROP CONSTRAINT lab_pathology_report_test_types_test_type_id_fkey, ADD CONSTRAINT lab_pathology_report_test_types_test_type_id_fkey FOREIGN KEY (test_type_id) REFERENCES public.lab_test_types(id) ON DELETE CASCADE;
+
+ALTER TABLE public.lab_pathology_order_items DROP CONSTRAINT IF EXISTS lab_pathology_order_items_test_type_id_fkey, ADD CONSTRAINT lab_pathology_order_items_test_type_id_fkey FOREIGN KEY (test_type_id) REFERENCES public.lab_test_types(id) ON DELETE CASCADE;
