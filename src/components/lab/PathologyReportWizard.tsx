@@ -622,7 +622,7 @@ export function PathologyReportWizard() {
         if (ttErr) throw ttErr;
       } else {
         // UPDATE existing report meta + status
-        const newStatus = isEditMode ? "final" : (pendingTestIds.size > 0 ? "partial" : "final");
+        const newStatus = pendingTestIds.size > 0 ? "partial" : "final";
         const { error: upErr } = await supabase
           .from("lab_pathology_reports")
           .update({
@@ -636,7 +636,8 @@ export function PathologyReportWizard() {
           }).eq("id", reportId);
         if (upErr) throw upErr;
 
-        // In edit mode, delete old results before re-inserting
+        // In edit mode, delete old results before re-inserting (covers both
+        // previously-completed tests and tests being filled now from a pending state).
         if (isEditMode) {
           const { error: delErr } = await supabase
             .from("lab_pathology_report_results")
@@ -646,12 +647,18 @@ export function PathologyReportWizard() {
         }
       }
 
-      // Insert result rows — in edit mode all params are filling
-      const fillingParamIds = new Set(
-        (parameters ?? []).filter((p) => fillingTestIds.includes(p.test_type_id)).map((p) => p.id)
+      // Insert result rows.
+      // - New report flow: only params for tests being filled now.
+      // - Edit mode: re-insert params for ALL non-pending tests (completed kept + filling),
+      //   since the prior delete wiped them all.
+      const tidsToPersist = isEditMode
+        ? selectedTestIds.filter((id) => !pendingTestIds.has(id))
+        : fillingTestIds;
+      const persistParamIds = new Set(
+        (parameters ?? []).filter((p) => tidsToPersist.includes(p.test_type_id)).map((p) => p.id)
       );
       const resultRows = (parameters ?? [])
-        .filter((p) => fillingParamIds.has(p.id))
+        .filter((p) => persistParamIds.has(p.id))
         .map((p) => results[p.id])
         .filter((r) => r && (r.result_value.trim() !== "" || r.skipped))
         .map((r) => {
