@@ -1206,6 +1206,23 @@ export function PathologyReportWizard() {
                         {t.name} <span className="text-xs text-muted-foreground">({t.report_category})</span>
                         {isCompleted && <Badge className="bg-green-600">Saved</Badge>}
                         {isPending && <Badge variant="outline" className="border-amber-500 text-amber-700">Pending</Badge>}
+                        {isCompleted && isEditMode && !isLocked && (
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            className="h-6 px-2 text-xs"
+                            onClick={() => {
+                              setCompletedTestIds((s) => {
+                                const n = new Set(s);
+                                n.delete(t.id);
+                                return n;
+                              });
+                            }}
+                          >
+                            <Pencil className="w-3 h-3 mr-1" /> Edit
+                          </Button>
+                        )}
                       </div>
                       <div className="flex items-center gap-3 flex-wrap">
                         {!isCompleted && !isLocked && (
