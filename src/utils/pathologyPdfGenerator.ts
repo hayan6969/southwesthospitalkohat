@@ -58,6 +58,7 @@ export interface PathologyPdfData {
 
 // ── Brand palette ─────────────────────────────────────────────────────────────
 const BRAND: [number, number, number] = [15, 76, 129];
+const BRAND_STRIP: [number, number, number] = [33, 102, 158];   // lighter band for the patient strip
 const FLAG_STYLE: Record<'High' | 'Low' | 'Borderline', {
   text: [number, number, number]; pillText: [number, number, number]; pillBg: [number, number, number];
 }> = {
@@ -193,6 +194,7 @@ export async function generatePathologyReportPDF(
 
   // ── Repeating header (every page) ──────────────────────────────────────────
   const drawPageHeader = () => {
+    // Main brand band
     doc.setFillColor(...BRAND);
     doc.rect(0, 0, pageWidth, 24, 'F');
 
@@ -209,30 +211,56 @@ export async function generatePathologyReportPDF(
       doc.text('SCAN TO VERIFY', qx + 8, qy + 18.5, { align: 'center' });
     }
 
-    // Hospital name, centered, auto-shrunk (leave room for the QR)
+    // Optional logo at the far left; title flows to its right
+    let titleX = marginX;
+    if (logoDataUrl) {
+      try { doc.addImage(logoDataUrl, 'PNG', marginX, 4, 15, 15); titleX = marginX + 18; } catch { /* ignore */ }
+    }
+
+    // Hospital name — left-aligned, auto-shrunk to leave room for the QR
+    const nameRightLimit = pageWidth - marginX - 22;   // keep clear of the QR block
+    const nameMaxW = nameRightLimit - titleX;
     doc.setTextColor(255, 255, 255);
     doc.setFont('helvetica', 'bold');
     const name = (hospital?.hospital_name || 'Hospital').toUpperCase();
-    let size = 17;
+    let size = 16;
     doc.setFontSize(size);
-    while (doc.getTextWidth(name) > pageWidth - 80 && size > 9) { size--; doc.setFontSize(size); }
-    doc.text(name, pageWidth / 2, 10.5, { align: 'center' });
+    while (doc.getTextWidth(name) > nameMaxW && size > 9) { size--; doc.setFontSize(size); }
+    doc.text(name, titleX, 9.5);
 
+    // Tagline — letter-spaced
     doc.setFont('helvetica', 'normal');
-    doc.setFontSize(8.5);
-    doc.text('Accurate  |  Caring  |  Instant', pageWidth / 2, 16, { align: 'center' });
+    doc.setFontSize(6.4);
+    doc.setCharSpace(1.3);
+    doc.setTextColor(208, 222, 236);
+    doc.text('ACCURATE   ·   CARING   ·   INSTANT', titleX, 14.6);
+    doc.setCharSpace(0);
 
-    // Grey sub-bar: address · contact
-    doc.setFillColor(238, 241, 245);
-    doc.rect(0, 24, pageWidth, 6, 'F');
-    doc.setTextColor(90, 100, 110);
-    doc.setFontSize(8);
-    const sub = [hospital?.hospital_address, hospital?.contact_number].filter(Boolean).join('  ·  ');
-    if (sub) doc.text(sub, pageWidth / 2, 28, { align: 'center' });
+    // Address · contact — inside the band, left-aligned
+    doc.setFontSize(7.6);
+    doc.setTextColor(216, 228, 240);
+    const addr = [hospital?.hospital_address, hospital?.contact_number].filter(Boolean).join('   ·   ');
+    if (addr) doc.text(doc.splitTextToSize(addr, nameMaxW)[0], titleX, 19.6);
 
-    doc.setDrawColor(...BRAND);
-    doc.setLineWidth(0.6);
-    doc.line(marginX, 30.5, pageWidth - marginX, 30.5);
+    // Blue summary strip: patient · report · collected
+    doc.setFillColor(...BRAND_STRIP);
+    doc.rect(0, 24, pageWidth, 7, 'F');
+    doc.setTextColor(255, 255, 255);
+    let sx = marginX;
+    const sy = 28.7;
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(9);
+    const pname = data.patientName || '—';
+    doc.text(pname, sx, sy);
+    sx += doc.getTextWidth(pname) + 7;
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8.4);
+    const repSeg = `Report: ${data.reportNumber || '—'}`;
+    doc.text(repSeg, sx, sy);
+    sx += doc.getTextWidth(repSeg) + 7;
+    const coll = fmtShort(data.collectedAt);
+    if (coll) doc.text(`Collected ${coll}`, sx, sy);
+
     doc.setTextColor(0, 0, 0);
   };
 
@@ -344,9 +372,6 @@ export async function generatePathologyReportPDF(
 
   // ── Page 1 ──────────────────────────────────────────────────────────────────
   drawPageHeader();
-  if (logoDataUrl) {
-    try { doc.addImage(logoDataUrl, 'PNG', marginX, 4, 14, 14); } catch { /* ignore */ }
-  }
   doc.setTextColor(0, 0, 0);
   y = 36;
 
