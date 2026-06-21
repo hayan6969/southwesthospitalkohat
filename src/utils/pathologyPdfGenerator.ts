@@ -153,6 +153,14 @@ export async function generatePathologyReportPDF(
     }
   } catch { /* best-effort */ }
 
+  // Most recent previous date — shown once in the PREVIOUS column header
+  let prevHeaderDate = '';
+  {
+    let newestPrev = '';
+    previousByParam.forEach((arr) => { const d = arr[0]?.date; if (d && d > newestPrev) newestPrev = d; });
+    try { if (newestPrev) prevHeaderDate = formatInPakistanTime(newestPrev, 'dd MMM').toUpperCase(); } catch { /* ignore */ }
+  }
+
   // ── QR (generate once, up front — header drawer is synchronous) ─────────────
   let qrDataUrl = '';
   let verifyUrl = '';
@@ -294,7 +302,13 @@ export async function generatePathologyReportPDF(
     const ty = y + 5;
     doc.text('INVESTIGATION', COL_NAME_START, ty);
     doc.text('RESULT',        COL_RESULT,     ty);
-    doc.text('PREVIOUS',      COL_PREV,       ty);
+    doc.text('PREVIOUS', COL_PREV, ty);
+    if (prevHeaderDate) {
+      const pw = doc.getTextWidth('PREVIOUS');
+      doc.setFontSize(6.6);
+      doc.text(`·  ${prevHeaderDate}`, COL_PREV + pw + 2, ty);
+      doc.setFontSize(8);
+    }
     doc.text('REFERENCE',     COL_REF,        ty);
     doc.text('UNIT',          COL_UNIT,       ty);
     doc.setTextColor(0, 0, 0);
@@ -340,8 +354,7 @@ export async function generatePathologyReportPDF(
     doc.setFontSize(9);
     const nameLines = doc.splitTextToSize(p.parameter_name, NAME_W).length;
     const refLines = doc.splitTextToSize(refTextOf(p), REF_W).length;
-    const prev = p.parameter_id ? previousByParam.get(p.parameter_id) : undefined;
-    return 5 * Math.max(nameLines, refLines, 1) + (prev?.[0]?.date ? 1.6 : 0);
+    return 5 * Math.max(nameLines, refLines, 1);
   };
   const measureParamHeight = (p: PathologyPdfParameter): number => {
     let h = rowAdvance(p);
@@ -375,49 +388,40 @@ export async function generatePathologyReportPDF(
   doc.setTextColor(0, 0, 0);
   y = 36;
 
-  // ── Patient block (page 1 only) ─────────────────────────────────────────────
-  const rightX      = pageWidth / 2 + 4;
-  const rightLabelX = pageWidth - marginX - 58;
-  const rightValueX = pageWidth - marginX;
-
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(13);
-  doc.text((data.patientName || '—').toUpperCase(), marginX, y);
-
-  doc.setFontSize(9);
-  doc.text('Sample Collected At:', rightX, y);
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(8);
-  const collectionLines = doc.splitTextToSize(
-    data.collectionAddress || hospital?.hospital_address || '—', rightLabelX - rightX - 4
-  );
-  doc.text(collectionLines, rightX, y + 5);
-
-  y += 8;
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(9);
-  doc.text(`Age: ${data.patientAge ?? '—'} Years    Sex: ${data.patientSex || '—'}`, marginX, y);
-  y += 5;
-  doc.text(`PID: ${data.patientId || '—'}`, marginX, y);
-  y += 5;
-  doc.text(`Ref. By: ${data.referredBy || '—'}`, marginX, y);
-  const leftBottom = y;
-
-  let yr = Math.max(42, 36 + 5 + collectionLines.length * 4 + 4);
-  const timeRows: [string, string][] = [
-    ['Registered on:', fmt(data.registeredAt)],
-    ['Collected on:',  fmt(data.collectedAt)],
-    ['Reported on:',   fmt(data.reportedAt)],
-    ['Report No:',     data.reportNumber],
+  // ── Patient block (page 1 only) — compact bordered grid ─────────────────────
+  const gridTop = y;
+  const colW = contentWidth / 3;
+  const rowH = 10.5;
+  const gridH = rowH * 2;
+  const ageSex = `${data.patientAge ?? '—'} Yrs  /  ${data.patientSex || '—'}`;
+  const cells: Array<[string, string]> = [
+    ['PATIENT NAME', data.patientName || '—'],
+    ['AGE / SEX',    ageSex],
+    ['PATIENT ID',   data.patientId || '—'],
+    ['REFERRED BY',  data.referredBy || '—'],
+    ['COLLECTED ON', fmt(data.collectedAt)],
+    ['REPORTED ON',  fmt(data.reportedAt)],
   ];
-  doc.setFontSize(8);
-  for (const [label, value] of timeRows) {
-    doc.setFont('helvetica', 'bold');   doc.text(label, rightLabelX, yr);
-    doc.setFont('helvetica', 'normal'); doc.text(value, rightValueX, yr, { align: 'right' });
-    yr += 5;
-  }
+  doc.setDrawColor(208, 215, 222);
+  doc.setLineWidth(0.3);
+  doc.roundedRect(marginX, gridTop, contentWidth, gridH, 1.5, 1.5, 'S');
+  doc.line(marginX + colW,     gridTop, marginX + colW,     gridTop + gridH);
+  doc.line(marginX + colW * 2, gridTop, marginX + colW * 2, gridTop + gridH);
+  doc.line(marginX, gridTop + rowH, pageWidth - marginX, gridTop + rowH);
+  cells.forEach(([label, value], i) => {
+    const cx = marginX + (i % 3) * colW + 3;
+    const ry = gridTop + Math.floor(i / 3) * rowH;
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(6.4);
+    doc.setTextColor(125, 134, 143);
+    doc.text(label, cx, ry + 3.9);
+    doc.setFontSize(9);
+    doc.setTextColor(20, 28, 38);
+    doc.text(doc.splitTextToSize(value, colW - 6)[0], cx, ry + 8.6);
+  });
+  doc.setTextColor(0, 0, 0);
+  y = gridTop + gridH + 4;
 
-  y = Math.max(leftBottom, yr) + 5;
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(7.6);
   doc.setTextColor(110, 120, 130);
@@ -519,19 +523,12 @@ export async function generatePathologyReportPDF(
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(9);
 
-      // Previous (latest value + small date below)
+      // Previous (value only — the date is shown once in the column header)
       const prev = p.parameter_id ? previousByParam.get(p.parameter_id) : undefined;
       const latest = prev?.[0];
       if (latest) {
         doc.setTextColor(70, 70, 70);
         doc.text(latest.value, COL_PREV, y);
-        const d = fmtShort(latest.date);
-        if (d) {
-          doc.setFontSize(6.6);
-          doc.setTextColor(150, 150, 150);
-          doc.text(d, COL_PREV, y + 3.3);
-          doc.setFontSize(9);
-        }
         doc.setTextColor(0, 0, 0);
       } else {
         doc.setTextColor(150, 150, 150);
@@ -546,7 +543,7 @@ export async function generatePathologyReportPDF(
       // Unit
       doc.text(p.unit || '—', COL_UNIT, y);
 
-      y += 5 * Math.max(nameLines.length, refLines.length, 1) + (latest?.date ? 1.6 : 0);
+      y += 5 * Math.max(nameLines.length, refLines.length, 1);
 
       // ── Interpretation sub-scale ──────────────────────────────────────────
       if (p.display_all_subranges && p.subranges && p.subranges.length > 0) {
