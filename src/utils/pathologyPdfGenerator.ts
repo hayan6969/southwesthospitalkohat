@@ -56,6 +56,16 @@ export interface PathologyPdfData {
   testTypes: PathologyPdfTestType[];
 }
 
+// ── Brand palette ─────────────────────────────────────────────────────────────
+const BRAND: [number, number, number] = [15, 76, 129];
+const FLAG_STYLE: Record<'High' | 'Low' | 'Borderline', {
+  text: [number, number, number]; pillText: [number, number, number]; pillBg: [number, number, number];
+}> = {
+  High:       { text: [200, 30, 30],  pillText: [180, 35, 24], pillBg: [253, 236, 234] },
+  Low:        { text: [30, 64, 175],  pillText: [29, 78, 216], pillBg: [234, 240, 255] },
+  Borderline: { text: [200, 120, 30], pillText: [146, 96, 10], pillBg: [253, 243, 224] },
+};
+
 // Cache hospital settings for the session (5 min TTL) so every print doesn't re-query.
 let cachedHospital: any;
 let cachedHospitalAt = 0;
@@ -72,15 +82,14 @@ const fetchHospital = async () => {
 
 const fmt = (iso: string | null | undefined) => {
   if (!iso) return '—';
-  try {
-    return formatInPakistanTime(iso, 'dd MMM yyyy, hh:mm a');
-  } catch {
-    return iso;
-  }
+  try { return formatInPakistanTime(iso, 'dd MMM yyyy, hh:mm a'); } catch { return iso; }
+};
+const fmtShort = (iso: string | null | undefined) => {
+  if (!iso) return '';
+  try { return formatInPakistanTime(iso, 'dd MMM yy'); } catch { return ''; }
 };
 
-// Cache the encoded logo per URL — fetching + base64-encoding it on every print is the
-// single most expensive repeated step.
+// Cache the encoded logo per URL — fetch + base64 encode is the most expensive repeated step.
 const logoCache = new Map<string, string | null>();
 const loadImageDataUrl = async (url: string): Promise<string | null> => {
   if (logoCache.has(url)) return logoCache.get(url) ?? null;
@@ -104,16 +113,13 @@ export async function generatePathologyReportPDF(
   data: PathologyPdfData,
   opts: { autoPrint?: boolean } = {}
 ) {
-  // Collect parameter ids up-front (sync) so the previous-results lookup can run in
-  // parallel with the hospital-settings fetch instead of waiting for it.
+  // Collect parameter ids up-front so the previous-results lookup runs in parallel with hospital.
   const priorParamIds: string[] = [];
   for (const tt of data.testTypes) {
-    for (const p of tt.parameters) {
-      if (p.parameter_id) priorParamIds.push(p.parameter_id);
-    }
+    for (const p of tt.parameters) if (p.parameter_id) priorParamIds.push(p.parameter_id);
   }
 
-  // ── Fetch hospital settings + previous results in parallel ─────────────────
+  // ── Fetch hospital settings + previous results in parallel (best-effort) ────
   const previousByParam = new Map<string, Array<{ value: string; date: string }>>();
   const [hospital, priorRows] = await Promise.all([
     fetchHospital(),
@@ -123,92 +129,122 @@ export async function generatePathologyReportPDF(
           .select('parameter_id, result_value, report_id, lab_pathology_reports!inner(patient_id, reported_at, created_at, id)')
           .in('parameter_id', priorParamIds)
           .eq('lab_pathology_reports.patient_id', data.patientDbId)
-          .then((res) => res.data ?? [])
-          .then((rows) => rows, () => [])
+          .then((res) => res.data ?? [], () => [])
       : Promise.resolve([] as any[]),
   ]);
 
   try {
     if (priorRows && priorRows.length > 0) {
-      const grouped = new Map<string, Array<{ value: string; date: string; rid: string }>>();
-      for (const row of (priorRows ?? []) as any[]) {
+      const grouped = new Map<string, Array<{ value: string; date: string }>>();
+      for (const row of priorRows as any[]) {
         if (data.currentReportId && row.report_id === data.currentReportId) continue;
         if (!row.result_value) continue;
         const rep = row.lab_pathology_reports;
         const date = rep?.reported_at || rep?.created_at || '';
         const arr = grouped.get(row.parameter_id) ?? [];
-        arr.push({ value: String(row.result_value), date, rid: row.report_id });
+        arr.push({ value: String(row.result_value), date });
         grouped.set(row.parameter_id, arr);
       }
       grouped.forEach((arr, k) => {
         arr.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
-        previousByParam.set(k, arr.slice(0, 3).map((x) => ({ value: x.value, date: x.date })));
+        previousByParam.set(k, arr.slice(0, 3));
       });
     }
   } catch { /* best-effort */ }
 
-  // ── PDF setup ─────────────────────────────────────────────────────────────
+  // ── QR (generate once, up front — header drawer is synchronous) ─────────────
+  let qrDataUrl = '';
+  let verifyUrl = '';
+  try {
+    const origin = typeof window !== 'undefined' ? window.location.origin : 'https://southwesthospitalkohat.com';
+    verifyUrl = `${origin}/verify-report/${data.reportNumber}`;
+    qrDataUrl = await QRCode.toDataURL(verifyUrl, { margin: 1, width: 300 });
+  } catch { /* best-effort */ }
+
+  const logoDataUrl = hospital?.logo_url ? await loadImageDataUrl(hospital.logo_url) : null;
+
+  // ── PDF setup ───────────────────────────────────────────────────────────────
   const doc = new jsPDF({ unit: 'mm', format: 'a4' });
   const pageWidth  = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
   const marginX = 10;
   const contentWidth = pageWidth - marginX * 2;
   const FOOTER_H = 8;
-  const FOOTER_RESERVE = FOOTER_H + 22;
+  const FOOTER_RESERVE = FOOTER_H + 12;
+  const safeBottom = () => pageHeight - FOOTER_RESERVE;
 
-  // ── Column layout ─────────────────────────────────────────────────────────
+  // ── Column layout (5 columns) ───────────────────────────────────────────────
   const cellPad = 3;
-  const COL_NAME_START = marginX + cellPad;
-  const COL_NAME_END   = marginX + 77;
-  const COL_RESULT     = marginX + 80;
-  const COL_REF        = marginX + 117;
-  const COL_UNIT       = marginX + 165;
+  const COL_NAME_START = marginX + cellPad;   // 13  Investigation
+  const COL_RESULT     = marginX + 60;        // 70  Result (+ flag pill)
+  const COL_PREV       = marginX + 90;        // 100 Previous
+  const COL_REF        = marginX + 118;       // 128 Reference
+  const COL_UNIT       = marginX + 165;       // 175 Unit
   const COL_RESULT_DIV = COL_RESULT - cellPad;
+  const COL_PREV_DIV   = COL_PREV   - cellPad;
   const COL_REF_DIV    = COL_REF    - cellPad;
   const COL_UNIT_DIV   = COL_UNIT   - cellPad;
+  const NAME_W = COL_RESULT - cellPad - COL_NAME_START;
+  const REF_W  = COL_UNIT   - cellPad - COL_REF;
+  const headerHeight = 7;
 
-  // ── Header / footer helpers ───────────────────────────────────────────────
+  let y = 36;
+  let segHeaderTop = y;
+
+  // ── Repeating header (every page) ──────────────────────────────────────────
   const drawPageHeader = () => {
-    doc.setFillColor(15, 76, 129);
-    doc.rect(0, 0, pageWidth, 22, 'F');
+    doc.setFillColor(...BRAND);
+    doc.rect(0, 0, pageWidth, 24, 'F');
 
+    // QR top-right with a white backing so it scans
+    if (qrDataUrl) {
+      const qx = pageWidth - marginX - 16;
+      const qy = 3;
+      doc.setFillColor(255, 255, 255);
+      doc.roundedRect(qx - 1.5, qy - 1.5, 19, 22, 1, 1, 'F');
+      try { doc.addImage(qrDataUrl, 'PNG', qx, qy, 16, 16); } catch { /* ignore */ }
+      doc.setTextColor(...BRAND);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(4.6);
+      doc.text('SCAN TO VERIFY', qx + 8, qy + 18.5, { align: 'center' });
+    }
+
+    // Hospital name, centered, auto-shrunk (leave room for the QR)
     doc.setTextColor(255, 255, 255);
     doc.setFont('helvetica', 'bold');
-    const hospitalName = (hospital?.hospital_name || 'Hospital').toUpperCase();
-    let titleSize = 18;
-    doc.setFontSize(titleSize);
-    while (doc.getTextWidth(hospitalName) > pageWidth - 60 && titleSize > 10) {
-      titleSize--; doc.setFontSize(titleSize);
-    }
-    doc.text(hospitalName, pageWidth / 2, 11, { align: 'center' });
+    const name = (hospital?.hospital_name || 'Hospital').toUpperCase();
+    let size = 17;
+    doc.setFontSize(size);
+    while (doc.getTextWidth(name) > pageWidth - 80 && size > 9) { size--; doc.setFontSize(size); }
+    doc.text(name, pageWidth / 2, 10.5, { align: 'center' });
+
     doc.setFont('helvetica', 'normal');
-    doc.setFontSize(9);
-    doc.text('Accurate  |  Caring  |  Instant', pageWidth / 2, 17, { align: 'center' });
-    doc.setFontSize(8);
-    doc.text(hospital?.contact_number || '', pageWidth - marginX, 17, { align: 'right' });
+    doc.setFontSize(8.5);
+    doc.text('Accurate  |  Caring  |  Instant', pageWidth / 2, 16, { align: 'center' });
 
-    doc.setFillColor(240, 240, 240);
-    doc.rect(0, 22, pageWidth, 6, 'F');
-    doc.setTextColor(60, 60, 60);
+    // Grey sub-bar: address · contact
+    doc.setFillColor(238, 241, 245);
+    doc.rect(0, 24, pageWidth, 6, 'F');
+    doc.setTextColor(90, 100, 110);
     doc.setFontSize(8);
-    doc.text(hospital?.hospital_address || '', pageWidth / 2, 26, { align: 'center' });
+    const sub = [hospital?.hospital_address, hospital?.contact_number].filter(Boolean).join('  ·  ');
+    if (sub) doc.text(sub, pageWidth / 2, 28, { align: 'center' });
 
-    doc.setDrawColor(15, 76, 129);
+    doc.setDrawColor(...BRAND);
     doc.setLineWidth(0.6);
-    doc.line(marginX, 30, pageWidth - marginX, 30);
+    doc.line(marginX, 30.5, pageWidth - marginX, 30.5);
     doc.setTextColor(0, 0, 0);
   };
 
+  // ── Repeating footer (every page) ──────────────────────────────────────────
   const drawPageFooter = () => {
-    doc.setFillColor(15, 76, 129);
+    doc.setFillColor(...BRAND);
     doc.rect(0, pageHeight - FOOTER_H, pageWidth, FOOTER_H, 'F');
     doc.setTextColor(255, 255, 255);
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(7);
-    doc.text(
-      `${data.status === 'final' ? 'FINAL REPORT' : 'DRAFT'}  ·  Generated: ${formatInPakistanTime(new Date().toISOString(), 'dd-MMM-yyyy hh:mm a')}`,
-      marginX, pageHeight - 3
-    );
+    const left = `${data.status === 'final' ? 'FINAL REPORT' : 'DRAFT'}  ·  Generated: ${formatInPakistanTime(new Date().toISOString(), 'dd-MMM-yyyy hh:mm a')}`;
+    doc.text(left, marginX, pageHeight - 3);
     doc.text('Computer-generated report', pageWidth - marginX, pageHeight - 3, { align: 'right' });
   };
 
@@ -219,63 +255,83 @@ export async function generatePathologyReportPDF(
     return 36;
   };
 
-  const safeBottom = () => pageHeight - FOOTER_RESERVE;
-
-  // ── Chip measurement helper ───────────────────────────────────────────────
-  const countChipRows = (
-    prev: Array<{ value: string; date: string }>,
-    startX: number,
-    maxX: number
-  ): number => {
-    doc.setFontSize(7);
-    let px = startX;
-    let rows = 1;
-    for (const pr of prev) {
-      const d = pr.date ? formatInPakistanTime(pr.date, 'dd MMM yy') : '—';
-      const chipText = `${d}: ${pr.value}`;
-      const chipW = doc.getTextWidth(chipText) + 5;
-      if (px + chipW > maxX) { rows++; px = startX; }
-      px += chipW + 3;
-    }
-    doc.setFontSize(9);
-    return rows;
+  // ── Shared column-header band ──────────────────────────────────────────────
+  const drawColumnHeader = () => {
+    segHeaderTop = y;
+    doc.setFillColor(...BRAND);
+    doc.rect(marginX, y, contentWidth, headerHeight, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(8);
+    const ty = y + 5;
+    doc.text('INVESTIGATION', COL_NAME_START, ty);
+    doc.text('RESULT',        COL_RESULT,     ty);
+    doc.text('PREVIOUS',      COL_PREV,       ty);
+    doc.text('REFERENCE',     COL_REF,        ty);
+    doc.text('UNIT',          COL_UNIT,       ty);
+    doc.setTextColor(0, 0, 0);
+    y += headerHeight + 5;
   };
 
-  // ── Height estimators ─────────────────────────────────────────────────────
-  const measureParamHeight = (p: PathologyPdfParameter): number => {
+  const closeTableSegment = (bottomY: number) => {
+    doc.setDrawColor(200, 200, 200);
+    doc.setLineWidth(0.3);
+    doc.line(marginX, segHeaderTop, marginX, bottomY);
+    doc.line(pageWidth - marginX, segHeaderTop, pageWidth - marginX, bottomY);
+    doc.line(marginX, segHeaderTop, pageWidth - marginX, segHeaderTop);
+    doc.line(marginX, bottomY, pageWidth - marginX, bottomY);
+    [COL_RESULT_DIV, COL_PREV_DIV, COL_REF_DIV, COL_UNIT_DIV].forEach((vx) => {
+      doc.line(vx, segHeaderTop, vx, bottomY);
+    });
+  };
+
+  // ── Flag pill (words only — Helvetica has no ▲▼◆ glyphs) ───────────────────
+  const drawFlagChip = (x: number, baselineY: number, flag: 'High' | 'Low' | 'Borderline') => {
+    const st = FLAG_STYLE[flag];
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(7);
+    const w = doc.getTextWidth(flag) + 4;
+    doc.setFillColor(...st.pillBg);
+    doc.roundedRect(x, baselineY - 3.1, w, 4.4, 1.2, 1.2, 'F');
+    doc.setTextColor(...st.pillText);
+    doc.text(flag, x + 2, baselineY);
+    doc.setTextColor(0, 0, 0);
+    doc.setFont('helvetica', 'normal');
     doc.setFontSize(9);
-    const nameLines = doc.splitTextToSize(p.parameter_name, COL_RESULT - cellPad - COL_NAME_START);
-    const refText = p.display_all_subranges
+    return w;
+  };
+
+  // ── Height estimators (keep font sizes in lock-step with the renderer) ──────
+  const refTextOf = (p: PathologyPdfParameter) => {
+    const ownRange = p.ref_min != null || p.ref_max != null;
+    return (p.display_all_subranges && !ownRange)
       ? (p.ref_display || '( See Below )')
       : (p.subrange_used ? `${p.subrange_used}: ${p.ref_display || '—'}` : (p.ref_display || '—'));
-    const refLines = doc.splitTextToSize(refText, COL_UNIT - cellPad - COL_REF);
-    let h = 5 * Math.max(nameLines.length, refLines.length, 1);
-
-    if (p.display_all_subranges && p.subranges && p.subranges.length > 0) {
-      // sub-table header + one row per subrange + small inter-group gaps + padding
-      h += 6 + p.subranges.length * 4.6 + 4;
-    }
-
+  };
+  const rowAdvance = (p: PathologyPdfParameter): number => {
+    doc.setFontSize(9);
+    const nameLines = doc.splitTextToSize(p.parameter_name, NAME_W).length;
+    const refLines = doc.splitTextToSize(refTextOf(p), REF_W).length;
     const prev = p.parameter_id ? previousByParam.get(p.parameter_id) : undefined;
-    if (prev && prev.length > 0) {
-      const rows = countChipRows(prev, COL_NAME_START + 20, COL_NAME_END - 2);
-      h += rows * 5 + 4;
+    return 5 * Math.max(nameLines, refLines, 1) + (prev?.[0]?.date ? 1.6 : 0);
+  };
+  const measureParamHeight = (p: PathologyPdfParameter): number => {
+    let h = rowAdvance(p);
+    if (p.display_all_subranges && p.subranges && p.subranges.length > 0) {
+      h += 6 + p.subranges.length * 4.6 + 4;
     }
     return h;
   };
-
   const measureTestHeight = (tt: PathologyPdfTestType): number => {
     let h = 5;
     if (tt.report_category) h += 4;
     if (data.sampleType) h += 4;
-    h += 8 + 5;
-
+    h += headerHeight + 5;
     let lastH: string | null = null;
     for (const p of tt.parameters) {
       if (p.category_heading && p.category_heading !== lastH) { h += 5; lastH = p.category_heading; }
       h += measureParamHeight(p);
     }
-
     h += 2 + 1;
     if (tt.method || data.instrument) h += 5;
     if (tt.notes) {
@@ -283,38 +339,32 @@ export async function generatePathologyReportPDF(
       h += doc.splitTextToSize(tt.notes, contentWidth).length * 3.5;
       doc.setFontSize(9);
     }
-    h += 4;
-    return h;
+    return h + 4;
   };
 
-  // ── Page 1: draw header + logo ────────────────────────────────────────────
+  // ── Page 1 ──────────────────────────────────────────────────────────────────
   drawPageHeader();
-  if (hospital?.logo_url) {
-    const dataUrl = await loadImageDataUrl(hospital.logo_url);
-    if (dataUrl) {
-      try { doc.addImage(dataUrl, 'PNG', marginX, 4, 14, 14); } catch { /* ignore */ }
-    }
+  if (logoDataUrl) {
+    try { doc.addImage(logoDataUrl, 'PNG', marginX, 4, 14, 14); } catch { /* ignore */ }
   }
-
   doc.setTextColor(0, 0, 0);
-  let y = 36;
+  y = 36;
 
-  // ── Patient info block ────────────────────────────────────────────────────
-  const rightX       = pageWidth / 2 + 4;
-  const rightLabelX  = pageWidth - marginX - 58;
-  const rightValueX  = pageWidth - marginX;
+  // ── Patient block (page 1 only) ─────────────────────────────────────────────
+  const rightX      = pageWidth / 2 + 4;
+  const rightLabelX = pageWidth - marginX - 58;
+  const rightValueX = pageWidth - marginX;
 
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(13);
-  doc.text(data.patientName?.toUpperCase() || '—', marginX, y);
+  doc.text((data.patientName || '—').toUpperCase(), marginX, y);
 
   doc.setFontSize(9);
   doc.text('Sample Collected At:', rightX, y);
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(8);
   const collectionLines = doc.splitTextToSize(
-    data.collectionAddress || hospital?.hospital_address || '—',
-    rightLabelX - rightX - 4
+    data.collectionAddress || hospital?.hospital_address || '—', rightLabelX - rightX - 4
   );
   doc.text(collectionLines, rightX, y + 5);
 
@@ -326,7 +376,7 @@ export async function generatePathologyReportPDF(
   doc.text(`PID: ${data.patientId || '—'}`, marginX, y);
   y += 5;
   doc.text(`Ref. By: ${data.referredBy || '—'}`, marginX, y);
-  const leftBlockBottom = y;
+  const leftBottom = y;
 
   let yr = Math.max(42, 36 + 5 + collectionLines.length * 4 + 4);
   const timeRows: [string, string][] = [
@@ -342,31 +392,37 @@ export async function generatePathologyReportPDF(
     yr += 5;
   }
 
-  y = Math.max(leftBlockBottom, yr) + 7;
+  y = Math.max(leftBottom, yr) + 5;
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(7.6);
+  doc.setTextColor(110, 120, 130);
+  const legend = doc.splitTextToSize(
+    "High / Low / Borderline flagged in colour  ·  'Previous' shows the most recent prior result  ·  Each test stays whole — a panel that does not fit moves to the next page.",
+    contentWidth
+  );
+  doc.text(legend, marginX, y);
+  y += legend.length * 3.4 + 2;
+
+  doc.setTextColor(0, 0, 0);
   doc.setDrawColor(180, 180, 180);
   doc.setLineWidth(0.3);
   doc.line(marginX, y, pageWidth - marginX, y);
   y += 5;
 
-  // ── Render each test ──────────────────────────────────────────────────────
+  // ── Render each test ─────────────────────────────────────────────────────────
   for (const tt of data.testTypes) {
-    const testH      = measureTestHeight(tt);
-    const usable     = safeBottom() - 18;
-    const remaining  = safeBottom() - y;
+    const testH     = measureTestHeight(tt);
+    const usable    = safeBottom() - 18;
+    const remaining = safeBottom() - y;
+    if ((testH <= usable && remaining < testH) || remaining < 40) y = newPage();
 
-    // If test fits on a fresh page and won't fit in remaining space, push to next page.
-    // Otherwise still push if there's barely any room left.
-    if ((testH <= usable && remaining < testH) || remaining < 40) {
-      y = newPage();
-    }
-
-    // ── Test title ────────────────────────────────────────────────────────
+    // Test title
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(12);
-    doc.setTextColor(0, 0, 0);
+    doc.setTextColor(...BRAND);
     doc.text(tt.name.toUpperCase(), pageWidth / 2, y, { align: 'center' });
+    doc.setTextColor(0, 0, 0);
     y += 5;
-
     if (tt.report_category) {
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(8);
@@ -375,7 +431,6 @@ export async function generatePathologyReportPDF(
       doc.setTextColor(0, 0, 0);
       y += 4;
     }
-
     if (data.sampleType) {
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(9);
@@ -385,134 +440,94 @@ export async function generatePathologyReportPDF(
       y += 4;
     }
 
-    // ── Column header row ─────────────────────────────────────────────────
-    const headerHeight = 8;
-    const headerTop    = y;
-    doc.setFillColor(245, 245, 245);
-    doc.rect(marginX, headerTop, contentWidth, headerHeight, 'F');
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(9);
-    doc.setTextColor(0, 0, 0);
-    doc.text('Investigation',   COL_NAME_START, y + 5.5);
-    doc.text('Result',          COL_RESULT,     y + 5.5);
-    doc.text('Reference Value', COL_REF,        y + 5.5);
-    doc.text('Unit',            COL_UNIT,       y + 5.5);
-    const headerBottom = headerTop + headerHeight;
-    doc.setDrawColor(200, 200, 200);
-    doc.line(marginX, headerBottom, pageWidth - marginX, headerBottom);
-    y = headerBottom + 5;
+    drawColumnHeader();
 
-    let segHeaderTop    = headerTop;
-    let segHeaderBottom = headerBottom;
-
-    const closeTableSegment = (bottomY: number) => {
-      doc.setDrawColor(200, 200, 200);
-      doc.setLineWidth(0.3);
-      doc.line(marginX,             segHeaderTop, marginX,             bottomY);
-      doc.line(pageWidth - marginX, segHeaderTop, pageWidth - marginX, bottomY);
-      doc.line(marginX,             segHeaderTop, pageWidth - marginX, segHeaderTop);
-      doc.line(marginX,             bottomY,      pageWidth - marginX, bottomY);
-      [COL_RESULT_DIV, COL_REF_DIV, COL_UNIT_DIV].forEach(vx => {
-        doc.line(vx, segHeaderTop, vx, bottomY);
-      });
-    };
-
-    // ── Parameter rows ────────────────────────────────────────────────────
     doc.setFont('helvetica', 'normal');
     let lastHeading: string | null = null;
 
     for (const p of tt.parameters) {
       const headingH = (p.category_heading && p.category_heading !== lastHeading) ? 5 : 0;
-      const paramH   = measureParamHeight(p);
-      const needed   = headingH + paramH;
-
+      const needed = headingH + measureParamHeight(p);
       if (y + needed > safeBottom()) {
         closeTableSegment(y);
         y = newPage();
-
         doc.setFont('helvetica', 'bold');
         doc.setFontSize(10);
-        doc.setTextColor(0, 0, 0);
+        doc.setTextColor(...BRAND);
         doc.text(`${tt.name.toUpperCase()} (cont.)`, pageWidth / 2, y, { align: 'center' });
+        doc.setTextColor(0, 0, 0);
         y += 5;
-
-        segHeaderTop = y;
-        doc.setFillColor(245, 245, 245);
-        doc.rect(marginX, segHeaderTop, contentWidth, headerHeight, 'F');
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(9);
-        doc.text('Investigation',   COL_NAME_START, y + 5.5);
-        doc.text('Result',          COL_RESULT,     y + 5.5);
-        doc.text('Reference Value', COL_REF,        y + 5.5);
-        doc.text('Unit',            COL_UNIT,       y + 5.5);
-        segHeaderBottom = segHeaderTop + headerHeight;
-        doc.setDrawColor(200, 200, 200);
-        doc.line(marginX, segHeaderBottom, pageWidth - marginX, segHeaderBottom);
-        y = segHeaderBottom + 5;
+        drawColumnHeader();
       }
 
-      // Group heading
+      // Group heading band
       if (p.category_heading && p.category_heading !== lastHeading) {
+        doc.setFillColor(238, 241, 245);
+        doc.rect(marginX, y - 3.4, contentWidth, 5, 'F');
         doc.setFont('helvetica', 'bold');
-        doc.setFontSize(9);
-        doc.setTextColor(15, 76, 129);
-        doc.text(p.category_heading, COL_NAME_START, y);
+        doc.setFontSize(8.2);
+        doc.setTextColor(...BRAND);
+        doc.text(p.category_heading.toUpperCase(), COL_NAME_START, y);
         doc.setTextColor(0, 0, 0);
         y += 5;
         lastHeading = p.category_heading;
       }
 
-      // Parameter name
+      // Name
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(9);
       doc.setTextColor(0, 0, 0);
-      const nameLines = doc.splitTextToSize(p.parameter_name, COL_RESULT - cellPad - COL_NAME_START);
+      const nameLines = doc.splitTextToSize(p.parameter_name, NAME_W);
       doc.text(nameLines, COL_NAME_START, y);
 
-      // Result + flag
+      // Result + flag pill
       const flag = p.flag;
       const resultText = p.result_value ?? '—';
-      if      (flag === 'High')       doc.setTextColor(200, 30, 30);
-      else if (flag === 'Low')        doc.setTextColor(30, 64, 175);
-      else if (flag === 'Borderline') doc.setTextColor(200, 120, 30);
-      else                            doc.setTextColor(0, 0, 0);
+      if (flag) doc.setTextColor(...FLAG_STYLE[flag].text); else doc.setTextColor(0, 0, 0);
       doc.setFont('helvetica', flag ? 'bold' : 'normal');
       doc.text(resultText, COL_RESULT, y);
       if (flag) {
         const valW = doc.getTextWidth(resultText);
-        doc.setFont('helvetica', 'italic');
-        doc.setFontSize(8);
-        doc.text(`  ${flag}`, COL_RESULT + valW, y);
-        doc.setFontSize(9);
+        drawFlagChip(COL_RESULT + valW + 2, y, flag);
       }
       doc.setTextColor(0, 0, 0);
       doc.setFont('helvetica', 'normal');
+      doc.setFontSize(9);
+
+      // Previous (latest value + small date below)
+      const prev = p.parameter_id ? previousByParam.get(p.parameter_id) : undefined;
+      const latest = prev?.[0];
+      if (latest) {
+        doc.setTextColor(70, 70, 70);
+        doc.text(latest.value, COL_PREV, y);
+        const d = fmtShort(latest.date);
+        if (d) {
+          doc.setFontSize(6.6);
+          doc.setTextColor(150, 150, 150);
+          doc.text(d, COL_PREV, y + 3.3);
+          doc.setFontSize(9);
+        }
+        doc.setTextColor(0, 0, 0);
+      } else {
+        doc.setTextColor(150, 150, 150);
+        doc.text('—', COL_PREV, y);
+        doc.setTextColor(0, 0, 0);
+      }
 
       // Reference
-      const refText = p.display_all_subranges
-        ? (p.ref_display || '( See Below )')
-        : (p.subrange_used
-            ? `${p.subrange_used}: ${p.ref_display || '—'}`
-            : (p.ref_display || '—'));
-      const refLines = doc.splitTextToSize(refText, COL_UNIT - cellPad - COL_REF);
+      const refLines = doc.splitTextToSize(refTextOf(p), REF_W);
       doc.text(refLines, COL_REF, y);
 
       // Unit
       doc.text(p.unit || '—', COL_UNIT, y);
 
-      y += 5 * Math.max(nameLines.length, refLines.length, 1);
+      y += 5 * Math.max(nameLines.length, refLines.length, 1) + (latest?.date ? 1.6 : 0);
 
-      // Subranges — grouped interpretation scale (e.g. HbA1c value ↔ reading ↔ control)
+      // ── Interpretation sub-scale ──────────────────────────────────────────
       if (p.display_all_subranges && p.subranges && p.subranges.length > 0) {
-        // A "reference scale" is a parameter with its own numeric range (e.g. HbA1c 4.5-6.5):
-        // the subranges are shown for reference only and are NOT selected, so never highlight a
-        // row. Only "pick-one" parameters (no own range — the subranges ARE the ranges) highlight
-        // the chosen one.
         const isReferenceScale = p.ref_min != null || p.ref_max != null;
-        // Parse "12% (Very Poor Control)" → reading "12%" + interpretation group "Very Poor Control".
         const parsed = p.subranges.map((sr) => {
-          const raw = sr.ref_display ||
-            (sr.ref_min != null && sr.ref_max != null ? `${sr.ref_min} - ${sr.ref_max}` : '');
+          const raw = sr.ref_display || (sr.ref_min != null && sr.ref_max != null ? `${sr.ref_min} - ${sr.ref_max}` : '');
           const m = raw.match(/^(.*?)\s*\(([^)]*)\)\s*$/);
           return {
             sr,
@@ -527,13 +542,11 @@ export async function generatePathologyReportPDF(
         });
         const hasGroups = parsed.some((x) => x.group);
         const rowH = 4.6;
-        // Keep each sub-column inside a real table column so the vertical dividers
-        // (at COL_RESULT_DIV / COL_REF_DIV / COL_UNIT_DIV) never cut through the text/boxes.
-        const cValue = COL_NAME_START + 4; // Investigation column
-        const cRead  = COL_RESULT;         // Result column
-        const cGroup = COL_REF;            // Reference column
+        const cValue = COL_NAME_START + 4;
+        const cRead  = COL_RESULT;
+        const cGroup = COL_REF;
         const groupBoxLeft = cGroup - 3;
-        const groupRight = COL_UNIT_DIV - 1; // stay left of the Unit divider
+        const groupRight = COL_UNIT_DIV - 1;
 
         const drawSubHeader = () => {
           doc.setFont('helvetica', 'bold'); doc.setFontSize(7.5); doc.setTextColor(110, 110, 110);
@@ -545,25 +558,6 @@ export async function generatePathologyReportPDF(
           y += 4.6;
           doc.setTextColor(0, 0, 0);
         };
-
-        const newPageInSub = () => {
-          closeTableSegment(y);
-          y = newPage();
-          segHeaderTop = y;
-          doc.setFillColor(245, 245, 245);
-          doc.rect(marginX, segHeaderTop, contentWidth, headerHeight, 'F');
-          doc.setFont('helvetica', 'bold'); doc.setFontSize(9); doc.setTextColor(0, 0, 0);
-          doc.text('Investigation',   COL_NAME_START, y + 5.5);
-          doc.text('Result',          COL_RESULT,     y + 5.5);
-          doc.text('Reference Value', COL_REF,        y + 5.5);
-          doc.text('Unit',            COL_UNIT,       y + 5.5);
-          segHeaderBottom = segHeaderTop + headerHeight;
-          doc.setDrawColor(200, 200, 200);
-          doc.line(marginX, segHeaderBottom, pageWidth - marginX, segHeaderBottom);
-          y = segHeaderBottom + 5;
-          drawSubHeader();
-        };
-
         const drawGroupBox = (topY: number, grp: string) => {
           if (!hasGroups || !grp) return;
           const boxBottom = y - 3.3;
@@ -575,7 +569,6 @@ export async function generatePathologyReportPDF(
         };
 
         drawSubHeader();
-
         let i = 0;
         while (i < parsed.length) {
           const grp = parsed[i].group;
@@ -584,7 +577,10 @@ export async function generatePathologyReportPDF(
           while (k < parsed.length && parsed[k].group === grp) {
             if (y > safeBottom()) {
               drawGroupBox(segTop, grp);
-              newPageInSub();
+              closeTableSegment(y);
+              y = newPage();
+              drawColumnHeader();
+              drawSubHeader();
               segTop = y - 3.3;
             }
             const x = parsed[k];
@@ -602,112 +598,33 @@ export async function generatePathologyReportPDF(
           }
           drawGroupBox(segTop, grp);
           i = k;
-          if (i < parsed.length) y += 1.6; // gap between interpretation boxes
+          if (i < parsed.length) y += 1.6;
         }
         y += 2;
         doc.setLineWidth(0.3);
         doc.setTextColor(0, 0, 0); doc.setFont('helvetica', 'normal'); doc.setFontSize(9);
       }
+    } // params
 
-      // ── Previous results chips (confined to Investigation column) ─────────
-      const prev = p.parameter_id ? previousByParam.get(p.parameter_id) : undefined;
-      if (prev && prev.length > 0) {
-        if (y > safeBottom()) {
-          closeTableSegment(y);
-          y = newPage();
-          segHeaderTop = y;
-          doc.setFillColor(245, 245, 245);
-          doc.rect(marginX, segHeaderTop, contentWidth, headerHeight, 'F');
-          doc.setFont('helvetica', 'bold'); doc.setFontSize(9);
-          doc.text('Investigation',   COL_NAME_START, y + 5.5);
-          doc.text('Result',          COL_RESULT,     y + 5.5);
-          doc.text('Reference Value', COL_REF,        y + 5.5);
-          doc.text('Unit',            COL_UNIT,       y + 5.5);
-          segHeaderBottom = segHeaderTop + headerHeight;
-          doc.setDrawColor(200, 200, 200);
-          doc.line(marginX, segHeaderBottom, pageWidth - marginX, segHeaderBottom);
-          y = segHeaderBottom + 5;
-        }
-
-        const chipRowH   = 5;
-        const chipStartX = COL_NAME_START + 20;
-        const chipMaxX   = COL_NAME_END - 2;
-        const labelW     = 18;
-
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(7);
-        doc.setTextColor(130, 130, 130);
-        doc.text('Previous', COL_NAME_START, y);
-
-        let px = COL_NAME_START + labelW;
-
-        for (let i = 0; i < prev.length; i++) {
-          const pr = prev[i];
-          const d  = pr.date ? formatInPakistanTime(pr.date, 'dd MMM yy') : '—';
-          const chipText = `${d}: ${pr.value}`;
-
-          doc.setFont('helvetica', 'normal');
-          doc.setFontSize(7);
-          const chipW = doc.getTextWidth(chipText) + 5;
-
-          if (px + chipW > chipMaxX) {
-            y  += chipRowH;
-            px  = chipStartX;
-            if (y > safeBottom()) {
-              closeTableSegment(y);
-              y = newPage();
-              segHeaderTop = y;
-              doc.setFillColor(245, 245, 245);
-              doc.rect(marginX, segHeaderTop, contentWidth, headerHeight, 'F');
-              doc.setFont('helvetica', 'bold'); doc.setFontSize(9);
-              doc.text('Investigation',   COL_NAME_START, y + 5.5);
-              doc.text('Result',          COL_RESULT,     y + 5.5);
-              doc.text('Reference Value', COL_REF,        y + 5.5);
-              doc.text('Unit',            COL_UNIT,       y + 5.5);
-              segHeaderBottom = segHeaderTop + headerHeight;
-              doc.setDrawColor(200, 200, 200);
-              doc.line(marginX, segHeaderBottom, pageWidth - marginX, segHeaderBottom);
-              y = segHeaderBottom + 5;
-            }
-          }
-
-          doc.setFillColor(225, 225, 225);
-          doc.roundedRect(px - 1, y - 3.2, chipW, 4.5, 0.8, 0.8, 'F');
-          doc.setTextColor(60, 60, 60);
-          doc.setFont('helvetica', 'normal');
-          doc.setFontSize(7);
-          doc.text(chipText, px + 1.5, y);
-
-          px += chipW + 3;
-        }
-
-        y += 4;
-        doc.setTextColor(0, 0, 0);
-        doc.setFont('helvetica', 'normal');
-        doc.setFontSize(9);
-      }
-    } // end parameters loop
-
-    // Close table
     y += 2;
     closeTableSegment(y);
     y += 1;
 
-    // Method / Instrument / Notes (outside table)
+    // Method / Instrument / Notes (outside the table)
     y += 2;
     if (tt.method || data.instrument) {
-      if (y > safeBottom() - 6) { y = newPage(); }
+      if (y > safeBottom() - 6) y = newPage();
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(8);
       doc.setTextColor(0, 0, 0);
       const segs: string[] = [];
       if (data.instrument) segs.push(`Instruments: ${data.instrument}`);
-      if (tt.method)       segs.push(`Method: ${tt.method}`);
+      if (tt.method) segs.push(`Method: ${tt.method}`);
       doc.text(segs.join('   |   '), marginX, y);
       y += 5;
     }
     if (tt.notes) {
-      if (y > safeBottom() - 8) { y = newPage(); }
+      if (y > safeBottom() - 8) y = newPage();
       doc.setFont('helvetica', 'italic');
       doc.setFontSize(8);
       doc.setTextColor(0, 0, 0);
@@ -716,11 +633,11 @@ export async function generatePathologyReportPDF(
       y += noteLines.length * 3.5;
     }
     y += 4;
-  } // end testTypes loop
+  } // testTypes
 
-  // ── Interpretation ────────────────────────────────────────────────────────
+  // ── Interpretation ──────────────────────────────────────────────────────────
   if (data.interpretation) {
-    if (y > safeBottom() - 15) { y = newPage(); }
+    if (y > safeBottom() - 15) y = newPage();
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(9);
     doc.setTextColor(0, 0, 0);
@@ -731,48 +648,21 @@ export async function generatePathologyReportPDF(
     y += lines.length * 4 + 2;
   }
 
-  // ── End of report ─────────────────────────────────────────────────────────
-  if (y > safeBottom() - 10) { y = newPage(); }
+  // ── End of report ─────────────────────────────────────────────────────────────
+  if (y > safeBottom() - 10) y = newPage();
   y += 4;
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(9);
-  doc.setTextColor(0, 0, 0);
+  doc.setTextColor(...BRAND);
   doc.text('****End of Report****', pageWidth / 2, y, { align: 'center' });
-  y += 10;
+  doc.setTextColor(0, 0, 0);
 
-  // ── QR Code ───────────────────────────────────────────────────────────────
-  try {
-    const appOrigin = typeof window !== 'undefined'
-      ? window.location.origin
-      : 'https://southwesthospitalkohat.com';
-    const verifyUrl = `${appOrigin}/verify-report/${data.reportNumber}`;
-    const qrDataUrl = await QRCode.toDataURL(verifyUrl, { margin: 1, width: 300 });
-    const qrSize = 22;
-
-    if (y + qrSize > safeBottom()) { y = newPage(); }
-    const qrX = marginX;
-    const qrY = y;
-    doc.addImage(qrDataUrl, 'PNG', qrX, qrY, qrSize, qrSize);
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(8);
-    doc.setTextColor(0, 0, 0);
-    doc.text('Scan to Verify', qrX + qrSize + 2, qrY + 5);
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(7);
-    doc.setTextColor(80, 80, 80);
-    const urlLines = doc.splitTextToSize(verifyUrl, 70);
-    doc.text(urlLines, qrX + qrSize + 2, qrY + 9);
-    doc.setTextColor(0, 0, 0);
-  } catch { /* best-effort */ }
-
-  // ── Footer on last page ───────────────────────────────────────────────────
+  // Footer on the final page (QR lives in the header now, not here)
   drawPageFooter();
 
-  // ── Output ────────────────────────────────────────────────────────────────
+  // ── Output ────────────────────────────────────────────────────────────────────
   try {
     if (opts.autoPrint) {
-      // Reliable auto-print: embed a print action and load into a hidden iframe,
-      // then trigger the dialog directly (no preview tab, no manual Ctrl+P).
       try { doc.autoPrint(); } catch { /* ignore */ }
       const blob = doc.output('blob');
       const url = URL.createObjectURL(blob);
@@ -780,16 +670,10 @@ export async function generatePathologyReportPDF(
       iframe.style.cssText = 'position:fixed;left:-9999px;top:0;width:1px;height:1px;border:0;';
       iframe.src = url;
       iframe.onload = () => {
-        try {
-          iframe.contentWindow?.focus();
-          iframe.contentWindow?.print();
-        } catch {
-          // OpenAction will still trigger the dialog
-        }
+        try { iframe.contentWindow?.focus(); iframe.contentWindow?.print(); } catch { /* OpenAction fallback */ }
       };
       document.body.appendChild(iframe);
     } else {
-      // Open in a new tab to review; user prints manually.
       const blobUrl = doc.output('bloburl');
       const w = window.open(blobUrl as unknown as string, '_blank');
       if (!w) doc.save(`Lab_${data.reportNumber}.pdf`);
