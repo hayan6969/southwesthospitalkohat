@@ -158,7 +158,7 @@ export async function generatePathologyReportPDF(
   {
     let newestPrev = '';
     previousByParam.forEach((arr) => { const d = arr[0]?.date; if (d && d > newestPrev) newestPrev = d; });
-    try { if (newestPrev) prevHeaderDate = formatInPakistanTime(newestPrev, 'dd MMM').toUpperCase(); } catch { /* ignore */ }
+    try { if (newestPrev) prevHeaderDate = formatInPakistanTime(newestPrev, 'dd/MM/yyyy'); } catch { /* ignore */ }
   }
 
   // ── QR (generate once, up front — header drawer is synchronous) ─────────────
@@ -187,7 +187,7 @@ export async function generatePathologyReportPDF(
   const COL_NAME_START = marginX + cellPad;   // 13  Investigation
   const COL_RESULT     = marginX + 60;        // 70  Result (+ flag pill)
   const COL_PREV       = marginX + 90;        // 100 Previous
-  const COL_REF        = marginX + 122;       // 132 Reference (wider PREVIOUS to fit the date label)
+  const COL_REF        = marginX + 126;       // 136 Reference (wider PREVIOUS to fit the (dd/mm/yyyy) label)
   const COL_UNIT       = marginX + 165;       // 175 Unit
   const COL_RESULT_DIV = COL_RESULT - cellPad;
   const COL_PREV_DIV   = COL_PREV   - cellPad;
@@ -304,10 +304,10 @@ export async function generatePathologyReportPDF(
     doc.text('RESULT',        COL_RESULT,     ty);
     doc.text('PREVIOUS', COL_PREV, ty);
     if (prevHeaderDate) {
-      const dateX = COL_PREV + doc.getTextWidth('PREVIOUS') + 2;   // pw measured at size 8
+      const dateX = COL_PREV + doc.getTextWidth('PREVIOUS') + 1.5;  // pw measured at size 8
       const avail = COL_REF_DIV - 1 - dateX;                        // keep clear of the column divider
-      const label = `· ${prevHeaderDate}`;
-      let ds = 6.6;
+      const label = `(${prevHeaderDate})`;
+      let ds = 7;
       doc.setFontSize(ds);
       while (doc.getTextWidth(label) > avail && ds > 4.6) { ds -= 0.2; doc.setFontSize(ds); }
       if (doc.getTextWidth(label) <= avail) doc.text(label, dateX, ty);
