@@ -7,7 +7,8 @@ import { PathologyReportWizard } from "@/components/lab/PathologyReportWizard";
 import { PathologyReportHistory } from "@/components/lab/PathologyReportHistory";
 import { PathologyTestTypeManager } from "@/components/lab/PathologyTestTypeManager";
 import { LabStockManager } from "@/components/lab/LabStockManager";
-import { ShoppingCart, Microscope, History, Settings2, BedDouble, Boxes } from "lucide-react";
+import { LabReportsTracking } from "@/components/lab/LabReportsTracking";
+import { ShoppingCart, Microscope, History, Settings2, BedDouble, Boxes, BarChart3 } from "lucide-react";
 import AppLayout from "@/layouts/AppLayout";
 import { IPDLabQueue } from "@/components/ipd/IPDLabQueue";
 
@@ -40,6 +41,10 @@ export default function DashboardLab() {
             <History className="w-3.5 h-3.5" />
             <span>Report History</span>
           </TabsTrigger>
+          <TabsTrigger value="reports" className="flex items-center gap-1.5 text-xs sm:text-sm">
+            <BarChart3 className="w-3.5 h-3.5" />
+            <span>Reports &amp; Tracking</span>
+          </TabsTrigger>
           <TabsTrigger value="manage-tests" className="flex items-center gap-1.5 text-xs sm:text-sm">
             <Settings2 className="w-3.5 h-3.5" />
             <span>Manage Tests</span>
@@ -68,6 +73,10 @@ export default function DashboardLab() {
 
         <TabsContent value="pathology-history">
           <PathologyReportHistory />
+        </TabsContent>
+
+        <TabsContent value="reports">
+          <LabReportsTracking />
         </TabsContent>
 
         <TabsContent value="manage-tests">

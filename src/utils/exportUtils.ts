@@ -1,5 +1,7 @@
 import { formatPkrAmount } from "@/utils/currency";
 import { format } from "date-fns";
+import { formatInPakistanTime } from "@/utils/timezone";
+import type { LabRegisterRow, LabRegisterSummary } from "@/utils/labRegisterPdfGenerator";
 
 // Export staff revenue breakdown to CSV
 export function exportRevenueToCSV(
@@ -106,6 +108,44 @@ export function exportDailyClosingToCSV(data: {
 
   const csvContent = rows.map(r => r.map(c => `"${c}"`).join(",")).join("\n");
   downloadCSV(csvContent, `daily-closing-${data.date}.csv`);
+}
+
+// Export the laboratory reports register (filtered rows + totals) to CSV
+export function exportLabRegisterToCSV(
+  rows: LabRegisterRow[],
+  summary: LabRegisterSummary,
+  periodLabel: string
+) {
+  const out: string[][] = [
+    ["Laboratory Reports Register"],
+    ["Period", periodLabel],
+    ["Generated At", format(new Date(), "yyyy-MM-dd HH:mm:ss")],
+    ["Total Reports", String(summary.totalReports)],
+    ["Total Charges (PKR)", String(summary.totalCharges)],
+    ["Top Test", summary.topTest || "—"],
+    [],
+    ["S/N", "Date", "Report #", "Patient ID", "Patient Name", "Referred By", "Tests", "Charges (PKR)"],
+  ];
+
+  for (const r of rows) {
+    out.push([
+      String(r.serial),
+      (() => { try { return formatInPakistanTime(r.date, "yyyy-MM-dd"); } catch { return ""; } })(),
+      r.reportNumber || "",
+      r.patientId || "",
+      r.patientName || "",
+      r.referredBy || "",
+      r.tests.join(" | "),
+      String(r.charges),
+    ]);
+  }
+
+  out.push([]);
+  out.push(["", "", "", "", "", "", "TOTAL", String(summary.totalCharges)]);
+
+  const csvContent = out.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\n");
+  const safeLabel = periodLabel.replace(/[^\w-]+/g, "_").slice(0, 40);
+  downloadCSV(csvContent, `lab-register-${safeLabel}.csv`);
 }
 
 function downloadCSV(content: string, filename: string) {

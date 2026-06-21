@@ -6,8 +6,9 @@ import { LabItemSupply } from "@/components/inventory/LabItemSupply";
 import { PathologyReportWizard } from "@/components/lab/PathologyReportWizard";
 import { PathologyReportHistory } from "@/components/lab/PathologyReportHistory";
 import { PathologyTestTypeManager } from "@/components/lab/PathologyTestTypeManager";
+import { LabReportsTracking } from "@/components/lab/LabReportsTracking";
 import { IPDLabQueue } from "@/components/ipd/IPDLabQueue";
-import { ShoppingCart, FlaskConical, Microscope, History, Settings2, BedDouble } from "lucide-react";
+import { ShoppingCart, FlaskConical, Microscope, History, Settings2, BedDouble, BarChart3 } from "lucide-react";
 
 export default function AdminLabs() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -35,6 +36,10 @@ export default function AdminLabs() {
               <History className="w-3.5 h-3.5" />
               <span>Report History</span>
             </TabsTrigger>
+            <TabsTrigger value="reports" className="flex items-center gap-1.5 text-xs sm:text-sm">
+              <BarChart3 className="w-3.5 h-3.5" />
+              <span>Reports &amp; Tracking</span>
+            </TabsTrigger>
             <TabsTrigger value="manage-tests" className="flex items-center gap-1.5 text-xs sm:text-sm">
               <Settings2 className="w-3.5 h-3.5" />
               <span>Manage Tests</span>
@@ -58,6 +63,9 @@ export default function AdminLabs() {
           </TabsContent>
           <TabsContent value="pathology-history">
             <PathologyReportHistory />
+          </TabsContent>
+          <TabsContent value="reports">
+            <LabReportsTracking />
           </TabsContent>
           <TabsContent value="manage-tests">
             <PathologyTestTypeManager priceEditable />
