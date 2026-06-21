@@ -80,7 +80,7 @@ export async function generateLabRegisterPDF(opts: {
   rows: LabRegisterRow[];
   summary: LabRegisterSummary;
   periodLabel: string;
-  autoPrint?: boolean;
+  download?: boolean;   // when true, Save-As instead of opening the print dialog
 }): Promise<void> {
   const { rows, summary, periodLabel } = opts;
 
@@ -267,10 +267,32 @@ export async function generateLabRegisterPDF(opts: {
   }
 
   const safeLabel = periodLabel.replace(/[^\w-]+/g, '_').slice(0, 40);
-  if (opts.autoPrint) {
-    doc.autoPrint();
-    window.open(doc.output('bloburl') as unknown as string, '_blank');
-  } else {
+
+  // Default behaviour: open the browser print dialog (print preview) rather than
+  // downloading the file. Pass { download: true } to force a Save-As instead.
+  if (opts.download) {
     doc.save(`lab-register-${safeLabel}.pdf`);
+    return;
+  }
+
+  try {
+    try { doc.autoPrint(); } catch { /* ignore */ }
+    const blob = doc.output('blob');
+    const url = URL.createObjectURL(blob);
+    const iframe = document.createElement('iframe');
+    iframe.style.cssText = 'position:fixed;left:-9999px;top:0;width:1px;height:1px;border:0;';
+    iframe.src = url;
+    iframe.onload = () => {
+      try { iframe.contentWindow?.focus(); iframe.contentWindow?.print(); } catch { /* OpenAction fallback */ }
+    };
+    document.body.appendChild(iframe);
+  } catch {
+    // Fallback: open in a new tab, or download if pop-ups are blocked.
+    try {
+      const w = window.open(doc.output('bloburl') as unknown as string, '_blank');
+      if (!w) doc.save(`lab-register-${safeLabel}.pdf`);
+    } catch {
+      doc.save(`lab-register-${safeLabel}.pdf`);
+    }
   }
 }
