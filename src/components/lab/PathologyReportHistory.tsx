@@ -222,7 +222,7 @@ export function PathologyReportHistory() {
                     <TableCell>
                       <div className="flex flex-col gap-1 items-start">
                         <Badge variant={r.status === "final" ? "default" : r.status === "partial" ? "outline" : "secondary"} className={r.status === "partial" ? "border-amber-500 text-amber-700" : ""}>{r.status}</Badge>
-                        {r.created_at && isReportLocked(r.created_at) ? (
+                        {r.created_at && isReportLocked(r.created_at, r.status) ? (
                           <Badge variant="outline" className="border-red-400 text-red-600 text-[10px] flex items-center gap-0.5"><Lock className="w-3 h-3" /> Locked</Badge>
                         ) : r.created_at && r.status === "final" ? (
                           <Badge variant="outline" className="border-green-400 text-green-600 text-[10px]">{formatRemainingTime(r.created_at)}</Badge>
@@ -231,7 +231,7 @@ export function PathologyReportHistory() {
                     </TableCell>
                     <TableCell className="text-right space-x-1">
                       <Button size="sm" variant="ghost" onClick={() => setViewingId(r.id)}><Eye className="w-3.5 h-3.5" /></Button>
-                      {r.created_at && !isReportLocked(r.created_at) && r.status === "final" && (
+                      {r.created_at && !isReportLocked(r.created_at, r.status) && (
                         <Button size="sm" variant="outline" onClick={() => navigate(`?tab=pathology&edit=${r.id}`)}><Edit className="w-3.5 h-3.5" /></Button>
                       )}
                       <Button

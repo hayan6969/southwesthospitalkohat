@@ -331,7 +331,7 @@ export function PathologyReportWizard() {
         .from("lab_pathology_reports").select("*").eq("id", reportId).single();
       if (e1) throw e1;
 
-      const locked = isReportLocked(report.created_at);
+      const locked = isReportLocked(report.created_at, report.status);
       setIsLocked(locked);
       setReportsCreatedAt(report.created_at);
 

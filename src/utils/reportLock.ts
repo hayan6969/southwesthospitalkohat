@@ -1,4 +1,8 @@
-export function isReportLocked(createdAt: string): boolean {
+// The 24h lock prevents tampering with a *finalized* report after sign-out.
+// In-progress reports (draft/partial) are never time-locked — pending tests
+// (e.g. cultures, send-outs) may legitimately be entered days later.
+export function isReportLocked(createdAt: string, status?: string): boolean {
+  if (status && status !== "final") return false;
   const age = Date.now() - new Date(createdAt).getTime();
   return age > 24 * 60 * 60 * 1000;
 }
