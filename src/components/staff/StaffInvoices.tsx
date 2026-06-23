@@ -1,8 +1,9 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -50,6 +51,8 @@ export function StaffInvoices() {
   const openEdit = (invoice: any) => {
     setEditingInvoice(invoice);
     setEditTestId(invoice.source === "xray_report" ? (invoice.test_id ?? "") : "");
+    setLabSelectedTestIds([]);   // re-seeded from the linked order once it loads
+    setLabTestSearch("");
     setEditForm({
       amount: String(invoice.amount ?? invoice.price ?? 0),
       // X-ray's visible "description" is its test name; everything else uses description.
@@ -68,17 +71,134 @@ export function StaffInvoices() {
     if (t) setEditForm((f) => ({ ...f, description: t.name, amount: String(t.price ?? 0) }));
   };
 
+  // ── Lab (pathology) invoices: re-pick tests via checkbox + search ───────────
+  const [labTestSearch, setLabTestSearch] = useState("");
+  const [labSelectedTestIds, setLabSelectedTestIds] = useState<string[]>([]);
+
+  // Lab test catalog (priced).
+  const { data: labTestTypes } = useQuery({
+    queryKey: ["lab_test_types_priced"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("lab_test_types")
+        .select("id, name, price, report_category")
+        .eq("is_active", true)
+        .order("sort_order");
+      if (error) throw error;
+      return data as { id: string; name: string; price: number; report_category: string | null }[];
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+
+  // The pathology order linked to the invoice being edited — its items are the
+  // currently-selected lab tests. Present only for lab/pathology invoices.
+  const { data: labOrder, isLoading: labOrderLoading } = useQuery({
+    queryKey: ["invoice-lab-order", editingInvoice?.id],
+    enabled: !!editingInvoice && editingInvoice.source === "invoice",
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("lab_pathology_orders")
+        .select("id, invoice_id, lab_pathology_order_items(test_type_id, price)")
+        .eq("invoice_id", editingInvoice.id)
+        .maybeSingle();
+      if (error) throw error;
+      return data as { id: string; lab_pathology_order_items: { test_type_id: string; price: number }[] } | null;
+    },
+  });
+
+  const isLabOrderInvoice = !!labOrder;
+
+  // Seed the checkbox selection from the order's existing items.
+  useEffect(() => {
+    if (labOrder?.lab_pathology_order_items) {
+      setLabSelectedTestIds(labOrder.lab_pathology_order_items.map((it) => it.test_type_id));
+    }
+  }, [labOrder]);
+
+  const labFilteredTests = useMemo(() => {
+    const list = labTestTypes ?? [];
+    const q = labTestSearch.trim().toLowerCase();
+    if (!q) return list;
+    return list.filter((t) => t.name.toLowerCase().includes(q) || (t.report_category ?? "").toLowerCase().includes(q));
+  }, [labTestTypes, labTestSearch]);
+
+  const labTotal = useMemo(() => {
+    const list = labTestTypes ?? [];
+    return labSelectedTestIds.reduce((sum, id) => sum + Number(list.find((t) => t.id === id)?.price ?? 0), 0);
+  }, [labSelectedTestIds, labTestTypes]);
+
+  const toggleLabTest = (id: string) =>
+    setLabSelectedTestIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+
+  const saveLabTests = async () => {
+    if (!editingInvoice || !labOrder || savingEdit) return;
+    if (labSelectedTestIds.length === 0) { toast.error("Select at least one test"); return; }
+    if (!isInvoiceEditable(editingInvoice.created_at)) {
+      toast.error(`Edit window (${INVOICE_EDIT_WINDOW_HOURS} hours) has expired`);
+      setEditingInvoice(null);
+      return;
+    }
+    const list = labTestTypes ?? [];
+    const chosen = labSelectedTestIds
+      .map((id) => list.find((t) => t.id === id))
+      .filter(Boolean) as { id: string; name: string; price: number }[];
+    const total = chosen.reduce((s, t) => s + Number(t.price ?? 0), 0);
+    const names = chosen.map((t) => t.name).join(", ");
+    setSavingEdit(true);
+    try {
+      const { error: invErr } = await supabase
+        .from("invoices")
+        .update({ amount: total, description: `Lab: ${names}` })
+        .eq("id", editingInvoice.id);
+      if (invErr) throw invErr;
+
+      const { error: ordErr } = await supabase
+        .from("lab_pathology_orders")
+        .update({ total_amount: total })
+        .eq("id", labOrder.id);
+      if (ordErr) throw ordErr;
+
+      // Replace the order's test items with the new selection.
+      const { error: delErr } = await supabase
+        .from("lab_pathology_order_items")
+        .delete()
+        .eq("order_id", labOrder.id);
+      if (delErr) throw delErr;
+      const { error: insErr } = await supabase
+        .from("lab_pathology_order_items")
+        .insert(chosen.map((t) => ({
+          order_id: labOrder.id,
+          test_type_id: t.id,
+          test_name_snapshot: t.name,
+          price: Number(t.price ?? 0),
+        })));
+      if (insErr) throw insErr;
+
+      toast.success("Lab tests updated");
+      queryClient.invalidateQueries({ queryKey: ["invoices"] });
+      queryClient.invalidateQueries({ queryKey: ["invoice-lab-order", editingInvoice.id] });
+      queryClient.invalidateQueries({ queryKey: ["pathology_orders_recent"] });
+      setEditingInvoice(null);
+    } catch (e: any) {
+      toast.error(e?.message || "Failed to update lab tests");
+    } finally {
+      setSavingEdit(false);
+    }
+  };
+
   const saveEdit = async () => {
     if (!editingInvoice || savingEdit) return;
-    const amt = parseFloat(editForm.amount);
-    if (isNaN(amt) || amt < 0) { toast.error("Enter a valid amount"); return; }
-    if (!editForm.description.trim()) { toast.error("Description is required"); return; }
     // Re-check the window at save time so a stale tab can't edit past 2 hours.
     if (!isInvoiceEditable(editingInvoice.created_at)) {
       toast.error(`Edit window (${INVOICE_EDIT_WINDOW_HOURS} hours) has expired`);
       setEditingInvoice(null);
       return;
     }
+    // Lab/pathology invoice → save the re-picked test selection instead.
+    if (isLabOrderInvoice) { await saveLabTests(); return; }
+    const amt = parseFloat(editForm.amount);
+    if (isNaN(amt) || amt < 0) { toast.error("Enter a valid amount"); return; }
+    if (!editForm.description.trim()) { toast.error("Description is required"); return; }
     setSavingEdit(true);
     try {
       if (editingInvoice.source === "xray_report") {
@@ -1108,67 +1228,112 @@ export function StaffInvoices() {
                 You can edit this invoice for {formatEditWindowRemaining(editingInvoice.created_at) || "a short time"} after creation.
               </div>
 
-              {editingInvoice.source === "xray_report" && (
-                <div className="space-y-2">
-                  <Label htmlFor="edit-xray-test">Test</Label>
-                  <Select value={editTestId} onValueChange={onPickXrayTest}>
-                    <SelectTrigger id="edit-xray-test">
-                      <SelectValue placeholder="Select the correct test" />
-                    </SelectTrigger>
-                    <SelectContent className="z-[10000] max-h-[260px]">
-                      {xrayTests?.map((t) => (
-                        <SelectItem key={t.id} value={t.id}>
-                          {t.name} — {formatPkrAmount(t.price)}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <p className="text-xs text-muted-foreground">
-                    Pick the correct test to fix a wrong selection — the price fills in automatically (you can still adjust it).
-                  </p>
+              {editingInvoice.source === "invoice" && labOrderLoading ? (
+                <div className="py-6 flex items-center justify-center gap-2 text-sm text-muted-foreground">
+                  <Loader2 className="w-4 h-4 animate-spin" /> Loading…
                 </div>
-              )}
+              ) : isLabOrderInvoice ? (
+                <>
+                  <div className="space-y-2">
+                    <Label>Tests</Label>
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        className="pl-9"
+                        placeholder="Search lab tests..."
+                        value={labTestSearch}
+                        onChange={(e) => setLabTestSearch(e.target.value)}
+                      />
+                    </div>
+                    <div className="max-h-64 overflow-y-auto border rounded-md divide-y">
+                      {labFilteredTests.map((t) => {
+                        const checked = labSelectedTestIds.includes(t.id);
+                        return (
+                          <label key={t.id} className="flex items-center gap-3 px-3 py-2 cursor-pointer hover:bg-muted/50">
+                            <Checkbox checked={checked} onCheckedChange={() => toggleLabTest(t.id)} />
+                            <span className="flex-1 text-sm">{t.name}</span>
+                            <span className="text-sm font-medium">{formatPkrAmount(Number(t.price ?? 0))}</span>
+                          </label>
+                        );
+                      })}
+                      {labFilteredTests.length === 0 && (
+                        <div className="px-3 py-4 text-center text-sm text-muted-foreground">No tests found</div>
+                      )}
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Tick the correct tests — the amount and the order are updated automatically.
+                    </p>
+                  </div>
+                  <div className="flex items-center justify-between rounded-md bg-muted/50 px-3 py-2 text-sm">
+                    <span>Selected: <b>{labSelectedTestIds.length}</b></span>
+                    <span>Total: <b>{formatPkrAmount(labTotal)}</b></span>
+                  </div>
+                </>
+              ) : (
+                <>
+                  {editingInvoice.source === "xray_report" && (
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-xray-test">Test</Label>
+                      <Select value={editTestId} onValueChange={onPickXrayTest}>
+                        <SelectTrigger id="edit-xray-test">
+                          <SelectValue placeholder="Select the correct test" />
+                        </SelectTrigger>
+                        <SelectContent className="z-[10000] max-h-[260px]">
+                          {xrayTests?.map((t) => (
+                            <SelectItem key={t.id} value={t.id}>
+                              {t.name} — {formatPkrAmount(t.price)}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <p className="text-xs text-muted-foreground">
+                        Pick the correct test to fix a wrong selection — the price fills in automatically (you can still adjust it).
+                      </p>
+                    </div>
+                  )}
 
-              <div className="space-y-2">
-                <Label htmlFor="edit-amount">Amount (PKR)</Label>
-                <Input
-                  id="edit-amount"
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={editForm.amount}
-                  onChange={(e) => setEditForm((f) => ({ ...f, amount: e.target.value }))}
-                />
-              </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-amount">Amount (PKR)</Label>
+                    <Input
+                      id="edit-amount"
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={editForm.amount}
+                      onChange={(e) => setEditForm((f) => ({ ...f, amount: e.target.value }))}
+                    />
+                  </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="edit-description">
-                  {editingInvoice.source === "xray_report" ? "Test name (as printed)" : "Description"}
-                </Label>
-                <Textarea
-                  id="edit-description"
-                  value={editForm.description}
-                  onChange={(e) => setEditForm((f) => ({ ...f, description: e.target.value }))}
-                  placeholder="Service description..."
-                />
-              </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-description">
+                      {editingInvoice.source === "xray_report" ? "Test name (as printed)" : "Description"}
+                    </Label>
+                    <Textarea
+                      id="edit-description"
+                      value={editForm.description}
+                      onChange={(e) => setEditForm((f) => ({ ...f, description: e.target.value }))}
+                      placeholder="Service description..."
+                    />
+                  </div>
 
-              {editingInvoice.source !== "xray_report" && (
-                <div className="space-y-2">
-                  <Label htmlFor="edit-due-date">Due Date (Optional)</Label>
-                  <Input
-                    id="edit-due-date"
-                    type="date"
-                    value={editForm.due_date}
-                    onChange={(e) => setEditForm((f) => ({ ...f, due_date: e.target.value }))}
-                  />
-                </div>
+                  {editingInvoice.source !== "xray_report" && (
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-due-date">Due Date (Optional)</Label>
+                      <Input
+                        id="edit-due-date"
+                        type="date"
+                        value={editForm.due_date}
+                        onChange={(e) => setEditForm((f) => ({ ...f, due_date: e.target.value }))}
+                      />
+                    </div>
+                  )}
+                </>
               )}
             </div>
           )}
           <DialogFooter>
             <Button variant="outline" onClick={() => setEditingInvoice(null)} disabled={savingEdit}>Cancel</Button>
-            <Button onClick={saveEdit} disabled={savingEdit}>
+            <Button onClick={saveEdit} disabled={savingEdit || (editingInvoice?.source === "invoice" && labOrderLoading)}>
               {savingEdit ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : null}
               {savingEdit ? "Saving…" : "Save changes"}
             </Button>
