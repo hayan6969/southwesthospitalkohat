@@ -2,10 +2,13 @@ import { useState, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, Search, FileText, Receipt, TestTube, Building2, Eye, Download, ChevronLeft, ChevronRight, Zap, X } from "lucide-react";
+import { Calendar, Search, FileText, Receipt, TestTube, Building2, Eye, Download, ChevronLeft, ChevronRight, Zap, X, Pencil, Loader2 } from "lucide-react";
 import { useInvoices } from "@/hooks/useDatabase";
 import { usePatientNames, getPatientName } from "@/hooks/useDisplayHelpers";
 import { format } from "date-fns";
@@ -14,8 +17,9 @@ import { generateInvoicePDF, generateInvoiceThermalPDF, generateLabInvoicePDF, g
 import { generatePharmacyInvoicePDF, generatePharmacyInvoiceA4PDF } from "@/utils/pharmacyPdfGenerator";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { getHospitalInvoiceType, hasMatchingOtHospitalInvoice, deduplicateInvoices } from "@/utils/invoiceDeduplication";
+import { EDITABLE_INVOICE_TYPES, isInvoiceEditable, formatEditWindowRemaining, INVOICE_EDIT_WINDOW_HOURS } from "@/utils/invoiceEdit";
 
 export function StaffInvoices() {
   const [filterType, setFilterType] = useState("all");
@@ -23,6 +27,66 @@ export function StaffInvoices() {
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
+
+  const queryClient = useQueryClient();
+
+  // Edit-within-window state (lab / x-ray / consultation invoices, first 2 hours)
+  const [editingInvoice, setEditingInvoice] = useState<any | null>(null);
+  const [editForm, setEditForm] = useState({ amount: "", description: "", due_date: "" });
+  const [savingEdit, setSavingEdit] = useState(false);
+
+  const openEdit = (invoice: any) => {
+    setEditingInvoice(invoice);
+    setEditForm({
+      amount: String(invoice.amount ?? invoice.price ?? 0),
+      // X-ray's visible "description" is its test name; everything else uses description.
+      description: invoice.source === "xray_report"
+        ? (invoice.test_name ?? "")
+        : (invoice.description ?? ""),
+      due_date: invoice.due_date ? String(invoice.due_date).slice(0, 10) : "",
+    });
+  };
+
+  const saveEdit = async () => {
+    if (!editingInvoice || savingEdit) return;
+    const amt = parseFloat(editForm.amount);
+    if (isNaN(amt) || amt < 0) { toast.error("Enter a valid amount"); return; }
+    if (!editForm.description.trim()) { toast.error("Description is required"); return; }
+    // Re-check the window at save time so a stale tab can't edit past 2 hours.
+    if (!isInvoiceEditable(editingInvoice.created_at)) {
+      toast.error(`Edit window (${INVOICE_EDIT_WINDOW_HOURS} hours) has expired`);
+      setEditingInvoice(null);
+      return;
+    }
+    setSavingEdit(true);
+    try {
+      if (editingInvoice.source === "xray_report") {
+        const { error } = await supabase
+          .from("xray_reports")
+          .update({ price: amt, test_name: editForm.description.trim() })
+          .eq("id", editingInvoice.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from("invoices")
+          .update({
+            amount: amt,
+            description: editForm.description.trim(),
+            due_date: editForm.due_date || null,
+          })
+          .eq("id", editingInvoice.id);
+        if (error) throw error;
+      }
+      toast.success("Invoice updated");
+      queryClient.invalidateQueries({ queryKey: ["invoices"] });
+      queryClient.invalidateQueries({ queryKey: ["xray-reports-staff"] });
+      setEditingInvoice(null);
+    } catch (e: any) {
+      toast.error(e?.message || "Failed to update invoice");
+    } finally {
+      setSavingEdit(false);
+    }
+  };
 
   // Fetch hospital invoices
   const { data: hospitalInvoices, isLoading: hospitalLoading } = useInvoices();
@@ -122,6 +186,7 @@ export function StaffInvoices() {
 
         combined.push({
           ...invoice,
+          source: 'invoice',
           type,
           invoice_type: type,
           invoice_date: invoice.created_at,
@@ -145,6 +210,7 @@ export function StaffInvoices() {
 
         combined.push({
           ...xrayReport,
+          source: 'xray_report',
           type: 'xray',
           invoice_type: 'xray',
           invoice_date: xrayReport.created_at,
@@ -168,6 +234,7 @@ export function StaffInvoices() {
 
       combined.push({
         ...otSchedule,
+        source: 'ot_schedule',
         type: 'ot',
         invoice_type: 'ot',
         invoice_date: otSchedule.created_at,
@@ -923,6 +990,18 @@ export function StaffInvoices() {
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-1">
+                          {EDITABLE_INVOICE_TYPES.includes(invoice.type) && isInvoiceEditable(invoice.created_at) && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => openEdit(invoice)}
+                              className="flex items-center gap-1 border-amber-400 text-amber-700 hover:bg-amber-50"
+                              title={formatEditWindowRemaining(invoice.created_at) || "Edit invoice"}
+                            >
+                              <Pencil className="w-3 h-3" />
+                              Edit
+                            </Button>
+                          )}
                           <Button
                             size="sm"
                             variant="outline"
@@ -993,6 +1072,65 @@ export function StaffInvoices() {
           )}
         </CardContent>
       </Card>
+
+      {/* Edit invoice (within the 2-hour correction window) */}
+      <Dialog open={!!editingInvoice} onOpenChange={(o) => { if (!o) setEditingInvoice(null); }}>
+        <DialogContent className="sm:max-w-[440px] z-[9999]">
+          <DialogHeader>
+            <DialogTitle>Edit Invoice {editingInvoice?.invoice_number}</DialogTitle>
+          </DialogHeader>
+          {editingInvoice && (
+            <div className="space-y-4">
+              <div className="rounded-md bg-amber-50 border border-amber-200 px-3 py-2 text-xs text-amber-800">
+                You can edit this invoice for {formatEditWindowRemaining(editingInvoice.created_at) || "a short time"} after creation.
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="edit-amount">Amount (PKR)</Label>
+                <Input
+                  id="edit-amount"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={editForm.amount}
+                  onChange={(e) => setEditForm((f) => ({ ...f, amount: e.target.value }))}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="edit-description">
+                  {editingInvoice.source === "xray_report" ? "Test / Description" : "Description"}
+                </Label>
+                <Textarea
+                  id="edit-description"
+                  value={editForm.description}
+                  onChange={(e) => setEditForm((f) => ({ ...f, description: e.target.value }))}
+                  placeholder="Service description..."
+                />
+              </div>
+
+              {editingInvoice.source !== "xray_report" && (
+                <div className="space-y-2">
+                  <Label htmlFor="edit-due-date">Due Date (Optional)</Label>
+                  <Input
+                    id="edit-due-date"
+                    type="date"
+                    value={editForm.due_date}
+                    onChange={(e) => setEditForm((f) => ({ ...f, due_date: e.target.value }))}
+                  />
+                </div>
+              )}
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditingInvoice(null)} disabled={savingEdit}>Cancel</Button>
+            <Button onClick={saveEdit} disabled={savingEdit}>
+              {savingEdit ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : null}
+              {savingEdit ? "Saving…" : "Save changes"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
