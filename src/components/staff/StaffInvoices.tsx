@@ -33,10 +33,23 @@ export function StaffInvoices() {
   // Edit-within-window state (lab / x-ray / consultation invoices, first 2 hours)
   const [editingInvoice, setEditingInvoice] = useState<any | null>(null);
   const [editForm, setEditForm] = useState({ amount: "", description: "", due_date: "" });
+  const [editTestId, setEditTestId] = useState<string>("");   // x-ray: selected catalog test
   const [savingEdit, setSavingEdit] = useState(false);
+
+  // X-ray test catalog — used to re-pick a wrongly-selected test in the edit dialog.
+  const { data: xrayTests } = useQuery({
+    queryKey: ["xray-tests"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("xray_tests").select("id, name, price").order("name");
+      if (error) throw error;
+      return data as { id: string; name: string; price: number }[];
+    },
+    staleTime: 5 * 60 * 1000,
+  });
 
   const openEdit = (invoice: any) => {
     setEditingInvoice(invoice);
+    setEditTestId(invoice.source === "xray_report" ? (invoice.test_id ?? "") : "");
     setEditForm({
       amount: String(invoice.amount ?? invoice.price ?? 0),
       // X-ray's visible "description" is its test name; everything else uses description.
@@ -45,6 +58,14 @@ export function StaffInvoices() {
         : (invoice.description ?? ""),
       due_date: invoice.due_date ? String(invoice.due_date).slice(0, 10) : "",
     });
+  };
+
+  // When a different X-ray test is chosen, swap the name and auto-fill its price
+  // (price stays editable afterwards in case of a manual adjustment/discount).
+  const onPickXrayTest = (testId: string) => {
+    setEditTestId(testId);
+    const t = xrayTests?.find((x) => x.id === testId);
+    if (t) setEditForm((f) => ({ ...f, description: t.name, amount: String(t.price ?? 0) }));
   };
 
   const saveEdit = async () => {
@@ -61,9 +82,11 @@ export function StaffInvoices() {
     setSavingEdit(true);
     try {
       if (editingInvoice.source === "xray_report") {
+        const update: Record<string, any> = { price: amt, test_name: editForm.description.trim() };
+        if (editTestId) update.test_id = editTestId;   // re-link to the corrected catalog test
         const { error } = await supabase
           .from("xray_reports")
-          .update({ price: amt, test_name: editForm.description.trim() })
+          .update(update)
           .eq("id", editingInvoice.id);
         if (error) throw error;
       } else {
@@ -1085,6 +1108,27 @@ export function StaffInvoices() {
                 You can edit this invoice for {formatEditWindowRemaining(editingInvoice.created_at) || "a short time"} after creation.
               </div>
 
+              {editingInvoice.source === "xray_report" && (
+                <div className="space-y-2">
+                  <Label htmlFor="edit-xray-test">Test</Label>
+                  <Select value={editTestId} onValueChange={onPickXrayTest}>
+                    <SelectTrigger id="edit-xray-test">
+                      <SelectValue placeholder="Select the correct test" />
+                    </SelectTrigger>
+                    <SelectContent className="z-[10000] max-h-[260px]">
+                      {xrayTests?.map((t) => (
+                        <SelectItem key={t.id} value={t.id}>
+                          {t.name} — {formatPkrAmount(t.price)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    Pick the correct test to fix a wrong selection — the price fills in automatically (you can still adjust it).
+                  </p>
+                </div>
+              )}
+
               <div className="space-y-2">
                 <Label htmlFor="edit-amount">Amount (PKR)</Label>
                 <Input
@@ -1099,7 +1143,7 @@ export function StaffInvoices() {
 
               <div className="space-y-2">
                 <Label htmlFor="edit-description">
-                  {editingInvoice.source === "xray_report" ? "Test / Description" : "Description"}
+                  {editingInvoice.source === "xray_report" ? "Test name (as printed)" : "Description"}
                 </Label>
                 <Textarea
                   id="edit-description"
