@@ -186,7 +186,16 @@ export const useFinancialAnalytics = (selectedMonth?: Date, filterParams?: Filte
         inv?.invoice_number?.startsWith?.('EMG-') ||
         inv?.invoice_number?.startsWith?.('EMERGENCY-');
 
-      const totalLabRevenue = labReportsArr.reduce((s: number, r: any) => s + (Number(r.price) || 0), 0);
+      // New pathology billing flow writes PATH-INV- invoices (no lab_reports rows),
+      // so its revenue must come from the invoices table. Legacy lab orders still
+      // live in lab_reports — counting both, with no overlap, avoids double-counting.
+      const isPathologyLabInv = (inv: any) => /^PATH-INV-/i.test(inv?.invoice_number || '');
+      const pathologyLabRevenue = hospitalInvoicesArr
+        .filter(isPathologyLabInv)
+        .reduce((s: number, inv: any) => s + (Number(inv.amount) || 0), 0);
+
+      const totalLabRevenue =
+        labReportsArr.reduce((s: number, r: any) => s + (Number(r.price) || 0), 0) + pathologyLabRevenue;
       const totalXrayRevenue = xrayReportsArr.reduce((s: number, r: any) => s + (Number(r.price) || 0), 0);
       const totalOperationsRevenue = otSchedulesArr.reduce((s: number, ot: any) =>
         s + ((Number(ot.total_cost) || 0) - (Number(ot.doctor_expense) || 0)), 0);

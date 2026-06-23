@@ -152,7 +152,12 @@ export default function FinanceIncome() {
   ).reduce((sum, invoice) => sum + (invoice.amount || 0), 0) || 0;
   
   const pharmacyRevenue = pharmacyInvoices?.reduce((sum, invoice) => sum + (invoice.final_amount || 0), 0) || 0;
-  const labRevenue = labReports?.reduce((sum, report) => sum + (report.price || 0), 0) || 0;
+  // New pathology billing creates PATH-INV- invoices (no lab_reports rows); legacy
+  // lab orders live in lab_reports. Counting both (non-overlapping) gives full lab revenue.
+  const pathologyLabRevenue = invoices?.filter(inv =>
+    inv.status === 'paid' && /^PATH-INV-/i.test(inv.invoice_number || '')
+  ).reduce((sum, inv) => sum + (inv.amount || 0), 0) || 0;
+  const labRevenue = (labReports?.reduce((sum, report) => sum + (report.price || 0), 0) || 0) + pathologyLabRevenue;
   const xrayRevenue = xrayReports?.reduce((sum, report) => sum + (report.price || 0), 0) || 0;
   
   // OT hospital revenue (excluding doctor expenses)

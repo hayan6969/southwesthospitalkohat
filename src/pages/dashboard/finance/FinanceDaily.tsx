@@ -67,7 +67,7 @@ export default function FinanceDaily() {
       ] = await Promise.all([
         supabase.from('invoices').select('amount, created_at, description, emergency_patient_data, invoice_number').eq('status', 'paid').gt('created_at', cutoffTime).lte('created_at', upperBound),
         supabase.from('pharmacy_invoices').select(`*, pharmacy_invoice_items(quantity, unit_price, total_price, medicine_id, medicines(purchase_price, selling_price))`).gt('created_at', cutoffTime).lte('created_at', upperBound),
-        supabase.from('invoices').select('amount, created_at, description, invoice_number, status').eq('status', 'paid').like('invoice_number', 'LAB-%').gt('created_at', cutoffTime).lte('created_at', upperBound),
+        supabase.from('invoices').select('amount, created_at, description, invoice_number, status').eq('status', 'paid').or('invoice_number.like.LAB-%,invoice_number.like.PATH-INV-%').gt('created_at', cutoffTime).lte('created_at', upperBound),
         supabase.from('xray_reports').select('price, created_at, test_name, status').not('price', 'is', null).gt('created_at', cutoffTime).lte('created_at', upperBound),
         supabase.from('ot_schedules').select('total_cost, doctor_expense, created_at, operation_date, status').in('status', ['completed', 'pending']).gt('created_at', cutoffTime).lte('created_at', upperBound),
         supabase.from('appointments').select('consultation_fee_at_time, type, status, appointment_date').ilike('type', 'emergency').eq('status', 'completed').gte('appointment_date', cutoffTime).lte('appointment_date', upperBound),
@@ -349,10 +349,10 @@ export default function FinanceDaily() {
         supabase.from('invoices')
           .select('*, patients(id, profiles(first_name, last_name))')
           .eq('status', 'paid')
-          .like('invoice_number', 'LAB-%')
+          .or('invoice_number.like.LAB-%,invoice_number.like.PATH-INV-%')
           .gt('created_at', cutoffTime)
           .lte('created_at', upperBound),
-        
+
         supabase.from('xray_reports')
           .select('*, patients(profiles(first_name, last_name))')
           .not('price', 'is', null)
