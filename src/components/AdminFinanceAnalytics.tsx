@@ -335,8 +335,13 @@ function calculateAnalytics(data: FinanceData) {
   // For now, use estimated profit margin - ideally should fetch invoice items
   const pharmacyProfit = pharmacyRevenue * 0.25; // Estimated 25% profit margin
   
-  // Lab revenue goes to hospital (both completed and pending with prices)
-  const labRevenue = labReports.filter(report => report.price).reduce((sum, report) => sum + Number(report.price), 0);
+  // Lab revenue goes to hospital. Legacy orders live in lab_reports; the new
+  // pathology flow writes PATH-INV- invoices (no lab_reports rows) — count both
+  // (non-overlapping) so pathology billing is included.
+  const pathologyLabRevenue = hospitalInvoices.filter(inv =>
+    inv.status === 'paid' && /^PATH-INV-/i.test(inv.invoice_number || '')
+  ).reduce((sum, inv) => sum + Number(inv.amount || 0), 0);
+  const labRevenue = labReports.filter(report => report.price).reduce((sum, report) => sum + Number(report.price), 0) + pathologyLabRevenue;
   
   // X-ray revenue goes to hospital (both completed and pending with prices)
   const xrayRevenue = xrayReports.filter(report => report.price).reduce((sum, report) => sum + Number(report.price), 0);

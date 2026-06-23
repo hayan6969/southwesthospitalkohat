@@ -128,7 +128,12 @@ export const generateAnalyticsReportPDF = async (startDate: Date, endDate: Date)
 
   // Calculate totals
   const hospitalInvoices = transactionsData.hospitalInvoices;
-  const labRev = enrichedLabReports.reduce((s: number, r: any) => s + (r.invoice_amount != null ? Number(r.invoice_amount) : (Number(r.price) || 0)), 0);
+  // New pathology flow → PATH-INV- invoices (no lab_reports rows); add them to the
+  // legacy lab_reports total (non-overlapping, so no double counting).
+  const pathologyLabRev = hospitalInvoices
+    .filter((inv: any) => /^PATH-INV-/i.test(inv.invoice_number || ''))
+    .reduce((s: number, inv: any) => s + (Number(inv.amount) || 0), 0);
+  const labRev = enrichedLabReports.reduce((s: number, r: any) => s + (r.invoice_amount != null ? Number(r.invoice_amount) : (Number(r.price) || 0)), 0) + pathologyLabRev;
   const xrayRev = (transactionsData.xrayReports).reduce((s: number, r: any) => s + (Number(r.price) || 0), 0);
   const otHosShare = (transactionsData.otSchedules).reduce((s: number, ot: any) =>
     s + ((Number(ot.total_cost) || 0) - (Number(ot.doctor_expense) || 0)), 0);

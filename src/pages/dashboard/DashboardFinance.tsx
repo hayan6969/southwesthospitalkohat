@@ -237,7 +237,7 @@ export default function DashboardFinance() {
   }
   
   const labRevenue = paidInvoices
-    .filter(inv => inv.invoice_number?.startsWith('LAB-'))
+    .filter(inv => inv.invoice_number?.startsWith('LAB-') || inv.invoice_number?.startsWith('PATH-INV-'))
     .reduce((sum, inv) => sum + Number(inv.amount), 0);
 
   const xrayRevenue = xrayReports?.reduce((sum, xray) => sum + (Number(xray.price) || 0), 0) || 0;
