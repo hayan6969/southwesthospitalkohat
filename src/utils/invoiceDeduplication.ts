@@ -27,7 +27,13 @@ export const isOtInvoiceRecord = (invoice: InvoiceLike) => {
   return /^OT-/i.test(invoice.invoice_number || "") || description.includes("ot procedure") || description.includes("operation theater");
 };
 
-export const isLabInvoiceRecord = (invoice: InvoiceLike) => /^LAB-/i.test(invoice.invoice_number || "");
+export const isLabInvoiceRecord = (invoice: InvoiceLike) => {
+  const number = invoice.invoice_number || "";
+  const description = invoice.description?.toLowerCase() || "";
+  // Pathology billing uses PATH-INV- (and older flows LAB-); the "Lab: …"
+  // description is the reliable fallback regardless of numbering scheme.
+  return /^(LAB-|PATH-INV-)/i.test(number) || /^lab[:\s]/.test(description);
+};
 
 export const isXrayInvoiceRecord = (invoice: InvoiceLike) => {
   const description = invoice.description?.toLowerCase() || "";
