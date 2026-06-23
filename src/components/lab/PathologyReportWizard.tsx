@@ -3,6 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useGridNav } from "@/hooks/useGridNav";
 import { useSearchPatientsWithNames } from "@/hooks/useDisplayHelpers";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -167,6 +168,8 @@ export function PathologyReportWizard() {
   const [submitting, setSubmitting] = useState(false);
   const [isLocked, setIsLocked] = useState(false);
   const [reportsCreatedAt, setReportsCreatedAt] = useState("");
+  // Enter/Arrow keyboard navigation between result-entry fields (Tab still works).
+  const handleGridNav = useGridNav();
   const [searchParams, setSearchParams] = useSearchParams();
   const editReportId = searchParams.get("edit");
   const isEditMode = !!editReportId;
@@ -1167,7 +1170,7 @@ export function PathologyReportWizard() {
 
         {/* STEP 3: Results */}
         {step === 3 && (
-          <div className="space-y-6">
+          <div className="space-y-6" data-gridnav-scope>
             {isLocked ? (
               <div className="rounded-lg border border-red-300 bg-red-50 p-3 flex items-start gap-3">
                 <Lock className="w-5 h-5 text-red-500 mt-0.5 shrink-0" />
@@ -1313,7 +1316,7 @@ export function PathologyReportWizard() {
                                   <TableCell className="text-xs">{range.display ?? "—"}</TableCell>
                                   <TableCell className="text-xs">{p.unit ?? "—"}</TableCell>
                                   <TableCell>
-                                    <Input value={row.result_value} disabled={row.skipped || isCompleted || isLocked} onChange={(e) => updateResult(p.id, { result_value: e.target.value })} placeholder="e.g. 5.2 or <0.1" />
+                                    <Input data-gridnav value={row.result_value} disabled={row.skipped || isCompleted || isLocked} onChange={(e) => updateResult(p.id, { result_value: e.target.value })} onKeyDown={handleGridNav} placeholder="e.g. 5.2 or <0.1" />
                                   </TableCell>
                                   <TableCell>{row.flag && <Badge variant="outline" className={flagBadgeClass(row.flag)}>{row.flag}</Badge>}</TableCell>
                                 </TableRow>
