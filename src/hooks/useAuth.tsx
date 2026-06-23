@@ -171,8 +171,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const signIn = async (email: string, password: string) => {
     try {
+      // Supabase lowercases the email on lookup but does NOT trim it, so
+      // normalize here to avoid "Invalid login credentials" from a stray
+      // capital letter (e.g. Admin@…) or trailing space.
+      const normalizedEmail = email.trim().toLowerCase();
       const { data, error } = await supabase.auth.signInWithPassword({
-        email,
+        email: normalizedEmail,
         password,
       });
 
@@ -247,9 +251,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     department_id?: string 
   }) => {
     try {
-      // Use server-side function to create user without auto-signin
+      // Use server-side function to create user without auto-signin.
+      // Normalize the email so the account is always loginable (sign-in
+      // lowercases the email, so a mixed-case stored email is unreachable).
       const { data, error } = await supabase.rpc('create_user_account', {
-        p_email: userData.email,
+        p_email: userData.email.trim().toLowerCase(),
         p_password: userData.password,
         p_first_name: userData.first_name,
         p_last_name: userData.last_name,
