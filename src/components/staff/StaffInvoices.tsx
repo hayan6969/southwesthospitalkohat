@@ -202,7 +202,7 @@ export function StaffInvoices() {
     setSavingEdit(true);
     try {
       if (editingInvoice.source === "xray_report") {
-        const update: Record<string, any> = { price: amt, test_name: editForm.description.trim() };
+        const update: { price: number; test_name: string; test_id?: string } = { price: amt, test_name: editForm.description.trim() };
         if (editTestId) update.test_id = editTestId;   // re-link to the corrected catalog test
         const { error } = await supabase
           .from("xray_reports")

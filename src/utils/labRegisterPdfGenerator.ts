@@ -257,7 +257,7 @@ export async function generateLabRegisterPDF(opts: {
   }
 
   // ── Page numbers ────────────────────────────────────────────────────────────
-  const total = doc.internal.getNumberOfPages();
+  const total = (doc.internal as any).getNumberOfPages();
   for (let p = 1; p <= total; p++) {
     doc.setPage(p);
     doc.setFont('helvetica', 'normal');
