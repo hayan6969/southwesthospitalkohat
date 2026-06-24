@@ -567,6 +567,7 @@ export type Database = {
           hospital_share_percentage: number
           id: string
           license_number: string | null
+          prescription_template: Json | null
           specialization: string | null
         }
         Insert: {
@@ -579,6 +580,7 @@ export type Database = {
           hospital_share_percentage?: number
           id: string
           license_number?: string | null
+          prescription_template?: Json | null
           specialization?: string | null
         }
         Update: {
@@ -591,6 +593,7 @@ export type Database = {
           hospital_share_percentage?: number
           id?: string
           license_number?: string | null
+          prescription_template?: Json | null
           specialization?: string | null
         }
         Relationships: [
