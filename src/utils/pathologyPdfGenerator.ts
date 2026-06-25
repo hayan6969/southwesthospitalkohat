@@ -112,8 +112,14 @@ const loadImageDataUrl = async (url: string): Promise<string | null> => {
 
 export async function generatePathologyReportPDF(
   data: PathologyPdfData,
-  opts: { autoPrint?: boolean } = {}
+  opts: { autoPrint?: boolean; grayscale?: boolean } = {}
 ) {
+  const useGrayscale = opts.grayscale !== false;
+  const brandCol: [number, number, number] = useGrayscale ? [255, 255, 255] : BRAND;
+  const brandStripCol: [number, number, number] = useGrayscale ? [255, 255, 255] : BRAND_STRIP;
+  const brandTextCol: [number, number, number] = useGrayscale ? [0, 0, 0] : [255, 255, 255];
+  const stripTextCol: [number, number, number] = useGrayscale ? [0, 0, 0] : [255, 255, 255];
+  const accentTextCol: [number, number, number] = useGrayscale ? [40, 40, 40] : BRAND;
   // Collect parameter ids up-front so the previous-results lookup runs in parallel with hospital.
   const priorParamIds: string[] = [];
   for (const tt of data.testTypes) {
@@ -203,7 +209,7 @@ export async function generatePathologyReportPDF(
   // ── Repeating header (every page) ──────────────────────────────────────────
   const drawPageHeader = () => {
     // Main brand band
-    doc.setFillColor(...BRAND);
+    doc.setFillColor(...brandCol);
     doc.rect(0, 0, pageWidth, 24, 'F');
 
     // QR top-right with a white backing so it scans
@@ -213,7 +219,7 @@ export async function generatePathologyReportPDF(
       doc.setFillColor(255, 255, 255);
       doc.roundedRect(qx - 1.5, qy - 1.5, 19, 22, 1, 1, 'F');
       try { doc.addImage(qrDataUrl, 'PNG', qx, qy, 16, 16); } catch { /* ignore */ }
-      doc.setTextColor(...BRAND);
+      doc.setTextColor(...accentTextCol);
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(4.6);
       doc.text('SCAN TO VERIFY', qx + 8, qy + 18.5, { align: 'center' });
@@ -228,7 +234,7 @@ export async function generatePathologyReportPDF(
     // Hospital name — left-aligned, auto-shrunk to leave room for the QR
     const nameRightLimit = pageWidth - marginX - 22;   // keep clear of the QR block
     const nameMaxW = nameRightLimit - titleX;
-    doc.setTextColor(255, 255, 255);
+    doc.setTextColor(...brandTextCol);
     doc.setFont('helvetica', 'bold');
     const name = (hospital?.hospital_name || 'Hospital').toUpperCase();
     let size = 16;
@@ -240,20 +246,20 @@ export async function generatePathologyReportPDF(
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(6.4);
     doc.setCharSpace(1.3);
-    doc.setTextColor(208, 222, 236);
+      doc.setTextColor(...(useGrayscale ? [180, 180, 180] as [number, number, number] : [208, 222, 236]));
     doc.text('ACCURATE   ·   CARING   ·   INSTANT', titleX, 14.6);
     doc.setCharSpace(0);
 
     // Address · contact — inside the band, left-aligned
     doc.setFontSize(7.6);
-    doc.setTextColor(216, 228, 240);
+    doc.setTextColor(...(useGrayscale ? [190, 190, 190] as [number, number, number] : [216, 228, 240]));
     const addr = [hospital?.hospital_address, hospital?.contact_number].filter(Boolean).join('   ·   ');
     if (addr) doc.text(doc.splitTextToSize(addr, nameMaxW)[0], titleX, 19.6);
 
     // Blue summary strip: patient · report · collected
-    doc.setFillColor(...BRAND_STRIP);
+    doc.setFillColor(...brandStripCol);
     doc.rect(0, 24, pageWidth, 7, 'F');
-    doc.setTextColor(255, 255, 255);
+    doc.setTextColor(...stripTextCol);
     let sx = marginX;
     const sy = 28.7;
     doc.setFont('helvetica', 'bold');
@@ -274,9 +280,9 @@ export async function generatePathologyReportPDF(
 
   // ── Repeating footer (every page) ──────────────────────────────────────────
   const drawPageFooter = () => {
-    doc.setFillColor(...BRAND);
+    doc.setFillColor(...brandCol);
     doc.rect(0, pageHeight - FOOTER_H, pageWidth, FOOTER_H, 'F');
-    doc.setTextColor(255, 255, 255);
+    doc.setTextColor(...brandTextCol);
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(7);
     const left = `${data.status === 'final' ? 'FINAL REPORT' : 'DRAFT'}  ·  Generated: ${formatInPakistanTime(new Date().toISOString(), 'dd-MMM-yyyy hh:mm a')}`;
@@ -294,9 +300,9 @@ export async function generatePathologyReportPDF(
   // ── Shared column-header band ──────────────────────────────────────────────
   const drawColumnHeader = () => {
     segHeaderTop = y;
-    doc.setFillColor(...BRAND);
+    doc.setFillColor(...brandCol);
     doc.rect(marginX, y, contentWidth, headerHeight, 'F');
-    doc.setTextColor(255, 255, 255);
+    doc.setTextColor(...brandTextCol);
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(8);
     const ty = y + 5;
@@ -333,6 +339,19 @@ export async function generatePathologyReportPDF(
 
   // ── Flag pill (words only — Helvetica has no ▲▼◆ glyphs) ───────────────────
   const drawFlagChip = (x: number, baselineY: number, flag: 'High' | 'Low' | 'Borderline') => {
+    if (useGrayscale) {
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(7);
+      const w = doc.getTextWidth(flag) + 4;
+      doc.setFillColor(230, 230, 230);
+      doc.roundedRect(x, baselineY - 3.1, w, 4.4, 1.2, 1.2, 'F');
+      doc.setTextColor(0, 0, 0);
+      doc.text(flag, x + 2, baselineY);
+      doc.setTextColor(0, 0, 0);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(9);
+      return w;
+    }
     const st = FLAG_STYLE[flag];
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(7);
@@ -452,7 +471,7 @@ export async function generatePathologyReportPDF(
     // Test title
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(12);
-    doc.setTextColor(...BRAND);
+    doc.setTextColor(...accentTextCol);
     doc.text(tt.name.toUpperCase(), pageWidth / 2, y, { align: 'center' });
     doc.setTextColor(0, 0, 0);
     y += 5;
@@ -486,7 +505,7 @@ export async function generatePathologyReportPDF(
         y = newPage();
         doc.setFont('helvetica', 'bold');
         doc.setFontSize(10);
-        doc.setTextColor(...BRAND);
+        doc.setTextColor(...accentTextCol);
         doc.text(`${tt.name.toUpperCase()} (cont.)`, pageWidth / 2, y, { align: 'center' });
         doc.setTextColor(0, 0, 0);
         y += 5;
@@ -499,7 +518,7 @@ export async function generatePathologyReportPDF(
         doc.rect(marginX, y - 3.4, contentWidth, 5, 'F');
         doc.setFont('helvetica', 'bold');
         doc.setFontSize(8.2);
-        doc.setTextColor(...BRAND);
+        doc.setTextColor(...accentTextCol);
         doc.text(p.category_heading.toUpperCase(), COL_NAME_START, y);
         doc.setTextColor(0, 0, 0);
         y += 5;
@@ -516,7 +535,10 @@ export async function generatePathologyReportPDF(
       // Result + flag pill
       const flag = p.flag;
       const resultText = p.result_value ?? '—';
-      if (flag) doc.setTextColor(...FLAG_STYLE[flag].text); else doc.setTextColor(0, 0, 0);
+      if (flag) {
+        if (useGrayscale) doc.setTextColor(0, 0, 0);
+        else doc.setTextColor(...FLAG_STYLE[flag].text);
+      } else doc.setTextColor(0, 0, 0);
       doc.setFont('helvetica', flag ? 'bold' : 'normal');
       doc.text(resultText, COL_RESULT, y);
       if (flag) {
@@ -679,7 +701,7 @@ export async function generatePathologyReportPDF(
   y += 4;
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(9);
-  doc.setTextColor(...BRAND);
+  doc.setTextColor(...accentTextCol);
   doc.text('****End of Report****', pageWidth / 2, y, { align: 'center' });
   doc.setTextColor(0, 0, 0);
 
