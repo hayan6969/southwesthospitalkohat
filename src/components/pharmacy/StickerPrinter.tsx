@@ -16,6 +16,7 @@ const SIZE_OPTIONS = [
   { value: "3x2", label: '3" × 2" (76.2 × 50.8 mm)', width: 76.2, height: 50.8 },
   { value: "4x3", label: '4" × 3" (101.6 × 76.2 mm)', width: 101.6, height: 76.2 },
   { value: "4x2.5", label: '4" × 2.5" (101.6 × 63.5 mm)', width: 101.6, height: 63.5 },
+  { value: "4x2", label: '4" × 2" (101.6 × 50.8 mm)', width: 101.6, height: 50.8 },
 ];
 
 const DOSAGE_PRESETS = ["OD", "BD", "TDS", "QID", "SOS", "Custom"];
@@ -70,9 +71,10 @@ export function StickerPrinter() {
   // Other
   const [expDate, setExpDate] = useState("");
   const [category, setCategory] = useState("");
-  const [sizeKey, setSizeKey] = useState("1.5x1");
+  const defaultSize = "4x2";
+  const [sizeKey, setSizeKey] = useState(defaultSize);
 
-  const size = SIZE_OPTIONS.find((s) => s.value === sizeKey) || SIZE_OPTIONS[0];
+  const size = SIZE_OPTIONS.find((s) => s.value === sizeKey) ?? SIZE_OPTIONS.find((s) => s.value === defaultSize) ?? SIZE_OPTIONS[0];
   const finalDosage = dosagePreset === "Custom" ? dosageCustom.trim() : dosagePreset;
 
   const patientBoxRef = useRef<HTMLDivElement>(null);
@@ -164,7 +166,7 @@ export function StickerPrinter() {
   }
   .sticker {
     width: ${PAGE_WIDTH}mm; height: ${PAGE_HEIGHT}mm;
-    padding: 1.5mm 2mm; overflow: hidden;
+    padding: 2mm 3mm 2mm 6mm; overflow: hidden;
     page-break-after: avoid; break-after: avoid;
     page-break-inside: avoid; break-inside: avoid;
     display: flex; flex-direction: column; justify-content: space-between;

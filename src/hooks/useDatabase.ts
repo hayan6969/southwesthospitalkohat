@@ -365,7 +365,11 @@ export const usePaginatedInvoices = (page: number = 1, pageSize: number = 20, se
 
       // Apply search filter if provided
       if (searchTerm.trim()) {
-        query = query.or(`invoice_number.ilike.%${searchTerm}%,description.ilike.%${searchTerm}%`);
+        const terms = searchTerm.trim().split(/\s+/).filter(Boolean);
+        const conditions = terms.flatMap(term =>
+          [`name.ilike.%${term}%`, `company_name.ilike.%${term}%`, `formula.ilike.%${term}%`]
+        ).join(',');
+        query = query.or(conditions);
       }
 
       // Apply pagination
