@@ -76,6 +76,9 @@ export default function FinanceRefunds() {
   const [searchingOrders, setSearchingOrders] = useState(false);
   const [selectedTestIds, setSelectedTestIds] = useState<Set<string>>(new Set());
   const [showLabConfirm, setShowLabConfirm] = useState(false);
+  // Actual amount the patient paid (invoice amount, after any discount). The
+  // order_items prices are catalog snapshots and don't reflect discounts.
+  const [invoiceAmount, setInvoiceAmount] = useState<number | null>(null);
   
   // Filtering and pagination state
   const [filteredRefunds, setFilteredRefunds] = useState<any[]>([]);
@@ -211,6 +214,18 @@ export default function FinanceRefunds() {
         ? { patient_number: patientRes.data.patient_number, profile: profileRes.data || undefined }
         : undefined;
 
+      // Pull the linked invoice's actual (post-discount) amount for the refund.
+      let invAmount: number | null = null;
+      if (order.invoice_id) {
+        const { data: inv } = await supabase
+          .from('invoices')
+          .select('amount')
+          .eq('id', order.invoice_id)
+          .maybeSingle();
+        invAmount = inv?.amount != null ? Number(inv.amount) : null;
+      }
+      setInvoiceAmount(invAmount);
+
       setSelectedOrder({ ...order, patient: patientProfile || undefined } as unknown as PathologyOrder);
       setFormData(prev => ({ ...prev, description: `Test cancellation for order ${order.order_number}` }));
     } catch (err) {
@@ -234,13 +249,23 @@ export default function FinanceRefunds() {
     setSelectedOrder(null);
     setOrderSearch("");
     setSelectedTestIds(new Set());
+    setInvoiceAmount(null);
     setFormData(prev => ({ ...prev, amount: "", description: "" }));
   };
 
-  const selectedItems = selectedOrder?.lab_pathology_order_items?.filter(
-    item => selectedTestIds.has(item.id)
-  ) || [];
-  const labRefundAmount = selectedItems.reduce((sum, item) => sum + Number(item.price || 0), 0);
+  const allItems = selectedOrder?.lab_pathology_order_items || [];
+  const selectedItems = allItems.filter(item => selectedTestIds.has(item.id));
+  const catalogTotal = allItems.reduce((sum, item) => sum + Number(item.price || 0), 0);
+  const selectedCatalog = selectedItems.reduce((sum, item) => sum + Number(item.price || 0), 0);
+  const isFullSelection = allItems.length > 0 && selectedItems.length === allItems.length;
+  // Base the refund on the invoice's actual (post-discount) amount, allocated
+  // proportionally to the selected tests' catalog share for a partial selection.
+  const labRefundAmount = invoiceAmount != null
+    ? (isFullSelection
+        ? invoiceAmount
+        : catalogTotal > 0 ? Math.round((invoiceAmount * selectedCatalog) / catalogTotal) : 0)
+    : selectedCatalog;
+  const isDiscounted = invoiceAmount != null && invoiceAmount < catalogTotal;
 
   // Pagination logic for filtered data
   const totalPages = Math.ceil(filteredRefunds.length / itemsPerPage);
@@ -667,6 +692,17 @@ export default function FinanceRefunds() {
                 <span className="text-gray-600">Selected tests:</span>
                 <span>{selectedItems.length} / {selectedOrder.lab_pathology_order_items?.length || 0}</span>
               </div>
+              {isDiscounted && (
+                <>
+                  <div className="flex justify-between text-gray-500">
+                    <span>Catalog total:</span>
+                    <span className="line-through">{formatPkrAmount(selectedCatalog)}</span>
+                  </div>
+                  <div className="text-xs text-amber-600">
+                    Discount applied to this invoice — refund reflects the amount actually paid.
+                  </div>
+                </>
+              )}
               <div className="flex justify-between text-lg font-bold pt-1 border-t">
                 <span>Refund amount:</span>
                 <span className="text-green-600">{formatPkrAmount(labRefundAmount)}</span>
