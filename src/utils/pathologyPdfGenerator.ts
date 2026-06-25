@@ -178,6 +178,7 @@ export async function generatePathologyReportPDF(
   } catch { /* best-effort */ }
 
   const logoDataUrl = hospital?.logo_url ? await loadImageDataUrl(hospital.logo_url) : await loadImageDataUrl('/logo.png');
+  const verifyLogoDataUrl = await loadImageDataUrl('/verification.png');
 
   // ── PDF setup ───────────────────────────────────────────────────────────────
   const doc = new jsPDF({ unit: 'mm', format: 'a4' });
@@ -213,10 +214,13 @@ export async function generatePathologyReportPDF(
     doc.setFillColor(...brandCol);
     doc.rect(0, 0, pageWidth, 24, 'F');
 
-    // QR top-right with a white backing so it scans
+    // Verification logo (left of QR) + QR top-right with a white backing so it scans
     if (qrDataUrl) {
       const qx = pageWidth - marginX - 16;
       const qy = 3;
+      if (verifyLogoDataUrl) {
+        try { doc.addImage(verifyLogoDataUrl, 'PNG', qx - 1.5 - 18, qy - 1.5, 18, 22); } catch { /* ignore */ }
+      }
       doc.setFillColor(255, 255, 255);
       doc.roundedRect(qx - 1.5, qy - 1.5, 19, 22, 1, 1, 'F');
       try { doc.addImage(qrDataUrl, 'PNG', qx, qy, 16, 16); } catch { /* ignore */ }
