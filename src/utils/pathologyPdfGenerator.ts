@@ -213,16 +213,12 @@ export async function generatePathologyReportPDF(
     doc.setFillColor(...brandCol);
     doc.rect(0, 0, pageWidth, 24, 'F');
 
-    // Verification logo (left of QR) + QR top-right with a white backing so it scans
+    // QR top-right with a white backing so it scans
     if (qrDataUrl) {
       const qx = pageWidth - marginX - 16;
       const qy = 3;
-      const blockW = 19;
-      if (verifyLogoDataUrl) {
-        try { doc.addImage(verifyLogoDataUrl, 'PNG', qx - 1.5 - 18, qy - 1.5, 18, 22); } catch { /* ignore */ }
-      }
       doc.setFillColor(255, 255, 255);
-      doc.roundedRect(qx - 1.5, qy - 1.5, blockW, 22, 1, 1, 'F');
+      doc.roundedRect(qx - 1.5, qy - 1.5, 19, 22, 1, 1, 'F');
       try { doc.addImage(qrDataUrl, 'PNG', qx, qy, 16, 16); } catch { /* ignore */ }
       doc.setTextColor(...accentTextCol);
       doc.setFont('helvetica', 'bold');
