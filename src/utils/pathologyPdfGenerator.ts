@@ -177,6 +177,7 @@ export async function generatePathologyReportPDF(
   } catch { /* best-effort */ }
 
   const logoDataUrl = hospital?.logo_url ? await loadImageDataUrl(hospital.logo_url) : null;
+  const verifyLogoDataUrl = await loadImageDataUrl('/Lab verification.png');
 
   // ── PDF setup ───────────────────────────────────────────────────────────────
   const doc = new jsPDF({ unit: 'mm', format: 'a4' });
@@ -212,12 +213,16 @@ export async function generatePathologyReportPDF(
     doc.setFillColor(...brandCol);
     doc.rect(0, 0, pageWidth, 24, 'F');
 
-    // QR top-right with a white backing so it scans
+    // Verification logo (left of QR) + QR top-right with a white backing so it scans
     if (qrDataUrl) {
       const qx = pageWidth - marginX - 16;
       const qy = 3;
+      const blockW = 19;
+      if (verifyLogoDataUrl) {
+        try { doc.addImage(verifyLogoDataUrl, 'PNG', qx - 1.5 - 18, qy - 1.5, 18, 22); } catch { /* ignore */ }
+      }
       doc.setFillColor(255, 255, 255);
-      doc.roundedRect(qx - 1.5, qy - 1.5, 19, 22, 1, 1, 'F');
+      doc.roundedRect(qx - 1.5, qy - 1.5, blockW, 22, 1, 1, 'F');
       try { doc.addImage(qrDataUrl, 'PNG', qx, qy, 16, 16); } catch { /* ignore */ }
       doc.setTextColor(...accentTextCol);
       doc.setFont('helvetica', 'bold');
@@ -232,7 +237,7 @@ export async function generatePathologyReportPDF(
     }
 
     // Hospital name — left-aligned, auto-shrunk to leave room for the QR
-    const nameRightLimit = pageWidth - marginX - 22;   // keep clear of the QR block
+    const nameRightLimit = pageWidth - marginX - 40;   // keep clear of the QR + verification logo
     const nameMaxW = nameRightLimit - titleX;
     doc.setTextColor(...brandTextCol);
     doc.setFont('helvetica', 'bold');
