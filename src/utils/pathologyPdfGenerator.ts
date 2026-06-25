@@ -114,6 +114,7 @@ export async function generatePathologyReportPDF(
   data: PathologyPdfData,
   opts: { autoPrint?: boolean; grayscale?: boolean } = {}
 ) {
+  const pdfFileName = `${data.patientId || 'Unknown'} - ${data.patientName || 'Patient'} - Lab Report.pdf`;
   const useGrayscale = opts.grayscale !== false;
   const brandCol: [number, number, number] = useGrayscale ? [255, 255, 255] : BRAND;
   const brandStripCol: [number, number, number] = useGrayscale ? [255, 255, 255] : BRAND_STRIP;
@@ -729,9 +730,9 @@ export async function generatePathologyReportPDF(
     } else {
       const blobUrl = doc.output('bloburl');
       const w = window.open(blobUrl as unknown as string, '_blank');
-      if (!w) doc.save(`Lab_${data.reportNumber}.pdf`);
+      if (!w) doc.save(pdfFileName);
     }
   } catch {
-    doc.save(`Lab_${data.reportNumber}.pdf`);
+    doc.save(pdfFileName);
   }
 }
