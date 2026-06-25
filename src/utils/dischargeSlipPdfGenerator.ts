@@ -71,8 +71,6 @@ export const generateDischargeSlipPDF = async (data: DischargeSlipData) => {
     } catch (error) {
       console.warn('Could not load hospital logo:', error);
       yPosition += 15;
-    } else {
-      yPosition += 15;
     }
 
     // Hospital Name
