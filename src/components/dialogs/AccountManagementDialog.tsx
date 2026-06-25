@@ -78,7 +78,7 @@ export function AccountManagementDialog() {
 
           const { error: docError } = await supabase
             .from('doctors')
-            .upsert(doctorRow, { onConflict: 'id' });
+            .upsert(doctorRow as any, { onConflict: 'id' });
           if (docError) {
             toast.error("Account created, but doctor details were not saved: " + docError.message);
           }
