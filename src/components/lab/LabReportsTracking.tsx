@@ -186,7 +186,7 @@ export function LabReportsTracking() {
     setExporting(true);
     try {
       // Refetch fresh data so deleted/updated reports never linger in the PDF.
-      const fresh = await queryClient.fetchQuery<RawRow[]>({ queryKey: ["lab_register", startISO, endISO] });
+      const fresh = await queryClient.fetchQuery<RawRow[]>({ queryKey: ["lab_register", startISO, endISO], staleTime: 0 });
       const q = search.trim().toLowerCase();
       const filtered = (fresh ?? []).filter((r) => {
         if (!q) return true;
