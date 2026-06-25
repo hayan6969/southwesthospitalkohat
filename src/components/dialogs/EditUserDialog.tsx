@@ -155,7 +155,7 @@ export function EditUserDialog({ user, open, onOpenChange, onUserUpdated }: Edit
         };
         const { error: docError } = await supabase
           .from('doctors')
-          .upsert(doctorRow, { onConflict: 'id' });
+          .upsert(doctorRow as any, { onConflict: 'id' });
         if (docError) {
           toast.error("Profile saved, but doctor details failed: " + docError.message);
         }
