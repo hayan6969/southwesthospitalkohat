@@ -1787,6 +1787,7 @@ export type Database = {
         Row: {
           created_at: string
           id: string
+          price_snapshot: number | null
           report_id: string
           sort_order: number
           test_type_id: string
@@ -1794,6 +1795,7 @@ export type Database = {
         Insert: {
           created_at?: string
           id?: string
+          price_snapshot?: number | null
           report_id: string
           sort_order?: number
           test_type_id: string
@@ -1801,6 +1803,7 @@ export type Database = {
         Update: {
           created_at?: string
           id?: string
+          price_snapshot?: number | null
           report_id?: string
           sort_order?: number
           test_type_id?: string
@@ -1824,6 +1827,7 @@ export type Database = {
       }
       lab_pathology_reports: {
         Row: {
+          amount: number | null
           collected_at: string | null
           collection_address: string | null
           created_at: string
@@ -1845,6 +1849,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          amount?: number | null
           collected_at?: string | null
           collection_address?: string | null
           created_at?: string
@@ -1866,6 +1871,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          amount?: number | null
           collected_at?: string | null
           collection_address?: string | null
           created_at?: string
@@ -1886,7 +1892,15 @@ export type Database = {
           status?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "fk_lab_pathology_reports_invoice"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       lab_reports: {
         Row: {
