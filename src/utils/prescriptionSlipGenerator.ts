@@ -4,8 +4,14 @@ import { formatInPakistanTime } from './timezone';
 export interface PrescriptionSlipData {
   patientName: string;
   patientNumber: string;
-  patientAge: string | number | null;
+  patientAge?: string | number | null;
   doctorName: string;
+  doctorId?: string | null;
+  doctorSpecialization?: string | null;
+  licenseNumber?: string | null;
+  appointmentDate: string;
+  appointmentType?: string;
+  consultationFee: number;
   doctorId?: string | null;
   doctorSpecialization?: string | null;
   licenseNumber?: string | null;
