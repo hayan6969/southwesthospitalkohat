@@ -12,11 +12,6 @@ export interface PrescriptionSlipData {
   appointmentDate: string;
   appointmentType?: string;
   consultationFee: number;
-  doctorId?: string | null;
-  doctorSpecialization?: string | null;
-  licenseNumber?: string | null;
-  appointmentDate: string;
-  consultationFee: number;
   bookingType?: string;
   tokenNumber?: string | null;
   template?: any;
