@@ -244,7 +244,10 @@ export default function DashboardAdmin() {
       
       const { data, error } = await supabase.storage
         .from('hospital-logos')
-        .upload(fileName, logoFile);
+        .upload(fileName, logoFile, {
+          contentType: logoFile.type || 'image/png',
+          upsert: true,
+        });
       
       if (!error && data) {
         const { data: { publicUrl } } = supabase.storage
@@ -252,6 +255,8 @@ export default function DashboardAdmin() {
           .getPublicUrl(fileName);
         
         updates.logo_url = publicUrl;
+      } else if (error) {
+        console.error('Logo upload error:', error);
       }
     }
     
