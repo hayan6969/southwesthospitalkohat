@@ -45,6 +45,7 @@ export function LabReportsTracking() {
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const [exporting, setExporting] = useState(false);
+  const queryClient = useQueryClient();
   const PAGE_SIZE = 15;
 
   // ── Resolve the active date range + a human label ───────────────────────────
