@@ -68,7 +68,7 @@ export default function UserAccountDialog() {
         if (Object.keys(doctorUpdate).length > 0) {
           const { error: docError } = await supabase
             .from('doctors')
-            .update(doctorUpdate)
+            .update(doctorUpdate as any)
             .eq('id', userId);
 
           if (docError) {
