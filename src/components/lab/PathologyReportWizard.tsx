@@ -596,6 +596,19 @@ export function PathologyReportWizard() {
       if (!reportId) {
         // INSERT new report
         const status = pendingTestIds.size > 0 ? "partial" : (mode === "final" ? "final" : "partial");
+        // Carry the exact invoice link + actual charge from the billed order, so
+        // the Lab Register shows the real (post-discount) amount, not catalog price.
+        let orderInvoiceId: string | null = null;
+        let orderAmount: number | null = null;
+        if (selectedOrderId) {
+          const { data: ord } = await supabase
+            .from("lab_pathology_orders")
+            .select("invoice_id, total_amount")
+            .eq("id", selectedOrderId)
+            .maybeSingle();
+          orderInvoiceId = ord?.invoice_id ?? null;
+          orderAmount = ord?.total_amount != null ? Number(ord.total_amount) : null;
+        }
         const { data: report, error: rErr } = await supabase
           .from("lab_pathology_reports")
           .insert({
@@ -614,7 +627,9 @@ export function PathologyReportWizard() {
             reported_at: meta.reported_at ? new Date(meta.reported_at).toISOString() : null,
             status,
             created_by: user?.id ?? null,
-          }).select().single();
+            invoice_id: orderInvoiceId,
+            amount: orderAmount,
+          } as any).select().single();
         if (rErr) throw rErr;
         reportId = report.id;
 

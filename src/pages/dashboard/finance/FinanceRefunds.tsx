@@ -10,6 +10,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
 import { useAuth } from "@/hooks/useAuth";
 import { useAuditLogger } from "@/hooks/useAuditLogger";
 import { supabase } from "@/integrations/supabase/client";
@@ -18,7 +19,8 @@ import { toast } from "sonner";
 import { format } from "date-fns";
 import { formatPkrAmount } from "@/utils/currency";
 import { getCurrentPakistanTime } from "@/utils/timezone";
-import { RefreshCw, Plus, Filter, Search, Calendar as CalendarIcon, ChevronLeft, ChevronRight, Upload, Image as ImageIcon } from "lucide-react";
+import { generateRefundSlipPDF } from "@/utils/refundSlipGenerator";
+import { RefreshCw, Plus, Filter, Search, Calendar as CalendarIcon, ChevronLeft, ChevronRight, Upload, Image as ImageIcon, X, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface RefundFormData {
@@ -26,6 +28,32 @@ interface RefundFormData {
   refundType: string;
   description: string;
   doctorId?: string;
+}
+
+interface PathologyOrderItem {
+  id: string;
+  test_type_id: string;
+  test_name_snapshot: string;
+  price: number;
+}
+
+interface PathologyOrder {
+  id: string;
+  order_number: string;
+  patient_id: string;
+  invoice_id: string | null;
+  total_amount: number;
+  payment_status: string;
+  lab_status: string;
+  lab_pathology_order_items: PathologyOrderItem[];
+  patient?: {
+    patient_number: string;
+    profile?: {
+      first_name: string;
+      last_name: string;
+      phone: string | null;
+    };
+  };
 }
 
 export default function FinanceRefunds() {
@@ -42,6 +70,12 @@ export default function FinanceRefunds() {
   const [proofFile, setProofFile] = useState<File | null>(null);
   const [uploadingProof, setUploadingProof] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [orderSearch, setOrderSearch] = useState("");
+  const [selectedOrder, setSelectedOrder] = useState<PathologyOrder | null>(null);
+  const [orderSearchResults, setOrderSearchResults] = useState<PathologyOrder[]>([]);
+  const [searchingOrders, setSearchingOrders] = useState(false);
+  const [selectedTestIds, setSelectedTestIds] = useState<Set<string>>(new Set());
+  const [showLabConfirm, setShowLabConfirm] = useState(false);
   
   // Filtering and pagination state
   const [filteredRefunds, setFilteredRefunds] = useState<any[]>([]);
@@ -123,6 +157,91 @@ export default function FinanceRefunds() {
     setSearchTerm("");
   };
 
+  // Lookup pathology order
+  const lookupPathologyOrder = async () => {
+    const q = orderSearch.trim();
+    if (!q) {
+      toast.error("Enter an order number");
+      return;
+    }
+    setSearchingOrders(true);
+    setSelectedOrder(null);
+    setSelectedTestIds(new Set());
+    try {
+      // Try order number first; if not found, try invoice number
+      let { data: order, error } = await supabase
+        .from('lab_pathology_orders')
+        .select('*, lab_pathology_order_items(*)')
+        .eq('payment_status', 'paid')
+        .eq('order_number', q)
+        .maybeSingle();
+
+      if (error) throw error;
+
+      if (!order) {
+        // Fallback: try to find order by invoice number
+        const { data: inv } = await supabase
+          .from('invoices')
+          .select('id')
+          .eq('invoice_number', q)
+          .maybeSingle();
+
+        if (inv) {
+          const { data: orderByInv } = await supabase
+            .from('lab_pathology_orders')
+            .select('*, lab_pathology_order_items(*)')
+            .eq('payment_status', 'paid')
+            .eq('invoice_id', inv.id)
+            .maybeSingle();
+          order = orderByInv;
+        }
+      }
+
+      if (!order) {
+        toast.error("Order not found or already cancelled");
+        return;
+      }
+
+      // Fetch patient number + profile separately (no FK constraints)
+      const [patientRes, profileRes] = await Promise.all([
+        supabase.from('patients').select('patient_number').eq('id', order.patient_id).maybeSingle(),
+        supabase.from('profiles').select('first_name, last_name, phone').eq('id', order.patient_id).maybeSingle(),
+      ]);
+      const patientProfile = patientRes.data?.patient_number
+        ? { patient_number: patientRes.data.patient_number, profile: profileRes.data || undefined }
+        : undefined;
+
+      setSelectedOrder({ ...order, patient: patientProfile || undefined } as unknown as PathologyOrder);
+      setFormData(prev => ({ ...prev, description: `Test cancellation for order ${order.order_number}` }));
+    } catch (err) {
+      console.error('Error looking up order:', err);
+      toast.error("Failed to look up order");
+    } finally {
+      setSearchingOrders(false);
+    }
+  };
+
+  const toggleTestItem = (itemId: string) => {
+    setSelectedTestIds(prev => {
+      const next = new Set(prev);
+      if (next.has(itemId)) next.delete(itemId);
+      else next.add(itemId);
+      return next;
+    });
+  };
+
+  const clearLabSelection = () => {
+    setSelectedOrder(null);
+    setOrderSearch("");
+    setSelectedTestIds(new Set());
+    setFormData(prev => ({ ...prev, amount: "", description: "" }));
+  };
+
+  const selectedItems = selectedOrder?.lab_pathology_order_items?.filter(
+    item => selectedTestIds.has(item.id)
+  ) || [];
+  const labRefundAmount = selectedItems.reduce((sum, item) => sum + Number(item.price || 0), 0);
+
   // Pagination logic for filtered data
   const totalPages = Math.ceil(filteredRefunds.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
@@ -153,6 +272,29 @@ export default function FinanceRefunds() {
         setUploadingProof(false);
       }
 
+      // If lab refund, cancel the order + void the invoice
+      if (refundData.refundType === 'lab' && selectedOrder) {
+        const { error: cancelError } = await supabase
+          .from('lab_pathology_orders')
+          .update({
+            payment_status: 'cancelled',
+            lab_status: 'cancelled'
+          })
+          .eq('id', selectedOrder.id);
+
+        if (cancelError) throw cancelError;
+
+        // Void the associated invoice so it's removed from revenue
+        if (selectedOrder.invoice_id) {
+          const { error: invError } = await supabase
+            .from('invoices')
+            .update({ status: 'cancelled' })
+            .eq('id', selectedOrder.invoice_id);
+
+          if (invError) console.error('Error voiding invoice:', invError);
+        }
+      }
+
       const { data: refund, error: refundError } = await supabase
         .from('refunds')
         .insert({
@@ -160,6 +302,8 @@ export default function FinanceRefunds() {
           refund_type: refundData.refundType,
           description: refundData.description,
           doctor_id: refundData.doctorId || null,
+          patient_id: selectedOrder?.patient_id || null,
+          related_record_id: selectedOrder?.id || null,
           processed_by: profile?.id,
           proof_url: proofUrl
         })
@@ -167,6 +311,32 @@ export default function FinanceRefunds() {
         .single();
 
       if (refundError) throw refundError;
+
+      // Generate refund slip PDF for lab cancellations
+      if (refundData.refundType === 'lab' && selectedOrder) {
+        const patient = selectedOrder.patient;
+        const items = selectedItems.length > 0 ? selectedItems : selectedOrder.lab_pathology_order_items || [];
+        try {
+          await generateRefundSlipPDF({
+            refundNumber: refund.id.slice(0, 8).toUpperCase(),
+            patientName: patient ? `${patient.profile?.first_name || ''} ${patient.profile?.last_name || ''}`.trim() : 'N/A',
+            patientNumber: patient?.patient_number || 'N/A',
+            patientContact: patient?.profile?.phone || null,
+            orderNumber: selectedOrder.order_number,
+            items: items.map(item => ({
+              testName: item.test_name_snapshot,
+              price: Number(item.price || 0)
+            })),
+            totalAmount: items.reduce((sum, item) => sum + Number(item.price || 0), 0),
+            refundAmount: parseFloat(refundData.amount),
+            reason: refundData.description,
+            processedBy: profile ? `${profile.first_name} ${profile.last_name}` : 'N/A',
+            date: format(new Date(), 'dd/MM/yyyy hh:mm a')
+          });
+        } catch (pdfError) {
+          console.error('Error generating refund slip:', pdfError);
+        }
+      }
 
       const doctorName = refundData.doctorId ? 
         `Dr. ${doctors?.find(d => d.id === refundData.doctorId)?.first_name} ${doctors?.find(d => d.id === refundData.doctorId)?.last_name}` : 
@@ -185,9 +355,11 @@ export default function FinanceRefunds() {
       queryClient.invalidateQueries({ queryKey: ['financial-analytics'] });
       queryClient.invalidateQueries({ queryKey: ['expenses'] });
       setFormData({ amount: "", refundType: "", description: "", doctorId: "" });
+      setSelectedOrder(null);
+      setOrderSearch("");
       setShowConfirmDialog(false);
       setProofFile(null);
-      toast.success("Refund processed successfully");
+      toast.success("Test cancelled and refund processed successfully");
     },
     onError: (error: any) => {
       toast.error(error.message || "Failed to process refund");
@@ -210,6 +382,12 @@ export default function FinanceRefunds() {
     // If refund type is consultation or ot_doctor, doctor must be selected
     if ((formData.refundType === 'consultation' || formData.refundType === 'ot_doctor') && !formData.doctorId) {
       toast.error("Please select a doctor for consultation or OT Doctor refunds");
+      return;
+    }
+
+    // If refund type is lab, an order must be selected
+    if (formData.refundType === 'lab' && !selectedOrder) {
+      toast.error("Please select a pathology order to cancel");
       return;
     }
 
@@ -321,6 +499,33 @@ export default function FinanceRefunds() {
                   </Select>
                 </div>
               )}
+
+              {formData.refundType === 'lab' && (
+                <div className="space-y-2">
+                  <Label>Find Order</Label>
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder="Order number (PATH-######) or invoice number (PATH-INV-...)"
+                      value={orderSearch}
+                      onChange={(e) => {
+                        setOrderSearch(e.target.value);
+                        if (selectedOrder) clearLabSelection();
+                      }}
+                      onKeyDown={(e) => e.key === 'Enter' && lookupPathologyOrder()}
+                      className="flex-1"
+                    />
+                    <Button type="button" variant="outline" onClick={lookupPathologyOrder} disabled={searchingOrders}>
+                      <Search className="w-4 h-4 mr-2" />
+                      {searchingOrders ? "Searching..." : "Lookup"}
+                    </Button>
+                    {selectedOrder && (
+                      <Button type="button" variant="ghost" size="icon" onClick={clearLabSelection}>
+                        <X className="w-4 h-4" />
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -395,6 +600,136 @@ export default function FinanceRefunds() {
           </form>
         </CardContent>
       </Card>
+
+      {/* Lab Order Details & Test Selection (like pharmacy pattern) */}
+      {selectedOrder && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 justify-between">
+              <span>Order {selectedOrder.order_number}</span>
+              <Badge variant="secondary">{selectedOrder.lab_pathology_order_items?.length || 0} tests</Badge>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 bg-gray-50 rounded-lg text-sm">
+              <div>
+                <p className="text-gray-500">Patient</p>
+                <p className="font-medium">
+                  {selectedOrder.patient?.profile?.first_name} {selectedOrder.patient?.profile?.last_name}
+                </p>
+              </div>
+              <div>
+                <p className="text-gray-500">Patient ID</p>
+                <p className="font-medium">{selectedOrder.patient?.patient_number || 'N/A'}</p>
+              </div>
+              <div>
+                <p className="text-gray-500">Status</p>
+                <p className="font-medium capitalize">{selectedOrder.lab_status}</p>
+              </div>
+              <div>
+                <p className="text-gray-500">Payment</p>
+                <p className="font-medium capitalize">{selectedOrder.payment_status}</p>
+              </div>
+            </div>
+
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-10">Select</TableHead>
+                  <TableHead>Test</TableHead>
+                  <TableHead className="text-right">Price</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {selectedOrder.lab_pathology_order_items?.map(item => (
+                  <TableRow key={item.id}>
+                    <TableCell>
+                      <input
+                        type="checkbox"
+                        checked={selectedTestIds.has(item.id)}
+                        onChange={() => toggleTestItem(item.id)}
+                        className="h-4 w-4 rounded border-gray-300"
+                      />
+                    </TableCell>
+                    <TableCell className="font-medium">{item.test_name_snapshot}</TableCell>
+                    <TableCell className="text-right font-mono">
+                      Rs. {Number(item.price || 0).toLocaleString('en-PK', { minimumFractionDigits: 2 })}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+
+            <Separator />
+
+            <div className="space-y-1 text-sm max-w-sm ml-auto">
+              <div className="flex justify-between">
+                <span className="text-gray-600">Selected tests:</span>
+                <span>{selectedItems.length} / {selectedOrder.lab_pathology_order_items?.length || 0}</span>
+              </div>
+              <div className="flex justify-between text-lg font-bold pt-1 border-t">
+                <span>Refund amount:</span>
+                <span className="text-green-600">{formatPkrAmount(labRefundAmount)}</span>
+              </div>
+            </div>
+
+            <AlertDialog open={showLabConfirm} onOpenChange={setShowLabConfirm}>
+              <AlertDialogTrigger asChild>
+                <Button
+                  className="w-full"
+                  disabled={selectedItems.length === 0}
+                >
+                  <AlertTriangle className="w-4 h-4 mr-2" />
+                  Cancel Selected Tests & Refund
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Confirm Test Cancellation</AlertDialogTitle>
+                  <AlertDialogDescription asChild>
+                    <div className="space-y-2">
+                      <p>
+                        Cancel <strong>{selectedItems.length} test(s)</strong> and refund{" "}
+                        <strong>{formatPkrAmount(labRefundAmount)}</strong> against order{" "}
+                        <strong>{selectedOrder.order_number}</strong>?
+                      </p>
+                      <ul className="list-disc list-inside text-sm space-y-1">
+                        {selectedItems.map(item => (
+                          <li key={item.id}>{item.test_name_snapshot} — {formatPkrAmount(Number(item.price))}</li>
+                        ))}
+                      </ul>
+                      <div className="text-sm border-t pt-2">
+                        <Label>Reason for cancellation</Label>
+                        <Textarea
+                          value={formData.description}
+                          onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+                          placeholder="Enter cancellation reason"
+                          rows={2}
+                          className="mt-1"
+                        />
+                      </div>
+                      <p className="text-xs text-muted-foreground">This action cannot be undone</p>
+                    </div>
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={() => {
+                      setFormData(prev => ({ ...prev, amount: labRefundAmount.toString() }));
+                      setShowConfirmDialog(true);
+                      setShowLabConfirm(false);
+                    }}
+                    className="bg-red-600 hover:bg-red-700"
+                  >
+                    Confirm Cancellation
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Refunds History */}
       <Card>

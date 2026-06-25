@@ -108,7 +108,14 @@ export function PreviousBillDiscountDialog({ open, onOpenChange }: Props) {
     const invoiceNumber = (invoice?.invoice_number || "").toLowerCase();
     const description = (invoice?.description || "").toLowerCase();
 
-    if (invoiceNumber.startsWith("lab-") || description.includes("lab")) return "lab";
+    // Pathology billing writes PATH-INV-… / "Lab: …"; older flow writes LAB-….
+    // Use a word boundary so "labor"/"laboratory note" on a consultation isn't
+    // misread as a lab invoice (which would skip the doctor-earnings adjustment).
+    if (
+      invoiceNumber.startsWith("lab-") ||
+      invoiceNumber.startsWith("path-inv-") ||
+      /\blab\b|pathology/.test(description)
+    ) return "lab";
     if (invoiceNumber.startsWith("xr-") || invoiceNumber.startsWith("xray-") || description.includes("x-ray") || description.includes("xray")) return "xray";
     if (invoiceNumber.startsWith("ot-") || description.includes("ot procedure") || description.includes("operation") || description.includes("surgery")) return "ot";
 
@@ -207,15 +214,27 @@ export function PreviousBillDiscountDialog({ open, onOpenChange }: Props) {
 
       // ── Update lab_pathology_reports.amount for lab discounts ─────
       if (serviceType === "lab" && discountAmount > 0) {
-        const invoiceDate = new Date(selectedInvoice.paid_at || selectedInvoice.created_at);
-        const dateStr = invoiceDate.toISOString().split("T")[0];
-        const newAmount = newInvoiceAmount;
-        await supabase
+        // Exact path: reports linked to THIS invoice (set at report creation or
+        // backfilled via the order link). No date/patient guessing.
+        const { data: linked } = await supabase
           .from("lab_pathology_reports")
-          .update({ amount: newAmount })
-          .eq("patient_id", selectedInvoice.patient_id)
-          .gte("created_at", dateStr + "T00:00:00")
-          .lte("created_at", dateStr + "T23:59:59");
+          .update({ amount: newInvoiceAmount } as any)
+          .eq("invoice_id", selectedInvoice.id)
+          .select("id");
+        // Fallback for legacy reports with no invoice link: same patient + same
+        // day, but ONLY unlinked rows so we never clobber another invoice's
+        // report on the same day.
+        if (!linked || linked.length === 0) {
+          const invoiceDate = new Date(selectedInvoice.paid_at || selectedInvoice.created_at);
+          const dateStr = invoiceDate.toISOString().split("T")[0];
+          await supabase
+            .from("lab_pathology_reports")
+            .update({ amount: newInvoiceAmount } as any)
+            .is("invoice_id", null)
+            .eq("patient_id", selectedInvoice.patient_id)
+            .gte("created_at", dateStr + "T00:00:00")
+            .lte("created_at", dateStr + "T23:59:59");
+        }
       }
 
       await generateRefundReceiptPDF({

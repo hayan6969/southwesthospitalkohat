@@ -16,7 +16,12 @@ FROM (
   FROM public.lab_pathology_reports lpr
   JOIN public.invoices inv ON lpr.patient_id = inv.patient_id
     AND lpr.created_at::date = inv.created_at::date
-    AND inv.invoice_number LIKE 'LAB-%'
+    -- lab_pathology_reports is populated by the pathology flow, which writes
+    -- PATH-INV-… invoices with description 'Lab: …'. The older simple lab flow
+    -- writes LAB-… . Match all three or the backfill catches nothing.
+    AND (inv.invoice_number LIKE 'PATH-INV-%'
+         OR inv.invoice_number LIKE 'LAB-%'
+         OR inv.description ILIKE 'Lab:%')
     AND inv.status = 'paid'
   WHERE lpr.amount IS NULL
   ORDER BY lpr.id, inv.created_at DESC

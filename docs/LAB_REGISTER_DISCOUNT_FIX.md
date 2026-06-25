@@ -23,13 +23,15 @@ Two separate issues:
 
 ## The Fix
 
-### Approach: Store final charge directly on the report
+> **Update (robust v2):** the original v1 stored `amount` and matched reports → invoices by `patient_id` + same day. That heuristic mis-fired in two cases (multiple lab reports for one patient on a day; the UTC vs Pakistan day boundary) and its backfill used the wrong invoice prefix (`LAB-%` — pathology invoices are `PATH-INV-`). **v2 keys off the exact invoice link instead.** `lab_pathology_orders` already stores both `invoice_id` *and* `report_id`, so each report's invoice — and its true, discount-reflecting charge — is derived exactly, with no date/patient guessing.
 
-Instead of trying to link reports → invoices (which requires `invoice_id` to be populated — it never was), we add an **`amount` column** directly to `lab_pathology_reports` that stores the definitive charge. This column can be:
+### Approach: Store final charge on the report, keyed by the exact invoice link
 
-1. **Backfilled** from matching invoices (by `patient_id` + same day)
-2. **Updated** when a retroactive discount is applied
-3. **Populated at creation** for future reports
+We populate **`lab_pathology_reports.invoice_id`** (the column existed but was never filled) and store the definitive **`amount`** on the report:
+
+1. **At creation** — `PathologyReportWizard` copies `invoice_id` + the order's `total_amount` from the billed order onto the new report.
+2. **Backfilled** — migration `20260625150000` links each report to its invoice via `lab_pathology_orders.report_id → invoice_id` (exact), falling back to patient+day only for order-less reports, then sets `amount` from the linked invoice's current amount (so past discounts are already reflected), then catalog price as a last resort.
+3. **Updated on retroactive discount** — `PreviousBillDiscountDialog` updates reports by `invoice_id` (exact); a patient+day fallback covers only unlinked legacy rows.
 
 ### Changes Made
 
@@ -92,14 +94,22 @@ WHERE created_at >= '2026-06-25'::date
 
 | File | What Changed |
 |------|-------------|
-| `supabase/migrations/20260625140000_fix_lab_register_discounts.sql` | New migration — adds `amount` + `price_snapshot` columns + backfill |
-| `src/components/lab/LabReportsTracking.tsx` | Reads `r.amount` directly; simplified charge logic |
-| `src/components/dialogs/PreviousBillDiscountDialog.tsx` | Updates `lab_pathology_reports.amount` on lab discount; adjusts doctor earnings on consultation discount |
+| `supabase/migrations/20260625140000_fix_lab_register_discounts.sql` | v1 — adds `amount` + `price_snapshot` columns + heuristic backfill (prefix corrected to `PATH-INV-`/`LAB-`/`Lab:%`) |
+| `supabase/migrations/20260625150000_lab_register_invoice_link.sql` | **v2 (authoritative)** — exact link via `lab_pathology_orders.report_id → invoice_id`; sets `amount` from the linked invoice; idempotent, self-contained |
+| `src/components/lab/PathologyReportWizard.tsx` | Sets `invoice_id` + `amount` on the report at creation from the billed order |
+| `src/components/lab/LabReportsTracking.tsx` | Reads `r.amount` directly; charge priority `amount` → `price_snapshot` → catalog |
+| `src/components/dialogs/PreviousBillDiscountDialog.tsx` | Lab discount updates reports by `invoice_id` (exact) + unlinked patient/day fallback; `inferServiceType` uses `\blab\b`/`path-inv-` (no "labor" false-positive); consultation discount adjusts doctor earnings |
 
 ---
 
+## Resolved in v2
+
+- ✅ **PathologyReportWizard** now populates `invoice_id` + `amount` at report creation (from the billed order).
+- ✅ **Multiple lab reports for one patient/day** — handled by the exact `invoice_id` link; the patient+day path is now a fallback restricted to unlinked rows.
+- ✅ **UTC vs Pakistan day boundary** — no longer relevant for linked reports (no date matching). It only affects the legacy fallback for order-less reports.
+
 ## Future Considerations
 
-- **PathologyReportWizard**: Should populate `amount` at report creation time (sum of selected test prices at that moment) to avoid relying on backfill
-- **EnhancedLabDialog**: Could also create a `lab_pathology_reports` entry to unify the two lab workflows
-- **Validation**: Add a DB constraint or trigger ensuring `amount >= 0` on `lab_pathology_reports`
+- **EnhancedLabDialog**: Could also create a `lab_pathology_reports` entry to unify the two lab workflows.
+- **Validation**: Add a DB constraint or trigger ensuring `amount >= 0` on `lab_pathology_reports`.
+- **`price_snapshot`**: still unwritten — populate it at report creation if per-test (not per-invoice) charges are ever needed.
