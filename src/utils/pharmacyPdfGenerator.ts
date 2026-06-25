@@ -66,29 +66,28 @@ export const generatePharmacyInvoicePDF = async (
 
   let y = 5;
 
-  // Logo (small, centered)
-  if (settings.logo_url) {
-    try {
-      const img = new Image();
-      img.crossOrigin = 'anonymous';
-      await new Promise((resolve) => {
-        img.onload = () => {
-          try {
-            const logoSize = 14;
-            pdf.addImage(img, 'JPEG', centerX - logoSize / 2, y, logoSize, logoSize);
-            resolve(true);
-          } catch {
-            resolve(false);
-          }
-        };
-        img.onerror = () => resolve(false);
-        setTimeout(() => resolve(false), 3000);
-        img.src = settings.logo_url;
-      });
-      y += 16;
-    } catch {
-      // skip logo
-    }
+  // Logo (small, centered) — fallback to /logo.png
+  const logoUrl = settings.logo_url || '/logo.png';
+  try {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    await new Promise((resolve) => {
+      img.onload = () => {
+        try {
+          const logoSize = 14;
+          pdf.addImage(img, 'JPEG', centerX - logoSize / 2, y, logoSize, logoSize);
+          resolve(true);
+        } catch {
+          resolve(false);
+        }
+      };
+      img.onerror = () => resolve(false);
+      setTimeout(() => resolve(false), 3000);
+      img.src = logoUrl;
+    });
+    y += 16;
+  } catch {
+    // skip logo
   }
 
   // Hospital Name
@@ -259,27 +258,26 @@ export const generatePharmacyInvoiceA4PDF = async (
   const pageWidth = doc.internal.pageSize.width;
   let y = 20;
 
-  // Logo
-  if (settings.logo_url) {
-    try {
-      const img = new Image();
-      img.crossOrigin = 'anonymous';
-      await new Promise((resolve) => {
-        img.onload = () => {
-          try {
-            doc.addImage(img, 'JPEG', 20, y - 5, 30, 20);
-            resolve(true);
-          } catch {
-            resolve(false);
-          }
-        };
-        img.onerror = () => resolve(false);
-        setTimeout(() => resolve(false), 5000);
-        img.src = settings.logo_url as string;
-      });
-    } catch {
-      // skip logo
-    }
+  // Logo — fallback to /logo.png
+  const logoUrl = settings.logo_url || '/logo.png';
+  try {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    await new Promise((resolve) => {
+      img.onload = () => {
+        try {
+          doc.addImage(img, 'JPEG', 20, y - 5, 30, 20);
+          resolve(true);
+        } catch {
+          resolve(false);
+        }
+      };
+      img.onerror = () => resolve(false);
+      setTimeout(() => resolve(false), 5000);
+      img.src = logoUrl;
+    });
+  } catch {
+    // skip logo
   }
 
   // Header

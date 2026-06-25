@@ -85,7 +85,7 @@ export async function generateLabRegisterPDF(opts: {
   const { rows, summary, periodLabel } = opts;
 
   const hospital = await fetchHospital();
-  const logoDataUrl = hospital?.logo_url ? await loadImageDataUrl(hospital.logo_url) : null;
+  const logoDataUrl = hospital?.logo_url ? await loadImageDataUrl(hospital.logo_url) : await loadImageDataUrl('/logo.png');
 
   const doc = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'landscape' });
   const pageWidth = doc.internal.pageSize.getWidth();

@@ -43,35 +43,34 @@ export const generateDischargeSlipPDF = async (data: DischargeSlipData) => {
       }
     };
 
-    // Header - Hospital Logo (if available)
-    if (hospitalSettings?.logo_url) {
-      try {
-        // Create a new image element to load the logo
-        const img = new Image();
-        img.crossOrigin = 'anonymous';
-        
-        await new Promise((resolve, reject) => {
-          img.onload = () => {
-            // Add the actual logo image
-            const logoWidth = 40;
-            const logoHeight = 40;
-            const logoX = (pageWidth - logoWidth) / 2;
-            
-            pdf.addImage(img, 'JPEG', logoX, yPosition, logoWidth, logoHeight);
-            resolve(void 0);
-          };
-          img.onerror = () => {
-            console.warn('Could not load hospital logo');
-            resolve(void 0);
-          };
-          img.src = hospitalSettings.logo_url;
-        });
-        
-        yPosition += 45;
-      } catch (error) {
-        console.warn('Could not load hospital logo:', error);
-        yPosition += 15;
-      }
+    // Header - Hospital Logo (if available, fallback to /logo.png)
+    const logoUrl = hospitalSettings?.logo_url || '/logo.png';
+    try {
+      // Create a new image element to load the logo
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      
+      await new Promise((resolve, reject) => {
+        img.onload = () => {
+          // Add the actual logo image
+          const logoWidth = 40;
+          const logoHeight = 40;
+          const logoX = (pageWidth - logoWidth) / 2;
+          
+          pdf.addImage(img, 'JPEG', logoX, yPosition, logoWidth, logoHeight);
+          resolve(void 0);
+        };
+        img.onerror = () => {
+          console.warn('Could not load hospital logo');
+          resolve(void 0);
+        };
+        img.src = logoUrl;
+      });
+      
+      yPosition += 45;
+    } catch (error) {
+      console.warn('Could not load hospital logo:', error);
+      yPosition += 15;
     } else {
       yPosition += 15;
     }
