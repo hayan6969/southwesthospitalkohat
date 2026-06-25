@@ -251,13 +251,13 @@ export async function generatePathologyReportPDF(
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(6.4);
     doc.setCharSpace(1.3);
-      doc.setTextColor(...(useGrayscale ? [180, 180, 180] as [number, number, number] : [208, 222, 236]));
+      doc.setTextColor(...((useGrayscale ? [180, 180, 180] : [208, 222, 236]) as [number, number, number]));
     doc.text('ACCURATE   ·   CARING   ·   INSTANT', titleX, 14.6);
     doc.setCharSpace(0);
 
     // Address · contact — inside the band, left-aligned
     doc.setFontSize(7.6);
-    doc.setTextColor(...(useGrayscale ? [190, 190, 190] as [number, number, number] : [216, 228, 240]));
+    doc.setTextColor(...((useGrayscale ? [190, 190, 190] : [216, 228, 240]) as [number, number, number]));
     const addr = [hospital?.hospital_address, hospital?.contact_number].filter(Boolean).join('   ·   ');
     if (addr) doc.text(doc.splitTextToSize(addr, nameMaxW)[0], titleX, 19.6);
 
