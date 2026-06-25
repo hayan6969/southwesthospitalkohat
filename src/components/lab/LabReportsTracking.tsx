@@ -185,7 +185,40 @@ export function LabReportsTracking() {
     if (exporting) return;
     setExporting(true);
     try {
-      await generateLabRegisterPDF({ rows, summary, periodLabel });
+      // Refetch fresh data so deleted/updated reports never linger in the PDF.
+      const fresh = await queryClient.fetchQuery<RawRow[]>({ queryKey: ["lab_register", startISO, endISO] });
+      const q = search.trim().toLowerCase();
+      const filtered = (fresh ?? []).filter((r) => {
+        if (!q) return true;
+        return (
+          r.reportNumber.toLowerCase().includes(q) ||
+          r.patientName.toLowerCase().includes(q) ||
+          r.patientId.toLowerCase().includes(q) ||
+          r.referredBy.toLowerCase().includes(q) ||
+          r.tests.some((t) => t.toLowerCase().includes(q))
+        );
+      });
+      const freshRows: LabRegisterRow[] = filtered.map((r, i) => ({
+        serial: i + 1,
+        reportNumber: r.reportNumber,
+        date: r.date,
+        patientId: r.patientId,
+        patientName: r.patientName,
+        referredBy: r.referredBy,
+        tests: r.tests,
+        charges: r.charges,
+      }));
+      const freshTotalCharges = freshRows.reduce((s, r) => s + r.charges, 0);
+      const counts = new Map<string, number>();
+      freshRows.forEach((r) => r.tests.forEach((t) => counts.set(t, (counts.get(t) || 0) + 1)));
+      let topTest = "—", topCount = 0;
+      counts.forEach((c, name) => { if (c > topCount) { topCount = c; topTest = name; } });
+      const freshSummary: LabRegisterSummary = {
+        totalReports: freshRows.length,
+        totalCharges: freshTotalCharges,
+        topTest: topCount ? `${topTest} (${topCount})` : "—",
+      };
+      await generateLabRegisterPDF({ rows: freshRows, summary: freshSummary, periodLabel });
     } catch (e: any) {
       toast.error(e?.message || "Failed to generate PDF");
     } finally {
