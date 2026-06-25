@@ -14,6 +14,8 @@ const SIZE_OPTIONS = [
   { value: "1.5x1", label: '1.5" × 1" (38.1 × 25.4 mm)', width: 38.1, height: 25.4 },
   { value: "2x1.5", label: '2" × 1.5" (50.8 × 38.1 mm)', width: 50.8, height: 38.1 },
   { value: "3x2", label: '3" × 2" (76.2 × 50.8 mm)', width: 76.2, height: 50.8 },
+  { value: "4x3", label: '4" × 3" (101.6 × 76.2 mm)', width: 101.6, height: 76.2 },
+  { value: "4x2.5", label: '4" × 2.5" (101.6 × 63.5 mm)', width: 101.6, height: 63.5 },
 ];
 
 const DOSAGE_PRESETS = ["OD", "BD", "TDS", "QID", "SOS", "Custom"];
