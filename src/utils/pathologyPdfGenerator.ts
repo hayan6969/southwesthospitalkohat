@@ -251,7 +251,7 @@ export async function generatePathologyReportPDF(
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(6.4);
     doc.setCharSpace(1.3);
-      doc.setTextColor(...(useGrayscale ? [180, 180, 180] as [number, number, number] : [208, 222, 236]));
+      doc.setTextColor(...((useGrayscale ? [180, 180, 180] : [208, 222, 236]) as [number, number, number]));
     doc.text('ACCURATE   ·   CARING   ·   INSTANT', titleX, 14.6);
     doc.setCharSpace(0);
 
