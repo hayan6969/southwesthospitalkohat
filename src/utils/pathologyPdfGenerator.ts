@@ -177,8 +177,7 @@ export async function generatePathologyReportPDF(
     qrDataUrl = await QRCode.toDataURL(verifyUrl, { margin: 1, width: 300 });
   } catch { /* best-effort */ }
 
-  const logoDataUrl = hospital?.logo_url ? await loadImageDataUrl(hospital.logo_url) : null;
-  const verifyLogoDataUrl = await loadImageDataUrl('/verification.png');
+  const logoDataUrl = hospital?.logo_url ? await loadImageDataUrl(hospital.logo_url) : await loadImageDataUrl('/logo.png');
 
   // ── PDF setup ───────────────────────────────────────────────────────────────
   const doc = new jsPDF({ unit: 'mm', format: 'a4' });
