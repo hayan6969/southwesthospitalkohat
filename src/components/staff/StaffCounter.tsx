@@ -294,7 +294,7 @@ export function StaffCounter() {
 
       const { data: doctorData, error: doctorError } = await supabase
         .from('doctors')
-        .select('consultation_fee, prescription_template, license_number')
+        .select('consultation_fee, prescription_template, license_number, specialization')
         .eq('id', currentAppointment.doctor_id)
         .maybeSingle();
 
