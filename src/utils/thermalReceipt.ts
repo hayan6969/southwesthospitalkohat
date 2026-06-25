@@ -26,7 +26,7 @@ export const getHospitalSettings = async (): Promise<HospitalSettings> => {
       .from('hospital_settings')
       .select('*')
       .limit(1)
-      .single();
+      .maybeSingle();
     if (error) throw error;
     return data as HospitalSettings;
   } catch (error) {

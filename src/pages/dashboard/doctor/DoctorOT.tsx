@@ -72,6 +72,7 @@ export default function DoctorOT() {
   const [showAssessmentDialog, setShowAssessmentDialog] = useState(false);
   const [showAnesthesiaDialog, setShowAnesthesiaDialog] = useState(false);
   const [selectedOT, setSelectedOT] = useState<OTScheduleWithDetails | null>(null);
+  const [processingId, setProcessingId] = useState<string | null>(null);
 
   useEffect(() => {
     fetchDoctorOTSchedules();
@@ -182,19 +183,28 @@ export default function DoctorOT() {
     }
   };
 
-  const handleOTNotes = (ot: OTScheduleWithDetails) => {
+  const openDialog = (ot: OTScheduleWithDetails, setter: (v: boolean) => void) => {
+    if (processingId) return;
+    setProcessingId(ot.id);
     setSelectedOT(ot);
-    setShowOTNotesDialog(true);
+    setter(true);
+  };
+
+  const handleDialogClose = () => {
+    setProcessingId(null);
+    setSelectedOT(null);
+  };
+
+  const handleOTNotes = (ot: OTScheduleWithDetails) => {
+    openDialog(ot, setShowOTNotesDialog);
   };
 
   const handlePreOpOrders = (ot: OTScheduleWithDetails) => {
-    setSelectedOT(ot);
-    setShowPreOpOrdersDialog(true);
+    openDialog(ot, setShowPreOpOrdersDialog);
   };
 
   const handleDischarge = (ot: OTScheduleWithDetails) => {
-    setSelectedOT(ot);
-    setShowDischargeDialog(true);
+    openDialog(ot, setShowDischargeDialog);
   };
 
   const handleDischargeSlip = async (ot: OTScheduleWithDetails) => {
@@ -212,23 +222,19 @@ export default function DoctorOT() {
   };
 
   const handleTreatmentChart = (ot: OTScheduleWithDetails) => {
-    setSelectedOT(ot);
-    setShowTreatmentChartDialog(true);
+    openDialog(ot, setShowTreatmentChartDialog);
   };
 
   const handleProgress = (ot: OTScheduleWithDetails) => {
-    setSelectedOT(ot);
-    setShowProgressDialog(true);
+    openDialog(ot, setShowProgressDialog);
   };
 
   const handleAssessment = (ot: OTScheduleWithDetails) => {
-    setSelectedOT(ot);
-    setShowAssessmentDialog(true);
+    openDialog(ot, setShowAssessmentDialog);
   };
 
   const handleAnesthesia = (ot: OTScheduleWithDetails) => {
-    setSelectedOT(ot);
-    setShowAnesthesiaDialog(true);
+    openDialog(ot, setShowAnesthesiaDialog);
   };
 
   const upcomingOTs = otSchedules.filter(ot => ot.status !== 'completed' && ot.status !== 'cancelled');
@@ -389,68 +395,75 @@ export default function DoctorOT() {
                           </TableCell>
                            <TableCell>
                              <div className="flex gap-2 flex-wrap">
-                               <Button 
-                                 size="sm" 
-                                 variant="outline"
-                                 onClick={() => handlePreOpOrders(ot)}
-                                 className="flex items-center gap-1"
-                               >
-                                 <ClipboardList className="w-3 h-3" />
-                                 Pre-Op Orders
-                               </Button>
-                               <Button 
-                                 size="sm" 
-                                 variant="outline"
-                                 onClick={() => handleTreatmentChart(ot)}
-                                 className="flex items-center gap-1"
-                               >
-                                 <FileText className="w-3 h-3" />
-                                 Treatment Chart
-                               </Button>
-                               <Button 
-                                 size="sm" 
-                                 variant="outline"
-                                 onClick={() => handleProgress(ot)}
-                                 className="flex items-center gap-1"
-                               >
-                                 <TrendingUp className="w-3 h-3" />
-                                 POPPR
-                               </Button>
-                               <Button 
-                                 size="sm" 
-                                 variant="outline"
-                                 onClick={() => handleAssessment(ot)}
-                                 className="flex items-center gap-1"
-                               >
-                                  <ClipboardCheck className="w-3 h-3" />
-                                  Assessment
+                                <Button 
+                                  size="sm" 
+                                  variant="outline"
+                                  onClick={() => handlePreOpOrders(ot)}
+                                  disabled={processingId === ot.id}
+                                  className="flex items-center gap-1"
+                                >
+                                  <ClipboardList className="w-3 h-3" />
+                                  Pre-Op Orders
                                 </Button>
                                 <Button 
                                   size="sm" 
                                   variant="outline"
-                                  onClick={() => handleAnesthesia(ot)}
+                                  onClick={() => handleTreatmentChart(ot)}
+                                  disabled={processingId === ot.id}
                                   className="flex items-center gap-1"
                                 >
-                                  <Activity className="w-3 h-3" />
-                                  Anesthesia
+                                  <FileText className="w-3 h-3" />
+                                  Treatment Chart
                                 </Button>
                                 <Button 
                                   size="sm" 
                                   variant="outline"
-                                  onClick={() => handleOTNotes(ot)}
+                                  onClick={() => handleProgress(ot)}
+                                  disabled={processingId === ot.id}
                                   className="flex items-center gap-1"
                                 >
-                                  <Edit className="w-3 h-3" />
-                                  OT Notes
+                                  <TrendingUp className="w-3 h-3" />
+                                  POPPR
                                 </Button>
-                               <Button 
-                                 size="sm" 
-                                 onClick={() => handleDischarge(ot)}
-                                 className="flex items-center gap-1 bg-green-600 hover:bg-green-700"
-                               >
-                                 <UserCheck className="w-3 h-3" />
-                                 Discharge
-                               </Button>
+                                <Button 
+                                  size="sm" 
+                                  variant="outline"
+                                  onClick={() => handleAssessment(ot)}
+                                  disabled={processingId === ot.id}
+                                  className="flex items-center gap-1"
+                                >
+                                   <ClipboardCheck className="w-3 h-3" />
+                                   Assessment
+                                 </Button>
+                                 <Button 
+                                   size="sm" 
+                                   variant="outline"
+                                   onClick={() => handleAnesthesia(ot)}
+                                   disabled={processingId === ot.id}
+                                   className="flex items-center gap-1"
+                                 >
+                                   <Activity className="w-3 h-3" />
+                                   Anesthesia
+                                 </Button>
+                                 <Button 
+                                   size="sm" 
+                                   variant="outline"
+                                   onClick={() => handleOTNotes(ot)}
+                                   disabled={processingId === ot.id}
+                                   className="flex items-center gap-1"
+                                 >
+                                   <Edit className="w-3 h-3" />
+                                   OT Notes
+                                 </Button>
+                                <Button 
+                                  size="sm" 
+                                  onClick={() => handleDischarge(ot)}
+                                  disabled={processingId === ot.id}
+                                  className="flex items-center gap-1 bg-green-600 hover:bg-green-700"
+                                >
+                                  <UserCheck className="w-3 h-3" />
+                                  Discharge
+                                </Button>
                              </div>
                            </TableCell>
                         </TableRow>
@@ -558,6 +571,7 @@ export default function DoctorOT() {
                                     size="sm" 
                                     variant="outline"
                                     onClick={() => handlePreOpOrders(ot)}
+                                    disabled={processingId === ot.id}
                                     className="flex items-center gap-1"
                                   >
                                     <ClipboardList className="w-3 h-3" />
@@ -567,6 +581,7 @@ export default function DoctorOT() {
                                     size="sm" 
                                     variant="outline"
                                     onClick={() => handleTreatmentChart(ot)}
+                                    disabled={processingId === ot.id}
                                     className="flex items-center gap-1"
                                   >
                                     <FileText className="w-3 h-3" />
@@ -576,6 +591,7 @@ export default function DoctorOT() {
                                     size="sm" 
                                     variant="outline"
                                     onClick={() => handleProgress(ot)}
+                                    disabled={processingId === ot.id}
                                     className="flex items-center gap-1"
                                   >
                                     <TrendingUp className="w-3 h-3" />
@@ -585,6 +601,7 @@ export default function DoctorOT() {
                                     size="sm" 
                                     variant="outline"
                                     onClick={() => handleAssessment(ot)}
+                                    disabled={processingId === ot.id}
                                     className="flex items-center gap-1"
                                   >
                                     <ClipboardCheck className="w-3 h-3" />
@@ -594,6 +611,7 @@ export default function DoctorOT() {
                                     size="sm" 
                                     variant="outline"
                                     onClick={() => handleAnesthesia(ot)}
+                                    disabled={processingId === ot.id}
                                     className="flex items-center gap-1"
                                   >
                                     <Activity className="w-3 h-3" />
@@ -603,6 +621,7 @@ export default function DoctorOT() {
                                     size="sm" 
                                     variant="outline"
                                     onClick={() => handleOTNotes(ot)}
+                                    disabled={processingId === ot.id}
                                     className="flex items-center gap-1"
                                   >
                                     <Edit className="w-3 h-3" />
@@ -613,6 +632,7 @@ export default function DoctorOT() {
                                       size="sm" 
                                       variant="outline"
                                       onClick={() => handleDischargeSlip(ot)}
+                                      disabled={processingId === ot.id}
                                       className="flex items-center gap-1"
                                     >
                                       <FileText className="w-3 h-3" />
@@ -695,7 +715,7 @@ export default function DoctorOT() {
       {/* Pre Operation Orders Dialog */}
       <PreOperationOrdersDialog 
         open={showPreOpOrdersDialog}
-        onOpenChange={setShowPreOpOrdersDialog}
+        onOpenChange={(v) => { setShowPreOpOrdersDialog(v); if (!v) handleDialogClose(); }}
         otSchedule={selectedOT}
         onSave={fetchDoctorOTSchedules}
       />
@@ -703,7 +723,7 @@ export default function DoctorOT() {
       {/* OT Notes Dialog */}
       <OTNotesDialog 
         open={showOTNotesDialog}
-        onOpenChange={setShowOTNotesDialog}
+        onOpenChange={(v) => { setShowOTNotesDialog(v); if (!v) handleDialogClose(); }}
         otSchedule={selectedOT}
         onSave={fetchDoctorOTSchedules}
       />
@@ -711,7 +731,7 @@ export default function DoctorOT() {
       {/* Discharge Slip Dialog */}
       <DischargeSlipDialog 
         open={showDischargeDialog}
-        onOpenChange={setShowDischargeDialog}
+        onOpenChange={(v) => { setShowDischargeDialog(v); if (!v) handleDialogClose(); }}
         otSchedule={selectedOT}
         onDischarge={fetchDoctorOTSchedules}
       />
@@ -719,28 +739,28 @@ export default function DoctorOT() {
       {/* Treatment Chart Dialog */}
       <TreatmentChartDialog 
         open={showTreatmentChartDialog}
-        onOpenChange={setShowTreatmentChartDialog}
+        onOpenChange={(v) => { setShowTreatmentChartDialog(v); if (!v) handleDialogClose(); }}
         otSchedule={selectedOT}
       />
 
       {/* Post Operative Progress Dialog */}
       <PostOperativeProgressDialog 
         open={showProgressDialog}
-        onOpenChange={setShowProgressDialog}
+        onOpenChange={(v) => { setShowProgressDialog(v); if (!v) handleDialogClose(); }}
         otSchedule={selectedOT}
       />
 
       {/* Assessment Dialog */}
       <AssessmentDialog 
         open={showAssessmentDialog}
-        onOpenChange={setShowAssessmentDialog}
+        onOpenChange={(v) => { setShowAssessmentDialog(v); if (!v) handleDialogClose(); }}
         otSchedule={selectedOT}
       />
 
       {/* Anesthesia Notes Dialog */}
       <AnesthesiaNotesDialog
         open={showAnesthesiaDialog}
-        onOpenChange={setShowAnesthesiaDialog}
+        onOpenChange={(v) => { setShowAnesthesiaDialog(v); if (!v) handleDialogClose(); }}
         otSchedule={selectedOT}
         onSave={fetchDoctorOTSchedules}
       />

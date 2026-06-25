@@ -73,7 +73,7 @@ let cachedHospitalAt = 0;
 const fetchHospital = async () => {
   if (cachedHospital !== undefined && Date.now() - cachedHospitalAt < 5 * 60 * 1000) return cachedHospital;
   try {
-    const { data } = await supabase.from('hospital_settings').select('*').limit(1).single();
+    const { data } = await supabase.from('hospital_settings').select('*').limit(1).maybeSingle();
     cachedHospital = data; cachedHospitalAt = Date.now();
     return data;
   } catch {

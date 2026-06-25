@@ -1,0 +1,617 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SWHC — Clinical Record (Dynamic Template)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Nastaliq+Urdu:wght@500;700&family=Playfair+Display:ital,wght@0,700;1,600&family=Source+Sans+3:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --red:#b3211c;
+    --navy:#1c1f6b;
+    --ink:#1c1c24;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;background:#d9d9e2;font-family:'Source Sans 3',Arial,sans-serif;color:var(--ink);}
+
+  /* ===== LOADING & ERROR OVERLAYS ===== */
+  #loadingOverlay{
+    display:none; position:fixed; inset:0; background:rgba(217,217,226,.85);
+    z-index:1000; align-items:center; justify-content:center; flex-direction:column;
+  }
+  #loadingOverlay.active{ display:flex; }
+  .spinner{
+    width:40px; height:40px; border:4px solid var(--navy); border-top-color:transparent;
+    border-radius:50%; animation:spin .7s linear infinite;
+  }
+  @keyframes spin{ to{ transform:rotate(360deg); } }
+  #loadingOverlay p{ margin-top:12px; font-weight:600; color:var(--navy); }
+
+  #errorOverlay{
+    display:none; position:fixed; inset:0; background:rgba(217,217,226,.85);
+    z-index:1000; align-items:center; justify-content:center; flex-direction:column;
+  }
+  #errorOverlay.active{ display:flex; }
+  #errorOverlay .err-box{
+    background:#fff; padding:24px 32px; border-radius:8px;
+    border:1px solid var(--red); max-width:400px; text-align:center;
+  }
+  #errorOverlay h3{ color:var(--red); margin:0 0 8px; }
+  #errorOverlay p{ margin:0 0 12px; font-size:14px; }
+  #errorOverlay button{
+    background:var(--navy); color:#fff; border:none; padding:8px 20px;
+    border-radius:4px; cursor:pointer; font-family:inherit; font-size:13px;
+  }
+  #errorOverlay button:hover{ opacity:.9; }
+
+  /* ===== SHEET ===== */
+  .sheet{
+    width:760px;
+    margin:30px auto;
+    background:#fff;
+    padding:26px 30px 0;
+    border:1px solid #ccc;
+  }
+
+  /* ===== PRINT BUTTON ===== */
+  #printBtn{
+    position:fixed; bottom:24px; right:24px; z-index:500;
+    background:var(--navy); color:#fff; border:none; padding:10px 22px;
+    border-radius:6px; font-family:'Source Sans 3',Arial,sans-serif;
+    font-size:14px; font-weight:600; cursor:pointer; box-shadow:0 2px 8px rgba(0,0,0,.2);
+  }
+  #printBtn:hover{ opacity:.9; }
+
+  /* ===== HEADER ===== */
+  .title{
+    margin:0 0 6px;
+    font-family:'Playfair Display', Georgia, serif;
+    font-weight:700;
+    font-size:34px;
+    color:var(--red);
+    border-bottom:3px double var(--red);
+    padding-bottom:4px;
+    letter-spacing:.5px;
+  }
+
+  .head-grid{
+    display:grid;
+    grid-template-columns: 1.55fr 0.7fr 1.1fr;
+    gap:10px;
+    margin-top:10px;
+  }
+
+  .doc-block .doc-name{
+    margin:0;
+    font-family:'Playfair Display', Georgia, serif;
+    font-style:italic;
+    font-weight:700;
+    font-size:23px;
+    color:var(--navy);
+  }
+  .doc-block .cred-bold{
+    margin:3px 0 4px;
+    font-weight:700;
+    font-size:12px;
+    color:var(--ink);
+  }
+  .doc-block .cred-list{
+    margin:0;
+    padding:0;
+    font-size:11px;
+    line-height:1.55;
+    color:var(--ink);
+    font-weight:600;
+  }
+  .doc-block .cred-list div{ margin:0; }
+
+  .logo-block{
+    text-align:center;
+    padding-top:4px;
+  }
+  .logo-block .logo-wrap{
+    width:56px;
+    height:56px;
+    margin:0 auto;
+  }
+  .logo-block img{ width:56px; height:56px; object-fit:contain; display:none; }
+  .logo-block svg{ width:56px; height:56px; }
+  .logo-block .swhc{
+    color:var(--red);
+    font-weight:700;
+    font-size:15px;
+    margin-top:2px;
+    letter-spacing:.5px;
+  }
+  .logo-block .pa{
+    color:var(--navy);
+    font-weight:700;
+    font-size:10px;
+    line-height:1.3;
+    margin-top:2px;
+  }
+
+  .urdu-block{
+    direction:rtl;
+    text-align:right;
+    font-family:'Noto Nastaliq Urdu', serif;
+    color:var(--navy);
+    font-size:13px;
+    line-height:1.85;
+  }
+  .urdu-block .u-name{
+    color:var(--red);
+    font-size:19px;
+    line-height:1.4;
+  }
+
+  /* ===== PATIENT BAR ===== */
+  .ptbar{
+    margin-top:14px;
+    padding-top:10px;
+    padding-bottom:10px;
+    border-top:2px solid var(--navy);
+    border-bottom:2px solid var(--navy);
+    font-size:13px;
+    font-weight:700;
+    color:var(--ink);
+    display:flex;
+    flex-wrap:wrap;
+    gap:12px 20px;
+  }
+  .ptbar span.lbl{ color:var(--ink); }
+  .ptbar span.fill{
+    border-bottom:1.5px solid var(--ink);
+    padding:0 4px 1px 4px;
+    font-weight:400;
+    min-width:80px;
+    display:inline-block;
+  }
+
+  /* ===== BODY ===== */
+  .body-grid{
+    display:grid;
+    grid-template-columns: 2fr 3fr;
+    min-height:560px;
+  }
+  .pane-left{
+    border-right:2px solid var(--navy);
+    padding:14px 18px 14px 0;
+  }
+  .pane-right{
+    padding:14px 0 14px 18px;
+  }
+
+  .clinical-heading{
+    font-family:'Playfair Display', Georgia, serif;
+    font-style:italic;
+    font-weight:700;
+    font-size:26px;
+    color:var(--navy);
+    margin:0 0 8px;
+  }
+
+  /* ===== LINED NOTES AREA ===== */
+  .lined-notes{
+    width:100%; min-height:140px; resize:vertical;
+    border:1px solid #ccc; padding:6px 8px;
+    font-family:'Source Sans 3',Arial,sans-serif; font-size:13px; line-height:1.6;
+    background:repeating-linear-gradient(
+      transparent, transparent 23px, #e0e0e0 23px, #e0e0e0 24px
+    );
+    outline:none; color:var(--ink); margin-bottom:16px;
+  }
+
+  .pelvic-heading{
+    font-weight:700;
+    font-size:16px;
+    color:var(--navy);
+    text-decoration:underline;
+    margin:0 0 8px;
+  }
+  .pelvic-grid{
+    display:grid; grid-template-columns:1fr 1fr; gap:6px 12px; margin-bottom:14px;
+  }
+  .pelvic-field-row{
+    display:flex; align-items:center; gap:4px;
+  }
+  .pelvic-field-row label{
+    font-weight:600; font-size:13px; color:var(--ink); min-width:50px;
+  }
+  .pelvic-field-row input{
+    flex:1; border:none; border-bottom:1px solid var(--navy);
+    font-family:'Source Sans 3',Arial,sans-serif; font-size:13px;
+    padding:2px 4px; outline:none; color:var(--ink); background:transparent;
+  }
+
+  /* ===== RX SECTION ===== */
+  .rx-mark{
+    font-family:'Playfair Display', Georgia, serif;
+    font-style:italic;
+    font-weight:700;
+    font-size:34px;
+    color:var(--navy);
+    transform:rotate(-6deg);
+    display:inline-block;
+    margin-bottom:14px;
+  }
+  #medicinesList{ list-style:none; padding:0; margin:0; }
+  #medicinesList li{
+    padding:8px 0; border-bottom:1px dashed #ddd; font-size:13px; line-height:1.5;
+  }
+  #medicinesList li:last-child{ border-bottom:none; }
+  .med-name{ font-weight:700; color:var(--navy); }
+  .med-detail{ color:var(--ink); font-weight:400; }
+  .med-number{ font-weight:700; color:var(--red); margin-right:6px; }
+
+  /* ===== FOOTER ===== */
+  .footer-rule{
+    border:none;
+    border-top:2px solid var(--navy);
+    margin:0;
+  }
+  .fee-row{
+    text-align:right;
+    font-size:13px;
+    padding:8px 0 2px;
+  }
+  .fee-row .fee-label{
+    font-weight:700;
+    color:var(--red);
+  }
+  .fee-row .fee-amount{
+    font-weight:700;
+    color:var(--ink);
+    margin-left:6px;
+  }
+
+  .not-valid{
+    text-align:right;
+    font-weight:700;
+    font-size:13px;
+    color:var(--navy);
+    padding:6px 0;
+  }
+  .addr-bar{
+    background:#fff;
+    text-align:center;
+    font-weight:700;
+    font-size:13px;
+    color:var(--red);
+    padding:6px 0 18px;
+  }
+  .addr-bar .mob{ color:var(--navy); margin-left:14px; }
+
+  /* ===== @MEDIA PRINT ===== */
+  @media print{
+    @page{ size:A4; margin:10mm; }
+    html,body{ background:#fff; }
+    .sheet{
+      width:100%; margin:0; padding:26px 20px 0;
+      border:none; box-shadow:none;
+    }
+    #printBtn, #loadingOverlay, #errorOverlay{ display:none !important; }
+    .lined-notes{ border:none; background:none; min-height:120px; }
+    .pelvic-field-row input{ border-bottom-color:#999; }
+    .body-grid{ min-height:auto; }
+    .logo-block svg{ -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ===== LOADING OVERLAY ===== -->
+<div id="loadingOverlay">
+  <div class="spinner"></div>
+  <p>Loading prescription data…</p>
+</div>
+
+<!-- ===== ERROR OVERLAY ===== -->
+<div id="errorOverlay">
+  <div class="err-box">
+    <h3>Failed to Load</h3>
+    <p id="errorMessage">Could not fetch prescription data.</p>
+    <button onclick="location.reload()">Retry</button>
+  </div>
+</div>
+
+<!-- ===== PRINT BUTTON ===== -->
+<button id="printBtn" onclick="window.print()">🖨 Print Prescription</button>
+
+<!-- ===== PRESCRIPTION SHEET ===== -->
+<div class="sheet">
+
+  <!-- Clinic Name -->
+  <h1 class="title" id="clinicName">—</h1>
+
+  <!-- Header Grid: Doctor Info | Logo | Urdu -->
+  <div class="head-grid">
+    <div class="doc-block">
+      <p class="doc-name" id="doctorName">—</p>
+      <p class="cred-bold">
+        <span id="doctorQuals">—</span><br>
+        <span id="doctorTitle">—</span>
+      </p>
+      <div class="cred-list" id="doctorDetailsList"></div>
+    </div>
+
+    <div class="logo-block">
+      <div class="logo-wrap">
+        <img id="clinicLogoImg" alt="Clinic logo">
+        <svg id="clinicLogoFallback" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+          <path d="M32 56 C10 42 4 28 12 18 C18 10 28 12 32 20 C36 12 46 10 52 18 C60 28 54 42 32 56 Z"
+                fill="none" stroke="#1c1f6b" stroke-width="4" stroke-linejoin="round"/>
+          <circle cx="32" cy="26" r="5" fill="#1c1f6b"/>
+          <path d="M24 40 C24 32 40 32 40 40 C40 46 24 46 24 40 Z" fill="#1c1f6b"/>
+          <circle cx="32" cy="34" r="2.6" fill="#fff"/>
+        </svg>
+      </div>
+      <div class="swhc" id="clinicShortName">—</div>
+      <div class="pa">Phone No of PA to Clinic<br><span id="clinicPhone">—</span></div>
+    </div>
+
+    <div class="urdu-block">
+      <div class="u-name" id="urduDoctorName">—</div>
+      <div id="urduDetailsList"></div>
+    </div>
+  </div>
+
+  <!-- Patient Bar -->
+  <div class="ptbar">
+    <span><span class="lbl">Pt's Name</span> <span class="fill" id="ptName">&nbsp;</span></span>
+    <span><span class="lbl">Age</span> <span class="fill" id="ptAge">&nbsp;</span></span>
+    <span><span class="lbl">Gender</span> <span class="fill" id="ptGender">&nbsp;</span></span>
+    <span><span class="lbl">Date</span> <span class="fill" id="ptDate">&nbsp;</span></span>
+    <span><span class="lbl">MRN</span> <span class="fill" id="ptMRN">&nbsp;</span></span>
+    <span><span class="lbl">Token</span> <span class="fill" id="ptToken">&nbsp;</span></span>
+  </div>
+
+  <!-- Body Grid: Clinical Record (left) | Rx (right) -->
+  <div class="body-grid">
+    <div class="pane-left">
+
+      <!-- Clinical Record — lined notes textarea -->
+      <p class="clinical-heading">Clinical Record</p>
+      <textarea class="lined-notes" id="clinicalNotes" placeholder="Doctor's notes…"></textarea>
+
+      <!-- Pelvic U/S — input fields -->
+      <p class="pelvic-heading">Pelvic U/S</p>
+      <div class="pelvic-grid">
+        <div class="pelvic-field-row">
+          <label for="pelvicUterus">Uterus</label>
+          <input type="text" id="pelvicUterus" placeholder="—">
+        </div>
+        <div class="pelvic-field-row">
+          <label for="pelvicAdnexa">Adnexa</label>
+          <input type="text" id="pelvicAdnexa" placeholder="—">
+        </div>
+        <div class="pelvic-field-row">
+          <label for="pelvicPOD">POD</label>
+          <input type="text" id="pelvicPOD" placeholder="—">
+        </div>
+      </div>
+
+    </div>
+    <div class="pane-right">
+
+      <!-- Rx Symbol -->
+      <span class="rx-mark">R&#8339;</span>
+
+      <!-- Medicines list populated from API -->
+      <ul id="medicinesList">
+        <li style="color:#999;font-style:italic;">Loading medicines…</li>
+      </ul>
+
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <hr class="footer-rule">
+  <p class="fee-row"><span class="fee-label">Consultation Fee</span><span class="fee-amount" id="feeAmount">—</span></p>
+  <p class="not-valid">NOT VALID FOR COURT</p>
+  <div class="addr-bar">
+    Address: <span id="clinicAddress">—</span><span class="mob">Mob: <span id="clinicMobile">—</span></span>
+  </div>
+
+</div>
+
+<script>
+  /* =========================================================
+     CONFIGURATION
+     ========================================================= */
+  /* ===== SUPABASE CONFIG — fill these from your Supabase project dashboard ===== */
+  const SUPABASE_URL     = 'https://YOUR_PROJECT_REF.supabase.co';
+  const SUPABASE_ANON_KEY = 'YOUR_ANON_KEY';
+  const API_BASE         = SUPABASE_URL + '/functions/v1';
+
+  /* =========================================================
+     EXPECTED API RESPONSE SHAPE (from Edge Function)
+
+     GET /functions/v1/prescription?patientId=XX
+     {
+       clinicName: "SOUTH WEST HEALTH COMPLEX KOHAT",
+       clinicShortName: "SWHC",
+       phone: "0336-1974146",
+       address: "Opposite Millinium Guest House, Pindi Raod Kohat",
+
+       doctorName: "Prof. Dr. Musarrat Jabeen",
+       doctorQualifications: "MBBS, FCPS, CHPE, CHR",
+       doctorTitle: "Consultant Gynaecologist",
+       doctorDetails: ["Principal KMU-IMS Kohat", "…"],
+       urduDoctorName: "پروفیسر ڈاکٹر مسرت جبین",
+       urduDetails: ["ایم بی بی ایس، …", "…"],
+       consultationFee: "Rs. 1,500.00",
+
+       patientName: "Fatima Bibi",
+       age: "32 yrs",
+       gender: "Female",
+       mrn: "MR-00241",
+       tokenNumber: "TK-005",
+       visitDate: "2026-06-24",
+
+       clinicalNotes: "Patient presents with …",
+       uterus: "Anteverted, normal size",
+       adnexa: "Clear bilateral",
+       pod: "Free fluid — minimal",
+
+       medicines: [
+         { name: "Augmentin 625mg", dose: "1 tab", frequency: "BID", duration: "7 days" },
+         { name: "Omeprazole 20mg", dose: "1 cap", frequency: "OD", duration: "7 days" }
+       ]
+     }
+     ========================================================= */
+
+  /* ===== UTILITY: format date as "24 Jun 2026" ===== */
+  function formatDate(dateStr) {
+    if (!dateStr) return '—';
+    var d = new Date(dateStr);
+    if (isNaN(d.getTime())) return dateStr;
+    var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    var day = d.getDate();
+    var month = months[d.getMonth()];
+    var year = d.getFullYear();
+    return day + ' ' + month + ' ' + year;
+  }
+
+  /* ===== LOADING UI HELPERS ===== */
+  function showLoading() {
+    document.getElementById('loadingOverlay').classList.add('active');
+  }
+  function hideLoading() {
+    document.getElementById('loadingOverlay').classList.remove('active');
+  }
+  function showError(msg) {
+    document.getElementById('errorMessage').textContent = msg || 'Could not fetch prescription data.';
+    document.getElementById('errorOverlay').classList.add('active');
+  }
+
+  /* ===== RENDER: populate all DOM elements from API data ===== */
+  function renderPrescription(data) {
+    var get = function(id) { return document.getElementById(id); };
+
+    // Clinic
+    get('clinicName').textContent = data.clinicName || '—';
+    get('clinicShortName').textContent = data.clinicShortName || '—';
+    get('clinicPhone').textContent = data.phone || '—';
+    get('clinicMobile').textContent = data.phone || '—';
+    get('clinicAddress').textContent = data.address || '—';
+
+    // Doctor
+    get('doctorName').textContent = data.doctorName || '—';
+    get('doctorQuals').textContent = data.doctorQualifications || '—';
+    get('doctorTitle').textContent = data.doctorTitle || '—';
+    var detailsList = get('doctorDetailsList');
+    detailsList.innerHTML = '';
+    (data.doctorDetails || []).forEach(function(line) {
+      var div = document.createElement('div');
+      div.textContent = line;
+      detailsList.appendChild(div);
+    });
+    get('urduDoctorName').textContent = data.urduDoctorName || '—';
+    var urduList = get('urduDetailsList');
+    urduList.innerHTML = '';
+    (data.urduDetails || []).forEach(function(line) {
+      var div = document.createElement('div');
+      div.textContent = line;
+      urduList.appendChild(div);
+    });
+
+    // Logo toggle (logoUrl not in Edge Function response — uses SVG fallback)
+    var img = get('clinicLogoImg');
+    var fallback = get('clinicLogoFallback');
+    img.style.display = 'none';
+    fallback.style.display = 'block';
+
+    // Patient
+    get('ptName').textContent = data.patientName || '—';
+    get('ptAge').textContent = data.age || '—';
+    get('ptGender').textContent = data.gender || '—';
+    get('ptDate').textContent = formatDate(data.visitDate) || formatDate(new Date().toISOString());
+    get('ptMRN').textContent = data.mrn || '—';
+    get('ptToken').textContent = data.tokenNumber || '—';
+
+    // Fee
+    get('feeAmount').textContent = data.consultationFee || '—';
+
+    // Prescription — clinical notes & pelvic fields
+    get('clinicalNotes').value = data.clinicalNotes || '';
+    get('pelvicUterus').value = data.uterus || '';
+    get('pelvicAdnexa').value = data.adnexa || '';
+    get('pelvicPOD').value = data.pod || '';
+
+    // Prescription — medicines list
+    var medsList = get('medicinesList');
+    medsList.innerHTML = '';
+    var meds = data.medicines || [];
+    if (meds.length === 0) {
+      var li = document.createElement('li');
+      li.style.cssText = 'color:#999;font-style:italic;';
+      li.textContent = 'No medicines prescribed.';
+      medsList.appendChild(li);
+    } else {
+      meds.forEach(function(m, i) {
+        var li = document.createElement('li');
+        li.innerHTML =
+          '<span class="med-number">' + (i + 1) + '.</span>' +
+          '<span class="med-name">' + escapeHtml(m.name || '—') + '</span>' +
+          '<br><span class="med-detail">' +
+          escapeHtml(m.dose || '') +
+          (m.dose && m.frequency ? ' — ' : '') +
+          escapeHtml(m.frequency || '') +
+          (m.frequency && m.duration ? ' × ' : '') +
+          escapeHtml(m.duration || '') +
+          '</span>';
+        medsList.appendChild(li);
+      });
+    }
+  }
+
+  /* ===== UTILITY: basic HTML escaping ===== */
+  function escapeHtml(str) {
+    var div = document.createElement('div');
+    div.appendChild(document.createTextNode(str));
+    return div.innerHTML;
+  }
+
+  /* ===== FETCH: load data from Supabase Edge Function ===== */
+  async function loadPrescription(patientId) {
+    showLoading();
+    try {
+      var url = API_BASE + '/prescription?patientId=' + encodeURIComponent(patientId);
+      var res = await fetch(url, {
+        headers: {
+          'apikey': SUPABASE_ANON_KEY,
+          'Authorization': 'Bearer ' + SUPABASE_ANON_KEY,
+          'Content-Type': 'application/json',
+        }
+      });
+      if (!res.ok) {
+        var errBody;
+        try { errBody = await res.json(); } catch(e) {}
+        throw new Error((errBody && errBody.error) || 'Server returned ' + res.status);
+      }
+      var data = await res.json();
+      renderPrescription(data);
+    } catch (err) {
+      console.error('Fetch error:', err);
+      showError(err.message || 'Could not fetch prescription data. Please check the connection and try again.');
+    } finally {
+      hideLoading();
+    }
+  }
+
+  /* ===== INIT: read patientId from URL query & start fetch ===== */
+  (function init() {
+    var params = new URLSearchParams(window.location.search);
+    var patientId = params.get('patientId');
+    if (patientId) {
+      loadPrescription(patientId);
+    } else {
+      showError('Missing patientId — add ?patientId=XX to the URL.');
+    }
+  })();
+</script>
+
+</body>
+</html>

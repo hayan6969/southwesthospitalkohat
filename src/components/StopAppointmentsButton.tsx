@@ -23,7 +23,7 @@ export function StopAppointmentsButton() {
         .select('accepting_appointments')
         .eq('doctor_id', profile.id)
         .eq('status_date', today)
-        .single();
+        .maybeSingle();
 
       if (data) {
         setIsAcceptingAppointments(data.accepting_appointments);

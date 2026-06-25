@@ -42,7 +42,7 @@ const getHospitalSettings = async () => {
       .from('hospital_settings')
       .select('*')
       .limit(1)
-      .single();
+      .maybeSingle();
     
     if (error) throw error;
     return data;
@@ -134,7 +134,7 @@ const fetchCreatorName = async (createdBy?: string): Promise<string> => {
       .from('profiles')
       .select('first_name, last_name')
       .eq('id', createdBy)
-      .single();
+      .maybeSingle();
     if (profile) return `${profile.first_name} ${profile.last_name}`.trim();
   } catch (e) {
     console.error('Error fetching creator name:', e);

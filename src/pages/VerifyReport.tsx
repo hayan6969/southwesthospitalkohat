@@ -75,7 +75,7 @@ export default function VerifyReport() {
       try {
         const [{ data: rep }, { data: hosp }] = await Promise.all([
           supabase.rpc("verify_pathology_report_full", { p_report_number: reportNumber as string }),
-          supabase.from("hospital_settings").select("hospital_name, hospital_address, contact_number, logo_url").limit(1).single(),
+          supabase.from("hospital_settings").select("hospital_name, hospital_address, contact_number, logo_url").limit(1).maybeSingle(),
         ]);
         setReport(rep as unknown as FullReport);
         setHospital(hosp);

@@ -1,6 +1,26 @@
 import jsPDF from 'jspdf';
 import { supabase } from '@/integrations/supabase/client';
 
+const logoCache = new Map<string, string | null>();
+
+const loadImageDataUrl = async (url: string): Promise<string | null> => {
+  if (logoCache.has(url)) return logoCache.get(url) ?? null;
+  try {
+    const res = await fetch(url);
+    const blob = await res.blob();
+    const dataUrl = await new Promise<string>((resolve) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result as string);
+      reader.readAsDataURL(blob);
+    });
+    logoCache.set(url, dataUrl);
+    return dataUrl;
+  } catch {
+    logoCache.set(url, null);
+    return null;
+  }
+};
+
 interface DischargeSlipData {
   name: string;
   ageSex: string;
@@ -22,7 +42,7 @@ export const generateDischargeSlipPDF = async (data: DischargeSlipData) => {
     const { data: hospitalSettings } = await supabase
       .from('hospital_settings')
       .select('*')
-      .single();
+      .maybeSingle();
 
     const pdf = new jsPDF('p', 'mm', 'a4');
     const pageWidth = pdf.internal.pageSize.getWidth();
@@ -50,17 +70,27 @@ export const generateDischargeSlipPDF = async (data: DischargeSlipData) => {
       const img = new Image();
       img.crossOrigin = 'anonymous';
       
-      await new Promise((resolve, reject) => {
+      const verifyLogoDataUrl = await loadImageDataUrl('/verification.png');
+      await new Promise((resolve) => {
         img.onload = () => {
-          // Add the actual logo image
           const logoWidth = 40;
           const logoHeight = 40;
           const logoX = (pageWidth - logoWidth) / 2;
           
           pdf.addImage(img, 'JPEG', logoX, yPosition, logoWidth, logoHeight);
+          
+          // Verification logo at top right, same Y as hospital logo
+          if (verifyLogoDataUrl) {
+            try { pdf.addImage(verifyLogoDataUrl, 'PNG', pageWidth - margin - 18, yPosition, 18, 22); } catch { /* ignore */ }
+          }
+          
           resolve(void 0);
         };
         img.onerror = () => {
+          // Still try to add verification logo even if hospital logo fails
+          if (verifyLogoDataUrl) {
+            try { pdf.addImage(verifyLogoDataUrl, 'PNG', pageWidth - margin - 18, yPosition, 18, 22); } catch { /* ignore */ }
+          }
           console.warn('Could not load hospital logo');
           resolve(void 0);
         };
