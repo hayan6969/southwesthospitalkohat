@@ -95,7 +95,7 @@ export function LabReportsTracking() {
       while (true) {
         const { data, error } = await supabase
           .from("lab_pathology_reports")
-          .select("id, report_number, patient_id, patient_name_snapshot, referred_by, status, created_at, lab_pathology_report_test_types(lab_test_types(name, price))")
+          .select("id, report_number, patient_id, patient_name_snapshot, referred_by, status, created_at, amount, lab_pathology_report_test_types(price_snapshot, lab_test_types(name, price))")
           .gte("created_at", startISO)
           .lte("created_at", endISO)
           .order("created_at", { ascending: true })
@@ -118,7 +118,12 @@ export function LabReportsTracking() {
       return all.map((r: any): RawRow => {
         const tts = (r.lab_pathology_report_test_types ?? []) as any[];
         const tests = tts.map((t) => t.lab_test_types?.name).filter(Boolean) as string[];
-        const charges = tts.reduce((sum, t) => sum + (Number(t.lab_test_types?.price) || 0), 0);
+        const reportAmount = r.amount != null ? Number(r.amount) : 0;
+        const snapshotCharges = tts.reduce((sum, t) => sum + (Number(t.price_snapshot) || 0), 0);
+        const catalogCharges = tts.reduce((sum, t) => sum + (Number(t.lab_test_types?.price) || 0), 0);
+        const charges = reportAmount > 0 ? reportAmount
+                     : snapshotCharges > 0 ? snapshotCharges
+                     : catalogCharges;
         return {
           id: r.id,
           reportNumber: r.report_number ?? "—",
@@ -282,7 +287,7 @@ export function LabReportsTracking() {
 
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div className="text-xs text-muted-foreground">
-              Showing <b>{periodLabel}</b> · charges estimated from current test catalog prices.
+              Showing <b>{periodLabel}</b> · charges reflect actual invoice amounts (discounts included).
             </div>
             <div className="flex flex-wrap gap-2">
               <Button variant="outline" size="sm" onClick={resetFilters}>

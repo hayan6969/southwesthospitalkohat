@@ -39,7 +39,7 @@ export function PreviousBillDiscountDialog({ open, onOpenChange }: Props) {
 
       const { data: invData, error } = await supabase
         .from("invoices")
-        .select("id, invoice_number, amount, description, patient_id, created_at, status, paid_at, created_by")
+        .select("id, invoice_number, amount, description, patient_id, doctor_id, created_at, status, paid_at, created_by")
         .eq("status", "paid")
         .ilike("invoice_number", `%${invoiceSearch}%`)
         .order("created_at", { ascending: false })
@@ -58,7 +58,7 @@ export function PreviousBillDiscountDialog({ open, onOpenChange }: Props) {
           const patientIds = profiles.map((p) => p.id);
           const { data: invByPatient } = await supabase
             .from("invoices")
-            .select("id, invoice_number, amount, description, patient_id, created_at, status, paid_at, created_by")
+            .select("id, invoice_number, amount, description, patient_id, doctor_id, created_at, status, paid_at, created_by")
             .eq("status", "paid")
             .in("patient_id", patientIds)
             .order("created_at", { ascending: false })
@@ -177,6 +177,45 @@ export function PreviousBillDiscountDialog({ open, onOpenChange }: Props) {
       if (discountRecordResult.error) throw discountRecordResult.error;
       if (invoiceUpdateResult.error) {
         console.error("Failed to update invoice amount:", invoiceUpdateResult.error);
+      }
+
+      // ── Adjust doctor earnings for consultation discounts ──────────────
+      if (serviceType === "consultation" && selectedInvoice.doctor_id && discountAmount > 0) {
+        const invoiceDate = new Date(selectedInvoice.paid_at || selectedInvoice.created_at);
+        const dateStr = invoiceDate.toISOString().split("T")[0];
+        const { data: dp } = await supabase
+          .from("doctor_payments")
+          .select("id, consultation_earnings, total_earnings")
+          .eq("doctor_id", selectedInvoice.doctor_id)
+          .eq("period_start", dateStr)
+          .eq("period_end", dateStr)
+          .eq("payment_status", "pending")
+          .maybeSingle();
+        if (dp) {
+          const newConsultEarnings = Math.max(0, Number(dp.consultation_earnings) - discountAmount);
+          const newTotalEarnings = Math.max(0, Number(dp.total_earnings) - discountAmount);
+          await supabase
+            .from("doctor_payments")
+            .update({
+              consultation_earnings: newConsultEarnings,
+              total_earnings: newTotalEarnings,
+              updated_at: new Date().toISOString(),
+            })
+            .eq("id", dp.id);
+        }
+      }
+
+      // ── Update lab_pathology_reports.amount for lab discounts ─────
+      if (serviceType === "lab" && discountAmount > 0) {
+        const invoiceDate = new Date(selectedInvoice.paid_at || selectedInvoice.created_at);
+        const dateStr = invoiceDate.toISOString().split("T")[0];
+        const newAmount = newInvoiceAmount;
+        await supabase
+          .from("lab_pathology_reports")
+          .update({ amount: newAmount })
+          .eq("patient_id", selectedInvoice.patient_id)
+          .gte("created_at", dateStr + "T00:00:00")
+          .lte("created_at", dateStr + "T23:59:59");
       }
 
       await generateRefundReceiptPDF({
