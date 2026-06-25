@@ -177,7 +177,7 @@ export async function generatePathologyReportPDF(
   } catch { /* best-effort */ }
 
   const logoDataUrl = hospital?.logo_url ? await loadImageDataUrl(hospital.logo_url) : null;
-  const verifyLogoDataUrl = await loadImageDataUrl('/Lab verification.png');
+  const verifyLogoDataUrl = await loadImageDataUrl('/verification.png');
 
   // ── PDF setup ───────────────────────────────────────────────────────────────
   const doc = new jsPDF({ unit: 'mm', format: 'a4' });
