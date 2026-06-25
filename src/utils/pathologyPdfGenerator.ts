@@ -257,7 +257,7 @@ export async function generatePathologyReportPDF(
 
     // Address · contact — inside the band, left-aligned
     doc.setFontSize(7.6);
-    doc.setTextColor(...(useGrayscale ? [190, 190, 190] as [number, number, number] : [216, 228, 240]));
+    doc.setTextColor(...((useGrayscale ? [190, 190, 190] : [216, 228, 240]) as [number, number, number]));
     const addr = [hospital?.hospital_address, hospital?.contact_number].filter(Boolean).join('   ·   ');
     if (addr) doc.text(doc.splitTextToSize(addr, nameMaxW)[0], titleX, 19.6);
 
