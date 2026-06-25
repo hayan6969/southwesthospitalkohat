@@ -231,7 +231,7 @@ export default function DoctorOT() {
     setShowAnesthesiaDialog(true);
   };
 
-  const upcomingOTs = otSchedules.filter(ot => ot.status === 'pending');
+  const upcomingOTs = otSchedules.filter(ot => ot.status !== 'completed' && ot.status !== 'cancelled');
 
   // Filter and paginate completed operations
   const completedOTs = useMemo(() => {
