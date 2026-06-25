@@ -37,8 +37,17 @@ export function EditUserDialog({ user, open, onOpenChange, onUserUpdated }: Edit
   const [departmentId, setDepartmentId] = useState("");
   const [shift, setShift] = useState("");
   const [password, setPassword] = useState("");
-  
+
   const [loading, setLoading] = useState(false);
+
+  // Doctor-only fields (shown when role === 'doctor')
+  const [specialization, setSpecialization] = useState("");
+  const [licenseNumber, setLicenseNumber] = useState("");
+  const [consultationFee, setConsultationFee] = useState(0);
+  const [degrees, setDegrees] = useState("");
+  const [paPhone, setPaPhone] = useState("");
+  // Full existing template so we merge (not clobber) urdu/credentials/toggles
+  const [templateObj, setTemplateObj] = useState<Record<string, any>>({});
 
   const { data: departments } = useDepartments();
   const { data: shifts } = useShifts();
@@ -53,6 +62,32 @@ export function EditUserDialog({ user, open, onOpenChange, onUserUpdated }: Edit
       setDepartmentId(user.department_id || "");
       setShift((user as any).shift || "");
       setPassword("");
+
+      // Reset then load doctor details when editing a doctor
+      setSpecialization("");
+      setLicenseNumber("");
+      setConsultationFee(0);
+      setDegrees("");
+      setPaPhone("");
+      setTemplateObj({});
+      if (user.role === 'doctor') {
+        (async () => {
+          const { data } = await supabase
+            .from('doctors')
+            .select('specialization, license_number, consultation_fee, prescription_template')
+            .eq('id', user.id)
+            .maybeSingle();
+          if (data) {
+            setSpecialization(data.specialization || "");
+            setLicenseNumber(data.license_number || "");
+            setConsultationFee(data.consultation_fee || 0);
+            const tpl = ((data as any).prescription_template || {}) as Record<string, any>;
+            setTemplateObj(tpl);
+            setDegrees(tpl.degrees || "");
+            setPaPhone(tpl.pa_phone || "");
+          }
+        })();
+      }
     }
   }, [user, open]);
 
@@ -102,6 +137,27 @@ export function EditUserDialog({ user, open, onOpenChange, onUserUpdated }: Edit
         if (passwordError) {
           console.error('Password update error:', passwordError);
           throw new Error(`Password update failed: ${passwordError.message}`);
+        }
+      }
+
+      // For doctors, save the doctor row + merge template (preserve urdu/credentials/toggles)
+      if (role === 'doctor') {
+        const merged: Record<string, any> = { ...templateObj };
+        if (degrees.trim()) merged.degrees = degrees.trim(); else delete merged.degrees;
+        if (paPhone.trim()) merged.pa_phone = paPhone.trim(); else delete merged.pa_phone;
+
+        const doctorRow: Record<string, any> = {
+          id: user.id,
+          specialization: specialization.trim() || null,
+          license_number: licenseNumber.trim() || null,
+          consultation_fee: consultationFee,
+          prescription_template: merged,
+        };
+        const { error: docError } = await supabase
+          .from('doctors')
+          .upsert(doctorRow, { onConflict: 'id' });
+        if (docError) {
+          toast.error("Profile saved, but doctor details failed: " + docError.message);
         }
       }
 
@@ -232,6 +288,66 @@ export function EditUserDialog({ user, open, onOpenChange, onUserUpdated }: Edit
               </SelectContent>
             </Select>
           </div>
+
+          {role === 'doctor' && (
+            <div className="border rounded-lg p-4 space-y-4 bg-gray-50">
+              <h4 className="font-medium text-sm">Doctor Details (prescription slip)</h4>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="doc_specialization">Specialization</Label>
+                  <Input
+                    id="doc_specialization"
+                    value={specialization}
+                    onChange={(e) => setSpecialization(e.target.value)}
+                    placeholder="e.g., Consultant Gynaecologist"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="doc_license">License / PMDC #</Label>
+                  <Input
+                    id="doc_license"
+                    value={licenseNumber}
+                    onChange={(e) => setLicenseNumber(e.target.value)}
+                    placeholder="PMDC / License #"
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="doc_fee">Consultation Fee (PKR)</Label>
+                  <Input
+                    id="doc_fee"
+                    type="number"
+                    min="0"
+                    value={consultationFee}
+                    onChange={(e) => setConsultationFee(parseInt(e.target.value) || 0)}
+                    placeholder="e.g., 2000"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="doc_pa_phone">PA Phone</Label>
+                  <Input
+                    id="doc_pa_phone"
+                    value={paPhone}
+                    onChange={(e) => setPaPhone(e.target.value)}
+                    placeholder="0336-1974146"
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="doc_degrees">Degrees</Label>
+                <Input
+                  id="doc_degrees"
+                  value={degrees}
+                  onChange={(e) => setDegrees(e.target.value)}
+                  placeholder="MBBS, FCPS, CHPE"
+                />
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Urdu header, credentials &amp; toggles are edited by the doctor in their dashboard settings and are preserved here.
+              </p>
+            </div>
+          )}
 
           {role === 'staff' && (
             <div className="space-y-2">

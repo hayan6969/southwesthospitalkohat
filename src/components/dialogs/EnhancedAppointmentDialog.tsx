@@ -18,7 +18,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { toast } from "sonner";
 import { Plus, Search, UserPlus, Check, ChevronsUpDown, X } from "lucide-react";
 import { formatCurrency } from "@/utils/currency";
-import { generateInvoicePDF } from "@/utils/pdfGenerator";
+import { generatePrescriptionSlipPDF } from "@/utils/prescriptionSlipGenerator";
 import { getCurrentPakistanDate, getCurrentPakistanTimeString, formatDateForDisplay, formatTimeForDisplay, fromPakistanTime } from "@/utils/timezone";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
@@ -200,51 +200,43 @@ export function EnhancedAppointmentDialog() {
         user?.id
       );
       
-      toast.success("Appointment created successfully with invoice");
+      toast.success("Appointment created successfully");
       
-      // Get patient info for PDF - for new patients, we need to fetch the patient_number
-      let patientForPdf = selectedPatient;
+      const patientName = selectedPatient
+        ? `${selectedPatient.profile?.first_name} ${selectedPatient.profile?.last_name}`
+        : `${newPatient.first_name} ${newPatient.last_name}`;
+      
+      let patientNumber = selectedPatient?.patient_number || 'N/A';
       if (activeTab === "register") {
-        // For newly registered patients, fetch the patient data to get the patient_number
         const { data: newPatientData } = await supabase
           .from('patients')
           .select('patient_number')
           .eq('id', patientId)
           .single();
-        
-        patientForPdf = {
-          patient_number: newPatientData?.patient_number || 'N/A',
-          profile: {
-            first_name: newPatient.first_name,
-            last_name: newPatient.last_name,
-            email: `patient${newPatient.phone}@hims.app` // Default email format
-          }
-        };
+        patientNumber = newPatientData?.patient_number || 'N/A';
       }
-      
-      // Generate and open PDF invoice
-      const patientName = patientForPdf 
-        ? `${patientForPdf.profile?.first_name} ${patientForPdf.profile?.last_name}`
-        : `${newPatient.first_name} ${newPatient.last_name}`;
-      
-      const invoiceData = {
-        invoice_number: result.invoice.invoice_number,
-        created_at: result.invoice.created_at,
-        amount: result.invoice.amount,
-        description: result.invoice.description || `Consultation with Dr. ${selectedDoctorName?.first_name} ${selectedDoctorName?.last_name}`,
-        due_date: result.invoice.due_date,
-        status: result.invoice.status,
-        patient: {
-          patient_number: patientForPdf?.patient_number || 'N/A',
-          users: {
-            first_name: patientName.split(' ')[0],
-            last_name: patientName.split(' ').slice(1).join(' '),
-            email: patientForPdf?.profile?.email || ''
-          }
-        }
-      };
-      
-      await generateInvoicePDF(invoiceData);
+
+      const [{ data: qp }, { data: docData }] = await Promise.all([
+        supabase.from('queue_positions').select('queue_position').eq('appointment_id', result.appointment.id).maybeSingle(),
+        supabase.from('doctors').select('prescription_template, license_number, specialization').eq('id', doctorId).maybeSingle()
+      ]);
+
+      const tokenNumber = qp ? `TK-${String(qp.queue_position).padStart(3, '0')}` : null;
+
+      await generatePrescriptionSlipPDF({
+        patientName,
+        patientNumber,
+        doctorName: `${selectedDoctorName?.first_name} ${selectedDoctorName?.last_name}`,
+        doctorId,
+        doctorSpecialization: docData?.specialization || selectedDoctor?.specialization || null,
+        licenseNumber: docData?.license_number || null,
+        appointmentDate: utcDateTime,
+        appointmentType: type.trim(),
+        consultationFee,
+        bookingType: 'counter',
+        tokenNumber,
+        template: docData?.prescription_template as any || null
+      });
       
       setOpen(false);
       resetForm();
@@ -516,7 +508,7 @@ export function EnhancedAppointmentDialog() {
                   serviceType="consultation"
                 />
                 <div className="text-sm text-muted-foreground">
-                  An invoice will be generated and opened in a new tab for printing/download.
+                  A prescription slip will be generated and opened in a new tab for printing.
                   {selectedPatient?.id && " Discount (if any) will be applied automatically."}
                 </div>
               </CardContent>
@@ -537,7 +529,7 @@ export function EnhancedAppointmentDialog() {
             >
               {createAppointmentWithInvoice.isPending || createPatientWithProfile.isPending 
                 ? "Creating..." 
-                : "Create Appointment & Invoice"
+                : "Create Appointment & Slip"
               }
             </Button>
           </div>

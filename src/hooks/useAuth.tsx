@@ -25,7 +25,7 @@ type AuthContextType = {
   signIn: (email: string, password: string) => Promise<{ error: any }>;
   signUp: (email: string, password: string, userData: { first_name: string; last_name: string; role?: string }) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
-  createUserAccount: (userData: { email: string; password: string; first_name: string; last_name: string; role: string; phone?: string; department_id?: string }) => Promise<{ error: any }>;
+  createUserAccount: (userData: { email: string; password: string; first_name: string; last_name: string; role: string; phone?: string; department_id?: string }) => Promise<{ error: any; data?: string }>;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -309,7 +309,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
 
       console.log('User account created:', userData.email);
-      return { error: null };
+      return { error: null, data };
     } catch (error) {
       return { error };
     }
@@ -398,7 +398,7 @@ export const useAuth = () => {
       signIn: async () => ({ error: new Error('Auth not ready') as any }),
       signUp: async () => ({ error: new Error('Auth not ready') as any }),
       signOut: async () => {},
-      createUserAccount: async () => ({ data: null, error: new Error('Auth not ready') as any }),
+      createUserAccount: async () => ({ data: undefined, error: new Error('Auth not ready') as any }),
     } as any;
   }
   return context;

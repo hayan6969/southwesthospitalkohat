@@ -21,6 +21,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { format, isSameDay } from "date-fns";
 import { toast } from "@/hooks/use-toast";
+import { generatePrescriptionSlipPDF } from "@/utils/prescriptionSlipGenerator";
 import { generateInvoicePDF } from "@/utils/pdfGenerator";
 import { cn } from "@/lib/utils";
 
@@ -293,7 +294,7 @@ export function StaffCounter() {
 
       const { data: doctorData, error: doctorError } = await supabase
         .from('doctors')
-        .select('consultation_fee')
+        .select('consultation_fee, prescription_template, license_number')
         .eq('id', currentAppointment.doctor_id)
         .maybeSingle();
 
@@ -438,57 +439,47 @@ export function StaffCounter() {
             }
           : item
       ));
-      // Generate and open PDF
+      // Generate prescription slip
       const patientName = getPatientName(appointment.patient_id, patientNames || []);
       const doctorName = getDoctorName(appointment.doctor_id, doctorNames || []);
       
-      // Create invoice object for PDF generation with complete patient information
-      console.log('invoiceData from database:', JSON.stringify(invoiceData, null, 2));
+      // Calculate age from date_of_birth
+      let patientAge: string | null = null;
+      if (patientData?.date_of_birth) {
+        const dob = new Date(patientData.date_of_birth);
+        const today = new Date();
+        let age = today.getFullYear() - dob.getFullYear();
+        const m = today.getMonth() - dob.getMonth();
+        if (m < 0 || (m === 0 && today.getDate() < dob.getDate())) age--;
+        patientAge = `${age} yrs`;
+      }
 
-      const invoiceDataWithoutPatient = invoiceData;
-      console.log('invoiceDataWithoutPatient:', invoiceDataWithoutPatient);
-      
-      const invoiceForPDF = {
-        ...invoiceDataWithoutPatient,
-        patient: {
-          patient_number: patientData?.patient_number || 'N/A',
-          cnic: patientData?.cnic || '',
-          address: patientData?.address || '',
-          date_of_birth: patientData?.date_of_birth || '',
-          blood_type: patientData?.blood_type || '',
-          allergies: patientData?.allergies || '',
-          emergency_contact_name: patientData?.emergency_contact_name || '',
-          emergency_contact_phone: patientData?.emergency_contact_phone || '',
-          users: {
-            first_name: (patientData?.profiles as any)?.first_name || patientName.split(' ')[0] || '',
-            last_name: (patientData?.profiles as any)?.last_name || patientName.split(' ').slice(1).join(' ') || '',
-            email: (patientData?.profiles as any)?.email || '',
-            phone: (patientData?.profiles as any)?.phone || ''
-          }
-        }
-      };
+      const { data: qp } = await supabase
+        .from('queue_positions')
+        .select('queue_position')
+        .eq('appointment_id', appointment.id)
+        .maybeSingle();
 
-      console.log('Patient data for PDF:', { 
-        patientData, 
-        patient_number: patientData?.patient_number,
-        profiles: patientData?.profiles,
-        invoiceForPDF: invoiceForPDF.patient 
+      const tokenNumber = qp ? `TK-${String(qp.queue_position).padStart(3, '0')}` : null;
+
+      await generatePrescriptionSlipPDF({
+        patientName,
+        patientNumber: patientData?.patient_number || 'N/A',
+        patientAge,
+        doctorName,
+        doctorId: currentAppointment.doctor_id,
+        doctorSpecialization: doctorData?.specialization || null,
+        licenseNumber: doctorData?.license_number || null,
+        appointmentDate: appointment.appointment_date,
+        consultationFee: consultationFee || appointment.consultation_fee_at_time || 0,
+        bookingType: appointment.booking_type || 'walk-in',
+        tokenNumber,
+        template: doctorData?.prescription_template as any || null
       });
-      
-      console.log('Final patient object being passed to PDF:', {
-        patient_number: invoiceForPDF.patient.patient_number,
-        users: invoiceForPDF.patient.users,
-        emergency_contact_phone: invoiceForPDF.patient.emergency_contact_phone
-      });
-
-      // Generate and open PDF
-      console.log('About to call generateInvoicePDF with:', JSON.stringify(invoiceForPDF, null, 2));
-      console.log('Specifically patient.patient_number:', invoiceForPDF.patient?.patient_number);
-      await generateInvoicePDF(invoiceForPDF);
       
       toast({
-        title: "Invoice Generated",
-        description: "Invoice has been generated and marked as paid",
+        title: "Prescription Slip Generated",
+        description: "Prescription slip has been generated. Invoice recorded internally.",
       });
       
       // Refresh appointments
@@ -770,8 +761,8 @@ export function StaffCounter() {
                               {processingInvoice === appointment.id
                                 ? 'Processing...'
                                 : (appointment.invoice_generated_at || appointment.invoice)
-                                  ? 'Reprint Invoice'
-                                  : 'Generate Invoice'}
+                                  ? 'Print Slip'
+                                  : 'Generate Slip'}
                             </Button>
                           </TableCell>
                         </TableRow>

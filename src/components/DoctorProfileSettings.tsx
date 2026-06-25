@@ -11,6 +11,19 @@ import { Switch } from "@/components/ui/switch";
 import { Camera, Upload, Clock, Calendar, X } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 
+interface PrescriptionTemplate {
+  title_prefix?: string;
+  degrees?: string;
+  credentials?: string[];
+  urdu_name?: string;
+  urdu_lines?: string[];
+  pa_phone?: string;
+  footer_text?: string;
+  show_token?: boolean;
+  show_fee?: boolean;
+  show_qr?: boolean;
+}
+
 interface DoctorProfile {
   specialization: string;
   consultation_fee: number;
@@ -20,6 +33,7 @@ interface DoctorProfile {
   first_name: string;
   last_name: string;
   phone: string;
+  prescription_template: PrescriptionTemplate;
 }
 
 export const DoctorProfileSettings = () => {
@@ -58,7 +72,8 @@ export const DoctorProfileSettings = () => {
     avatar_url: '',
     first_name: '',
     last_name: '',
-    phone: ''
+    phone: '',
+    prescription_template: {}
   });
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -109,24 +124,16 @@ export const DoctorProfileSettings = () => {
 
       if (profileError) throw profileError;
 
-      // If no doctor record exists, create default values
-      const defaultDoctorData = {
-        specialization: '',
-        consultation_fee: 0,
-        experience_years: 0,
-        license_number: '',
-        avatar_url: ''
-      };
-
       setDoctorProfile({
-        specialization: doctorData?.specialization || defaultDoctorData.specialization,
-        consultation_fee: doctorData?.consultation_fee || defaultDoctorData.consultation_fee,
-        experience_years: doctorData?.experience_years || defaultDoctorData.experience_years,
-        license_number: doctorData?.license_number || defaultDoctorData.license_number,
-        avatar_url: doctorData?.avatar_url || defaultDoctorData.avatar_url,
+        specialization: doctorData?.specialization || '',
+        consultation_fee: doctorData?.consultation_fee || 0,
+        experience_years: doctorData?.experience_years || 0,
+        license_number: doctorData?.license_number || '',
+        avatar_url: doctorData?.avatar_url || '',
         first_name: profileData.first_name || '',
         last_name: profileData.last_name || '',
-        phone: profileData.phone || ''
+        phone: profileData.phone || '',
+        prescription_template: (doctorData?.prescription_template || {}) as PrescriptionTemplate
       });
     } catch (error) {
       console.error('Error fetching doctor profile:', error);
@@ -223,7 +230,19 @@ export const DoctorProfileSettings = () => {
     try {
       setSaving(true);
 
-      // Update doctor table
+      const template = doctorProfile.prescription_template;
+      const cleanedTemplate: Record<string, any> = {};
+      if (template.title_prefix) cleanedTemplate.title_prefix = template.title_prefix;
+      if (template.degrees) cleanedTemplate.degrees = template.degrees;
+      if (template.credentials?.length) cleanedTemplate.credentials = template.credentials;
+      if (template.urdu_name) cleanedTemplate.urdu_name = template.urdu_name;
+      if (template.urdu_lines?.length) cleanedTemplate.urdu_lines = template.urdu_lines;
+      if (template.pa_phone) cleanedTemplate.pa_phone = template.pa_phone;
+      if (template.footer_text) cleanedTemplate.footer_text = template.footer_text;
+      cleanedTemplate.show_token = template.show_token !== false;
+      cleanedTemplate.show_fee = template.show_fee !== false;
+      cleanedTemplate.show_qr = template.show_qr !== false;
+
       const { error: doctorError } = await supabase
         .from('doctors')
         .upsert({
@@ -232,7 +251,8 @@ export const DoctorProfileSettings = () => {
           consultation_fee: doctorProfile.consultation_fee,
           experience_years: doctorProfile.experience_years,
           license_number: doctorProfile.license_number,
-          avatar_url: doctorProfile.avatar_url
+          avatar_url: doctorProfile.avatar_url,
+          prescription_template: cleanedTemplate
         }, {
           onConflict: 'id'
         });
@@ -620,6 +640,143 @@ export const DoctorProfileSettings = () => {
             <p className="text-sm text-gray-600">
               This fee will be shown to patients when they book appointments with you
             </p>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Prescription Slip Template */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Prescription Slip Template</CardTitle>
+          <CardDescription>
+            Customize your letterhead that appears on every prescription slip
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="title_prefix">Title Prefix</Label>
+              <Input
+                id="title_prefix"
+                value={doctorProfile.prescription_template?.title_prefix || ''}
+                onChange={(e) => setDoctorProfile({
+                  ...doctorProfile,
+                  prescription_template: { ...doctorProfile.prescription_template, title_prefix: e.target.value }
+                })}
+                placeholder="e.g., Prof. Dr."
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="degrees">Degrees</Label>
+              <Input
+                id="degrees"
+                value={doctorProfile.prescription_template?.degrees || ''}
+                onChange={(e) => setDoctorProfile({
+                  ...doctorProfile,
+                  prescription_template: { ...doctorProfile.prescription_template, degrees: e.target.value }
+                })}
+                placeholder="MBBS, FCPS, CHPE"
+              />
+            </div>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="credentials">Credentials (one per line)</Label>
+            <Textarea
+              id="credentials"
+              value={(doctorProfile.prescription_template?.credentials || []).join('\n')}
+              onChange={(e) => setDoctorProfile({
+                ...doctorProfile,
+                prescription_template: { ...doctorProfile.prescription_template, credentials: e.target.value.split('\n').filter(Boolean) }
+              })}
+              placeholder="Principal KMU-IMS Kohat&#10;CEO DHQ & W&amp;C/LM Teaching Hospital Kohat"
+              rows={4}
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="urdu_name">Urdu Name</Label>
+              <Input
+                id="urdu_name"
+                value={doctorProfile.prescription_template?.urdu_name || ''}
+                onChange={(e) => setDoctorProfile({
+                  ...doctorProfile,
+                  prescription_template: { ...doctorProfile.prescription_template, urdu_name: e.target.value }
+                })}
+                placeholder="پروفیسر ڈاکٹر مسرت جبین"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="pa_phone">PA Phone</Label>
+              <Input
+                id="pa_phone"
+                value={doctorProfile.prescription_template?.pa_phone || ''}
+                onChange={(e) => setDoctorProfile({
+                  ...doctorProfile,
+                  prescription_template: { ...doctorProfile.prescription_template, pa_phone: e.target.value }
+                })}
+                placeholder="0336-1974146"
+              />
+            </div>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="urdu_lines">Urdu Lines (one per line)</Label>
+            <Textarea
+              id="urdu_lines"
+              value={(doctorProfile.prescription_template?.urdu_lines || []).join('\n')}
+              onChange={(e) => setDoctorProfile({
+                ...doctorProfile,
+                prescription_template: { ...doctorProfile.prescription_template, urdu_lines: e.target.value.split('\n').filter(Boolean) }
+              })}
+              placeholder="ماہر امراض نسواں"
+              rows={3}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="footer_text">Footer Text</Label>
+            <Input
+              id="footer_text"
+              value={doctorProfile.prescription_template?.footer_text || ''}
+              onChange={(e) => setDoctorProfile({
+                ...doctorProfile,
+                prescription_template: { ...doctorProfile.prescription_template, footer_text: e.target.value }
+              })}
+              placeholder="NOT VALID FOR COURT"
+            />
+          </div>
+          <div className="flex flex-wrap gap-6 pt-2">
+            <div className="flex items-center gap-2">
+              <Switch
+                id="show_token"
+                checked={doctorProfile.prescription_template?.show_token !== false}
+                onCheckedChange={(checked) => setDoctorProfile({
+                  ...doctorProfile,
+                  prescription_template: { ...doctorProfile.prescription_template, show_token: checked }
+                })}
+              />
+              <Label htmlFor="show_token">Show Token</Label>
+            </div>
+            <div className="flex items-center gap-2">
+              <Switch
+                id="show_fee"
+                checked={doctorProfile.prescription_template?.show_fee !== false}
+                onCheckedChange={(checked) => setDoctorProfile({
+                  ...doctorProfile,
+                  prescription_template: { ...doctorProfile.prescription_template, show_fee: checked }
+                })}
+              />
+              <Label htmlFor="show_fee">Show Fee</Label>
+            </div>
+            <div className="flex items-center gap-2">
+              <Switch
+                id="show_qr"
+                checked={doctorProfile.prescription_template?.show_qr !== false}
+                onCheckedChange={(checked) => setDoctorProfile({
+                  ...doctorProfile,
+                  prescription_template: { ...doctorProfile.prescription_template, show_qr: checked }
+                })}
+              />
+              <Label htmlFor="show_qr">Show QR Code</Label>
+            </div>
           </div>
         </CardContent>
       </Card>

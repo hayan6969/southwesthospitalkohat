@@ -3,6 +3,7 @@ import { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useDepartments } from "@/hooks/useDatabase";
 import { useShifts } from "@/hooks/useShifts";
+import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,6 +24,13 @@ export function AccountManagementDialog() {
   const [shift, setShift] = useState("");
   const [loading, setLoading] = useState(false);
 
+  // Doctor-only fields (shown when role === 'doctor')
+  const [specialization, setSpecialization] = useState("");
+  const [licenseNumber, setLicenseNumber] = useState("");
+  const [consultationFee, setConsultationFee] = useState(0);
+  const [degrees, setDegrees] = useState("");
+  const [paPhone, setPaPhone] = useState("");
+
   const { createUserAccount } = useAuth();
   const { data: departments } = useDepartments();
   const { data: shifts } = useShifts();
@@ -38,7 +46,7 @@ export function AccountManagementDialog() {
     setLoading(true);
 
     try {
-      const { error } = await createUserAccount({
+      const { error, data: userId } = await createUserAccount({
         email: email.trim(),
         password: password.trim(),
         first_name: firstName.trim(),
@@ -56,9 +64,29 @@ export function AccountManagementDialog() {
           toast.error("Failed to create account: " + msg);
         }
       } else {
+        // For doctors, seed/update the doctors row (handle_new_user only creates
+        // a profiles row, so we must upsert here — update() would hit zero rows).
+        if (role === 'doctor' && userId) {
+          const doctorRow: Record<string, any> = { id: userId };
+          if (specialization.trim()) doctorRow.specialization = specialization.trim();
+          if (licenseNumber.trim()) doctorRow.license_number = licenseNumber.trim();
+          if (consultationFee > 0) doctorRow.consultation_fee = consultationFee;
+          const template: Record<string, any> = {};
+          if (degrees.trim()) template.degrees = degrees.trim();
+          if (paPhone.trim()) template.pa_phone = paPhone.trim();
+          if (Object.keys(template).length > 0) doctorRow.prescription_template = template;
+
+          const { error: docError } = await supabase
+            .from('doctors')
+            .upsert(doctorRow, { onConflict: 'id' });
+          if (docError) {
+            toast.error("Account created, but doctor details were not saved: " + docError.message);
+          }
+        }
+
         toast.success(`${role} account created successfully for ${firstName} ${lastName}`);
         setOpen(false);
-        
+
         // Reset form
         setFirstName("");
         setLastName("");
@@ -68,6 +96,11 @@ export function AccountManagementDialog() {
         setRole("");
         setDepartmentId("");
         setShift("");
+        setSpecialization("");
+        setLicenseNumber("");
+        setConsultationFee(0);
+        setDegrees("");
+        setPaPhone("");
       }
     } catch (error) {
       toast.error("Failed to create account");
@@ -179,6 +212,63 @@ export function AccountManagementDialog() {
               onChange={(e) => setPhone(e.target.value)}
             />
           </div>
+
+          {role === 'doctor' && (
+            <div className="border rounded-lg p-4 space-y-4 bg-gray-50">
+              <h4 className="font-medium text-sm">Doctor Details (prescription slip)</h4>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="doc_specialization">Specialization</Label>
+                  <Input
+                    id="doc_specialization"
+                    value={specialization}
+                    onChange={(e) => setSpecialization(e.target.value)}
+                    placeholder="e.g., Consultant Gynaecologist"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="doc_license">License / PMDC #</Label>
+                  <Input
+                    id="doc_license"
+                    value={licenseNumber}
+                    onChange={(e) => setLicenseNumber(e.target.value)}
+                    placeholder="PMDC / License #"
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="doc_fee">Consultation Fee (PKR)</Label>
+                  <Input
+                    id="doc_fee"
+                    type="number"
+                    min="0"
+                    value={consultationFee}
+                    onChange={(e) => setConsultationFee(parseInt(e.target.value) || 0)}
+                    placeholder="e.g., 2000"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="doc_pa_phone">PA Phone</Label>
+                  <Input
+                    id="doc_pa_phone"
+                    value={paPhone}
+                    onChange={(e) => setPaPhone(e.target.value)}
+                    placeholder="0336-1974146"
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="doc_degrees">Degrees</Label>
+                <Input
+                  id="doc_degrees"
+                  value={degrees}
+                  onChange={(e) => setDegrees(e.target.value)}
+                  placeholder="MBBS, FCPS, CHPE"
+                />
+              </div>
+            </div>
+          )}
 
           {['staff', 'nursing', 'ota'].includes(role) && (
             <>
