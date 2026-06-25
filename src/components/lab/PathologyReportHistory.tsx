@@ -302,15 +302,17 @@ async function loadFullReport(reportId: string): Promise<PathologyPdfData | null
   const results = resultsRes.data ?? [];
   const testTypeIds = tts.map((t: any) => t.test_type_id);
 
-  // Wave 2: params (needs testTypeIds) and phone (needs patient_id) in parallel
-  const [paramsRes, phoneRes] = await Promise.all([
+  // Wave 2: params (needs testTypeIds), phone (needs patient_id), and patient_number in parallel
+  const [paramsRes, phoneRes, patientRes] = await Promise.all([
     testTypeIds.length > 0
       ? supabase.from("lab_test_parameters").select("*").in("test_type_id", testTypeIds).order("sort_order")
       : Promise.resolve({ data: [] as any[] }),
     supabase.from("profiles").select("phone").eq("id", r.patient_id).single(),
+    supabase.from("patients").select("patient_number").eq("id", r.patient_id).maybeSingle(),
   ]);
   const params = paramsRes.data ?? [];
   const phone = phoneRes.data?.phone ?? null;
+  const patientNumber = (patientRes.data as any)?.patient_number ?? null;
 
   // Wave 3: subranges (needs paramIds)
   const paramIds = params.map((p: any) => p.id);
@@ -321,7 +323,7 @@ async function loadFullReport(reportId: string): Promise<PathologyPdfData | null
   return {
     reportNumber: r.report_number,
     patientName: r.patient_name_snapshot ?? "",
-    patientId: "—",
+    patientId: patientNumber ?? "—",
     patientDbId: r.patient_id,
     currentReportId: r.id,
     patientAge: r.patient_age_snapshot,

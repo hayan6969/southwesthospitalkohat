@@ -77,11 +77,12 @@ export default function PatientLabs() {
         ? await supabase.from("lab_parameter_subranges").select("*").in("parameter_id", paramIds).order("sort_order")
         : { data: [] as any[] };
       const phone = (await supabase.from("profiles").select("phone").eq("id", r.patient_id).single()).data?.phone ?? null;
+      const pNum = (await supabase.from("patients").select("patient_number").eq("id", r.patient_id).maybeSingle()).data as any;
 
       const pdfData: PathologyPdfData = {
         reportNumber: r.report_number,
         patientName: r.patient_name_snapshot ?? "",
-        patientId: "—",
+        patientId: pNum?.patient_number ?? "—",
         patientDbId: r.patient_id,
         currentReportId: r.id,
         patientAge: r.patient_age_snapshot,
