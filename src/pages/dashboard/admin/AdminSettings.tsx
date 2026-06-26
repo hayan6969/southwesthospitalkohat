@@ -33,6 +33,7 @@ export default function AdminSettings() {
     payroll_payment_date: "",
   });
   const [saving, setSaving] = useState(false);
+  const [logoUploading, setLogoUploading] = useState(false);
 
   // Shift form state
   const [newShiftName, setNewShiftName] = useState("");
