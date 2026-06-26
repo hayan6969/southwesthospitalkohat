@@ -162,7 +162,7 @@ export default function AdminSettings() {
     if (ok) refetch();
   };
 
-
+  if (loading) {
     return (
       <AppLayout>
         <div className="flex items-center justify-center min-h-[400px]">
