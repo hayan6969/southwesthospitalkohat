@@ -9,7 +9,7 @@ import { useHospitalSettings } from "@/hooks/useHospitalSettings";
 import { useAllShifts, useCreateShift, useUpdateShift, useDeleteShift } from "@/hooks/useShifts";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
-import { Settings, DollarSign, Clock, Users, Save, Plus, Trash2, Edit2, X, Check } from "lucide-react";
+import { Settings, DollarSign, Clock, Users, Save, Plus, Trash2, Edit2, X, Check, Image as ImageIcon, Upload } from "lucide-react";
 import { formatPkrAmount } from "@/utils/currency";
 import AppLayout from "@/layouts/AppLayout";
 
