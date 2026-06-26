@@ -47,22 +47,32 @@ export const useHospitalSettings = () => {
 
   const updateSettings = async (updates: Partial<HospitalSettings>) => {
     try {
-      if (settings?.id) {
+      // First, try to get existing settings to check if we need to update or insert
+      const { data: existing, error: fetchError } = await supabase
+        .from('hospital_settings')
+        .select('*')
+        .limit(1)
+        .maybeSingle();
+
+      if (fetchError) throw fetchError;
+
+      let result;
+      if (existing?.id) {
         // Update existing settings
-        const { error } = await supabase
+        const { data, error } = await supabase
           .from('hospital_settings')
           .update(updates)
-          .eq('id', settings.id);
-
+          .eq('id', existing.id)
+          .select();
+        
         if (error) throw error;
-
-        setSettings({ ...settings, ...updates });
+        result = data;
       } else {
-        // Insert new settings record with defaults
+        // Insert new settings with defaults
         const newSettings = {
-          hospital_name: 'City General Hospital',
-          contact_number: '+92-XXX-XXXXXXX',
-          hospital_address: '123 Main Street, City Center',
+          hospital_name: updates.hospital_name || 'City General Hospital',
+          contact_number: updates.contact_number || '+92-XXX-XXXXXXX',
+          hospital_address: updates.hospital_address || '123 Main Street, City Center',
           opening_time: '08:00:00',
           closing_time: '20:00:00',
           working_days: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
@@ -73,23 +83,26 @@ export const useHospitalSettings = () => {
           emergency_consultation_fee: 10000,
           ...updates
         };
-
+        
         const { data, error } = await supabase
           .from('hospital_settings')
           .insert(newSettings)
-          .select()
-          .single();
-
+          .select();
+        
         if (error) throw error;
-
-        setSettings(data);
+        result = data;
       }
 
-      toast({
-        title: "Success",
-        description: "Hospital settings updated successfully",
-      });
-      return true;
+      if (result?.length) {
+        setSettings(result[0]);
+        toast({
+          title: "Success",
+          description: "Hospital settings updated successfully",
+        });
+        return true;
+      } else {
+        throw new Error('No data returned from update');
+      }
     } catch (error) {
       console.error('Error updating hospital settings:', error);
       toast({

@@ -78,6 +78,7 @@ export default function AdminSettings() {
         booking_lead_time_hours: parseInt(formData.booking_lead_time_hours),
         emergency_slots_percentage: parseInt(formData.emergency_slots_percentage),
         payroll_payment_date: parseInt(formData.payroll_payment_date),
+        id: settings?.id || crypto.randomUUID()
       };
       const success = await updateSettings(updateData);
       if (success) refetch();
