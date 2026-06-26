@@ -211,8 +211,34 @@ export default function AdminSettings() {
                 <Label htmlFor="hospital_address">Hospital Address</Label>
                 <Input id="hospital_address" value={formData.hospital_address} onChange={(e) => handleInputChange("hospital_address", e.target.value)} placeholder="Enter hospital address" />
               </div>
+              <div className="pt-2">
+                <Label className="flex items-center gap-2"><ImageIcon className="w-4 h-4" /> Hospital Logo</Label>
+                <div className="mt-2 flex items-center gap-4">
+                  {settings?.logo_url ? (
+                    <img src={settings.logo_url} alt="Hospital logo" className="w-16 h-16 object-contain rounded border bg-white" />
+                  ) : (
+                    <div className="w-16 h-16 rounded border bg-muted flex items-center justify-center text-xs text-muted-foreground">No logo</div>
+                  )}
+                  <div className="flex flex-col gap-2">
+                    <label className="inline-flex">
+                      <input type="file" accept="image/*" className="hidden" onChange={handleLogoUpload} disabled={logoUploading} />
+                      <span className="inline-flex items-center gap-1 px-3 py-1.5 text-sm rounded-md border bg-background hover:bg-accent cursor-pointer">
+                        <Upload className="w-4 h-4" />
+                        {logoUploading ? "Uploading..." : settings?.logo_url ? "Replace Logo" : "Upload Logo"}
+                      </span>
+                    </label>
+                    {settings?.logo_url && (
+                      <Button size="sm" variant="ghost" onClick={handleLogoRemove} className="text-destructive justify-start h-auto py-1 px-2">
+                        <Trash2 className="w-4 h-4 mr-1" /> Remove
+                      </Button>
+                    )}
+                  </div>
+                </div>
+                <p className="text-xs text-muted-foreground mt-2">Used in headers, receipts, and as the browser favicon.</p>
+              </div>
             </CardContent>
           </Card>
+
 
           {/* Financial Settings */}
           <Card>
