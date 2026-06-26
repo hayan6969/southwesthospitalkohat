@@ -127,7 +127,42 @@ export default function AdminSettings() {
     });
   };
 
-  if (loading) {
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      toast({ title: "Invalid file", description: "Please select an image file", variant: "destructive" });
+      return;
+    }
+    setLogoUploading(true);
+    try {
+      const ext = file.name.split(".").pop() || "png";
+      const path = `logo-${Date.now()}.${ext}`;
+      const { error: uploadError } = await supabase.storage
+        .from("hospital-logos")
+        .upload(path, file, { cacheControl: "3600", upsert: true });
+      if (uploadError) throw uploadError;
+      const { data: pub } = supabase.storage.from("hospital-logos").getPublicUrl(path);
+      const ok = await updateSettings({ logo_url: pub.publicUrl });
+      if (ok) {
+        refetch();
+        toast({ title: "Logo updated", description: "Reload the page to see it in the favicon." });
+      }
+    } catch (err: any) {
+      console.error(err);
+      toast({ title: "Upload failed", description: err.message || "Could not upload logo", variant: "destructive" });
+    } finally {
+      setLogoUploading(false);
+      e.target.value = "";
+    }
+  };
+
+  const handleLogoRemove = async () => {
+    const ok = await updateSettings({ logo_url: null as any });
+    if (ok) refetch();
+  };
+
+
     return (
       <AppLayout>
         <div className="flex items-center justify-center min-h-[400px]">
