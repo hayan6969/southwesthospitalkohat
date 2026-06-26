@@ -9,7 +9,7 @@ import { useHospitalSettings } from "@/hooks/useHospitalSettings";
 import { useAllShifts, useCreateShift, useUpdateShift, useDeleteShift } from "@/hooks/useShifts";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
-import { Settings, DollarSign, Clock, Users, Save, Plus, Trash2, Edit2, X, Check } from "lucide-react";
+import { Settings, DollarSign, Clock, Users, Save, Plus, Trash2, Edit2, X, Check, Image as ImageIcon, Upload } from "lucide-react";
 import { formatPkrAmount } from "@/utils/currency";
 import AppLayout from "@/layouts/AppLayout";
 
@@ -33,6 +33,7 @@ export default function AdminSettings() {
     payroll_payment_date: "",
   });
   const [saving, setSaving] = useState(false);
+  const [logoUploading, setLogoUploading] = useState(false);
 
   // Shift form state
   const [newShiftName, setNewShiftName] = useState("");
@@ -126,6 +127,41 @@ export default function AdminSettings() {
     });
   };
 
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      toast({ title: "Invalid file", description: "Please select an image file", variant: "destructive" });
+      return;
+    }
+    setLogoUploading(true);
+    try {
+      const ext = file.name.split(".").pop() || "png";
+      const path = `logo-${Date.now()}.${ext}`;
+      const { error: uploadError } = await supabase.storage
+        .from("hospital-logos")
+        .upload(path, file, { cacheControl: "3600", upsert: true });
+      if (uploadError) throw uploadError;
+      const { data: pub } = supabase.storage.from("hospital-logos").getPublicUrl(path);
+      const ok = await updateSettings({ logo_url: pub.publicUrl });
+      if (ok) {
+        refetch();
+        toast({ title: "Logo updated", description: "Reload the page to see it in the favicon." });
+      }
+    } catch (err: any) {
+      console.error(err);
+      toast({ title: "Upload failed", description: err.message || "Could not upload logo", variant: "destructive" });
+    } finally {
+      setLogoUploading(false);
+      e.target.value = "";
+    }
+  };
+
+  const handleLogoRemove = async () => {
+    const ok = await updateSettings({ logo_url: null as any });
+    if (ok) refetch();
+  };
+
   if (loading) {
     return (
       <AppLayout>
@@ -175,8 +211,34 @@ export default function AdminSettings() {
                 <Label htmlFor="hospital_address">Hospital Address</Label>
                 <Input id="hospital_address" value={formData.hospital_address} onChange={(e) => handleInputChange("hospital_address", e.target.value)} placeholder="Enter hospital address" />
               </div>
+              <div className="pt-2">
+                <Label className="flex items-center gap-2"><ImageIcon className="w-4 h-4" /> Hospital Logo</Label>
+                <div className="mt-2 flex items-center gap-4">
+                  {settings?.logo_url ? (
+                    <img src={settings.logo_url} alt="Hospital logo" className="w-16 h-16 object-contain rounded border bg-white" />
+                  ) : (
+                    <div className="w-16 h-16 rounded border bg-muted flex items-center justify-center text-xs text-muted-foreground">No logo</div>
+                  )}
+                  <div className="flex flex-col gap-2">
+                    <label className="inline-flex">
+                      <input type="file" accept="image/*" className="hidden" onChange={handleLogoUpload} disabled={logoUploading} />
+                      <span className="inline-flex items-center gap-1 px-3 py-1.5 text-sm rounded-md border bg-background hover:bg-accent cursor-pointer">
+                        <Upload className="w-4 h-4" />
+                        {logoUploading ? "Uploading..." : settings?.logo_url ? "Replace Logo" : "Upload Logo"}
+                      </span>
+                    </label>
+                    {settings?.logo_url && (
+                      <Button size="sm" variant="ghost" onClick={handleLogoRemove} className="text-destructive justify-start h-auto py-1 px-2">
+                        <Trash2 className="w-4 h-4 mr-1" /> Remove
+                      </Button>
+                    )}
+                  </div>
+                </div>
+                <p className="text-xs text-muted-foreground mt-2">Used in headers, receipts, and as the browser favicon.</p>
+              </div>
             </CardContent>
           </Card>
+
 
           {/* Financial Settings */}
           <Card>
