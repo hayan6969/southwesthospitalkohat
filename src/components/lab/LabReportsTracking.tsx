@@ -122,19 +122,18 @@ export function LabReportsTracking() {
       // applied discounts at checkout).
       const { data: usedDiscounts } = await supabase
         .from("patient_discounts")
-        .select("patient_id, discount_type, discount_value, used_at")
+        .select("patient_id, discount_type, discount_value")
         .eq("service_type", "lab")
         .not("used_at", "is", null)
         .gte("used_at", startISO)
         .lte("used_at", endISO);
-      // Group discounts by patient_id + used_at date
-      const discountMap = new Map<string, { discount_type: string; discount_value: number }[]>();
+      // Group discounts by patient_id (no date — the discount may have been
+      // consumed on a different day than the report was created).
+      const discountByPatient = new Map<string, { discount_type: string; discount_value: number }[]>();
       (usedDiscounts ?? []).forEach((d: any) => {
-        const dateKey = d.used_at?.split("T")[0] ?? "";
-        const key = `${d.patient_id}|${dateKey}`;
-        const arr = discountMap.get(key) || [];
+        const arr = discountByPatient.get(d.patient_id) || [];
         arr.push({ discount_type: d.discount_type, discount_value: Number(d.discount_value ?? 0) });
-        discountMap.set(key, arr);
+        discountByPatient.set(d.patient_id, arr);
       });
 
       return all.map((r: any): RawRow => {
@@ -147,14 +146,14 @@ export function LabReportsTracking() {
                      : snapshotCharges > 0 ? snapshotCharges
                      : catalogCharges;
 
-        // If a lab discount was consumed for this patient on the same day,
-        // the stored amount may not reflect it yet (legacy invoices).
-        const reportDate = r.created_at?.split("T")[0] ?? "";
-        const matchKey = `${r.patient_id}|${reportDate}`;
-        const discounts = discountMap.get(matchKey);
-        if (discounts && discounts.length > 0) {
+        // If a lab discount was consumed for this patient and hasn't been
+        // applied yet, adjust the charges.  We delete the entry after first
+        // use so the discount is only subtracted once across all reports
+        // for the same patient.
+        const pending = discountByPatient.get(r.patient_id);
+        if (pending && pending.length > 0) {
           let totalDiscount = 0;
-          for (const d of discounts) {
+          for (const d of pending) {
             if (d.discount_type === "percentage") {
               totalDiscount += Math.round((charges * d.discount_value) / 100);
             } else {
@@ -162,6 +161,7 @@ export function LabReportsTracking() {
             }
           }
           charges = Math.max(0, charges - totalDiscount);
+          discountByPatient.delete(r.patient_id);
         }
 
         return {
