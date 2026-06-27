@@ -71,6 +71,9 @@ import PharmacyStickers from "./pages/dashboard/pharmacy/PharmacyStickers";
 // Finance routes component
 import FinanceRoutes from "./pages/dashboard/FinanceRoutes";
 
+const ADMIN_ROLES = ['admin', 'super_admin'];
+const withAdmin = (...roles: string[]) => [...roles, ...ADMIN_ROLES];
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -142,120 +145,120 @@ const App = () => {
 
             {/* Doctor dashboard routes */}
             <Route path="/dashboard/doctor" element={
-              <ProtectedRoute allowedRoles={['doctor', 'admin']}>
+              <ProtectedRoute allowedRoles={withAdmin('doctor')}>
                 <DashboardDoctor />
               </ProtectedRoute>
             } />
             <Route path="/dashboard/doctor/schedule" element={
-              <ProtectedRoute allowedRoles={['doctor', 'admin']}>
+              <ProtectedRoute allowedRoles={withAdmin('doctor')}>
                 <DoctorSchedule />
               </ProtectedRoute>
             } />
             <Route path="/dashboard/doctor/patients" element={
-              <ProtectedRoute allowedRoles={['doctor', 'admin']}>
+              <ProtectedRoute allowedRoles={withAdmin('doctor')}>
                 <DoctorPatients />
               </ProtectedRoute>
             } />
             <Route path="/dashboard/doctor/notes" element={
-              <ProtectedRoute allowedRoles={['doctor', 'admin']}>
+              <ProtectedRoute allowedRoles={withAdmin('doctor')}>
                 <DoctorNotes />
               </ProtectedRoute>
             } />
 
             {/* Staff dashboard routes */}
             <Route path="/dashboard/staff" element={
-              <ProtectedRoute allowedRoles={['staff', 'admin']}>
+              <ProtectedRoute allowedRoles={withAdmin('staff')}>
                 <DashboardStaff />
               </ProtectedRoute>
             } />
             <Route path="/dashboard/staff/patients" element={
-              <ProtectedRoute allowedRoles={['staff', 'admin']}>
+              <ProtectedRoute allowedRoles={withAdmin('staff')}>
                 <StaffPatients />
               </ProtectedRoute>
             } />
             <Route path="/dashboard/staff/appointments" element={
-              <ProtectedRoute allowedRoles={['staff', 'admin']}>
+              <ProtectedRoute allowedRoles={withAdmin('staff')}>
                 <StaffAppointments />
               </ProtectedRoute>
             } />
             <Route path="/dashboard/staff/invoices" element={
-              <ProtectedRoute allowedRoles={['staff', 'admin']}>
+              <ProtectedRoute allowedRoles={withAdmin('staff')}>
                 <StaffInvoices />
               </ProtectedRoute>
             } />
             <Route path="/dashboard/staff/labs" element={
-              <ProtectedRoute allowedRoles={['staff', 'admin']}>
+              <ProtectedRoute allowedRoles={withAdmin('staff')}>
                 <StaffLabs />
               </ProtectedRoute>
             } />
 
             {/* OTA dashboard routes */}
             <Route path="/dashboard/ota" element={
-              <ProtectedRoute allowedRoles={['ota', 'nursing', 'admin']}>
+              <ProtectedRoute allowedRoles={withAdmin('ota', 'nursing')}>
                 <DashboardOTA />
               </ProtectedRoute>
             } />
             <Route path="/dashboard/ota/*" element={
-              <ProtectedRoute allowedRoles={['ota', 'nursing', 'admin']}>
+              <ProtectedRoute allowedRoles={withAdmin('ota', 'nursing')}>
                 <DashboardOTA />
               </ProtectedRoute>
             } />
 
             {/* IPD dashboard routes */}
             <Route path="/dashboard/ipd" element={
-              <ProtectedRoute allowedRoles={['ipd', 'admin']}>
+              <ProtectedRoute allowedRoles={withAdmin('ipd')}>
                 <DashboardIpd />
               </ProtectedRoute>
             } />
             <Route path="/dashboard/ipd/*" element={
-              <ProtectedRoute allowedRoles={['ipd', 'admin']}>
+              <ProtectedRoute allowedRoles={withAdmin('ipd')}>
                 <DashboardIpd />
               </ProtectedRoute>
             } />
 
             {/* Admin dashboard routes */}
             <Route path="/dashboard/admin" element={
-              <ProtectedRoute allowedRoles={['admin']}>
+              <ProtectedRoute allowedRoles={ADMIN_ROLES}>
                 <DashboardAdmin />
               </ProtectedRoute>
             } />
             <Route path="/dashboard/admin/departments" element={
-              <ProtectedRoute allowedRoles={['admin']}>
+              <ProtectedRoute allowedRoles={ADMIN_ROLES}>
                 <AdminDepartments />
               </ProtectedRoute>
             } />
             <Route path="/dashboard/admin/staff" element={
-              <ProtectedRoute allowedRoles={['admin']}>
+              <ProtectedRoute allowedRoles={ADMIN_ROLES}>
                 <AdminStaff />
               </ProtectedRoute>
             } />
             <Route path="/dashboard/admin/doctors" element={
-              <ProtectedRoute allowedRoles={['admin']}>
+              <ProtectedRoute allowedRoles={ADMIN_ROLES}>
                 <AdminDoctors />
               </ProtectedRoute>
             } />
             <Route path="/dashboard/admin/audit-logs" element={
-              <ProtectedRoute allowedRoles={['admin']}>
+              <ProtectedRoute allowedRoles={ADMIN_ROLES}>
                 <AdminAuditLogs />
               </ProtectedRoute>
             } />
             <Route path="/dashboard/admin/settings" element={
-              <ProtectedRoute allowedRoles={['admin']}>
+              <ProtectedRoute allowedRoles={ADMIN_ROLES}>
                 <AdminSettings />
               </ProtectedRoute>
             } />
             <Route path="/dashboard/admin/regions" element={
-              <ProtectedRoute allowedRoles={['admin']}>
+              <ProtectedRoute allowedRoles={ADMIN_ROLES}>
                 <AdminRegions />
               </ProtectedRoute>
             } />
             <Route path="/dashboard/admin/ipd" element={
-              <ProtectedRoute allowedRoles={['admin']}>
+              <ProtectedRoute allowedRoles={ADMIN_ROLES}>
                 <AdminIPD />
               </ProtectedRoute>
             } />
             <Route path="/dashboard/admin/labs" element={
-              <ProtectedRoute allowedRoles={['admin']}>
+              <ProtectedRoute allowedRoles={ADMIN_ROLES}>
                 <AdminLabs />
               </ProtectedRoute>
             } />
@@ -267,7 +270,7 @@ const App = () => {
 
             {/* Pharmacy dashboard routes */}
             <Route path="/dashboard/pharmacy" element={
-              <ProtectedRoute allowedRoles={['head_pharmacist', 'assistant_pharmacist', 'salesman_pharmacist', 'admin']}>
+              <ProtectedRoute allowedRoles={withAdmin('head_pharmacist', 'assistant_pharmacist', 'salesman_pharmacist')}>
                 <DashboardPharmacy />
               </ProtectedRoute>
             } />
@@ -279,54 +282,54 @@ const App = () => {
             {/* Nursing role redirect to OTA dashboard */}
             <Route path="/dashboard/nursing" element={<Navigate to="/dashboard/ota" replace />} />
             <Route path="/dashboard/pharmacy/medicines" element={
-              <ProtectedRoute allowedRoles={['head_pharmacist', 'assistant_pharmacist', 'admin']}>
+              <ProtectedRoute allowedRoles={withAdmin('head_pharmacist', 'assistant_pharmacist')}>
                 <PharmacyMedicines />
               </ProtectedRoute>
             } />
             <Route path="/dashboard/pharmacy/invoices" element={
-              <ProtectedRoute allowedRoles={['head_pharmacist', 'assistant_pharmacist', 'admin']}>
+              <ProtectedRoute allowedRoles={withAdmin('head_pharmacist', 'assistant_pharmacist')}>
                 <PharmacyInvoices />
               </ProtectedRoute>
             } />
             <Route path="/dashboard/pharmacy/expiry" element={
-              <ProtectedRoute allowedRoles={['head_pharmacist', 'assistant_pharmacist', 'admin']}>
+              <ProtectedRoute allowedRoles={withAdmin('head_pharmacist', 'assistant_pharmacist')}>
                 <PharmacyExpiry />
               </ProtectedRoute>
             } />
             <Route path="/dashboard/pharmacy/analytics" element={
-              <ProtectedRoute allowedRoles={['head_pharmacist', 'assistant_pharmacist', 'admin']}>
+              <ProtectedRoute allowedRoles={withAdmin('head_pharmacist', 'assistant_pharmacist')}>
                 <PharmacyAnalytics />
               </ProtectedRoute>
             } />
             <Route path="/dashboard/pharmacy/sell" element={
-              <ProtectedRoute allowedRoles={['head_pharmacist', 'assistant_pharmacist', 'salesman_pharmacist', 'admin']}>
+              <ProtectedRoute allowedRoles={withAdmin('head_pharmacist', 'assistant_pharmacist', 'salesman_pharmacist')}>
                 <PharmacySell />
               </ProtectedRoute>
             } />
             <Route path="/dashboard/pharmacy/stock" element={
-              <ProtectedRoute allowedRoles={['head_pharmacist', 'assistant_pharmacist', 'admin']}>
+              <ProtectedRoute allowedRoles={withAdmin('head_pharmacist', 'assistant_pharmacist')}>
                 <PharmacyStock />
               </ProtectedRoute>
             } />
             <Route path="/dashboard/pharmacy/returns" element={
-              <ProtectedRoute allowedRoles={['head_pharmacist', 'assistant_pharmacist', 'admin']}>
+              <ProtectedRoute allowedRoles={withAdmin('head_pharmacist', 'assistant_pharmacist')}>
                 <PharmacyReturns />
               </ProtectedRoute>
             } />
             <Route path="/dashboard/pharmacy/lab-reports" element={
-              <ProtectedRoute allowedRoles={['head_pharmacist', 'assistant_pharmacist', 'admin']}>
+              <ProtectedRoute allowedRoles={withAdmin('head_pharmacist', 'assistant_pharmacist')}>
                 <PharmacyLabReports />
               </ProtectedRoute>
             } />
             <Route path="/dashboard/pharmacy/stickers" element={
-              <ProtectedRoute allowedRoles={['head_pharmacist', 'assistant_pharmacist', 'admin']}>
+              <ProtectedRoute allowedRoles={withAdmin('head_pharmacist', 'assistant_pharmacist')}>
                 <PharmacyStickers />
               </ProtectedRoute>
             } />
 
             {/* Finance dashboard routes - All wrapped in FinanceLayout */}
             <Route path="/dashboard/finance/*" element={
-              <ProtectedRoute allowedRoles={['finance', 'admin']}>
+              <ProtectedRoute allowedRoles={withAdmin('finance')}>
                 <FinanceRoutes />
               </ProtectedRoute>
             } />
@@ -337,19 +340,19 @@ const App = () => {
 
             {/* Store & Inventory Manager dashboard */}
             <Route path="/dashboard/store" element={
-              <ProtectedRoute allowedRoles={['store', 'inventory_manager', 'admin']}>
+              <ProtectedRoute allowedRoles={withAdmin('store', 'inventory_manager')}>
                 <DashboardStore />
               </ProtectedRoute>
             } />
             <Route path="/dashboard/store/*" element={
-              <ProtectedRoute allowedRoles={['store', 'inventory_manager', 'admin']}>
+              <ProtectedRoute allowedRoles={withAdmin('store', 'inventory_manager')}>
                 <DashboardStore />
               </ProtectedRoute>
             } />
 
             {/* Lab dashboard routes */}
             <Route path="/dashboard/lab" element={
-              <ProtectedRoute allowedRoles={['lab', 'admin']}>
+              <ProtectedRoute allowedRoles={withAdmin('lab')}>
                 <DashboardLab />
               </ProtectedRoute>
             } />

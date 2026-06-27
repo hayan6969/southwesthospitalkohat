@@ -161,7 +161,7 @@ export default function InvoiceAuditTrail() {
 
   const handleCsv = () => {
     try {
-      const header = ["Time", "Invoice #", "Operation", "Changed By", "Old Amount", "New Amount", "Old Status", "New Status", "Changed Fields"];
+      const header = ["Time", "Invoice #", "Operation", "Changed By", "Authorized By", "Old Amount", "New Amount", "Old Status", "New Status", "Changed Fields"];
       const csvRows = [header];
       for (const r of filteredRows) {
         csvRows.push([
@@ -169,6 +169,7 @@ export default function InvoiceAuditTrail() {
           r.invoice_number,
           r.operation,
           r.changed_by_name,
+          r.authorizedBy,
           r.old_amount != null ? String(r.old_amount) : "",
           r.new_amount != null ? String(r.new_amount) : "",
           r.old_status || "",
@@ -394,6 +395,9 @@ export default function InvoiceAuditTrail() {
                               <Badge key={f} variant="outline" className="mr-1 border-gray-300 text-gray-600">{f}</Badge>
                             ))
                           : "—"}
+                        {r.authorizedBy && (
+                          <div className="text-[11px] text-amber-700 mt-1">Authorized by: <span className="font-medium">{r.authorizedBy}</span></div>
+                        )}
                       </TableCell>
                     </TableRow>
                   ))}

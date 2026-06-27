@@ -17,8 +17,9 @@ const Index = () => {
       console.log('Redirecting to dashboard for role:', profile.role);
       
       let dashboardRole;
-      // Handle special role mappings
-      if (profile.role.includes('pharmacist')) {
+      if (profile.role === 'super_admin') {
+        dashboardRole = 'admin';
+      } else if (profile.role.includes('pharmacist')) {
         dashboardRole = 'pharmacy';
       } else if (profile.role === 'nursing' as any) {
         dashboardRole = 'ota';
@@ -95,8 +96,9 @@ const Index = () => {
                 <Button 
                   onClick={() => {
                     let dashboardRole;
-                    // Handle special role mappings
-                    if (profile.role.includes('pharmacist')) {
+                    if (profile.role === 'super_admin') {
+                      dashboardRole = 'admin';
+                    } else if (profile.role.includes('pharmacist')) {
                       dashboardRole = 'pharmacy';
                     } else if (profile.role === 'nursing' as any) {
                       dashboardRole = 'ota';
@@ -111,7 +113,7 @@ const Index = () => {
                 </Button>
               </div>
               
-              {profile?.role === 'admin' && (
+              {(profile?.role === 'admin' || profile?.role === 'super_admin') && (
                 <div className="border-t pt-6">
                   <div className="text-center space-y-4">
                     <h3 className="text-lg font-semibold">Admin Functions</h3>

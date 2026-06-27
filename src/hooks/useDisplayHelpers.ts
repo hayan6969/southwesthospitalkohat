@@ -230,7 +230,6 @@ export const useSearchPatientsWithNames = (searchTerm: string) => {
           profileMap.set(profile.id, profile);
         });
 
-        // Fetch missing profiles for patients found by patient_number but not by profile search
         const missingProfileIds = Array.from(patientMap.keys()).filter((id) => !profileMap.has(id));
         if (missingProfileIds.length > 0) {
           const { data: missingProfiles } = await supabase
@@ -278,3 +277,31 @@ export const getDoctorName = (doctorId: string, doctorNames: any[]) => {
   const doctor = doctorNames?.find(d => d.id === doctorId);
   return doctor ? `Dr. ${doctor.first_name} ${doctor.last_name}` : 'Unknown Doctor';
 };
+
+// ── Role display helpers ──────────────────────────────────────────────
+
+const ROLE_LABELS: Record<string, { label: string; color: string }> = {
+  super_admin:         { label: "Super Admin", color: "bg-violet-100 text-violet-800" },
+  admin:               { label: "Admin",       color: "bg-blue-100 text-blue-800" },
+  doctor:              { label: "Doctor",      color: "bg-green-100 text-green-800" },
+  staff:               { label: "Staff",       color: "bg-cyan-100 text-cyan-800" },
+  ota:                 { label: "OTA",         color: "bg-orange-100 text-orange-800" },
+  nursing:             { label: "Nursing",     color: "bg-pink-100 text-pink-800" },
+  ipd:                 { label: "IPD",         color: "bg-indigo-100 text-indigo-800" },
+  head_pharmacist:     { label: "Head Pharmacist",    color: "bg-teal-100 text-teal-800" },
+  assistant_pharmacist:{ label: "Asst. Pharmacist",   color: "bg-teal-50 text-teal-700" },
+  salesman_pharmacist: { label: "Salesman Pharmacist",color: "bg-teal-50 text-teal-600" },
+  patient:             { label: "Patient",     color: "bg-gray-100 text-gray-800" },
+  finance:             { label: "Finance",     color: "bg-emerald-100 text-emerald-800" },
+  inventory_manager:   { label: "Inventory Manager",  color: "bg-yellow-100 text-yellow-800" },
+  store:               { label: "Store",       color: "bg-amber-100 text-amber-800" },
+  lab:                 { label: "Lab",         color: "bg-purple-100 text-purple-800" },
+};
+
+export function getRoleLabel(role: string): string {
+  return ROLE_LABELS[role]?.label || role;
+}
+
+export function getRoleBadgeClass(role: string): string {
+  return ROLE_LABELS[role]?.color || "bg-gray-100 text-gray-800";
+}

@@ -1,4 +1,5 @@
 import { useLocation, useNavigate } from "react-router-dom";
+import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { 
   Settings, 
@@ -10,7 +11,8 @@ import {
   Package,
   Warehouse,
   BedDouble,
-  FlaskConical
+  FlaskConical,
+  ShieldAlert
 } from "lucide-react";
 
 const dashboards = [
@@ -18,6 +20,7 @@ const dashboards = [
   { path: "/dashboard/admin/departments", label: "Departments", icon: Building2 },
   { path: "/dashboard/admin/ipd", label: "IPD", icon: BedDouble },
   { path: "/dashboard/admin/labs", label: "Lab", icon: FlaskConical },
+  { path: "/dashboard/admin/invoice-audit", label: "Audit", icon: ShieldAlert, superAdminOnly: true as const },
   { path: "/dashboard/finance", label: "Finance", icon: DollarSign },
   { path: "/dashboard/pharmacy", label: "Pharmacy", icon: Pill },
   { path: "/dashboard/staff", label: "Staff", icon: UserCog },
@@ -27,8 +30,10 @@ const dashboards = [
 ];
 
 export function AdminDashboardNav() {
+  const { profile } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
+  const visibleDashboards = dashboards.filter((d) => !(d as any).superAdminOnly || profile?.role === 'super_admin');
 
   const getCurrentDashboard = () => {
     const fullPath = location.pathname + location.search;
@@ -40,7 +45,7 @@ export function AdminDashboardNav() {
       return "/dashboard/store";
     }
     const path = location.pathname;
-    const sorted = [...dashboards].filter(d => !d.path.includes("?")).sort((a, b) => b.path.length - a.path.length);
+    const sorted = [...visibleDashboards].filter(d => !d.path.includes("?")).sort((a, b) => b.path.length - a.path.length);
     return sorted.find(d => path.startsWith(d.path))?.path || "";
   };
 
@@ -48,7 +53,7 @@ export function AdminDashboardNav() {
 
   return (
     <div className="flex items-center gap-1.5 sm:gap-2 whitespace-nowrap overflow-x-auto">
-      {dashboards.map((dashboard) => {
+      {visibleDashboards.map((dashboard) => {
         const Icon = dashboard.icon;
         const isActive = currentDashboard === dashboard.path;
         
