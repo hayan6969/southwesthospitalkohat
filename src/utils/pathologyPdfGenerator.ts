@@ -599,13 +599,14 @@ export async function generatePathologyReportPDF(
         const cRead  = COL_RESULT;
         const cGroup = COL_REF;
         const groupBoxLeft = cGroup - 3;
-        const groupRight = COL_UNIT_DIV - 1;
+        const groupRight = COL_REF_DIV;
 
         const drawSubHeader = () => {
           doc.setFont('helvetica', 'bold'); doc.setFontSize(7.5); doc.setTextColor(110, 110, 110);
           doc.text('Value', cValue, y);
           doc.text(p.unit ? `Reading (${p.unit})` : 'Reading', cRead, y);
-          if (hasGroups) doc.text('Interpretation', cGroup, y);
+          doc.text('Reference Value', cGroup, y);
+          doc.text('Unit', COL_UNIT, y);
           doc.setDrawColor(215, 215, 215); doc.setLineWidth(0.2);
           doc.line(marginX + 2, y + 1.4, groupRight, y + 1.4);
           y += 4.6;
@@ -644,7 +645,8 @@ export async function generatePathologyReportPDF(
             doc.setFont('helvetica', x.selected ? 'bold' : 'normal');
             doc.setFontSize(8); doc.setTextColor(55, 55, 55);
             doc.text(x.value, cValue, y);
-            if (x.reading) doc.text(x.reading, cRead, y);
+            if (x.reading) doc.text(x.reading, cGroup, y);
+            doc.text(p.unit || '', COL_UNIT, y);
             doc.setTextColor(0, 0, 0); doc.setFont('helvetica', 'normal'); doc.setFontSize(9);
             y += rowH;
             k++;
