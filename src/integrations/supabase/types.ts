@@ -931,6 +931,62 @@ export type Database = {
         }
         Relationships: []
       }
+      invoice_audit_log: {
+        Row: {
+          changed_at: string
+          changed_by: string | null
+          changed_fields: string[] | null
+          id: string
+          invoice_id: string | null
+          invoice_number: string | null
+          new_amount: number | null
+          new_row: Json | null
+          new_status: string | null
+          old_amount: number | null
+          old_row: Json | null
+          old_status: string | null
+          operation: string
+        }
+        Insert: {
+          changed_at?: string
+          changed_by?: string | null
+          changed_fields?: string[] | null
+          id?: string
+          invoice_id?: string | null
+          invoice_number?: string | null
+          new_amount?: number | null
+          new_row?: Json | null
+          new_status?: string | null
+          old_amount?: number | null
+          old_row?: Json | null
+          old_status?: string | null
+          operation: string
+        }
+        Update: {
+          changed_at?: string
+          changed_by?: string | null
+          changed_fields?: string[] | null
+          id?: string
+          invoice_id?: string | null
+          invoice_number?: string | null
+          new_amount?: number | null
+          new_row?: Json | null
+          new_status?: string | null
+          old_amount?: number | null
+          old_row?: Json | null
+          old_status?: string | null
+          operation?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoice_audit_log_changed_by_fkey"
+            columns: ["changed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       invoices: {
         Row: {
           amount: number
