@@ -576,88 +576,92 @@ export async function generatePathologyReportPDF(
 
       y += 5 * Math.max(nameLines.length, refLines.length, 1);
 
-      // ── Interpretation sub-scale ──────────────────────────────────────────
+      // ── Sub-range / Interpretation scale ──────────────────────────────────
       if (p.display_all_subranges && p.subranges && p.subranges.length > 0) {
         const isReferenceScale = p.ref_min != null || p.ref_max != null;
-        const parsed = p.subranges.map((sr) => {
-          const raw = sr.ref_display || (sr.ref_min != null && sr.ref_max != null ? `${sr.ref_min} - ${sr.ref_max}` : '');
-          const m = raw.match(/^(.*?)\s*\(([^)]*)\)\s*$/);
-          return {
-            sr,
-            value: sr.label || '—',
-            reading: (m ? m[1] : raw).trim(),
-            group: (m ? m[2] : '').trim(),
-            selected: !isReferenceScale && (
-              (p.subrange_id && sr.id === p.subrange_id) ||
-              (!p.subrange_id && !!p.subrange_used && sr.label === p.subrange_used)
-            ),
-          };
-        });
-        const hasGroups = parsed.some((x) => x.group);
-        const rowH = 4.6;
-        const cValue = COL_NAME_START + 4;
-        const cRead  = COL_RESULT;
-        const cGroup = COL_REF;
-        const groupBoxLeft = cGroup - 3;
-        const groupRight = COL_REF_DIV;
 
-        const drawSubHeader = () => {
-          doc.setFont('helvetica', 'bold'); doc.setFontSize(7.5); doc.setTextColor(110, 110, 110);
-          doc.text('Value', cValue, y);
-          doc.text(p.unit ? `Reading (${p.unit})` : 'Reading', cRead, y);
-          doc.text('Reference Value', cGroup, y);
-          doc.text('Unit', COL_UNIT, y);
-          doc.setDrawColor(215, 215, 215); doc.setLineWidth(0.2);
-          doc.line(marginX + 2, y + 1.4, groupRight, y + 1.4);
-          y += 4.6;
-          doc.setTextColor(0, 0, 0);
-        };
-        const drawGroupBox = (topY: number, grp: string) => {
-          if (!hasGroups || !grp) return;
-          const boxBottom = y - 3.3;
-          doc.setDrawColor(150, 150, 150); doc.setLineWidth(0.2);
-          doc.rect(groupBoxLeft, topY, groupRight - groupBoxLeft, boxBottom - topY);
-          doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5); doc.setTextColor(0, 0, 0);
-          const lines = doc.splitTextToSize(grp, groupRight - cGroup - 1);
-          doc.text(lines, cGroup, topY + (boxBottom - topY) / 2 - (lines.length - 1) * 1.5 + 1.4);
-        };
+        // Sub-header row
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(7.5);
+        doc.setTextColor(110, 110, 110);
+        doc.text('Value',                         COL_NAME_START + 4, y);
+        doc.text(p.unit ? `Reading (${p.unit})` : 'Reading', COL_RESULT, y);
+        doc.text('Reference Value',               COL_REF,    y);
+        doc.text('Unit',                          COL_UNIT,   y);
+        doc.setDrawColor(215, 215, 215);
+        doc.setLineWidth(0.2);
+        doc.line(marginX + 2, y + 1.4, COL_REF_DIV, y + 1.4);
+        y += 4.6;
+        doc.setTextColor(0, 0, 0);
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(8);
 
-        drawSubHeader();
-        let i = 0;
-        while (i < parsed.length) {
-          const grp = parsed[i].group;
-          let segTop = y - 3.3;
-          let k = i;
-          while (k < parsed.length && parsed[k].group === grp) {
-            if (y > safeBottom()) {
-              drawGroupBox(segTop, grp);
-              closeTableSegment(y);
-              y = newPage();
-              drawColumnHeader();
-              drawSubHeader();
-              segTop = y - 3.3;
-            }
-            const x = parsed[k];
-            if (x.selected) {
-              doc.setFillColor(255, 249, 196);
-              doc.rect(marginX + 0.3, y - 3.3, contentWidth - 0.6, rowH, 'F');
-            }
-            doc.setFont('helvetica', x.selected ? 'bold' : 'normal');
-            doc.setFontSize(8); doc.setTextColor(55, 55, 55);
-            doc.text(x.value, cValue, y);
-            if (x.reading) doc.text(x.reading, cGroup, y);
-            doc.text(p.unit || '', COL_UNIT, y);
-            doc.setTextColor(0, 0, 0); doc.setFont('helvetica', 'normal'); doc.setFontSize(9);
-            y += rowH;
-            k++;
+        // Sub-range data rows
+        for (const sr of p.subranges) {
+          if (y > safeBottom()) {
+            closeTableSegment(y);
+            y = newPage();
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(10);
+            doc.setTextColor(...accentTextCol);
+            doc.text(`${tt.name.toUpperCase()} (cont.)`, pageWidth / 2, y, { align: 'center' });
+            doc.setTextColor(0, 0, 0);
+            y += 5;
+            drawColumnHeader();
+            // Re-draw sub-header
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(7.5);
+            doc.setTextColor(110, 110, 110);
+            doc.text('Value',                         COL_NAME_START + 4, y);
+            doc.text(p.unit ? `Reading (${p.unit})` : 'Reading', COL_RESULT, y);
+            doc.text('Reference Value',               COL_REF,    y);
+            doc.text('Unit',                          COL_UNIT,   y);
+            doc.setDrawColor(215, 215, 215);
+            doc.setLineWidth(0.2);
+            doc.line(marginX + 2, y + 1.4, COL_REF_DIV, y + 1.4);
+            y += 4.6;
+            doc.setTextColor(0, 0, 0);
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(8);
           }
-          drawGroupBox(segTop, grp);
-          i = k;
-          if (i < parsed.length) y += 1.6;
+
+          const refDisplay = sr.ref_display || (
+            sr.ref_min != null && sr.ref_max != null
+              ? `${sr.ref_min} - ${sr.ref_max}`
+              : '—'
+          );
+          const isSelected = !isReferenceScale && (
+            (p.subrange_id && sr.id === p.subrange_id) ||
+            (!p.subrange_id && !!p.subrange_used && sr.label === p.subrange_used)
+          );
+
+          if (isSelected) {
+            doc.setFillColor(255, 249, 196);
+            doc.rect(marginX + 0.3, y - 3.3, contentWidth - 0.6, 4.6, 'F');
+          }
+
+          doc.setFont('helvetica', isSelected ? 'bold' : 'normal');
+          doc.setFontSize(8);
+          doc.setTextColor(55, 55, 55);
+
+          // Investigation — sub-range label (e.g. "310 mg/dl")
+          doc.text(sr.label || '—', COL_NAME_START + 4, y);
+          // Reference — full display string (e.g. "11% (Very Poor Control)")
+          doc.text(refDisplay, COL_REF, y);
+          // Unit — every row (e.g. "%")
+          doc.text(p.unit || '', COL_UNIT, y);
+
+          doc.setTextColor(0, 0, 0);
+          doc.setFont('helvetica', 'normal');
+          doc.setFontSize(9);
+          y += 4.6;
         }
+
         y += 2;
         doc.setLineWidth(0.3);
-        doc.setTextColor(0, 0, 0); doc.setFont('helvetica', 'normal'); doc.setFontSize(9);
+        doc.setTextColor(0, 0, 0);
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(9);
       }
     } // params
 
