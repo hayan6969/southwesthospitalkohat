@@ -85,7 +85,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    if (profile?.role !== 'admin') {
+    if (profile?.role !== 'admin' && profile?.role !== 'super_admin') {
       console.error('Insufficient permissions - user role:', profile?.role);
       return new Response(
         JSON.stringify({ error: 'Insufficient permissions - admin role required' }),
