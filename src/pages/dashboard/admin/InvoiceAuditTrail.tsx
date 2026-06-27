@@ -85,9 +85,10 @@ export default function InvoiceAuditTrail() {
 
   useEffect(() => { setPage(1); }, [startISO, endISO, search, opFilter]);
 
-  const { data: auditRows, isLoading, isError } = useQuery<AuditRow[]>({
+  const { data: auditRows, isLoading, isError, error: queryError } = useQuery<AuditRow[]>({
     queryKey: ["invoice_audit_log", startISO, endISO],
     staleTime: 30_000,
+    retry: 1,
     refetchOnWindowFocus: false,
     queryFn: async () => {
       const { data, error } = await supabase
@@ -375,7 +376,7 @@ export default function InvoiceAuditTrail() {
                 </TableHeader>
                 <TableBody>
                   {isLoading && <TableRow><TableCell colSpan={7} className="text-center py-6">Loading…</TableCell></TableRow>}
-                  {isError && !isLoading && <TableRow><TableCell colSpan={7} className="text-center py-6 text-red-600">Failed to load audit trail.</TableCell></TableRow>}
+                  {isError && !isLoading && <TableRow><TableCell colSpan={7} className="text-center py-6 text-red-600">Failed to load audit trail. {(queryError as any)?.message || ''}</TableCell></TableRow>}
                   {!isLoading && !isError && filteredRows.length === 0 && (
                     <TableRow><TableCell colSpan={7} className="text-center py-6 text-muted-foreground">No changes found for this period.</TableCell></TableRow>
                   )}
