@@ -30,6 +30,9 @@ export function PreviousBillDiscountDialog({ open, onOpenChange }: Props) {
   const [discountType, setDiscountType] = useState("percentage");
   const [discountValue, setDiscountValue] = useState<number | "">("");
   const [reason, setReason] = useState("");
+  // Who instructed / authorized this discount (separate from the operator who
+  // processes it — captured into the invoice so it shows in the audit trail).
+  const [authorizedBy, setAuthorizedBy] = useState("");
 
   // Search paid invoices (also fetch created_by for staff attribution)
   const { data: invoices, isLoading: searching } = useQuery({
@@ -158,14 +161,14 @@ export function PreviousBillDiscountDialog({ open, onOpenChange }: Props) {
         supabase.from("refunds").insert({
           amount: discountAmount,
           refund_type: "discount_adjustment",
-          description: `Discount on previous bill ${selectedInvoice.invoice_number} - ${discountLabel}. Patient: ${patientName}. Billed by: ${billedByStaff}. Reason: ${reason || "N/A"}`,
+          description: `Discount on previous bill ${selectedInvoice.invoice_number} - ${discountLabel}. Patient: ${patientName}. Billed by: ${billedByStaff}. Authorized by: ${authorizedBy.trim() || "N/A"}. Reason: ${reason || "N/A"}`,
           patient_id: selectedInvoice.patient_id,
           related_record_id: selectedInvoice.id,
           processed_by: profile?.id,
         }),
         supabase.from("invoices").update({
           amount: newInvoiceAmount,
-          description: `${selectedInvoice.description || ''} [Adjusted: ${discountLabel}, Refund: ${formatPkrAmount(discountAmount)}]`,
+          description: `${selectedInvoice.description || ''} [Adjusted: ${discountLabel}, Refund: ${formatPkrAmount(discountAmount)}]${authorizedBy.trim() ? ` [Authorized by: ${authorizedBy.trim()}]` : ''}`,
         }).eq("id", selectedInvoice.id),
         supabase.from("patient_discounts").insert({
           patient_id: selectedInvoice.patient_id,
@@ -274,6 +277,7 @@ export function PreviousBillDiscountDialog({ open, onOpenChange }: Props) {
     setDiscountType("percentage");
     setDiscountValue("");
     setReason("");
+    setAuthorizedBy("");
   };
 
   return (
@@ -396,6 +400,18 @@ export function PreviousBillDiscountDialog({ open, onOpenChange }: Props) {
                     placeholder={discountType === "percentage" ? "e.g. 10" : "e.g. 500"}
                   />
                 </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Authorized / Instructed By</Label>
+                <Input
+                  value={authorizedBy}
+                  onChange={(e) => setAuthorizedBy(e.target.value)}
+                  placeholder="Who instructed / approved this discount? (e.g. Dr. Musarrat, MS)"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Recorded on the invoice and shown in the Invoice Audit Trail — distinct from the operator processing it.
+                </p>
               </div>
 
               <div className="space-y-2">

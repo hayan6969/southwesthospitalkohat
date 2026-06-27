@@ -31,6 +31,7 @@ interface AuditRow {
   old_row: any;
   new_row: any;
   changed_fields: string[];
+  authorizedBy: string;
 }
 
 const localDate = (ymd: string) => new Date(`${ymd}T00:00:00`);
@@ -122,6 +123,11 @@ export default function InvoiceAuditTrail() {
         old_row: r.old_row,
         new_row: r.new_row,
         changed_fields: r.changed_fields || [],
+        authorizedBy: (() => {
+          const desc = (r.new_row?.description || r.old_row?.description || "") as string;
+          const m = desc.match(/\[Authorized by:\s*([^\]]*)\]/i);
+          return m ? m[1].trim() : "";
+        })(),
       }));
     },
   });
