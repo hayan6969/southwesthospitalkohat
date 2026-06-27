@@ -256,7 +256,7 @@ export default function FinanceDiscounts() {
                         </TableCell>
                         <TableCell>
                           <Badge variant="secondary">
-                            {discount.discount_type === 'percentage' ? `% ${discount.discount_value}%` : formatPkrAmount(discount.discount_value)}
+                            {discount.discount_type === 'percentage' ? `${discount.discount_value}%` : formatPkrAmount(discount.discount_value)}
                           </Badge>
                         </TableCell>
                         <TableCell>

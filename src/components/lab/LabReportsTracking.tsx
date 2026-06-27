@@ -116,15 +116,54 @@ export function LabReportsTracking() {
         (pats ?? []).forEach((p: any) => { if (p.patient_number) patientMap.set(p.id, p.patient_number); });
       }
 
+      // Fetch consumed lab discounts in the same range so we can adjust
+      // charges for reports whose stored amount does not yet reflect the
+      // discount (e.g. invoices created before StaffPathologyBilling
+      // applied discounts at checkout).
+      const { data: usedDiscounts } = await supabase
+        .from("patient_discounts")
+        .select("patient_id, discount_type, discount_value, used_at")
+        .eq("service_type", "lab")
+        .not("used_at", "is", null)
+        .gte("used_at", startISO)
+        .lte("used_at", endISO);
+      // Group discounts by patient_id + used_at date
+      const discountMap = new Map<string, { discount_type: string; discount_value: number }[]>();
+      (usedDiscounts ?? []).forEach((d: any) => {
+        const dateKey = d.used_at?.split("T")[0] ?? "";
+        const key = `${d.patient_id}|${dateKey}`;
+        const arr = discountMap.get(key) || [];
+        arr.push({ discount_type: d.discount_type, discount_value: Number(d.discount_value ?? 0) });
+        discountMap.set(key, arr);
+      });
+
       return all.map((r: any): RawRow => {
         const tts = (r.lab_pathology_report_test_types ?? []) as any[];
         const tests = tts.map((t) => t.lab_test_types?.name).filter(Boolean) as string[];
         const reportAmount = r.amount != null ? Number(r.amount) : 0;
         const snapshotCharges = tts.reduce((sum, t) => sum + (Number(t.price_snapshot) || 0), 0);
         const catalogCharges = tts.reduce((sum, t) => sum + (Number(t.lab_test_types?.price) || 0), 0);
-        const charges = reportAmount > 0 ? reportAmount
+        let charges = reportAmount > 0 ? reportAmount
                      : snapshotCharges > 0 ? snapshotCharges
                      : catalogCharges;
+
+        // If a lab discount was consumed for this patient on the same day,
+        // the stored amount may not reflect it yet (legacy invoices).
+        const reportDate = r.created_at?.split("T")[0] ?? "";
+        const matchKey = `${r.patient_id}|${reportDate}`;
+        const discounts = discountMap.get(matchKey);
+        if (discounts && discounts.length > 0) {
+          let totalDiscount = 0;
+          for (const d of discounts) {
+            if (d.discount_type === "percentage") {
+              totalDiscount += Math.round((charges * d.discount_value) / 100);
+            } else {
+              totalDiscount += Math.min(d.discount_value, charges);
+            }
+          }
+          charges = Math.max(0, charges - totalDiscount);
+        }
+
         return {
           id: r.id,
           reportNumber: r.report_number ?? "—",

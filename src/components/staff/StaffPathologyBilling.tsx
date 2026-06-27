@@ -45,6 +45,7 @@ import { toast } from "sonner";
 import { formatPkrAmount } from "@/utils/currency";
 import { format } from "date-fns";
 import { generateLabInvoicePDF } from "@/utils/pdfGenerator";
+import { applyPatientDiscount } from "@/utils/discountUtils";
 
 interface TestType {
   id: string;
@@ -126,6 +127,24 @@ export function StaffPathologyBilling() {
   const orders = ordersResult?.rows;
   const ordersTotal = ordersResult?.count ?? 0;
   const ordersTotalPages = Math.max(1, Math.ceil(ordersTotal / ORDERS_PAGE_SIZE));
+
+  const { data: availableDiscount } = useQuery({
+    queryKey: ["patient-discount-preview", selectedPatient?.id, "lab"],
+    queryFn: async () => {
+      if (!selectedPatient?.id) return null;
+      const { data } = await supabase
+        .from("patient_discounts")
+        .select("*")
+        .eq("patient_id", selectedPatient.id)
+        .eq("service_type", "lab")
+        .eq("is_active", true)
+        .is("used_at", null)
+        .gte("expires_at", new Date().toISOString())
+        .maybeSingle();
+      return data;
+    },
+    enabled: !!selectedPatient?.id,
+  });
 
   const filteredTests = useMemo(() => {
     if (!testTypes) return [];
@@ -214,19 +233,27 @@ export function StaffPathologyBilling() {
       if (numErr) throw numErr;
       const orderNumber = orderNumData as string;
 
-      // 2. Invoice (paid)
+      // 2. Apply patient discount (if any)
+      const labDiscount = await applyPatientDiscount(patient.id, total, 'lab');
+
       const invoiceNumber = `PATH-INV-${Date.now().toString().slice(-8)}`;
       const testNames = selectedTestIds
         .map((id) => testTypes?.find((t) => t.id === id)?.name)
         .filter(Boolean)
         .join(", ");
+      const invoiceAmount = labDiscount.discountedAmount;
+      const invoiceDescription = `Lab: ${testNames}${labDiscount.discountLabel
+        ? ` (${labDiscount.discountLabel}, Original: Rs. ${labDiscount.originalAmount})`
+        : ''}`;
+
+      // 3. Invoice (paid)
       const { data: invoice, error: invErr } = await supabase
         .from("invoices")
         .insert({
           patient_id: patient.id,
           invoice_number: invoiceNumber,
-          amount: total,
-          description: `Lab: ${testNames}`,
+          amount: invoiceAmount,
+          description: invoiceDescription,
           status: "paid",
           paid_at: new Date().toISOString(),
           created_by: user?.id ?? null,
@@ -267,7 +294,11 @@ export function StaffPathologyBilling() {
         .insert(items);
       if (itErr) throw itErr;
 
-      toast.success(`Order ${orderNumber} created (${formatPkrAmount(total)})`);
+      const hasDiscount = labDiscount.discountApplied > 0;
+      toast.success(
+        `Order ${orderNumber} created (${formatPkrAmount(invoiceAmount)})` +
+        (hasDiscount ? ` — discount ${labDiscount.discountLabel} applied` : "")
+      );
 
       // Auto-print thermal lab receipt
       try {
@@ -289,9 +320,17 @@ export function StaffPathologyBilling() {
           patientId: patientDisplayId,
           patientPhone,
           tests,
-          totalAmount: total,
+          totalAmount: invoiceAmount,
           issueDate: format(new Date(), "dd-MMM-yyyy hh:mm a"),
           createdBy: user?.id,
+          ...(hasDiscount ? {
+            discount: {
+              originalAmount: labDiscount.originalAmount,
+              discountedAmount: labDiscount.discountedAmount,
+              discountApplied: labDiscount.discountApplied,
+              discountLabel: labDiscount.discountLabel,
+            }
+          } : {}),
         }, { autoPrint: true });
       } catch (printErr) {
         console.error("Receipt print failed:", printErr);
@@ -596,13 +635,29 @@ export function StaffPathologyBilling() {
                     </div>
 
                     {selectedTestIds.length > 0 && (
-                      <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg flex justify-between items-center">
-                        <span className="font-medium">
-                          Selected Tests: {selectedTestIds.length}
-                        </span>
-                        <span className="font-bold text-blue-600">
-                          Total: {formatPkrAmount(total)}
-                        </span>
+                      <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                        <div className="flex justify-between items-center">
+                          <span className="font-medium">
+                            Selected Tests: {selectedTestIds.length}
+                          </span>
+                          <span className="font-bold text-blue-600">
+                            Total: {formatPkrAmount(total)}
+                          </span>
+                        </div>
+                        {availableDiscount && (
+                          <div className="mt-2 pt-2 border-t border-blue-200 flex justify-between items-center text-sm">
+                            <span className="text-green-700 font-medium">
+                              Discount ({availableDiscount.discount_type === 'percentage' ? `${availableDiscount.discount_value}%` : formatPkrAmount(availableDiscount.discount_value)})
+                            </span>
+                            <span className="text-green-700 font-bold">
+                              -{formatPkrAmount(
+                                availableDiscount.discount_type === 'percentage'
+                                  ? Math.round((total * Number(availableDiscount.discount_value)) / 100)
+                                  : Math.min(Number(availableDiscount.discount_value), total)
+                              )}
+                            </span>
+                          </div>
+                        )}
                       </div>
                     )}
                   </CardContent>
