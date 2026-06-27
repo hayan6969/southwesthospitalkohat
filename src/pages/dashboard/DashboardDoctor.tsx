@@ -110,7 +110,7 @@ export default function DashboardDoctor() {
               </h1>
               <p className="text-gray-500 text-xs mt-0.5">Hospital Information Management System</p>
             </div>
-            {profile?.role === 'admin' && <AdminDashboardNav />}
+            {(profile?.role === 'admin' || profile?.role === 'super_admin') && <AdminDashboardNav />}
           </div>
           
           {/* Profile Section - Compact */}

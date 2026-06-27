@@ -15,7 +15,7 @@ import { formatInPakistanTime, getCurrentPakistanDate } from "@/utils/timezone";
 import { formatPkrAmount } from "@/utils/currency";
 import { toast } from "sonner";
 
-type Operation = "created" | "updated" | "deleted" | "all" | "changes";
+type Operation = "created" | "updated" | "deleted" | "cancelled" | "discounted" | "all" | "changes";
 
 interface AuditRow {
   id: string;
@@ -41,6 +41,8 @@ const operationBadge = (op: string) => {
     case "created": return <Badge className="bg-green-100 text-green-800 border-green-200">Created</Badge>;
     case "updated": return <Badge className="bg-blue-100 text-blue-800 border-blue-200">Edited</Badge>;
     case "deleted": return <Badge className="bg-red-100 text-red-800 border-red-200">Deleted</Badge>;
+    case "cancelled": return <Badge className="bg-orange-100 text-orange-800 border-orange-200">Cancelled</Badge>;
+    case "discounted": return <Badge className="bg-purple-100 text-purple-800 border-purple-200">Discounted</Badge>;
     default: return <Badge>{op}</Badge>;
   }
 };
@@ -140,7 +142,7 @@ export default function InvoiceAuditTrail() {
       rows = rows.filter((r) => r.invoice_number.toLowerCase().includes(q));
     }
     if (opFilter === "changes") {
-      rows = rows.filter((r) => r.operation === "updated" || r.operation === "deleted");
+      rows = rows.filter((r) => r.operation !== "created");
     } else if (opFilter !== "all") {
       rows = rows.filter((r) => r.operation === opFilter);
     }
@@ -155,9 +157,9 @@ export default function InvoiceAuditTrail() {
     const todayEnd = endOfDay(localDate(today)).toISOString();
     const todayRows = (auditRows ?? []).filter((r) => r.changed_at >= todayStart && r.changed_at <= todayEnd);
     const editedToday = todayRows.filter((r) => r.operation === "updated").length;
-    const cancelledToday = todayRows.filter((r) => r.new_status === "cancelled" || (r.old_status === "paid" && r.new_status === "cancelled")).length;
+    const cancelledToday = todayRows.filter((r) => r.operation === "cancelled").length;
     const discountTotal = todayRows
-      .filter((r) => r.operation === "updated" && r.old_amount != null && r.new_amount != null && r.new_amount < r.old_amount)
+      .filter((r) => r.operation === "discounted" && r.old_amount != null && r.new_amount != null)
       .reduce((sum, r) => sum + ((r.old_amount ?? 0) - (r.new_amount ?? 0)), 0);
     return { editedToday, cancelledToday, discountTotal };
   }, [auditRows, today]);
@@ -231,7 +233,7 @@ export default function InvoiceAuditTrail() {
       <div className="space-y-6">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Invoice Audit Trail</h1>
-          <p className="text-gray-600 mt-1">Track every invoice change — created, edited, cancelled</p>
+          <p className="text-gray-600 mt-1">Track every invoice change — created, edited, cancelled, discounted</p>
         </div>
 
         {/* Summary cards */}
@@ -327,11 +329,13 @@ export default function InvoiceAuditTrail() {
                 <Select value={opFilter} onValueChange={(v) => setOpFilter(v as Operation)}>
                   <SelectTrigger><SelectValue placeholder="All" /></SelectTrigger>
                   <SelectContent className="z-[10000]">
-                    <SelectItem value="changes">Changes only (deleted/edited)</SelectItem>
+                    <SelectItem value="changes">Changes only (cancelled/deleted/edited)</SelectItem>
                     <SelectItem value="all">All (incl. created)</SelectItem>
                     <SelectItem value="created">Created</SelectItem>
                     <SelectItem value="updated">Edited</SelectItem>
                     <SelectItem value="deleted">Deleted</SelectItem>
+                    <SelectItem value="cancelled">Cancelled</SelectItem>
+                    <SelectItem value="discounted">Discounted</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

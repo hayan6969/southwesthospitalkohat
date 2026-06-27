@@ -52,7 +52,7 @@ export default function DashboardStaff() {
                 <span className="truncate">{hospitalSettings?.hospital_name || "HIMS"}</span>
               </h1>
             </div>
-            {profile.role === 'admin' && (
+            {(profile.role === 'admin' || profile.role === 'super_admin') && (
               <div className="hidden lg:block">
                 <AdminDashboardNav />
               </div>
@@ -72,7 +72,7 @@ export default function DashboardStaff() {
             </Button>
           </div>
         </div>
-        {profile.role === 'admin' && (
+        {(profile.role === 'admin' || profile.role === 'super_admin') && (
           <div className="lg:hidden mt-3 overflow-x-auto -mx-4 px-4">
             <AdminDashboardNav />
           </div>
