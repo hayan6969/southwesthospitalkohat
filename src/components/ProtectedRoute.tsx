@@ -28,7 +28,8 @@ export default function ProtectedRoute({ children, allowedRoles }: ProtectedRout
     return null;
   }
 
-  if (allowedRoles && profile && !allowedRoles.includes(profile.role)) {
+  const role = profile?.role;
+  if (allowedRoles && role && role !== 'super_admin' && !allowedRoles.includes(role)) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-red-50 to-red-100">
         <div className="text-center">

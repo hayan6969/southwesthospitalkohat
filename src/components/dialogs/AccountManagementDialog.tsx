@@ -171,6 +171,7 @@ export function AccountManagementDialog() {
                 <SelectValue placeholder="Select role" />
               </SelectTrigger>
               <SelectContent className="bg-white z-[10000] max-h-[200px]" position="popper" side="bottom" portal={false}>
+                <SelectItem value="super_admin">Super Admin</SelectItem>
                 <SelectItem value="doctor">Doctor</SelectItem>
                 <SelectItem value="staff">Staff</SelectItem>
                 <SelectItem value="ota">OTA</SelectItem>

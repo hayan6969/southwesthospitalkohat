@@ -10,7 +10,7 @@ type UserProfile = {
   first_name: string;
   last_name: string;
   phone?: string;
-  role: 'admin' | 'doctor' | 'staff' | 'ota' | 'ipd' | 'head_pharmacist' | 'assistant_pharmacist' | 'salesman_pharmacist' | 'patient' | 'finance' | 'nursing' | 'inventory_manager' | 'store' | 'lab';
+  role: 'admin' | 'doctor' | 'staff' | 'ota' | 'ipd' | 'head_pharmacist' | 'assistant_pharmacist' | 'salesman_pharmacist' | 'patient' | 'finance' | 'nursing' | 'inventory_manager' | 'store' | 'lab' | 'super_admin';
   department_id?: string;
   is_active: boolean;
   created_at: string;
@@ -62,7 +62,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         // Cast the role to the proper type
         const profile: UserProfile = {
           ...data,
-          role: data.role as 'admin' | 'doctor' | 'staff' | 'ota' | 'ipd' | 'head_pharmacist' | 'assistant_pharmacist' | 'salesman_pharmacist' | 'patient' | 'finance' | 'nursing' | 'inventory_manager' | 'store' | 'lab'
+          role: data.role as 'admin' | 'doctor' | 'staff' | 'ota' | 'ipd' | 'head_pharmacist' | 'assistant_pharmacist' | 'salesman_pharmacist' | 'patient' | 'finance' | 'nursing' | 'inventory_manager' | 'store' | 'lab' | 'super_admin'
         };
         
         return profile;
@@ -201,7 +201,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         
         if (profileData?.role) {
           let dashboardRole;
-          if (profileData.role.includes('pharmacist')) {
+          if (profileData.role === 'super_admin') {
+            dashboardRole = 'admin';
+          } else if (profileData.role.includes('pharmacist')) {
             dashboardRole = 'pharmacy';
           } else {
             dashboardRole = profileData.role;

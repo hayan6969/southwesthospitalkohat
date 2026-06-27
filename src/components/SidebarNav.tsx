@@ -1,6 +1,6 @@
 
 import { NavLink, useLocation } from "react-router-dom";
-import { User, Users, Calendar, FileText, Inbox, Info, Activity, Building2, Shield, Pill, Clock, TestTube, CreditCard, Calculator, Receipt, Settings, ChartBar, UserPlus, Stethoscope, Upload, CheckCircle, RotateCcw, FlaskConical, Menu, X, Package, Warehouse, Tag, PackageCheck, BedDouble } from "lucide-react";
+import { User, Users, Calendar, FileText, Inbox, Info, Activity, Building2, Shield, Pill, Clock, TestTube, CreditCard, Calculator, Receipt, Settings, ChartBar, UserPlus, Stethoscope, Upload, CheckCircle, RotateCcw, FlaskConical, Menu, X, Package, Warehouse, Tag, PackageCheck, BedDouble, ClipboardList } from "lucide-react";
 import { useState } from "react";
 import { useIsMobile } from "@/hooks/use-mobile";
 
@@ -45,6 +45,15 @@ const navsByRole: Record<string, { label: string; to: string; icon: React.Elemen
     { label: "Dashboard", to: "/dashboard/admin", icon: Info },
     { label: "Departments", to: "/dashboard/admin/departments", icon: Building2 },
     { label: "Account Management", to: "/dashboard/admin/accounts", icon: Users },
+    { label: "Lab", to: "/dashboard/admin?tab=lab", icon: FlaskConical },
+    { label: "IPD", to: "/dashboard/ipd", icon: BedDouble },
+    { label: "System Settings", to: "/dashboard/admin/settings", icon: Settings },
+  ],
+  super_admin: [
+    { label: "Dashboard", to: "/dashboard/admin", icon: Info },
+    { label: "Departments", to: "/dashboard/admin/departments", icon: Building2 },
+    { label: "Account Management", to: "/dashboard/admin/accounts", icon: Users },
+    { label: "Invoice Audit Trail", to: "/dashboard/admin/invoice-audit", icon: ClipboardList },
     { label: "Lab", to: "/dashboard/admin?tab=lab", icon: FlaskConical },
     { label: "IPD", to: "/dashboard/ipd", icon: BedDouble },
     { label: "System Settings", to: "/dashboard/admin/settings", icon: Settings },
