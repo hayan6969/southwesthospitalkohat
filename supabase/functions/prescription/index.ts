@@ -38,7 +38,7 @@ Deno.serve(async (req) => {
   const [{ data: profile }, { data: patient }, { data: hospital }] = await Promise.all([
     db.from("profiles").select("first_name,last_name,email,phone").eq("id", patientId).maybeSingle(),
     db.from("patients").select("patient_number,date_of_birth,gender,address,cnic,city,province").eq("id", patientId).maybeSingle(),
-    db.from("hospital_settings").select("hospital_name,contact_number,hospital_address,logo_url").limit(1).maybeSingle(),
+    db.from("hospital_settings").select("hospital_name,contact_number,hospital_address,logo_url,email,website,footer_text").limit(1).maybeSingle(),
   ]);
 
   if (!profile && !patient) return json({ error: "Patient not found" }, 404);
@@ -68,7 +68,12 @@ Deno.serve(async (req) => {
     const [{ data: dp }, { data: dr }] = await Promise.all([
       db.from("profiles").select("first_name,last_name,phone,email").eq("id", rx.doctor_id).maybeSingle(),
       db.from("doctors").select(
-        "specialization,license_number,consultation_fee,avatar_url,prescription_template"
+        "specialization,license_number,consultation_fee,avatar_url," +
+        "prescription_template," +
+        "clinic_name,clinic_short_name,phone,address," +
+        "qualifications,title,doctor_details," +
+        "urdu_doctor_name,urdu_details," +
+        "signature_url,stamp_url,header_logo"
       ).eq("id", rx.doctor_id).maybeSingle(),
     ]);
     doctorProfile = dp;
@@ -86,17 +91,15 @@ Deno.serve(async (req) => {
     ? `Dr. ${doctorProfile.first_name ?? ""} ${doctorProfile.last_name ?? ""}`.trim()
     : null;
 
-  const tpl = (doctorRow?.prescription_template ?? {}) as Record<string, any>;
-
   const result = {
     hospital: {
       name: hospital?.hospital_name ?? null,
       address: hospital?.hospital_address ?? null,
       phone: hospital?.contact_number ?? null,
-      email: null,
-      website: null,
+      email: hospital?.email ?? null,
+      website: hospital?.website ?? null,
       logoUrl: hospital?.logo_url ?? null,
-      footerText: null,
+      footerText: hospital?.footer_text ?? null,
     },
     doctor: {
       id: rx?.doctor_id ?? null,
@@ -108,17 +111,17 @@ Deno.serve(async (req) => {
       phone: doctorProfile?.phone ?? null,
       email: doctorProfile?.email ?? null,
       avatarUrl: doctorRow?.avatar_url ?? null,
-      clinicName: tpl.clinic_name ?? null,
-      clinicShortName: tpl.clinic_short_name ?? null,
-      address: tpl.address ?? null,
-      qualifications: tpl.degrees ?? tpl.qualifications ?? null,
-      title: tpl.title_prefix ?? tpl.title ?? null,
-      doctorDetails: tpl.credentials ?? tpl.doctor_details ?? null,
-      urduDoctorName: tpl.urdu_name ?? tpl.urdu_doctor_name ?? null,
-      urduDetails: tpl.urdu_lines ?? tpl.urdu_details ?? null,
-      signatureUrl: tpl.signature_url ?? null,
-      stampUrl: tpl.stamp_url ?? null,
-      headerLogo: tpl.header_logo ?? null,
+      clinicName: doctorRow?.clinic_name ?? null,
+      clinicShortName: doctorRow?.clinic_short_name ?? null,
+      address: doctorRow?.address ?? null,
+      qualifications: doctorRow?.qualifications ?? null,
+      title: doctorRow?.title ?? null,
+      doctorDetails: doctorRow?.doctor_details ?? null,
+      urduDoctorName: doctorRow?.urdu_doctor_name ?? null,
+      urduDetails: doctorRow?.urdu_details ?? null,
+      signatureUrl: doctorRow?.signature_url ?? null,
+      stampUrl: doctorRow?.stamp_url ?? null,
+      headerLogo: doctorRow?.header_logo ?? null,
       consultationFee: doctorRow?.consultation_fee ?? null,
       prescriptionTemplate: doctorRow?.prescription_template ?? null,
     },

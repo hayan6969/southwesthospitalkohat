@@ -564,11 +564,14 @@ export type Database = {
           fee_set_by_finance: boolean
           fee_updated_at: string | null
           fee_updated_by: string | null
+          header_logo: string | null
           hospital_share_percentage: number
           id: string
           license_number: string | null
           prescription_template: Json | null
+          signature_url: string | null
           specialization: string | null
+          stamp_url: string | null
         }
         Insert: {
           avatar_url?: string | null
@@ -577,11 +580,14 @@ export type Database = {
           fee_set_by_finance?: boolean
           fee_updated_at?: string | null
           fee_updated_by?: string | null
+          header_logo?: string | null
           hospital_share_percentage?: number
           id: string
           license_number?: string | null
           prescription_template?: Json | null
+          signature_url?: string | null
           specialization?: string | null
+          stamp_url?: string | null
         }
         Update: {
           avatar_url?: string | null
@@ -590,11 +596,14 @@ export type Database = {
           fee_set_by_finance?: boolean
           fee_updated_at?: string | null
           fee_updated_by?: string | null
+          header_logo?: string | null
           hospital_share_percentage?: number
           id?: string
           license_number?: string | null
           prescription_template?: Json | null
+          signature_url?: string | null
           specialization?: string | null
+          stamp_url?: string | null
         }
         Relationships: [
           {
@@ -769,10 +778,12 @@ export type Database = {
           closing_time: string | null
           contact_number: string | null
           created_at: string | null
+          email: string | null
           emergency_consultation_fee: number | null
           emergency_slots_percentage: number | null
           evening_shift_end: string | null
           evening_shift_start: string | null
+          footer_text: string | null
           hospital_address: string | null
           hospital_name: string | null
           id: string
@@ -783,6 +794,7 @@ export type Database = {
           opening_time: string | null
           payroll_payment_date: number | null
           updated_at: string | null
+          website: string | null
           working_days: string[] | null
         }
         Insert: {
@@ -790,10 +802,12 @@ export type Database = {
           closing_time?: string | null
           contact_number?: string | null
           created_at?: string | null
+          email?: string | null
           emergency_consultation_fee?: number | null
           emergency_slots_percentage?: number | null
           evening_shift_end?: string | null
           evening_shift_start?: string | null
+          footer_text?: string | null
           hospital_address?: string | null
           hospital_name?: string | null
           id?: string
@@ -804,6 +818,7 @@ export type Database = {
           opening_time?: string | null
           payroll_payment_date?: number | null
           updated_at?: string | null
+          website?: string | null
           working_days?: string[] | null
         }
         Update: {
@@ -811,10 +826,12 @@ export type Database = {
           closing_time?: string | null
           contact_number?: string | null
           created_at?: string | null
+          email?: string | null
           emergency_consultation_fee?: number | null
           emergency_slots_percentage?: number | null
           evening_shift_end?: string | null
           evening_shift_start?: string | null
+          footer_text?: string | null
           hospital_address?: string | null
           hospital_name?: string | null
           id?: string
@@ -825,6 +842,7 @@ export type Database = {
           opening_time?: string | null
           payroll_payment_date?: number | null
           updated_at?: string | null
+          website?: string | null
           working_days?: string[] | null
         }
         Relationships: []
