@@ -15,7 +15,7 @@ import { formatInPakistanTime, getCurrentPakistanDate } from "@/utils/timezone";
 import { formatPkrAmount } from "@/utils/currency";
 import { toast } from "sonner";
 
-type Operation = "created" | "updated" | "deleted" | "all";
+type Operation = "created" | "updated" | "deleted" | "all" | "changes";
 
 interface AuditRow {
   id: string;
@@ -53,7 +53,7 @@ export default function InvoiceAuditTrail() {
   const [to, setTo] = useState<string>(today);
   const [preset, setPreset] = useState<string>("today");
   const [search, setSearch] = useState("");
-  const [opFilter, setOpFilter] = useState<Operation>("all");
+  const [opFilter, setOpFilter] = useState<Operation>("changes");
   const [page, setPage] = useState(1);
   const PAGE_SIZE = 20;
 
@@ -139,7 +139,9 @@ export default function InvoiceAuditTrail() {
       const q = search.trim().toLowerCase();
       rows = rows.filter((r) => r.invoice_number.toLowerCase().includes(q));
     }
-    if (opFilter !== "all") {
+    if (opFilter === "changes") {
+      rows = rows.filter((r) => r.operation === "updated" || r.operation === "deleted");
+    } else if (opFilter !== "all") {
       rows = rows.filter((r) => r.operation === opFilter);
     }
     return rows;
@@ -200,7 +202,7 @@ export default function InvoiceAuditTrail() {
     setTo(today);
     setPreset("today");
     setSearch("");
-    setOpFilter("all");
+    setOpFilter("changes");
   };
 
   const statusDiff = (oldS: string | null, newS: string | null) => {
@@ -325,7 +327,8 @@ export default function InvoiceAuditTrail() {
                 <Select value={opFilter} onValueChange={(v) => setOpFilter(v as Operation)}>
                   <SelectTrigger><SelectValue placeholder="All" /></SelectTrigger>
                   <SelectContent className="z-[10000]">
-                    <SelectItem value="all">All</SelectItem>
+                    <SelectItem value="changes">Changes only (deleted/edited)</SelectItem>
+                    <SelectItem value="all">All (incl. created)</SelectItem>
                     <SelectItem value="created">Created</SelectItem>
                     <SelectItem value="updated">Edited</SelectItem>
                     <SelectItem value="deleted">Deleted</SelectItem>
