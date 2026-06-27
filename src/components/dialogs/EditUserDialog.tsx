@@ -29,6 +29,7 @@ interface EditUserDialogProps {
 }
 
 export function EditUserDialog({ user, open, onOpenChange, onUserUpdated }: EditUserDialogProps) {
+  const { profile: currentProfile } = useAuth();
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
@@ -230,7 +231,9 @@ export function EditUserDialog({ user, open, onOpenChange, onUserUpdated }: Edit
                 <SelectValue placeholder="Select role" />
               </SelectTrigger>
               <SelectContent className="bg-white z-50">
-                <SelectItem value="super_admin">Super Admin</SelectItem>
+                {currentProfile?.role === 'super_admin' && (
+                  <SelectItem value="super_admin">Super Admin</SelectItem>
+                )}
                 <SelectItem value="admin">Admin</SelectItem>
                 <SelectItem value="doctor">Doctor</SelectItem>
                 <SelectItem value="staff">Staff</SelectItem>
