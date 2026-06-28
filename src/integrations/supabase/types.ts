@@ -558,8 +558,12 @@ export type Database = {
       }
       doctors: {
         Row: {
+          address: string | null
           avatar_url: string | null
+          clinic_name: string | null
+          clinic_short_name: string | null
           consultation_fee: number | null
+          doctor_details: string[] | null
           experience_years: number | null
           fee_set_by_finance: boolean
           fee_updated_at: string | null
@@ -568,14 +572,23 @@ export type Database = {
           hospital_share_percentage: number
           id: string
           license_number: string | null
+          phone: string | null
           prescription_template: Json | null
+          qualifications: string | null
           signature_url: string | null
           specialization: string | null
           stamp_url: string | null
+          title: string | null
+          urdu_details: string[] | null
+          urdu_doctor_name: string | null
         }
         Insert: {
+          address?: string | null
           avatar_url?: string | null
+          clinic_name?: string | null
+          clinic_short_name?: string | null
           consultation_fee?: number | null
+          doctor_details?: string[] | null
           experience_years?: number | null
           fee_set_by_finance?: boolean
           fee_updated_at?: string | null
@@ -584,14 +597,23 @@ export type Database = {
           hospital_share_percentage?: number
           id: string
           license_number?: string | null
+          phone?: string | null
           prescription_template?: Json | null
+          qualifications?: string | null
           signature_url?: string | null
           specialization?: string | null
           stamp_url?: string | null
+          title?: string | null
+          urdu_details?: string[] | null
+          urdu_doctor_name?: string | null
         }
         Update: {
+          address?: string | null
           avatar_url?: string | null
+          clinic_name?: string | null
+          clinic_short_name?: string | null
           consultation_fee?: number | null
+          doctor_details?: string[] | null
           experience_years?: number | null
           fee_set_by_finance?: boolean
           fee_updated_at?: string | null
@@ -600,10 +622,15 @@ export type Database = {
           hospital_share_percentage?: number
           id?: string
           license_number?: string | null
+          phone?: string | null
           prescription_template?: Json | null
+          qualifications?: string | null
           signature_url?: string | null
           specialization?: string | null
           stamp_url?: string | null
+          title?: string | null
+          urdu_details?: string[] | null
+          urdu_doctor_name?: string | null
         }
         Relationships: [
           {
