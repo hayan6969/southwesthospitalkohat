@@ -1064,18 +1064,21 @@ export const generateDailyClosingPDF = async (data: {
           let displayText = cell;
           const availableWidth = colWidths[colIndex] - 5; // padding buffer
           
-          // Don't truncate amounts
-          const isAmount = cell.includes('Rs.') || cell.includes('(');
+          // Detect monetary amounts strictly: "Rs. 1,234.56" or "(Rs. 1,234.56)" or pure numbers.
+          // A loose check (e.g. any "(" in the string) wrongly flagged descriptions
+          // containing "(100%)" as amounts, skipping truncation and right-aligning them off-page.
+          const trimmed = cell.trim();
+          const isAmount = /^\(?\s*Rs\.?\s*-?[\d,]+(\.\d+)?\s*\)?$/.test(trimmed)
+            || /^-?[\d,]+(\.\d+)?$/.test(trimmed);
+
           if (!isAmount && displayText.length > 0) {
-            // Use character-based limit as primary method (more reliable)
             const charLimit = Math.max(3, Math.floor(availableWidth / 1.8));
             if (displayText.length > charLimit) {
               displayText = displayText.substring(0, charLimit - 2).trim() + '..';
             }
           }
-          
-          // Right align numeric values (amounts)
-          if (isAmount || (!isNaN(parseFloat(cell)) && cell.trim().length > 0)) {
+
+          if (isAmount) {
             doc.text(displayText, xPos + colWidths[colIndex] - 4, tableY + 6, { align: 'right' });
           } else {
             doc.text(displayText, xPos, tableY + 6);
