@@ -2497,13 +2497,28 @@ export const generateDailyClosingSummaryPDF = async (data: {
           doc.rect(startX, tableY, tableWidth, rowHeight, 'F');
         }
         xPos = startX + 2;
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(8);
         row.forEach((cell, colIndex) => {
-          let displayText = cell;
-          const maxLength = Math.floor(colWidths[colIndex] * 0.8);
-          if (typeof cell === 'string' && cell.length > maxLength && !cell.includes('Rs.') && !cell.includes('(') && maxLength > 10) {
-            displayText = cell.substring(0, maxLength - 3) + '...';
+          let displayText = cell || '';
+          const availableWidth = colWidths[colIndex] - 5;
+
+          // Only true currency/number cells should be right-aligned. Refund descriptions can
+          // contain "Rs." or "(100%)", so loose checks make them spill outside the table.
+          const trimmed = displayText.trim();
+          const isAmount = /^\(?\s*Rs\.?\s*-?[\d,]+(\.\d+)?\s*\)?$/.test(trimmed)
+            || /^-?[\d,]+(\.\d+)?$/.test(trimmed);
+
+          if (!isAmount && displayText.length > 0) {
+            while (doc.getTextWidth(displayText) > availableWidth && displayText.length > 3) {
+              displayText = displayText.slice(0, -1);
+            }
+            if (displayText !== cell) {
+              displayText = displayText.slice(0, Math.max(0, displayText.length - 2)).trimEnd() + '...';
+            }
           }
-          if (cell.includes('Rs.') || cell.includes('(') || (!isNaN(parseFloat(cell)) && cell.trim() !== '')) {
+
+          if (isAmount) {
             doc.text(displayText, xPos + colWidths[colIndex] - 4, tableY + 6, { align: 'right' });
           } else {
             doc.text(displayText, xPos, tableY + 6);
