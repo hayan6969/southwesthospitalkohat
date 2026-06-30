@@ -183,8 +183,8 @@ export function StaffPathologyBilling() {
     );
   };
 
-  const ensurePatient = async (): Promise<{ id: string } | null> => {
-    if (selectedPatient) return { id: selectedPatient.id };
+  const ensurePatient = async (): Promise<{ id: string; patient_number?: string } | null> => {
+    if (selectedPatient) return { id: selectedPatient.id, patient_number: selectedPatient.patient_number };
     if (activeTab === "register") {
       if (!newPatient.first_name.trim() || !newPatient.last_name.trim() || !newPatient.phone.trim()) {
         toast.error("First name, last name and phone are required");
@@ -201,7 +201,7 @@ export function StaffPathologyBilling() {
         return null;
       }
       const result: any = data;
-      return { id: result.user_id };
+      return { id: result.user_id, patient_number: result.patient_number };
     }
     toast.error("Select a patient");
     return null;
@@ -307,8 +307,8 @@ export function StaffPathologyBilling() {
             ? `${selectedPatient.profile?.first_name ?? ""} ${selectedPatient.profile?.last_name ?? ""}`.trim() ||
               (selectedPatient.full_name ?? "Patient")
             : `${newPatient.first_name} ${newPatient.last_name}`.trim();
-        const patientPhone = selectedPatient?.phone ?? newPatient.phone ?? "";
-        const patientDisplayId = selectedPatient?.patient_number ?? "";
+        const patientPhone = selectedPatient?.profile?.phone ?? newPatient.phone ?? "";
+        const patientDisplayId = selectedPatient?.patient_number ?? patient?.patient_number ?? "";
         const tests = selectedTestIds.map((id) => {
           const t = testTypes!.find((x) => x.id === id)!;
           return { name: t.name, price: Number(t.price ?? 0) };
@@ -699,11 +699,11 @@ export function StaffPathologyBilling() {
                   <div className="text-xs text-muted-foreground">Patient</div>
                   <div className="font-medium">
                     {selectedPatient
-                      ? `${selectedPatient.first_name ?? ""} ${selectedPatient.last_name ?? ""}`.trim() || "—"
+                      ? `${selectedPatient.profile?.first_name ?? ""} ${selectedPatient.profile?.last_name ?? ""}`.trim() || "—"
                       : `${newPatient.first_name} ${newPatient.last_name}`.trim() || "—"}
                   </div>
                   <div className="text-xs text-muted-foreground">
-                    {selectedPatient?.patient_number ?? "New patient"} · {selectedPatient?.phone ?? newPatient.phone}
+                    {selectedPatient?.patient_number ?? "New patient"} · {selectedPatient?.profile?.phone ?? newPatient.phone}
                   </div>
                 </div>
 

@@ -24,6 +24,9 @@ export default function AdminSettings() {
     hospital_name: "",
     contact_number: "",
     hospital_address: "",
+    email: "",
+    website: "",
+    footer_text: "",
     emergency_consultation_fee: "",
     opening_time: "",
     closing_time: "",
@@ -50,6 +53,9 @@ export default function AdminSettings() {
         hospital_name: settings.hospital_name || "",
         contact_number: settings.contact_number || "",
         hospital_address: settings.hospital_address || "",
+        email: settings.email || "",
+        website: settings.website || "",
+        footer_text: settings.footer_text || "NOT VALID FOR COURT",
         emergency_consultation_fee: settings.emergency_consultation_fee?.toString() || "10000",
         opening_time: settings.opening_time || "08:00",
         closing_time: settings.closing_time || "20:00",
@@ -72,6 +78,9 @@ export default function AdminSettings() {
         hospital_name: formData.hospital_name,
         contact_number: formData.contact_number,
         hospital_address: formData.hospital_address,
+        email: formData.email || null,
+        website: formData.website || null,
+        footer_text: formData.footer_text || null,
         emergency_consultation_fee: parseFloat(formData.emergency_consultation_fee),
         opening_time: formData.opening_time,
         closing_time: formData.closing_time,
@@ -210,6 +219,19 @@ export default function AdminSettings() {
               <div>
                 <Label htmlFor="hospital_address">Hospital Address</Label>
                 <Input id="hospital_address" value={formData.hospital_address} onChange={(e) => handleInputChange("hospital_address", e.target.value)} placeholder="Enter hospital address" />
+              </div>
+              <div>
+                <Label htmlFor="email">Email</Label>
+                <Input id="email" type="email" value={formData.email} onChange={(e) => handleInputChange("email", e.target.value)} placeholder="hospital@example.com" />
+              </div>
+              <div>
+                <Label htmlFor="website">Website</Label>
+                <Input id="website" value={formData.website} onChange={(e) => handleInputChange("website", e.target.value)} placeholder="https://swhc.pk" />
+              </div>
+              <div>
+                <Label htmlFor="footer_text">Prescription Footer Text</Label>
+                <Input id="footer_text" value={formData.footer_text} onChange={(e) => handleInputChange("footer_text", e.target.value)} placeholder="NOT VALID FOR COURT" />
+                <p className="text-xs text-muted-foreground mt-1">Default text printed at bottom of prescription slips</p>
               </div>
               <div className="pt-2">
                 <Label className="flex items-center gap-2"><ImageIcon className="w-4 h-4" /> Hospital Logo</Label>

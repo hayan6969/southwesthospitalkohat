@@ -5,7 +5,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { generatePrescriptionPDF } from "@/utils/prescriptionPdfGenerator";
 import { FileText, Pill, Loader2 } from "lucide-react";
 
 interface PrescriptionDialogProps {
@@ -94,14 +93,9 @@ export function PrescriptionDialog({
         });
       }
 
-      // Generate and open PDF
-      await generatePrescriptionPDF({
-        prescriptionText,
-        patientName,
-        patientId,
-        appointmentDate: new Date(appointment.appointment_date).toLocaleDateString(),
-        doctorName: "Dr. " + (appointment.doctor?.first_name || "") + " " + (appointment.doctor?.last_name || "")
-      });
+      // Open print-ready prescription template
+      const printUrl = `/print/prescription/${appointment.patient_id}`;
+      window.open(printUrl, '_blank');
 
       onOpenChange(false);
       setPrescriptionText("");

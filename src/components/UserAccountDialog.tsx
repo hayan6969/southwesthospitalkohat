@@ -4,7 +4,6 @@ import { useDepartments } from '@/hooks/useDatabase';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
@@ -27,8 +26,6 @@ export default function UserAccountDialog() {
     specialization: '',
     license_number: '',
     consultation_fee: 0,
-    degrees: '',
-    pa_phone: ''
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -60,10 +57,6 @@ export default function UserAccountDialog() {
         if (formData.specialization) doctorUpdate.specialization = formData.specialization;
         if (formData.license_number) doctorUpdate.license_number = formData.license_number;
         if (formData.consultation_fee > 0) doctorUpdate.consultation_fee = formData.consultation_fee;
-        const template: Record<string, any> = {};
-        if (formData.degrees) template.degrees = formData.degrees;
-        if (formData.pa_phone) template.pa_phone = formData.pa_phone;
-        if (Object.keys(template).length > 0) doctorUpdate.prescription_template = template;
 
         if (Object.keys(doctorUpdate).length > 0) {
           const { error: docError } = await supabase
@@ -92,8 +85,6 @@ export default function UserAccountDialog() {
         specialization: '',
         license_number: '',
         consultation_fee: 0,
-        degrees: '',
-        pa_phone: ''
       });
       setOpen(false);
     } catch (error) {
@@ -126,56 +117,29 @@ export default function UserAccountDialog() {
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="first_name">First Name</Label>
-              <Input
-                id="first_name"
-                value={formData.first_name}
-                onChange={(e) => setFormData({ ...formData, first_name: e.target.value })}
-                required
-              />
+              <Input id="first_name" value={formData.first_name} onChange={(e) => setFormData({ ...formData, first_name: e.target.value })} required />
             </div>
             <div className="space-y-2">
               <Label htmlFor="last_name">Last Name</Label>
-              <Input
-                id="last_name"
-                value={formData.last_name}
-                onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
-                required
-              />
+              <Input id="last_name" value={formData.last_name} onChange={(e) => setFormData({ ...formData, last_name: e.target.value })} required />
             </div>
           </div>
-          
+
           <div className="space-y-2">
             <Label htmlFor="email">Email</Label>
-            <Input
-              id="email"
-              type="email"
-              value={formData.email}
-              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-              required
-            />
+            <Input id="email" type="email" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} required />
           </div>
-          
+
           <div className="space-y-2">
             <Label htmlFor="password">Password</Label>
-            <Input
-              id="password"
-              type="password"
-              value={formData.password}
-              onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-              required
-            />
+            <Input id="password" type="password" value={formData.password} onChange={(e) => setFormData({ ...formData, password: e.target.value })} required />
           </div>
-          
+
           <div className="space-y-2">
             <Label htmlFor="phone">Phone (Optional)</Label>
-            <Input
-              id="phone"
-              type="tel"
-              value={formData.phone}
-              onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-            />
+            <Input id="phone" type="tel" value={formData.phone} onChange={(e) => setFormData({ ...formData, phone: e.target.value })} />
           </div>
-          
+
           <div className="space-y-2">
             <Label htmlFor="role">Role</Label>
             <Select value={formData.role} onValueChange={(value) => setFormData({ ...formData, role: value })}>
@@ -193,7 +157,7 @@ export default function UserAccountDialog() {
               </SelectContent>
             </Select>
           </div>
-          
+
           <div className="space-y-2">
             <Label htmlFor="department">Department (Optional)</Label>
             <Select value={formData.department_id} onValueChange={(value) => setFormData({ ...formData, department_id: value })}>
@@ -202,9 +166,7 @@ export default function UserAccountDialog() {
               </SelectTrigger>
               <SelectContent>
                 {departments?.map((dept) => (
-                  <SelectItem key={dept.id} value={dept.id}>
-                    {dept.name}
-                  </SelectItem>
+                  <SelectItem key={dept.id} value={dept.id}>{dept.name}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -213,60 +175,21 @@ export default function UserAccountDialog() {
           {formData.role === 'doctor' && (
             <div className="border rounded-lg p-4 space-y-4 bg-gray-50">
               <h4 className="font-medium text-sm">Doctor Details</h4>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="doc_specialization">Specialization</Label>
-                  <Input
-                    id="doc_specialization"
-                    value={formData.specialization}
-                    onChange={(e) => setFormData({ ...formData, specialization: e.target.value })}
-                    placeholder="e.g., Cardiology"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="doc_license">License Number</Label>
-                  <Input
-                    id="doc_license"
-                    value={formData.license_number}
-                    onChange={(e) => setFormData({ ...formData, license_number: e.target.value })}
-                    placeholder="PMDC / License #"
-                  />
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="doc_fee">Consultation Fee (PKR)</Label>
-                  <Input
-                    id="doc_fee"
-                    type="number"
-                    min="0"
-                    value={formData.consultation_fee}
-                    onChange={(e) => setFormData({ ...formData, consultation_fee: parseInt(e.target.value) || 0 })}
-                    placeholder="e.g., 2000"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="doc_pa_phone">PA Phone</Label>
-                  <Input
-                    id="doc_pa_phone"
-                    value={formData.pa_phone}
-                    onChange={(e) => setFormData({ ...formData, pa_phone: e.target.value })}
-                    placeholder="PA clinic phone"
-                  />
-                </div>
+              <div className="space-y-2">
+                <Label htmlFor="doc_specialization">Specialization</Label>
+                <Input id="doc_specialization" value={formData.specialization} onChange={(e) => setFormData({ ...formData, specialization: e.target.value })} placeholder="e.g., Cardiology" />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="doc_degrees">Degrees</Label>
-                <Input
-                  id="doc_degrees"
-                  value={formData.degrees}
-                  onChange={(e) => setFormData({ ...formData, degrees: e.target.value })}
-                  placeholder="MBBS, FCPS, CHPE"
-                />
+                <Label htmlFor="doc_license">PMDC / License Number</Label>
+                <Input id="doc_license" value={formData.license_number} onChange={(e) => setFormData({ ...formData, license_number: e.target.value })} placeholder="Medical license number" />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="doc_fee">Consultation Fee (PKR)</Label>
+                <Input id="doc_fee" type="number" min="0" value={formData.consultation_fee} onChange={(e) => setFormData({ ...formData, consultation_fee: parseInt(e.target.value) || 0 })} placeholder="e.g., 2000" />
               </div>
             </div>
           )}
-          
+
           <Button type="submit" className="w-full" disabled={loading}>
             {loading ? 'Creating Account...' : 'Create Account'}
           </Button>

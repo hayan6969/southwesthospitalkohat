@@ -18,7 +18,6 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { toast } from "sonner";
 import { Plus, Search, UserPlus, Check, ChevronsUpDown, X } from "lucide-react";
 import { formatCurrency } from "@/utils/currency";
-import { generatePrescriptionSlipPDF } from "@/utils/prescriptionSlipGenerator";
 import { getCurrentPakistanDate, getCurrentPakistanTimeString, formatDateForDisplay, formatTimeForDisplay, fromPakistanTime } from "@/utils/timezone";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
@@ -223,20 +222,8 @@ export function EnhancedAppointmentDialog() {
 
       const tokenNumber = qp ? `TK-${String(qp.queue_position).padStart(3, '0')}` : null;
 
-      await generatePrescriptionSlipPDF({
-        patientName,
-        patientNumber,
-        doctorName: `${selectedDoctorName?.first_name} ${selectedDoctorName?.last_name}`,
-        doctorId,
-        doctorSpecialization: docData?.specialization || selectedDoctor?.specialization || null,
-        licenseNumber: docData?.license_number || null,
-        appointmentDate: utcDateTime,
-        appointmentType: type.trim(),
-        consultationFee,
-        bookingType: 'counter',
-        tokenNumber,
-        template: docData?.prescription_template as any || null
-      });
+      const printUrl = `/print/prescription/${patientId}`;
+      window.open(printUrl, '_blank');
       
       setOpen(false);
       resetForm();

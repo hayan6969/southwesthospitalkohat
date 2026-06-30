@@ -21,7 +21,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { format, isSameDay } from "date-fns";
 import { toast } from "@/hooks/use-toast";
-import { generatePrescriptionSlipPDF } from "@/utils/prescriptionSlipGenerator";
+
 import { generateInvoicePDF } from "@/utils/pdfGenerator";
 import { cn } from "@/lib/utils";
 
@@ -462,20 +462,8 @@ export function StaffCounter() {
 
       const tokenNumber = qp ? `TK-${String(qp.queue_position).padStart(3, '0')}` : null;
 
-      await generatePrescriptionSlipPDF({
-        patientName,
-        patientNumber: patientData?.patient_number || 'N/A',
-        patientAge,
-        doctorName,
-        doctorId: currentAppointment.doctor_id,
-        doctorSpecialization: doctorData?.specialization || null,
-        licenseNumber: doctorData?.license_number || null,
-        appointmentDate: appointment.appointment_date,
-        consultationFee: consultationFee || appointment.consultation_fee_at_time || 0,
-        bookingType: appointment.booking_type || 'walk-in',
-        tokenNumber,
-        template: doctorData?.prescription_template as any || null
-      });
+      const printUrl = `/print/prescription/${currentAppointment.patient_id}`;
+      window.open(printUrl, '_blank');
       
       toast({
         title: "Prescription Slip Generated",
