@@ -674,10 +674,10 @@ const CSS = `
 .rx-verify img{ height:120px; max-width:300px; object-fit:contain; object-position:bottom;
   transform:translateY(28px); }
 .rx-sign{ justify-self:end; text-align:center; min-width:200px; }
-.rx-sign-imgs{ height:50px; display:flex; align-items:flex-end; justify-content:center; gap:12px; }
+.rx-sign-imgs{ position:relative; height:80px; display:flex; align-items:center; justify-content:center; }
 .rx-sign-imgs img{ object-fit:contain; }
-.rx-sign-imgs .rx-sig{ max-height:50px; max-width:160px; }
-.rx-sign-imgs .rx-stamp{ max-height:60px; max-width:90px; opacity:.9; }
+.rx-sign-imgs .rx-sig{ max-height:80px; max-width:220px; position:relative; z-index:2; }
+.rx-sign-imgs .rx-stamp{ max-height:160px; max-width:200px; position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); opacity:.5; z-index:1; pointer-events:none; }
 .rx-sign-line{ border-top:1px solid var(--ink); padding-top:3px; margin-top:2px; font-size:12px; color:var(--ink); }
 .rx-notvalid{ color:var(--blue); font-weight:bold; font-size:12px; margin-top:3px; }
 
