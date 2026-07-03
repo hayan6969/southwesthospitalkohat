@@ -540,14 +540,22 @@ export default function PrintPrescription() {
                   }}
                 />
               </div>
-              <div className="rx-sign">
-                <div className="rx-sign-imgs">
-                  {data.doctor.stampUrl && <img src={data.doctor.stampUrl} alt="" className="rx-stamp" />}
-                  {data.doctor.signatureUrl && <img src={data.doctor.signatureUrl} alt="" className="rx-sig" />}
-                </div>
-                <div className="rx-sign-line">Doctor's Signature</div>
-                <div className="rx-notvalid">{notValidText}</div>
-              </div>
+              {(() => {
+                const tmpl = data.doctor.prescriptionTemplate || {};
+                const showSig = tmpl.show_signature !== false && !!data.doctor.signatureUrl;
+                const showStmp = tmpl.show_stamp !== false && !!data.doctor.stampUrl;
+                if (!showSig && !showStmp) return null;
+                return (
+                  <div className="rx-sign">
+                    <div className="rx-sign-imgs">
+                      {showStmp && <img src={data.doctor.stampUrl!} alt="" className="rx-stamp" onError={(e) => { e.currentTarget.style.display = "none"; }} />}
+                      {showSig && <img src={data.doctor.signatureUrl!} alt="" className="rx-sig" onError={(e) => { e.currentTarget.style.display = "none"; }} />}
+                    </div>
+                    <div className="rx-sign-line">Doctor's Signature</div>
+                    <div className="rx-notvalid">{notValidText}</div>
+                  </div>
+                );
+              })()}
             </div>
 
           </div>
@@ -666,10 +674,10 @@ const CSS = `
 .rx-verify img{ height:120px; max-width:300px; object-fit:contain; object-position:bottom;
   transform:translateY(28px); }
 .rx-sign{ justify-self:end; text-align:center; min-width:200px; }
-.rx-sign-imgs{ height:34px; display:flex; align-items:flex-end; justify-content:center; gap:10px; }
+.rx-sign-imgs{ height:50px; display:flex; align-items:flex-end; justify-content:center; gap:12px; }
 .rx-sign-imgs img{ object-fit:contain; }
-.rx-sign-imgs .rx-sig{ max-height:34px; max-width:130px; }
-.rx-sign-imgs .rx-stamp{ max-height:44px; max-width:70px; opacity:.9; }
+.rx-sign-imgs .rx-sig{ max-height:50px; max-width:160px; }
+.rx-sign-imgs .rx-stamp{ max-height:60px; max-width:90px; opacity:.9; }
 .rx-sign-line{ border-top:1px solid var(--ink); padding-top:3px; margin-top:2px; font-size:12px; color:var(--ink); }
 .rx-notvalid{ color:var(--blue); font-weight:bold; font-size:12px; margin-top:3px; }
 
