@@ -15,6 +15,7 @@ import NotFound from "./pages/NotFound";
 import OfflineMode from "./pages/OfflineMode";
 import OfflineModePharmacy from "./pages/OfflineModePharmacy";
 import VerifyReport from "./pages/VerifyReport";
+import PrintPrescription from "./pages/PrintPrescription";
 
 
 // Dashboard main pages
@@ -106,6 +107,11 @@ const App = () => {
             <Route path="/offline-mode" element={<OfflineMode />} />
             <Route path="/offline-mode-pharmacy" element={<OfflineModePharmacy />} />
             <Route path="/verify-report/:reportNumber" element={<VerifyReport />} />
+
+            {/* Print-ready prescription / clinical-record sheet (public print view) */}
+            <Route path="/print/prescription/:patientId" element={<PrintPrescription />} />
+            <Route path="/print/prescription" element={<PrintPrescription />} />
+
             <Route path="/" element={
               <ProtectedRoute>
                 <Index />

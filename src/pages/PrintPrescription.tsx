@@ -1,0 +1,649 @@
+import { useEffect, useRef, useState } from "react";
+import { useParams } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+
+/**
+ * Print-ready prescription / clinical-record sheet (SWHC letterhead).
+ * Layout matches the PRESCRIPTION TEMPLATE – SPECIFICATION reference exactly.
+ * This file only owns presentation — the data-fetching logic is unchanged.
+ *
+ * Routes:
+ *   /print/prescription/:patientId   → fetch the patient's latest prescription/appointment from the DB
+ *   /print/prescription/preview      → render from localStorage("prescription_preview") for the settings preview
+ */
+
+// ---------------------------------------------------------------------------
+// Types (loose — data comes from Supabase / localStorage)
+// ---------------------------------------------------------------------------
+interface RxData {
+  hospital: {
+    name: string | null;
+    address: string | null;
+    phone: string | null;
+    email?: string | null;
+    website?: string | null;
+    logoUrl?: string | null;
+    footerText?: string | null;
+  };
+  doctor: {
+    fullName: string | null;
+    qualifications: string | null;
+    title: string | null;
+    specialization?: string | null;
+    licenseNumber?: string | null;
+    doctorDetails: string[];
+    urduDoctorName: string | null;
+    urduDetails: string[];
+    clinicName?: string | null;
+    clinicShortName?: string | null;
+    phone?: string | null;
+    signatureUrl: string | null;
+    stampUrl: string | null;
+    headerLogo: string | null;
+    consultationFee: number | null;
+    prescriptionTemplate: Record<string, any>;
+  };
+  patient: {
+    name: string | null;
+    patientNumber: string | null;
+    age: string | null;
+    gender: string | null;
+    cnic?: string | null;
+    address?: string | null;
+  };
+  appointment: {
+    date: string | null;
+    notes: string | null;
+    consultationFee: number | null;
+  };
+  prescription: {
+    text: string | null;
+    createdAt: string | null;
+  };
+  token: string | null;
+}
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+// Empty (not a placeholder) when there is no date — per spec rule 6.
+function formatDate(dateStr: string | null | undefined): string {
+  if (!dateStr) return "";
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return String(dateStr);
+  return `${d.getDate()} ${MONTHS[d.getMonth()]} ${d.getFullYear()}`;
+}
+
+function computeAge(dob: string | null | undefined): string | null {
+  if (!dob) return null;
+  const d = new Date(dob);
+  if (isNaN(d.getTime())) return null;
+  const years = Math.floor((Date.now() - d.getTime()) / (365.25 * 24 * 60 * 60 * 1000));
+  if (years < 0 || years > 150) return null;
+  return `${years} yrs`;
+}
+
+function toStringArray(value: unknown): string[] {
+  if (Array.isArray(value)) return value.filter(Boolean).map(String);
+  if (typeof value === "string" && value.trim()) return value.split("\n").filter(Boolean);
+  return [];
+}
+
+// Normalise the settings-preview localStorage payload into RxData
+function normalizePreview(raw: any): RxData {
+  return {
+    hospital: {
+      name: raw?.hospital?.name ?? null,
+      address: raw?.hospital?.address ?? null,
+      phone: raw?.hospital?.phone ?? null,
+      logoUrl: raw?.hospital?.logoUrl ?? null,
+    },
+    doctor: {
+      fullName: raw?.doctor?.fullName ?? null,
+      qualifications: raw?.doctor?.qualifications ?? null,
+      title: raw?.doctor?.title ?? null,
+      doctorDetails: toStringArray(raw?.doctor?.doctorDetails),
+      urduDoctorName: raw?.doctor?.urduDoctorName ?? null,
+      urduDetails: toStringArray(raw?.doctor?.urduDetails),
+      clinicName: raw?.doctor?.clinicName ?? null,
+      clinicShortName: raw?.doctor?.clinicShortName ?? null,
+      phone: raw?.doctor?.phone ?? null,
+      signatureUrl: raw?.doctor?.signatureUrl ?? null,
+      stampUrl: raw?.doctor?.stampUrl ?? null,
+      headerLogo: raw?.doctor?.headerLogo ?? null,
+      consultationFee: raw?.doctor?.consultationFee ?? null,
+      prescriptionTemplate: raw?.doctor?.prescriptionTemplate ?? {},
+    },
+    patient: {
+      name: raw?.patient?.name ?? null,
+      patientNumber: raw?.patient?.patientNumber ?? null,
+      age: raw?.patient?.age ?? null,
+      gender: raw?.patient?.gender ?? null,
+    },
+    appointment: {
+      date: raw?.appointment?.date ?? null,
+      notes: raw?.appointment?.notes ?? null,
+      consultationFee: raw?.appointment?.consultationFee ?? null,
+    },
+    prescription: {
+      text: raw?.prescription?.text ?? null,
+      createdAt: raw?.prescription?.createdAt ?? null,
+    },
+    token: raw?.token ?? null,
+  };
+}
+
+// Fetch + normalise a real patient's slip data using the live schema.
+async function loadFromDb(patientId: string): Promise<RxData> {
+  const [{ data: profile }, { data: patient }, { data: hospital }] = await Promise.all([
+    supabase.from("profiles").select("first_name,last_name,phone,email").eq("id", patientId).maybeSingle(),
+    supabase
+      .from("patients")
+      .select("patient_number,date_of_birth,cnic,address,city,province")
+      .eq("id", patientId)
+      .maybeSingle(),
+    supabase
+      .from("hospital_settings")
+      .select("hospital_name,contact_number,hospital_address,logo_url,email,website,footer_text")
+      .limit(1)
+      .maybeSingle(),
+  ]);
+
+  if (!profile && !patient) throw new Error("Patient not found");
+
+  // Latest prescription for this patient (may be null for booking/invoice flows).
+  const { data: rx } = await supabase
+    .from("prescriptions")
+    .select("id, prescription_text, created_at, appointment_id, doctor_id")
+    .eq("patient_id", patientId)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  // Resolve the appointment: prefer the prescription's appointment, else the patient's latest.
+  const apptSelect = "id, appointment_date, type, notes, consultation_fee_at_time, doctor_id";
+  let appointment: any = null;
+  if (rx?.appointment_id) {
+    appointment = (await supabase.from("appointments").select(apptSelect).eq("id", rx.appointment_id).maybeSingle()).data;
+  }
+  if (!appointment) {
+    appointment = (
+      await supabase
+        .from("appointments")
+        .select(apptSelect)
+        .eq("patient_id", patientId)
+        .order("appointment_date", { ascending: false })
+        .limit(1)
+        .maybeSingle()
+    ).data;
+  }
+
+  const doctorId = rx?.doctor_id ?? appointment?.doctor_id ?? null;
+
+  // Token from the resolved appointment's queue position.
+  let token: string | null = null;
+  if (appointment?.id) {
+    const { data: qp } = await supabase
+      .from("queue_positions")
+      .select("queue_position")
+      .eq("appointment_id", appointment.id)
+      .maybeSingle();
+    if (qp?.queue_position != null) token = `TK-${String(qp.queue_position).padStart(3, "0")}`;
+  }
+
+  // Doctor letterhead.
+  let doctorProfile: any = null;
+  let doctorRow: any = null;
+  if (doctorId) {
+    const [{ data: dp }, { data: dr }] = await Promise.all([
+      supabase.from("profiles").select("first_name,last_name,phone,email").eq("id", doctorId).maybeSingle(),
+      supabase
+        .from("doctors")
+        .select(
+          "specialization,license_number,consultation_fee,avatar_url,prescription_template," +
+            "clinic_name,clinic_short_name,phone,address,qualifications,title,doctor_details," +
+            "urdu_doctor_name,urdu_details,signature_url,stamp_url,header_logo"
+        )
+        .eq("id", doctorId)
+        .maybeSingle(),
+    ]);
+    doctorProfile = dp;
+    doctorRow = dr;
+  }
+
+  const doctorFullName = doctorProfile
+    ? `Dr. ${doctorProfile.first_name ?? ""} ${doctorProfile.last_name ?? ""}`.trim()
+    : null;
+
+  return {
+    hospital: {
+      name: hospital?.hospital_name ?? doctorRow?.clinic_name ?? null,
+      address: hospital?.hospital_address ?? doctorRow?.address ?? null,
+      phone: hospital?.contact_number ?? doctorRow?.phone ?? null,
+      email: hospital?.email ?? null,
+      website: hospital?.website ?? null,
+      logoUrl: hospital?.logo_url ?? null,
+      footerText: hospital?.footer_text ?? null,
+    },
+    doctor: {
+      fullName: doctorFullName,
+      qualifications: doctorRow?.qualifications ?? null,
+      title: doctorRow?.title ?? doctorRow?.specialization ?? null,
+      specialization: doctorRow?.specialization ?? null,
+      licenseNumber: doctorRow?.license_number ?? null,
+      doctorDetails: toStringArray(doctorRow?.doctor_details),
+      urduDoctorName: doctorRow?.urdu_doctor_name ?? null,
+      urduDetails: toStringArray(doctorRow?.urdu_details),
+      clinicName: doctorRow?.clinic_name ?? null,
+      clinicShortName: doctorRow?.clinic_short_name ?? null,
+      phone: doctorRow?.phone ?? doctorProfile?.phone ?? null,
+      signatureUrl: doctorRow?.signature_url ?? null,
+      stampUrl: doctorRow?.stamp_url ?? null,
+      headerLogo: doctorRow?.header_logo ?? null,
+      consultationFee: doctorRow?.consultation_fee ?? null,
+      prescriptionTemplate: (doctorRow?.prescription_template as Record<string, any>) ?? {},
+    },
+    patient: {
+      name: profile ? `${profile.first_name ?? ""} ${profile.last_name ?? ""}`.trim() || null : null,
+      patientNumber: patient?.patient_number ?? null,
+      age: computeAge(patient?.date_of_birth),
+      gender: null, // not stored on the live patients table
+      cnic: patient?.cnic ?? null,
+      address: patient?.address ?? null,
+    },
+    appointment: {
+      date: appointment?.appointment_date ?? rx?.created_at ?? null,
+      notes: appointment?.notes ?? null,
+      consultationFee: appointment?.consultation_fee_at_time ?? doctorRow?.consultation_fee ?? null,
+    },
+    prescription: {
+      text: rx?.prescription_text ?? null,
+      createdAt: rx?.created_at ?? null,
+    },
+    token,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Component
+// ---------------------------------------------------------------------------
+export default function PrintPrescription() {
+  const { patientId } = useParams<{ patientId: string }>();
+  const [data, setData] = useState<RxData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const hasPrinted = useRef(false);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function run() {
+      setLoading(true);
+      setError(null);
+      try {
+        let result: RxData;
+        if (patientId === "preview") {
+          const raw = localStorage.getItem("prescription_preview");
+          if (!raw) throw new Error("No preview data found. Open the preview from Doctor Settings.");
+          result = normalizePreview(JSON.parse(raw));
+        } else if (patientId) {
+          result = await loadFromDb(patientId);
+        } else {
+          throw new Error("Missing patient id in the URL.");
+        }
+        if (!cancelled) setData(result);
+      } catch (err: any) {
+        console.error("Failed to load prescription:", err);
+        if (!cancelled) setError(err?.message || "Could not load prescription data.");
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+
+    run();
+    return () => {
+      cancelled = true;
+    };
+  }, [patientId]);
+
+  // Auto-open the print dialog once the sheet has rendered.
+  useEffect(() => {
+    if (!data || hasPrinted.current) return;
+    hasPrinted.current = true;
+    const t = setTimeout(() => window.print(), 700);
+    return () => clearTimeout(t);
+  }, [data]);
+
+  // ---- derived values (mapping table) ----
+  const tmpl = data?.doctor.prescriptionTemplate ?? {};
+  const show = (key: string) => tmpl[key] !== false; // default-on toggles
+
+  const hospitalName = data?.hospital.name || data?.doctor.clinicName || "";
+  const logoSrc = data?.doctor.headerLogo || data?.hospital.logoUrl || null;
+  const paPhone = data?.hospital.phone || data?.doctor.phone || null;
+  const designation = data?.doctor.specialization || data?.doctor.title || null;
+  const visitDate = formatDate(data?.appointment.date || data?.prescription.createdAt);
+  const feeNumber = data?.appointment.consultationFee ?? data?.doctor.consultationFee ?? 0;
+  const feeText = `Rs. ${Number(feeNumber || 0).toLocaleString("en-PK")}`;
+  const notValidText = data?.hospital.footerText || "NOT VALID FOR COURT";
+
+  // Doctor block lines (skip anything empty — spec rule 6).
+  const doctorLines = data
+    ? [
+        data.doctor.qualifications,
+        designation,
+        ...data.doctor.doctorDetails,
+        data.doctor.clinicName || data.hospital.name,
+        data.doctor.licenseNumber ? `PMDC / Reg. No: ${data.doctor.licenseNumber}` : null,
+      ].filter((l): l is string => Boolean(l))
+    : [];
+
+  return (
+    <div className="rx-page">
+      <style>{CSS}</style>
+
+      {loading && (
+        <div className="rx-overlay">
+          <div className="rx-spinner" />
+          <p>Loading prescription…</p>
+        </div>
+      )}
+
+      {error && !loading && (
+        <div className="rx-overlay">
+          <div className="rx-errbox">
+            <h3>Failed to Load</h3>
+            <p>{error}</p>
+            <button onClick={() => window.location.reload()}>Retry</button>
+          </div>
+        </div>
+      )}
+
+      {data && !error && (
+        <>
+          <button className="rx-print-btn" onClick={() => window.print()}>
+            🖨 Print Prescription
+          </button>
+
+          <div className="rx-sheet">
+            {/* ── 2. HEADER ─────────────────────────────────────────── */}
+            <h1 className="rx-hospital">{hospitalName}</h1>
+
+            <div className="rx-head">
+              {/* Doctor (left) */}
+              <div className="rx-doc">
+                <p className="rx-doc-name">{data.doctor.fullName || ""}</p>
+                <div className="rx-doc-lines">
+                  {doctorLines.map((line, i) => (
+                    <div key={i}>{line}</div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Logo (center) */}
+              <div className="rx-center">
+                {logoSrc && <img src={logoSrc} alt="" />}
+                {data.doctor.clinicShortName && <div className="rx-short">{data.doctor.clinicShortName}</div>}
+                {hospitalName && <div className="rx-hosp-small">{hospitalName}</div>}
+                {paPhone && (
+                  <div className="rx-pa">
+                    Phone No of PA to Clinic
+                    <div className="rx-pa-phone">{paPhone}</div>
+                  </div>
+                )}
+              </div>
+
+              {/* Urdu (right) */}
+              <div className="rx-urdu">
+                {data.doctor.urduDoctorName && <div className="rx-u-name">{data.doctor.urduDoctorName}</div>}
+                {data.doctor.urduDetails.map((line, i) => (
+                  <div key={i}>{line}</div>
+                ))}
+              </div>
+            </div>
+
+            <hr className="rx-head-rule" />
+
+            {/* ── 3. PATIENT DETAIL ROW (boxed) ─────────────────────── */}
+            <div className="rx-ptbox">
+              <div className="rx-ptrow">
+                <span className="rx-field">
+                  <span className="k">Pt's Name</span>
+                  <span className="v rx-v-lg">{data.patient.name || ""}</span>
+                </span>
+                <span className="rx-field">
+                  <span className="k">Age</span>
+                  <span className="v">{data.patient.age || ""}</span>
+                </span>
+                <span className="rx-field">
+                  <span className="k">Gender</span>
+                  <span className="v">{data.patient.gender || ""}</span>
+                </span>
+                <span className="rx-field">
+                  <span className="k">Date</span>
+                  <span className="v">{visitDate}</span>
+                </span>
+                <span className="rx-field">
+                  <span className="k">MRN</span>
+                  <span className="v">{data.patient.patientNumber || ""}</span>
+                </span>
+              </div>
+              {show("show_token") && (
+                <div className="rx-ptrow">
+                  <span className="rx-field">
+                    <span className="k">Token</span>
+                    <span className="v">{data.token || ""}</span>
+                  </span>
+                </div>
+              )}
+            </div>
+
+            {/* ── 4. MAIN BODY — Clinical Record 30% | Rx 70% ───────── */}
+            <div className="rx-body">
+              <div className="rx-col rx-col-clinical">
+                <p className="rx-col-title">Clinical Record</p>
+                <div className="rx-col-box rx-clinical-box">
+                  <div className="rx-cr-block">
+                    <div className="rx-cr-label">History</div>
+                    <div className="rx-cr-dots" />
+                  </div>
+                  <div className="rx-cr-block">
+                    <div className="rx-cr-label">Diagnosis</div>
+                    <div className="rx-cr-dots" />
+                  </div>
+                  <div className="rx-cr-inline">
+                    <span className="rx-cr-label">BP</span>
+                    <span className="rx-cr-dots-inline" />
+                  </div>
+                  <div className="rx-cr-inline">
+                    <span className="rx-cr-label">Pulse</span>
+                    <span className="rx-cr-dots-inline" />
+                  </div>
+                  <div className="rx-cr-inline">
+                    <span className="rx-cr-label">Temperature</span>
+                    <span className="rx-cr-dots-inline" />
+                    <span className="rx-cr-unit">°C</span>
+                  </div>
+                  <div className="rx-cr-inline">
+                    <span className="rx-cr-label">Weight</span>
+                    <span className="rx-cr-dots-inline" />
+                    <span className="rx-cr-unit">kg</span>
+                  </div>
+                </div>
+              </div>
+              <div className="rx-col rx-col-rx">
+                <p className="rx-col-title">
+                  R<span className="rx-x">x</span>
+                </p>
+                <div className="rx-col-box rx-rx-box">
+                  <span className="rx-rx-watermark" aria-hidden="true">
+                    R<span>x</span>
+                  </span>
+                  {data.prescription.text && <pre className="rx-rx-text">{data.prescription.text}</pre>}
+                </div>
+              </div>
+            </div>
+
+            {/* ── 5. FOOTER (compact) ───────────────────────────────── */}
+            <hr className="rx-foot-rule" />
+            <div className="rx-foot">
+              <div className="rx-fee">
+                {show("show_fee") && (
+                  <>
+                    <span className="rx-fee-lbl">Consultation Fee</span>
+                    <span className="rx-fee-amt">{feeText}</span>
+                  </>
+                )}
+              </div>
+              <div className="rx-sign">
+                <div className="rx-sign-imgs">
+                  {show("show_stamp") && data.doctor.stampUrl && (
+                    <img src={data.doctor.stampUrl} alt="" className="rx-stamp" />
+                  )}
+                  {show("show_signature") && data.doctor.signatureUrl && (
+                    <img src={data.doctor.signatureUrl} alt="" className="rx-sig" />
+                  )}
+                </div>
+                <div className="rx-sign-line">Doctor's Signature</div>
+                <div className="rx-notvalid">{notValidText}</div>
+              </div>
+            </div>
+
+            {show("show_footer") && (data.hospital.address || paPhone) && (
+              <div className="rx-addr">
+                {data.hospital.address && <span className="rx-a">Address: {data.hospital.address}</span>}
+                {paPhone && <span className="rx-m">Mob: {paPhone}</span>}
+              </div>
+            )}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Styles — matches PRESCRIPTION TEMPLATE – SPECIFICATION
+//   Red #B22222 · Blue #1A237E · Text #000000 · Georgia headings / Arial body
+// ---------------------------------------------------------------------------
+const CSS = `
+@import url('https://fonts.googleapis.com/css2?family=Noto+Nastaliq+Urdu:wght@500;700&display=swap');
+
+.rx-page{ --red:#B22222; --blue:#1A237E; --ink:#000000; }
+.rx-page{ position:fixed; inset:0; overflow:auto; background:#e6e6ec;
+  font-family:Arial,Calibri,'Segoe UI',sans-serif; color:var(--ink); }
+.rx-page *{ box-sizing:border-box; }
+
+/* Overlays */
+.rx-overlay{ position:fixed; inset:0; background:rgba(230,230,236,.92); z-index:1000;
+  display:flex; align-items:center; justify-content:center; flex-direction:column; }
+.rx-spinner{ width:40px; height:40px; border:4px solid var(--blue); border-top-color:transparent;
+  border-radius:50%; animation:rx-spin .7s linear infinite; }
+@keyframes rx-spin{ to{ transform:rotate(360deg); } }
+.rx-overlay p{ margin-top:12px; font-weight:600; color:var(--blue); }
+.rx-errbox{ background:#fff; padding:24px 32px; border-radius:8px; border:1px solid var(--red);
+  max-width:400px; text-align:center; }
+.rx-errbox h3{ color:var(--red); margin:0 0 8px; }
+.rx-errbox p{ margin:0 0 12px; font-size:14px; }
+.rx-errbox button{ background:var(--blue); color:#fff; border:none; padding:8px 20px;
+  border-radius:4px; cursor:pointer; font-family:inherit; font-size:13px; }
+
+.rx-print-btn{ position:fixed; bottom:24px; right:24px; z-index:500; background:var(--blue); color:#fff;
+  border:none; padding:10px 22px; border-radius:6px; font-family:inherit; font-size:14px; font-weight:600;
+  cursor:pointer; box-shadow:0 2px 8px rgba(0,0,0,.2); }
+.rx-print-btn:hover{ opacity:.9; }
+
+/* ── Sheet: A4 portrait, 12mm margin, single page ── */
+.rx-sheet{ width:210mm; height:297mm; margin:24px auto; background:#fff; padding:12mm;
+  box-shadow:0 2px 14px rgba(0,0,0,.25); display:flex; flex-direction:column; overflow:hidden; }
+
+/* 2. Header (≈24%) */
+.rx-hospital{ margin:0; font-family:Georgia,'Times New Roman',serif; font-weight:bold; color:var(--red);
+  font-size:30px; line-height:1.1; letter-spacing:.3px; border-bottom:4px double var(--red);
+  padding-bottom:5px; }
+
+.rx-head{ display:grid; grid-template-columns:1.55fr .95fr 1.15fr; gap:14px; margin-top:10px;
+  align-items:start; }
+.rx-doc-name{ margin:0 0 4px; font-family:Georgia,'Times New Roman',serif; font-weight:bold;
+  font-style:italic; color:var(--blue); font-size:20px; line-height:1.15; }
+.rx-doc-lines{ font-size:12px; line-height:1.5; color:var(--ink); }
+.rx-doc-lines div{ margin:0; }
+
+.rx-center{ text-align:center; }
+.rx-center img{ max-width:74px; max-height:60px; object-fit:contain; margin:0 auto 3px; display:block; }
+.rx-center .rx-short{ font-weight:bold; font-size:14px; color:var(--blue); letter-spacing:.5px; }
+.rx-center .rx-hosp-small{ font-weight:bold; font-size:10px; color:var(--blue); line-height:1.25; margin-top:1px; }
+.rx-center .rx-pa{ font-weight:bold; font-size:10px; color:var(--blue); line-height:1.3; margin-top:3px; }
+.rx-center .rx-pa-phone{ font-weight:bold; color:var(--blue); font-size:11px; }
+
+.rx-urdu{ direction:rtl; text-align:right; font-family:'Noto Nastaliq Urdu',serif; color:var(--blue);
+  font-size:12px; line-height:1.9; }
+.rx-urdu .rx-u-name{ color:var(--red); font-size:16px; line-height:1.5; }
+
+.rx-head-rule{ border:none; border-top:2px solid var(--blue); margin:10px 0 0; }
+
+/* 3. Patient box */
+.rx-ptbox{ border:1.5px solid var(--blue); padding:8px 10px; margin-top:10px; }
+.rx-ptrow{ display:flex; flex-wrap:wrap; align-items:baseline; gap:6px 22px; font-size:13px; }
+.rx-ptrow + .rx-ptrow{ margin-top:9px; }
+.rx-field{ display:flex; align-items:baseline; gap:6px; }
+.rx-field .k{ font-weight:bold; white-space:nowrap; }
+.rx-field .v{ min-width:90px; border-bottom:1px solid var(--ink); padding:0 4px 1px; font-weight:400;
+  display:inline-block; }
+.rx-field .rx-v-lg{ min-width:150px; }
+
+/* 4. Body — Clinical Record 30% | Rx 70% (≈48%) */
+.rx-body{ display:grid; grid-template-columns:1fr 2.35fr; gap:6mm; margin-top:6px; }
+.rx-col{ display:flex; flex-direction:column; }
+.rx-col-title{ margin:0 0 4px; font-family:Georgia,'Times New Roman',serif; font-weight:bold;
+  font-style:italic; color:var(--blue); font-size:22px; line-height:1; }
+.rx-col-title .rx-x{ font-size:14px; }
+.rx-col-box{ border:1.5px solid var(--blue); height:155mm; padding:10px 12px; overflow:hidden; }
+
+/* Clinical Record — fixed handwriting fields, evenly distributed */
+.rx-clinical-box{ display:flex; flex-direction:column; justify-content:space-between; }
+.rx-cr-label{ color:var(--blue); font-weight:bold; font-size:13px; }
+.rx-cr-dots{ border-bottom:2px dotted #333; margin-top:16px; }
+.rx-cr-inline{ display:flex; align-items:flex-end; gap:8px; }
+.rx-cr-inline .rx-cr-label{ white-space:nowrap; }
+.rx-cr-dots-inline{ flex:1; border-bottom:2px dotted #333; height:15px; }
+.rx-cr-unit{ font-weight:bold; font-size:12px; color:var(--ink); white-space:nowrap; }
+
+/* Rx — faded watermark upper-left + optional typed prescription */
+.rx-rx-box{ position:relative; }
+.rx-rx-watermark{ position:absolute; top:6px; left:14px; font-family:Georgia,'Times New Roman',serif;
+  font-style:italic; font-weight:bold; color:var(--blue); font-size:78px; line-height:1; opacity:.08;
+  pointer-events:none; user-select:none; }
+.rx-rx-watermark span{ font-size:42px; }
+.rx-rx-text{ position:relative; margin:0; padding-top:74px; font-family:Arial,Calibri,sans-serif;
+  font-size:14px; line-height:1.7; white-space:pre-wrap; word-break:break-word; color:var(--ink); }
+
+/* 5. Footer (≈18%) — pulled up close to Rx */
+.rx-foot-rule{ border:none; border-top:2px solid var(--blue); margin:5mm 0 0; }
+.rx-foot{ display:flex; justify-content:space-between; align-items:flex-end; padding-top:6px; gap:16px; }
+.rx-fee{ font-size:14px; }
+.rx-fee-lbl{ color:var(--red); font-weight:bold; }
+.rx-fee-amt{ color:var(--ink); font-weight:bold; margin-left:8px; }
+.rx-sign{ text-align:center; min-width:200px; }
+.rx-sign-imgs{ height:34px; display:flex; align-items:flex-end; justify-content:center; gap:10px; }
+.rx-sign-imgs img{ object-fit:contain; }
+.rx-sign-imgs .rx-sig{ max-height:34px; max-width:130px; }
+.rx-sign-imgs .rx-stamp{ max-height:44px; max-width:70px; opacity:.9; }
+.rx-sign-line{ border-top:1px solid var(--ink); padding-top:3px; margin-top:2px; font-size:12px; color:var(--ink); }
+.rx-notvalid{ color:var(--blue); font-weight:bold; font-size:12px; margin-top:3px; }
+
+.rx-addr{ text-align:center; font-size:12px; margin-top:6px; }
+.rx-addr .rx-a{ color:var(--red); font-weight:bold; }
+.rx-addr .rx-m{ color:var(--blue); font-weight:bold; margin-left:16px; }
+
+/* ── Print: single A4 page, 12mm margin ── */
+@media print{
+  @page{ size:A4; margin:12mm; }
+  .rx-page{ position:static; background:#fff; overflow:visible; }
+  .rx-sheet{ width:100%; height:calc(297mm - 24mm); margin:0; padding:0; box-shadow:none; overflow:hidden; }
+  .rx-print-btn, .rx-overlay{ display:none !important; }
+  .rx-page *{ -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+}
+`;
