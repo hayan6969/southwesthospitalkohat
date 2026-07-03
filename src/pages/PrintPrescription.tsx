@@ -308,9 +308,8 @@ export default function PrintPrescription() {
     };
   }, [patientId]);
 
-  // Auto-open the print dialog only after the sheet's images (logo, verification
-  // seal, signature, stamp) have finished loading — otherwise the logo can be
-  // missing on the printout. A 4s fallback ensures a slow/broken image never blocks.
+  // Auto-open the print dialog only after ALL images (logo, verification,
+  // signature, stamp) have finished loading in both cache and DOM.
   useEffect(() => {
     if (!data || hasPrinted.current) return;
     hasPrinted.current = true;
@@ -326,19 +325,32 @@ export default function PrintPrescription() {
     const doPrint = () => {
       if (printed) return;
       printed = true;
-      // let the just-loaded (cached) images paint before the dialog opens
-      window.setTimeout(() => window.print(), 200);
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => window.print());
+      });
+    };
+
+    const waitForDomImages = () => {
+      const imgs = document.querySelectorAll<HTMLImageElement>(".rx-root img");
+      const pending = Array.from(imgs).filter((img) => !img.complete);
+      if (pending.length === 0) { doPrint(); return; }
+      let done = 0;
+      pending.forEach((img) => {
+        img.onload = () => { done++; if (done >= pending.length) doPrint(); };
+        img.onerror = () => { done++; if (done >= pending.length) doPrint(); };
+      });
+      setTimeout(() => { if (!printed) doPrint(); }, 3000);
     };
 
     if (urls.length === 0) {
-      doPrint();
+      waitForDomImages();
       return;
     }
 
     let remaining = urls.length;
     const onOne = () => {
       remaining -= 1;
-      if (remaining <= 0) doPrint();
+      if (remaining <= 0) waitForDomImages();
     };
     urls.forEach((url) => {
       const img = new Image();
@@ -347,8 +359,8 @@ export default function PrintPrescription() {
       img.src = url;
     });
 
-    const fallback = window.setTimeout(doPrint, 4000);
-    return () => window.clearTimeout(fallback);
+    const fallback = setTimeout(() => { if (!printed) doPrint(); }, 6000);
+    return () => clearTimeout(fallback);
   }, [data]);
 
   // ---- derived values (mapping table) ----
