@@ -497,6 +497,15 @@ export default function PrintPrescription() {
                   </>
                 )}
               </div>
+              <div className="rx-verify">
+                <img
+                  src="/verification.png"
+                  alt="Verification"
+                  onError={(e) => {
+                    e.currentTarget.style.display = "none";
+                  }}
+                />
+              </div>
               <div className="rx-sign">
                 <div className="rx-sign-imgs">
                   {show("show_stamp") && data.doctor.stampUrl && (
@@ -600,7 +609,7 @@ const CSS = `
 .rx-col-title{ margin:0 0 4px; font-family:Georgia,'Times New Roman',serif; font-weight:bold;
   font-style:italic; color:var(--blue); font-size:22px; line-height:1; }
 .rx-col-title .rx-x{ font-size:14px; }
-.rx-col-box{ border:1.5px solid var(--blue); height:155mm; padding:10px 12px; overflow:hidden; }
+.rx-col-box{ border:1.5px solid var(--blue); height:150mm; padding:10px 12px; overflow:hidden; }
 
 /* Clinical Record — fixed handwriting fields, evenly distributed */
 .rx-clinical-box{ display:flex; flex-direction:column; justify-content:space-between; }
@@ -622,11 +631,14 @@ const CSS = `
 
 /* 5. Footer (≈18%) — pulled up close to Rx */
 .rx-foot-rule{ border:none; border-top:2px solid var(--blue); margin:5mm 0 0; }
-.rx-foot{ display:flex; justify-content:space-between; align-items:flex-end; padding-top:6px; gap:16px; }
-.rx-fee{ font-size:14px; }
+.rx-foot{ display:grid; grid-template-columns:1fr auto 1fr; align-items:end; column-gap:12px;
+  padding-top:6px; }
+.rx-fee{ justify-self:start; font-size:14px; }
 .rx-fee-lbl{ color:var(--red); font-weight:bold; }
 .rx-fee-amt{ color:var(--ink); font-weight:bold; margin-left:8px; }
-.rx-sign{ text-align:center; min-width:200px; }
+.rx-verify{ justify-self:center; display:flex; align-items:flex-end; }
+.rx-verify img{ height:92px; max-width:230px; object-fit:contain; }
+.rx-sign{ justify-self:end; text-align:center; min-width:200px; }
 .rx-sign-imgs{ height:34px; display:flex; align-items:flex-end; justify-content:center; gap:10px; }
 .rx-sign-imgs img{ object-fit:contain; }
 .rx-sign-imgs .rx-sig{ max-height:34px; max-width:130px; }
