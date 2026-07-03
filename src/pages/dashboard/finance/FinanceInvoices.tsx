@@ -6,7 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { formatPkrAmount } from "@/utils/currency";
-import { Download, Receipt, Calendar as CalendarIcon, Filter, ChevronLeft, ChevronRight } from "lucide-react";
+import { Download, Receipt, Calendar as CalendarIcon, Filter, ChevronLeft, ChevronRight, Pill } from "lucide-react";
 import { format } from "date-fns";
 import { generateInvoicePDF, generateXrayInvoicePDF, generateOTPDF } from "@/utils/pdfGenerator";
 import { generatePharmacyInvoicePDF } from "@/utils/pharmacyPdfGenerator";
@@ -879,15 +879,29 @@ export default function FinanceInvoices() {
                   </TableCell>
                   <TableCell>{format(new Date(invoice.displayDate!), 'MMM dd, yyyy')}</TableCell>
                   <TableCell>
-                    <Button 
-                      size="sm" 
-                      variant="outline"
-                      onClick={() => handleDownloadPDF(invoice)}
-                      className="flex items-center gap-2"
-                    >
-                      <Download className="w-4 h-4" />
-                      View
-                    </Button>
+                    <div className="flex items-center gap-2">
+                      {invoice.type === 'appointment' && invoice.patient_id && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => window.open(`/print/prescription/${invoice.patient_id}`, '_blank')}
+                          className="flex items-center gap-2 border-indigo-400 text-indigo-700 hover:bg-indigo-50"
+                          title="Print prescription slip"
+                        >
+                          <Pill className="w-4 h-4" />
+                          Rx
+                        </Button>
+                      )}
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleDownloadPDF(invoice)}
+                        className="flex items-center gap-2"
+                      >
+                        <Download className="w-4 h-4" />
+                        View
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}

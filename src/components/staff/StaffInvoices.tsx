@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, Search, FileText, Receipt, TestTube, Building2, Eye, Download, ChevronLeft, ChevronRight, Zap, X, Pencil, Loader2 } from "lucide-react";
+import { Calendar, Search, FileText, Receipt, TestTube, Building2, Eye, Download, ChevronLeft, ChevronRight, Zap, X, Pencil, Loader2, Pill } from "lucide-react";
 import { useInvoices } from "@/hooks/useDatabase";
 import { usePatientNames, getPatientName } from "@/hooks/useDisplayHelpers";
 import { format } from "date-fns";
@@ -1143,6 +1143,18 @@ export function StaffInvoices() {
                             >
                               <Pencil className="w-3 h-3" />
                               Edit
+                            </Button>
+                          )}
+                          {invoice.type === 'appointments' && invoice.patient_id && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => window.open(`/print/prescription/${invoice.patient_id}`, '_blank')}
+                              className="flex items-center gap-1 border-indigo-400 text-indigo-700 hover:bg-indigo-50"
+                              title="Print prescription slip"
+                            >
+                              <Pill className="w-3 h-3" />
+                              Rx
                             </Button>
                           )}
                           <Button

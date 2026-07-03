@@ -308,18 +308,53 @@ export default function PrintPrescription() {
     };
   }, [patientId]);
 
-  // Auto-open the print dialog once the sheet has rendered.
+  // Auto-open the print dialog only after the sheet's images (logo, verification
+  // seal, signature, stamp) have finished loading — otherwise the logo can be
+  // missing on the printout. A 4s fallback ensures a slow/broken image never blocks.
   useEffect(() => {
     if (!data || hasPrinted.current) return;
     hasPrinted.current = true;
-    const t = setTimeout(() => window.print(), 700);
-    return () => clearTimeout(t);
+
+    const urls = [
+      data.doctor.headerLogo || data.hospital.logoUrl,
+      "/verification.png",
+      data.doctor.signatureUrl,
+      data.doctor.stampUrl,
+    ].filter((u): u is string => Boolean(u));
+
+    let printed = false;
+    const doPrint = () => {
+      if (printed) return;
+      printed = true;
+      // let the just-loaded (cached) images paint before the dialog opens
+      window.setTimeout(() => window.print(), 200);
+    };
+
+    if (urls.length === 0) {
+      doPrint();
+      return;
+    }
+
+    let remaining = urls.length;
+    const onOne = () => {
+      remaining -= 1;
+      if (remaining <= 0) doPrint();
+    };
+    urls.forEach((url) => {
+      const img = new Image();
+      img.onload = onOne;
+      img.onerror = onOne;
+      img.src = url;
+    });
+
+    const fallback = window.setTimeout(doPrint, 4000);
+    return () => window.clearTimeout(fallback);
   }, [data]);
 
   // ---- derived values (mapping table) ----
-  const tmpl = data?.doctor.prescriptionTemplate ?? {};
-  const show = (key: string) => tmpl[key] !== false; // default-on toggles
-
+  // Every prescription uses the SAME template: all sections always render;
+  // a missing value simply shows blank (doctor template toggles are intentionally
+  // ignored here so the layout never changes between doctors/patients).
   const hospitalName = data?.hospital.name || data?.doctor.clinicName || "";
   const logoSrc = data?.doctor.headerLogo || data?.hospital.logoUrl || null;
   const paPhone = data?.hospital.phone || data?.doctor.phone || null;
@@ -329,16 +364,27 @@ export default function PrintPrescription() {
   const feeText = `Rs. ${Number(feeNumber || 0).toLocaleString("en-PK")}`;
   const notValidText = data?.hospital.footerText || "NOT VALID FOR COURT";
 
-  // Doctor block lines (skip anything empty — spec rule 6).
-  const doctorLines = data
-    ? [
-        data.doctor.qualifications,
-        designation,
-        ...data.doctor.doctorDetails,
-        data.doctor.clinicName || data.hospital.name,
-        data.doctor.licenseNumber ? `PMDC / Reg. No: ${data.doctor.licenseNumber}` : null,
-      ].filter((l): l is string => Boolean(l))
-    : [];
+  // Doctor block lines (skip empties, and drop duplicates — e.g. the clinic name
+  // often already appears inside doctor_details, so we don't want it twice).
+  const doctorLines = (() => {
+    if (!data) return [] as string[];
+    const raw = [
+      data.doctor.qualifications,
+      designation,
+      ...data.doctor.doctorDetails,
+      data.doctor.clinicName || data.hospital.name,
+      data.doctor.licenseNumber ? `PMDC / Reg. No: ${data.doctor.licenseNumber}` : null,
+    ]
+      .filter((l): l is string => Boolean(l))
+      .map((l) => l.trim());
+    const seen = new Set<string>();
+    return raw.filter((l) => {
+      const key = l.toLowerCase();
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  })();
 
   return (
     <div className="rx-page">
@@ -385,7 +431,6 @@ export default function PrintPrescription() {
               {/* Logo (center) */}
               <div className="rx-center">
                 {logoSrc && <img src={logoSrc} alt="" />}
-                {data.doctor.clinicShortName && <div className="rx-short">{data.doctor.clinicShortName}</div>}
                 {hospitalName && <div className="rx-hosp-small">{hospitalName}</div>}
                 {paPhone && (
                   <div className="rx-pa">
@@ -393,6 +438,7 @@ export default function PrintPrescription() {
                     <div className="rx-pa-phone">{paPhone}</div>
                   </div>
                 )}
+                <div className="rx-token">Token {data.token || ""}</div>
               </div>
 
               {/* Urdu (right) */}
@@ -430,14 +476,6 @@ export default function PrintPrescription() {
                   <span className="v">{data.patient.patientNumber || ""}</span>
                 </span>
               </div>
-              {show("show_token") && (
-                <div className="rx-ptrow">
-                  <span className="rx-field">
-                    <span className="k">Token</span>
-                    <span className="v">{data.token || ""}</span>
-                  </span>
-                </div>
-              )}
             </div>
 
             {/* ── 4. MAIN BODY — Clinical Record 30% | Rx 70% ───────── */}
@@ -490,12 +528,8 @@ export default function PrintPrescription() {
             <hr className="rx-foot-rule" />
             <div className="rx-foot">
               <div className="rx-fee">
-                {show("show_fee") && (
-                  <>
-                    <span className="rx-fee-lbl">Consultation Fee</span>
-                    <span className="rx-fee-amt">{feeText}</span>
-                  </>
-                )}
+                <span className="rx-fee-lbl">Consultation Fee</span>
+                <span className="rx-fee-amt">{feeText}</span>
               </div>
               <div className="rx-verify">
                 <img
@@ -508,24 +542,14 @@ export default function PrintPrescription() {
               </div>
               <div className="rx-sign">
                 <div className="rx-sign-imgs">
-                  {show("show_stamp") && data.doctor.stampUrl && (
-                    <img src={data.doctor.stampUrl} alt="" className="rx-stamp" />
-                  )}
-                  {show("show_signature") && data.doctor.signatureUrl && (
-                    <img src={data.doctor.signatureUrl} alt="" className="rx-sig" />
-                  )}
+                  {data.doctor.stampUrl && <img src={data.doctor.stampUrl} alt="" className="rx-stamp" />}
+                  {data.doctor.signatureUrl && <img src={data.doctor.signatureUrl} alt="" className="rx-sig" />}
                 </div>
                 <div className="rx-sign-line">Doctor's Signature</div>
                 <div className="rx-notvalid">{notValidText}</div>
               </div>
             </div>
 
-            {show("show_footer") && (data.hospital.address || paPhone) && (
-              <div className="rx-addr">
-                {data.hospital.address && <span className="rx-a">Address: {data.hospital.address}</span>}
-                {paPhone && <span className="rx-m">Mob: {paPhone}</span>}
-              </div>
-            )}
           </div>
         </>
       )}
@@ -586,10 +610,12 @@ const CSS = `
 .rx-center .rx-hosp-small{ font-weight:bold; font-size:10px; color:var(--blue); line-height:1.25; margin-top:1px; }
 .rx-center .rx-pa{ font-weight:bold; font-size:10px; color:var(--blue); line-height:1.3; margin-top:3px; }
 .rx-center .rx-pa-phone{ font-weight:bold; color:var(--blue); font-size:11px; }
+.rx-center .rx-token{ font-weight:bold; color:var(--blue); font-size:12px; margin-top:4px; }
 
 .rx-urdu{ direction:rtl; text-align:right; font-family:'Noto Nastaliq Urdu',serif; color:var(--blue);
-  font-size:12px; line-height:1.9; }
-.rx-urdu .rx-u-name{ color:var(--red); font-size:16px; line-height:1.5; }
+  font-size:13px; line-height:2.2; }
+.rx-urdu > div{ margin-bottom:5px; }
+.rx-urdu .rx-u-name{ color:var(--red); font-size:18px; line-height:2; margin-bottom:8px; }
 
 .rx-head-rule{ border:none; border-top:2px solid var(--blue); margin:10px 0 0; }
 
@@ -604,12 +630,12 @@ const CSS = `
 .rx-field .rx-v-lg{ min-width:150px; }
 
 /* 4. Body — Clinical Record 30% | Rx 70% (≈48%) */
-.rx-body{ display:grid; grid-template-columns:1fr 2.35fr; gap:6mm; margin-top:6px; }
-.rx-col{ display:flex; flex-direction:column; }
+.rx-body{ display:grid; grid-template-columns:1fr 2.35fr; gap:6mm; margin-top:6px; flex:1; min-height:0; }
+.rx-col{ display:flex; flex-direction:column; min-height:0; }
 .rx-col-title{ margin:0 0 4px; font-family:Georgia,'Times New Roman',serif; font-weight:bold;
   font-style:italic; color:var(--blue); font-size:22px; line-height:1; }
 .rx-col-title .rx-x{ font-size:14px; }
-.rx-col-box{ border:1.5px solid var(--blue); height:150mm; padding:10px 12px; overflow:hidden; }
+.rx-col-box{ border:1.5px solid var(--blue); flex:1; min-height:0; padding:10px 12px; overflow:hidden; }
 
 /* Clinical Record — fixed handwriting fields, evenly distributed */
 .rx-clinical-box{ display:flex; flex-direction:column; justify-content:space-between; }
@@ -637,7 +663,8 @@ const CSS = `
 .rx-fee-lbl{ color:var(--red); font-weight:bold; }
 .rx-fee-amt{ color:var(--ink); font-weight:bold; margin-left:8px; }
 .rx-verify{ justify-self:center; display:flex; align-items:flex-end; }
-.rx-verify img{ height:92px; max-width:230px; object-fit:contain; }
+.rx-verify img{ height:120px; max-width:300px; object-fit:contain; object-position:bottom;
+  transform:translateY(28px); }
 .rx-sign{ justify-self:end; text-align:center; min-width:200px; }
 .rx-sign-imgs{ height:34px; display:flex; align-items:flex-end; justify-content:center; gap:10px; }
 .rx-sign-imgs img{ object-fit:contain; }

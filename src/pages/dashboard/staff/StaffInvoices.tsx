@@ -4,7 +4,7 @@ import { usePaginatedInvoices, usePaginatedPharmacyInvoices, useUpdateInvoice } 
 import { InvoiceDialog } from "@/components/dialogs/InvoiceDialog";
 import { generateInvoicePDF, generateXrayInvoicePDF } from "@/utils/pdfGenerator";
 import { generatePharmacyInvoicePDF } from "@/utils/pharmacyPdfGenerator";
-import { Banknote, FileText, Calendar, CheckCircle, Download, ChevronLeft, ChevronRight } from "lucide-react";
+import { Banknote, FileText, Calendar, CheckCircle, Download, ChevronLeft, ChevronRight, Pill } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
@@ -433,8 +433,20 @@ export default function StaffInvoices() {
                               Mark Paid
                             </Button>
                           )}
-                          <Button 
-                            size="sm" 
+                          {invoice.type === 'appointment' && (invoice as any).patient_id && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => window.open(`/print/prescription/${(invoice as any).patient_id}`, '_blank')}
+                              className="border-indigo-400 text-indigo-700 hover:bg-indigo-50"
+                              title="Print prescription slip"
+                            >
+                              <Pill className="w-3 h-3 mr-1" />
+                              Rx
+                            </Button>
+                          )}
+                          <Button
+                            size="sm"
                             variant="outline"
                             onClick={() => handleDownloadPDF(invoice)}
                           >
