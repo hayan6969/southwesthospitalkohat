@@ -297,26 +297,52 @@ export default function FinanceRefunds() {
         setUploadingProof(false);
       }
 
-      // If lab refund, cancel the order + void the invoice
+      // If lab refund: full selection cancels whole order + voids invoice.
+      // Partial selection only removes the selected tests and reduces the
+      // invoice amount so remaining tests stay visible/processable in Lab.
       if (refundData.refundType === 'lab' && selectedOrder) {
-        const { error: cancelError } = await supabase
-          .from('lab_pathology_orders')
-          .update({
-            payment_status: 'cancelled',
-            lab_status: 'cancelled'
-          })
-          .eq('id', selectedOrder.id);
+        if (isFullSelection || selectedItems.length === 0) {
+          const { error: cancelError } = await supabase
+            .from('lab_pathology_orders')
+            .update({
+              payment_status: 'cancelled',
+              lab_status: 'cancelled'
+            })
+            .eq('id', selectedOrder.id);
 
-        if (cancelError) throw cancelError;
+          if (cancelError) throw cancelError;
 
-        // Void the associated invoice so it's removed from revenue
-        if (selectedOrder.invoice_id) {
-          const { error: invError } = await supabase
-            .from('invoices')
-            .update({ status: 'cancelled' })
-            .eq('id', selectedOrder.invoice_id);
+          if (selectedOrder.invoice_id) {
+            const { error: invError } = await supabase
+              .from('invoices')
+              .update({ status: 'cancelled' })
+              .eq('id', selectedOrder.invoice_id);
+            if (invError) console.error('Error voiding invoice:', invError);
+          }
+        } else {
+          // Partial: delete only the selected order items, keep order active
+          const idsToRemove = selectedItems.map(i => i.id);
+          const { error: delError } = await supabase
+            .from('lab_pathology_order_items')
+            .delete()
+            .in('id', idsToRemove);
+          if (delError) throw delError;
 
-          if (invError) console.error('Error voiding invoice:', invError);
+          const newTotal = Math.max(0, Number(selectedOrder.total_amount || 0) - selectedCatalog);
+          const { error: updOrderError } = await supabase
+            .from('lab_pathology_orders')
+            .update({ total_amount: newTotal })
+            .eq('id', selectedOrder.id);
+          if (updOrderError) console.error('Error updating order total:', updOrderError);
+
+          if (selectedOrder.invoice_id && invoiceAmount != null) {
+            const newInvoiceAmount = Math.max(0, invoiceAmount - parseFloat(refundData.amount));
+            const { error: invError } = await supabase
+              .from('invoices')
+              .update({ amount: newInvoiceAmount })
+              .eq('id', selectedOrder.invoice_id);
+            if (invError) console.error('Error adjusting invoice:', invError);
+          }
         }
       }
 
