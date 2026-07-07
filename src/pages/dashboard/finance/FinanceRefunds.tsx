@@ -301,7 +301,11 @@ export default function FinanceRefunds() {
       // Partial selection only removes the selected tests and reduces the
       // invoice amount so remaining tests stay visible/processable in Lab.
       if (refundData.refundType === 'lab' && selectedOrder) {
-        if (isFullSelection || selectedItems.length === 0) {
+        if (selectedItems.length === 0) {
+          throw new Error("Select at least one lab test to refund");
+        }
+
+        if (isFullSelection) {
           const { error: cancelError } = await supabase
             .from('lab_pathology_orders')
             .update({
@@ -439,6 +443,11 @@ export default function FinanceRefunds() {
     // If refund type is lab, an order must be selected
     if (formData.refundType === 'lab' && !selectedOrder) {
       toast.error("Please select a pathology order to cancel");
+      return;
+    }
+
+    if (formData.refundType === 'lab' && selectedItems.length === 0) {
+      toast.error("Please select at least one lab test to refund");
       return;
     }
 
