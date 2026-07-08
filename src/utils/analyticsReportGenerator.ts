@@ -150,8 +150,12 @@ export const generateAnalyticsReportPDF = async (startDate: Date, endDate: Date)
     .reduce((s: number, e: any) => s + (Number(e.consultation_fee_at_time) || 0), 0);
   const miscRev = (transactionsData.miscellaneousIncome)
     .reduce((s: number, m: any) => s + (Number(m.amount) || 0), 0);
+  // Manually created invoices (MAN-) belong to hospital revenue
+  const manualInvRev = hospitalInvoices
+    .filter((inv: any) => /^MAN-/i.test(inv.invoice_number || ''))
+    .reduce((s: number, inv: any) => s + (Number(inv.amount) || 0), 0);
 
-  const hospitalRevenue = labRev + xrayRev + otHosShare + emergencyRev + emergencyAptRev + miscRev;
+  const hospitalRevenue = labRev + xrayRev + otHosShare + emergencyRev + emergencyAptRev + miscRev + manualInvRev;
 
   const pharmacyPositive = (transactionsData.pharmacyInvoices)
     .filter((inv: any) => (inv.final_amount || 0) >= 0)
