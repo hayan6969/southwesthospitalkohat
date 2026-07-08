@@ -762,6 +762,7 @@ export default function FinanceInvoices() {
                {filterType === 'all' ? 'All Types' : 
                 filterType === 'appointment' ? 'Appointments' :
                filterType === 'emergency' ? 'Emergency' :
+               filterType === 'manual' ? 'Manual Invoice' :
                filterType === 'pharmacy' ? 'Pharmacy' :
                 filterType === 'lab' ? 'Lab Tests' :
                 filterType === 'xray' ? 'X-ray' :
