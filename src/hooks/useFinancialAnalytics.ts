@@ -208,8 +208,12 @@ export const useFinancialAnalytics = (selectedMonth?: Date, filterParams?: Filte
       const opdConsultationRevenue = hospitalInvoicesArr
         .filter((inv: any) => inv.invoice_number?.startsWith?.('INV-') && !isEmergencyInv(inv))
         .reduce((s: number, inv: any) => s + (Number(inv.amount) || 0), 0);
+      // Manually created invoices (MAN-) are hospital revenue
+      const manualInvoiceRevenue = hospitalInvoicesArr
+        .filter((inv: any) => /^MAN-/i.test(inv.invoice_number || ''))
+        .reduce((s: number, inv: any) => s + (Number(inv.amount) || 0), 0);
 
-      const totalHospitalRevenue = totalLabRevenue + totalXrayRevenue + totalOperationsRevenue + totalEmergencyRevenue + miscRevenue;
+      const totalHospitalRevenue = totalLabRevenue + totalXrayRevenue + totalOperationsRevenue + totalEmergencyRevenue + miscRevenue + manualInvoiceRevenue;
       const totalDoctorsRevenue = opdConsultationRevenue + otDoctorExpense;
       const totalExpenses = expensesArr.reduce((s: number, e: any) => s + (Number(e.amount) || 0), 0);
 
