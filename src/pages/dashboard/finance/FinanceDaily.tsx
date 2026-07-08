@@ -146,7 +146,10 @@ export default function FinanceDaily() {
 
       const doctorRevenue = consultationRevenue + otDoctorExpense;
 
-      const totalHospitalRevenue = emergencyRevenue + labRevenue + xrayRevenue + otHospitalRevenue + miscellaneousIncome;
+      const manualInvoiceRevenue = hospitalInvoices?.filter(inv => /^MAN-/i.test(inv.invoice_number || ''))
+        .reduce((sum, inv) => sum + Number(inv.amount || 0), 0) || 0;
+
+      const totalHospitalRevenue = emergencyRevenue + labRevenue + xrayRevenue + otHospitalRevenue + miscellaneousIncome + manualInvoiceRevenue;
       const totalHospitalProfit = totalHospitalRevenue - totalExpenses - totalRefunds;
 
       // IPD calculations
