@@ -136,7 +136,7 @@ export default function FinanceInvoices() {
 
   const handleDownloadPDF = async (invoice: any) => {
     try {
-      if (invoice.type === 'appointment' || invoice.type === 'emergency') {
+      if (invoice.type === 'appointment' || invoice.type === 'emergency' || invoice.type === 'manual') {
         await generateInvoicePDF(invoice);
       } else if (invoice.type === 'pharmacy') {
         await generatePharmacyInvoiceFromData(invoice);
@@ -641,7 +641,9 @@ export default function FinanceInvoices() {
               ? 'X-ray'
               : type === 'emergency'
                 ? 'Emergency Consultation'
-                : 'Appointment';
+                : type === 'manual'
+                  ? 'Manual Invoice'
+                  : 'Appointment';
 
       const creatorProfile = (inv as any).creator;
       const createdByName = creatorProfile
@@ -760,6 +762,7 @@ export default function FinanceInvoices() {
                {filterType === 'all' ? 'All Types' : 
                 filterType === 'appointment' ? 'Appointments' :
                filterType === 'emergency' ? 'Emergency' :
+               filterType === 'manual' ? 'Manual Invoice' :
                filterType === 'pharmacy' ? 'Pharmacy' :
                 filterType === 'lab' ? 'Lab Tests' :
                 filterType === 'xray' ? 'X-ray' :
@@ -787,6 +790,7 @@ export default function FinanceInvoices() {
                   <SelectItem value="all">All Types</SelectItem>
                   <SelectItem value="appointment">Appointments</SelectItem>
                   <SelectItem value="emergency">Emergency</SelectItem>
+                  <SelectItem value="manual">Manual Invoice</SelectItem>
                   <SelectItem value="pharmacy">Pharmacy</SelectItem>
                   <SelectItem value="lab">Lab Tests</SelectItem>
                   <SelectItem value="xray">X-ray</SelectItem>

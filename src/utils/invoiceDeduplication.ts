@@ -40,8 +40,14 @@ export const isXrayInvoiceRecord = (invoice: InvoiceLike) => {
   return /^XR(?:AY)?-/i.test(invoice.invoice_number || "") || description.includes("x-ray") || description.includes("xray");
 };
 
+export const isManualInvoiceRecord = (invoice: InvoiceLike) => {
+  return /^MAN-/i.test(invoice.invoice_number || "");
+};
+
 export const getHospitalInvoiceType = (invoice: InvoiceLike) => {
   const description = invoice.description?.toLowerCase() || "";
+
+  if (isManualInvoiceRecord(invoice)) return "manual" as const;
 
   if (
     description.includes("emergency consultation") ||
