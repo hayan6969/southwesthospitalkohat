@@ -67,7 +67,7 @@ export function InvoiceDialog() {
         amount: usdAmount,
         description: description.trim(),
         due_date: dueDate || undefined,
-        status: 'pending'
+        status: 'paid'
       });
       
       toast.success("Invoice created successfully");
