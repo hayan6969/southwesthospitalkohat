@@ -790,6 +790,7 @@ export default function FinanceInvoices() {
                   <SelectItem value="all">All Types</SelectItem>
                   <SelectItem value="appointment">Appointments</SelectItem>
                   <SelectItem value="emergency">Emergency</SelectItem>
+                  <SelectItem value="manual">Manual Invoice</SelectItem>
                   <SelectItem value="pharmacy">Pharmacy</SelectItem>
                   <SelectItem value="lab">Lab Tests</SelectItem>
                   <SelectItem value="xray">X-ray</SelectItem>
