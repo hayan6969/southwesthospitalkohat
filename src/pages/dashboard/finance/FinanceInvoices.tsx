@@ -136,7 +136,7 @@ export default function FinanceInvoices() {
 
   const handleDownloadPDF = async (invoice: any) => {
     try {
-      if (invoice.type === 'appointment' || invoice.type === 'emergency') {
+      if (invoice.type === 'appointment' || invoice.type === 'emergency' || invoice.type === 'manual') {
         await generateInvoicePDF(invoice);
       } else if (invoice.type === 'pharmacy') {
         await generatePharmacyInvoiceFromData(invoice);
