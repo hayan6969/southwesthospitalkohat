@@ -354,8 +354,13 @@ function calculateAnalytics(data: FinanceData) {
   const otDoctorExpenses = otSchedules.filter(schedule => schedule.doctor_expense)
     .reduce((sum, schedule) => sum + Number(schedule.doctor_expense), 0);
 
-  // Hospital revenue = EMERGENCY consultations + lab + X-ray + OT hospital portion + pharmacy profit
-  const hospitalRevenue = emergencyConsultationRevenue + labRevenue + xrayRevenue + otHospitalRevenue + pharmacyProfit;
+  // Manually created invoices (MAN-) count as hospital revenue
+  const manualInvoiceRevenue = hospitalInvoices.filter(inv =>
+    inv.status === 'paid' && /^MAN-/i.test(inv.invoice_number || '')
+  ).reduce((sum, inv) => sum + Number(inv.amount || 0), 0);
+
+  // Hospital revenue = EMERGENCY consultations + lab + X-ray + OT hospital portion + pharmacy profit + manual invoices
+  const hospitalRevenue = emergencyConsultationRevenue + labRevenue + xrayRevenue + otHospitalRevenue + pharmacyProfit + manualInvoiceRevenue;
   
   // Total revenue for display purposes
   const totalRevenue = hospitalRevenue + pharmacyRevenue + doctorConsultationRevenue + otDoctorExpenses;
