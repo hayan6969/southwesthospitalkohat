@@ -641,7 +641,9 @@ export default function FinanceInvoices() {
               ? 'X-ray'
               : type === 'emergency'
                 ? 'Emergency Consultation'
-                : 'Appointment';
+                : type === 'manual'
+                  ? 'Manual Invoice'
+                  : 'Appointment';
 
       const creatorProfile = (inv as any).creator;
       const createdByName = creatorProfile
