@@ -28,7 +28,7 @@ export function InvoiceDialog() {
 
   const generateInvoiceNumber = () => {
     const timestamp = Date.now().toString().slice(-6);
-    return `INV-${timestamp}`;
+    return `MAN-${timestamp}`;
   };
 
   const handleSelectPatient = (patient: any) => {
