@@ -153,13 +153,27 @@ export function PreviousBillDiscountDialog({ open, onOpenChange }: Props) {
         : "N/A";
 
       const processedAt = new Date().toISOString();
-      const newInvoiceAmount = selectedInvoice.amount - discountAmount;
+      // Re-fetch the current invoice amount to avoid applying a discount on
+      // top of stale cached data (which caused the "second discount doubled"
+      // effect users reported).
+      const { data: freshInv, error: freshErr } = await supabase
+        .from("invoices")
+        .select("amount")
+        .eq("id", selectedInvoice.id)
+        .maybeSingle();
+      if (freshErr) throw freshErr;
+      const currentAmount = Number(freshInv?.amount ?? selectedInvoice.amount);
+      const effectiveDiscount =
+        discountType === "percentage"
+          ? Math.round((currentAmount * Number(discountValue)) / 100)
+          : Math.min(Number(discountValue), currentAmount);
+      const newInvoiceAmount = Math.max(0, currentAmount - effectiveDiscount);
       const serviceType = inferServiceType(selectedInvoice);
-      const recordedDiscountValue = discountType === "percentage" ? Number(discountValue) : discountAmount;
+      const recordedDiscountValue = discountType === "percentage" ? Number(discountValue) : effectiveDiscount;
 
       const [refundResult, invoiceUpdateResult, discountRecordResult] = await Promise.all([
         supabase.from("refunds").insert({
-          amount: discountAmount,
+          amount: effectiveDiscount,
           refund_type: "discount_adjustment",
           description: `Discount on previous bill ${selectedInvoice.invoice_number} - ${discountLabel}. Patient: ${patientName}. Billed by: ${billedByStaff}. Authorized by: ${authorizedBy.trim() || "N/A"}. Reason: ${reason || "N/A"}`,
           patient_id: selectedInvoice.patient_id,
@@ -168,7 +182,7 @@ export function PreviousBillDiscountDialog({ open, onOpenChange }: Props) {
         }),
         supabase.from("invoices").update({
           amount: newInvoiceAmount,
-          description: `${selectedInvoice.description || ''} [Adjusted: ${discountLabel}, Refund: ${formatPkrAmount(discountAmount)}]${authorizedBy.trim() ? ` [Authorized by: ${authorizedBy.trim()}]` : ''}`,
+          description: `${selectedInvoice.description || ''} [Adjusted: ${discountLabel}, Refund: ${formatPkrAmount(effectiveDiscount)}]${authorizedBy.trim() ? ` [Authorized by: ${authorizedBy.trim()}]` : ''}`,
         }).eq("id", selectedInvoice.id),
         supabase.from("patient_discounts").insert({
           patient_id: selectedInvoice.patient_id,
@@ -190,7 +204,7 @@ export function PreviousBillDiscountDialog({ open, onOpenChange }: Props) {
       }
 
       // ── Adjust doctor earnings for consultation discounts ──────────────
-      if (serviceType === "consultation" && selectedInvoice.doctor_id && discountAmount > 0) {
+      if (serviceType === "consultation" && selectedInvoice.doctor_id && effectiveDiscount > 0) {
         const invoiceDate = new Date(selectedInvoice.paid_at || selectedInvoice.created_at);
         const dateStr = invoiceDate.toISOString().split("T")[0];
         const { data: dp } = await supabase
@@ -202,8 +216,8 @@ export function PreviousBillDiscountDialog({ open, onOpenChange }: Props) {
           .eq("payment_status", "pending")
           .maybeSingle();
         if (dp) {
-          const newConsultEarnings = Math.max(0, Number(dp.consultation_earnings) - discountAmount);
-          const newTotalEarnings = Math.max(0, Number(dp.total_earnings) - discountAmount);
+          const newConsultEarnings = Math.max(0, Number(dp.consultation_earnings) - effectiveDiscount);
+          const newTotalEarnings = Math.max(0, Number(dp.total_earnings) - effectiveDiscount);
           await supabase
             .from("doctor_payments")
             .update({
@@ -216,7 +230,7 @@ export function PreviousBillDiscountDialog({ open, onOpenChange }: Props) {
       }
 
       // ── Update lab_pathology_reports.amount for lab discounts ─────
-      if (serviceType === "lab" && discountAmount > 0) {
+      if (serviceType === "lab" && effectiveDiscount > 0) {
         // Exact path: reports linked to THIS invoice (set at report creation or
         // backfilled via the order link). No date/patient guessing.
         const { data: linked } = await supabase
@@ -247,7 +261,7 @@ export function PreviousBillDiscountDialog({ open, onOpenChange }: Props) {
         patientId: selectedInvoice.patient?.patient_number || "N/A",
         originalAmount: selectedInvoice.amount,
         discountLabel,
-        refundAmount: discountAmount,
+        refundAmount: effectiveDiscount,
         reason: reason || "N/A",
         billedByStaff,
         processedByStaff,
@@ -256,12 +270,27 @@ export function PreviousBillDiscountDialog({ open, onOpenChange }: Props) {
       });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["search-paid-invoices"] });
-      queryClient.invalidateQueries({ queryKey: ["refunds"] });
-      queryClient.invalidateQueries({ queryKey: ["patient-discounts"] });
-      queryClient.invalidateQueries({ queryKey: ["all-patient-discounts"] });
-      queryClient.invalidateQueries({ queryKey: ["invoices"] });
-      queryClient.invalidateQueries({ queryKey: ["daily-finance"] });
+      // Broad invalidation so lab register + all finance/analytics views
+      // reflect the discount immediately (previously stale caches made the
+      // first discount look ignored until a second one flushed the data).
+      [
+        "search-paid-invoices",
+        "refunds",
+        "patient-discounts",
+        "all-patient-discounts",
+        "invoices",
+        "daily-finance",
+        "daily-detailed",
+        "financial-analytics",
+        "admin-finance-analytics",
+        "lab_register",
+        "lab-pathology-reports",
+        "pathology-reports",
+        "doctor-payments",
+      ].forEach((key) => queryClient.invalidateQueries({ queryKey: [key] }));
+      // Force-refetch anything currently mounted so the UI updates without
+      // waiting for a manual reload.
+      queryClient.refetchQueries({ type: "active" });
       toast.success(
         `Refund of ${formatPkrAmount(discountAmount)} created. Patient can collect cash from the counter.`
       );
