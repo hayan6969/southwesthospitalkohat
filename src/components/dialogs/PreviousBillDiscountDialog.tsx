@@ -153,9 +153,23 @@ export function PreviousBillDiscountDialog({ open, onOpenChange }: Props) {
         : "N/A";
 
       const processedAt = new Date().toISOString();
-      const newInvoiceAmount = selectedInvoice.amount - discountAmount;
+      // Re-fetch the current invoice amount to avoid applying a discount on
+      // top of stale cached data (which caused the "second discount doubled"
+      // effect users reported).
+      const { data: freshInv, error: freshErr } = await supabase
+        .from("invoices")
+        .select("amount")
+        .eq("id", selectedInvoice.id)
+        .maybeSingle();
+      if (freshErr) throw freshErr;
+      const currentAmount = Number(freshInv?.amount ?? selectedInvoice.amount);
+      const effectiveDiscount =
+        discountType === "percentage"
+          ? Math.round((currentAmount * Number(discountValue)) / 100)
+          : Math.min(Number(discountValue), currentAmount);
+      const newInvoiceAmount = Math.max(0, currentAmount - effectiveDiscount);
       const serviceType = inferServiceType(selectedInvoice);
-      const recordedDiscountValue = discountType === "percentage" ? Number(discountValue) : discountAmount;
+      const recordedDiscountValue = discountType === "percentage" ? Number(discountValue) : effectiveDiscount;
 
       const [refundResult, invoiceUpdateResult, discountRecordResult] = await Promise.all([
         supabase.from("refunds").insert({
