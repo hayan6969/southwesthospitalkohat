@@ -256,12 +256,27 @@ export function PreviousBillDiscountDialog({ open, onOpenChange }: Props) {
       });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["search-paid-invoices"] });
-      queryClient.invalidateQueries({ queryKey: ["refunds"] });
-      queryClient.invalidateQueries({ queryKey: ["patient-discounts"] });
-      queryClient.invalidateQueries({ queryKey: ["all-patient-discounts"] });
-      queryClient.invalidateQueries({ queryKey: ["invoices"] });
-      queryClient.invalidateQueries({ queryKey: ["daily-finance"] });
+      // Broad invalidation so lab register + all finance/analytics views
+      // reflect the discount immediately (previously stale caches made the
+      // first discount look ignored until a second one flushed the data).
+      [
+        "search-paid-invoices",
+        "refunds",
+        "patient-discounts",
+        "all-patient-discounts",
+        "invoices",
+        "daily-finance",
+        "daily-detailed",
+        "financial-analytics",
+        "admin-finance-analytics",
+        "lab_register",
+        "lab-pathology-reports",
+        "pathology-reports",
+        "doctor-payments",
+      ].forEach((key) => queryClient.invalidateQueries({ queryKey: [key] }));
+      // Force-refetch anything currently mounted so the UI updates without
+      // waiting for a manual reload.
+      queryClient.refetchQueries({ type: "active" });
       toast.success(
         `Refund of ${formatPkrAmount(discountAmount)} created. Patient can collect cash from the counter.`
       );
