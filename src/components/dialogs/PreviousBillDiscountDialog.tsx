@@ -173,7 +173,7 @@ export function PreviousBillDiscountDialog({ open, onOpenChange }: Props) {
 
       const [refundResult, invoiceUpdateResult, discountRecordResult] = await Promise.all([
         supabase.from("refunds").insert({
-          amount: discountAmount,
+          amount: effectiveDiscount,
           refund_type: "discount_adjustment",
           description: `Discount on previous bill ${selectedInvoice.invoice_number} - ${discountLabel}. Patient: ${patientName}. Billed by: ${billedByStaff}. Authorized by: ${authorizedBy.trim() || "N/A"}. Reason: ${reason || "N/A"}`,
           patient_id: selectedInvoice.patient_id,
@@ -182,7 +182,7 @@ export function PreviousBillDiscountDialog({ open, onOpenChange }: Props) {
         }),
         supabase.from("invoices").update({
           amount: newInvoiceAmount,
-          description: `${selectedInvoice.description || ''} [Adjusted: ${discountLabel}, Refund: ${formatPkrAmount(discountAmount)}]${authorizedBy.trim() ? ` [Authorized by: ${authorizedBy.trim()}]` : ''}`,
+          description: `${selectedInvoice.description || ''} [Adjusted: ${discountLabel}, Refund: ${formatPkrAmount(effectiveDiscount)}]${authorizedBy.trim() ? ` [Authorized by: ${authorizedBy.trim()}]` : ''}`,
         }).eq("id", selectedInvoice.id),
         supabase.from("patient_discounts").insert({
           patient_id: selectedInvoice.patient_id,
@@ -204,7 +204,7 @@ export function PreviousBillDiscountDialog({ open, onOpenChange }: Props) {
       }
 
       // ── Adjust doctor earnings for consultation discounts ──────────────
-      if (serviceType === "consultation" && selectedInvoice.doctor_id && discountAmount > 0) {
+      if (serviceType === "consultation" && selectedInvoice.doctor_id && effectiveDiscount > 0) {
         const invoiceDate = new Date(selectedInvoice.paid_at || selectedInvoice.created_at);
         const dateStr = invoiceDate.toISOString().split("T")[0];
         const { data: dp } = await supabase
@@ -216,8 +216,8 @@ export function PreviousBillDiscountDialog({ open, onOpenChange }: Props) {
           .eq("payment_status", "pending")
           .maybeSingle();
         if (dp) {
-          const newConsultEarnings = Math.max(0, Number(dp.consultation_earnings) - discountAmount);
-          const newTotalEarnings = Math.max(0, Number(dp.total_earnings) - discountAmount);
+          const newConsultEarnings = Math.max(0, Number(dp.consultation_earnings) - effectiveDiscount);
+          const newTotalEarnings = Math.max(0, Number(dp.total_earnings) - effectiveDiscount);
           await supabase
             .from("doctor_payments")
             .update({
@@ -230,7 +230,7 @@ export function PreviousBillDiscountDialog({ open, onOpenChange }: Props) {
       }
 
       // ── Update lab_pathology_reports.amount for lab discounts ─────
-      if (serviceType === "lab" && discountAmount > 0) {
+      if (serviceType === "lab" && effectiveDiscount > 0) {
         // Exact path: reports linked to THIS invoice (set at report creation or
         // backfilled via the order link). No date/patient guessing.
         const { data: linked } = await supabase
@@ -261,7 +261,7 @@ export function PreviousBillDiscountDialog({ open, onOpenChange }: Props) {
         patientId: selectedInvoice.patient?.patient_number || "N/A",
         originalAmount: selectedInvoice.amount,
         discountLabel,
-        refundAmount: discountAmount,
+        refundAmount: effectiveDiscount,
         reason: reason || "N/A",
         billedByStaff,
         processedByStaff,
