@@ -321,7 +321,9 @@ export function DetailedDailyReport({
   }));
   const totalExpenses = expenseItems.reduce((sum, e) => sum + e.amount, 0);
 
-  // Build refund items
+  // Build refund items — keep discount_adjustment visible for audit but exclude
+  // from totals (invoice.amount is already reduced when a discount is applied,
+  // so counting the refund again would double-subtract from net profit).
   const refundItems: RefundItem[] = (refunds || []).map((ref: any) => ({
     id: ref.id,
     description: ref.description,
@@ -330,7 +332,9 @@ export function DetailedDailyReport({
     date: ref.created_at,
     time: ref.created_at,
   }));
-  const totalRefunds = refundItems.reduce((sum, r) => sum + r.amount, 0);
+  const totalRefunds = refundItems
+    .filter((r) => r.refundType !== 'discount_adjustment')
+    .reduce((sum, r) => sum + r.amount, 0);
 
   // All transactions totals
   const allGrandTotal = transactions.reduce((sum, t) => sum + t.amountPaid, 0);
