@@ -196,7 +196,10 @@ export const useFinancialAnalytics = (selectedMonth?: Date, filterParams?: Filte
 
       const totalLabRevenue =
         labReportsArr.reduce((s: number, r: any) => s + (Number(r.price) || 0), 0) + pathologyLabRevenue;
-      const totalXrayRevenue = xrayReportsArr.reduce((s: number, r: any) => s + (Number(r.price) || 0), 0);
+      // X-ray revenue: read from XR- invoices so post-billing discounts reflect
+      const totalXrayRevenue = hospitalInvoicesArr
+        .filter((inv: any) => /^XR-/i.test(inv.invoice_number || ''))
+        .reduce((s: number, inv: any) => s + (Number(inv.amount) || 0), 0);
       const totalOperationsRevenue = otSchedulesArr.reduce((s: number, ot: any) =>
         s + ((Number(ot.total_cost) || 0) - (Number(ot.doctor_expense) || 0)), 0);
       const otDoctorExpense = otSchedulesArr.reduce((s: number, ot: any) => s + (Number(ot.doctor_expense) || 0), 0);
