@@ -487,12 +487,16 @@ export default function FinanceDaily() {
       pharmacyProfit = grossPharmacyProfit - returnsProfit;
 
       const labRevenue = labInvoices.reduce((sum, inv) => sum + (Number(inv.amount) || 0), 0);
-      const xrayRevenue = xrayReports.reduce((sum, xray) => sum + (xray.price || 0), 0);
+      // X-ray revenue from XR- invoices so discounts reflect
+      const xrayRevenue = hospitalInvoices
+        .filter((inv: any) => /^XR-/i.test(inv.invoice_number || ''))
+        .reduce((sum: number, inv: any) => sum + (Number(inv.amount) || 0), 0);
       const otHospitalRevenue = otSchedules.reduce((sum, ot) => 
         sum + ((ot.total_cost || 0) - (ot.doctor_expense || 0)), 0);
       const miscIncome = miscellaneousIncome.reduce((sum, income) => sum + (income.amount || 0), 0);
       const totalExpenses = expenses.reduce((sum, exp) => sum + exp.amount, 0);
-      const totalRefunds = refunds.reduce((sum, ref) => sum + ref.amount, 0);
+      // Exclude discount_adjustment: invoice.amount is already reduced
+      const totalRefunds = refunds.filter((r: any) => r.refund_type !== 'discount_adjustment').reduce((sum: number, ref: any) => sum + ref.amount, 0);
 
       // IPD calculations
       const ipdDoctorRevenue = ipdInvoices.reduce((sum, inv) => sum + (Number(inv.doctor_charges_total) || 0), 0);
