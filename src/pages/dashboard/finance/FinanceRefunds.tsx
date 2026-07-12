@@ -588,10 +588,11 @@ export default function FinanceRefunds() {
   const getRefundTypeLabel = (type: string) => {
     const labels = {
       consultation: "Consultation",
-      ot_doctor: "OT Doctor", 
+      ot_doctor: "OT Doctor",
       ot_simple: "OT Simple",
       lab: "Lab Report",
       pharmacy: "Pharmacy",
+      emergency: "Emergency",
       other: "Other Hospital Services"
     };
     return labels[type as keyof typeof labels] || type;
@@ -601,13 +602,15 @@ export default function FinanceRefunds() {
     const colors = {
       consultation: "bg-blue-100 text-blue-800",
       ot_doctor: "bg-red-100 text-red-800",
-      ot_simple: "bg-orange-100 text-orange-800", 
+      ot_simple: "bg-orange-100 text-orange-800",
       lab: "bg-green-100 text-green-800",
       pharmacy: "bg-purple-100 text-purple-800",
+      emergency: "bg-rose-100 text-rose-800",
       other: "bg-gray-100 text-gray-800"
     };
     return colors[type as keyof typeof colors] || "bg-gray-100 text-gray-800";
   };
+
 
   const isDoctorRelated = (type: string) => ['consultation', 'ot_doctor'].includes(type);
 
