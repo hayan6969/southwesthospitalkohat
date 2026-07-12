@@ -207,21 +207,36 @@ export function DetailedDailyReport({
     });
   });
 
-  // X-ray reports
+  // X-ray reports — use the paid XR- invoice amount when available so discounts reflect
+  const xrayInvoiceByReportId = new Map<string, number>();
+  const xrayInvoiceById = new Map<string, number>();
+  (hospitalInvoices || []).forEach((inv: any) => {
+    if (!/^XR-/i.test(inv.invoice_number || '')) return;
+    const amt = Number(inv.amount) || 0;
+    if (inv.id) xrayInvoiceById.set(inv.id, amt);
+  });
+  (xrayReports || []).forEach((xray: any) => {
+    if (xray.invoice_id && xrayInvoiceById.has(xray.invoice_id)) {
+      xrayInvoiceByReportId.set(xray.id, xrayInvoiceById.get(xray.invoice_id)!);
+    }
+  });
   (xrayReports || []).forEach((xray: any) => {
     const patientProfile = (xray as any).patients?.profiles;
     const patientName = patientProfile
       ? `${patientProfile.first_name || ''} ${patientProfile.last_name || ''}`.trim()
       : 'Unknown Patient';
+    const amount = xrayInvoiceByReportId.has(xray.id)
+      ? xrayInvoiceByReportId.get(xray.id)!
+      : Number(xray.price) || 0;
     transactions.push({
       id: xray.id,
       patientName,
       time: xray.created_at,
       procedureName: xray.test_name || 'X-Ray',
       consultant: '—',
-      amountPaid: Number(xray.price) || 0,
+      amountPaid: amount,
       docShare: 0,
-      hosShare: Number(xray.price) || 0,
+      hosShare: amount,
       operator: '—',
       category: 'X-Ray',
       shift: getShift(xray.created_at),
