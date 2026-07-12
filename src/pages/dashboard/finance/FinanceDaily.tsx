@@ -142,7 +142,9 @@ export default function FinanceDaily() {
       const otDoctorExpense = otSchedules?.reduce((sum, ot) => sum + (ot.doctor_expense || 0), 0) || 0;
       const miscellaneousIncome = miscIncome?.reduce((sum, income) => sum + (income.amount || 0), 0) || 0;
       const totalExpenses = expenses?.reduce((sum, exp) => sum + exp.amount, 0) || 0;
-      const totalRefunds = refunds?.reduce((sum, ref) => sum + ref.amount, 0) || 0;
+      // Exclude discount_adjustment refunds — invoice amounts are already reduced,
+      // subtracting the refund too would double-count the discount against profit.
+      const totalRefunds = refunds?.filter(r => r.refund_type !== 'discount_adjustment').reduce((sum, ref) => sum + ref.amount, 0) || 0;
 
       const doctorRevenue = consultationRevenue + otDoctorExpense;
 
@@ -165,7 +167,7 @@ export default function FinanceDaily() {
 
       const otRefunds = refunds?.filter(r => r.refund_type.includes('ot'))?.reduce((sum, r) => sum + r.amount, 0) || 0;
       const pharmacyRefunds = pharmacyReturnsFromInvoices + (refunds?.filter(r => r.refund_type === 'pharmacy_invoice')?.reduce((sum, r) => sum + r.amount, 0) || 0);
-      const otherRefunds = refunds?.filter(r => !r.refund_type.includes('ot') && r.refund_type !== 'pharmacy_invoice')?.reduce((sum, r) => sum + r.amount, 0) || 0;
+      const otherRefunds = refunds?.filter(r => !r.refund_type.includes('ot') && r.refund_type !== 'pharmacy_invoice' && r.refund_type !== 'discount_adjustment')?.reduce((sum, r) => sum + r.amount, 0) || 0;
 
       return {
         emergencyRevenue,
@@ -485,12 +487,16 @@ export default function FinanceDaily() {
       pharmacyProfit = grossPharmacyProfit - returnsProfit;
 
       const labRevenue = labInvoices.reduce((sum, inv) => sum + (Number(inv.amount) || 0), 0);
-      const xrayRevenue = xrayReports.reduce((sum, xray) => sum + (xray.price || 0), 0);
+      // X-ray revenue from XR- invoices so discounts reflect
+      const xrayRevenue = hospitalInvoices
+        .filter((inv: any) => /^XR-/i.test(inv.invoice_number || ''))
+        .reduce((sum: number, inv: any) => sum + (Number(inv.amount) || 0), 0);
       const otHospitalRevenue = otSchedules.reduce((sum, ot) => 
         sum + ((ot.total_cost || 0) - (ot.doctor_expense || 0)), 0);
       const miscIncome = miscellaneousIncome.reduce((sum, income) => sum + (income.amount || 0), 0);
       const totalExpenses = expenses.reduce((sum, exp) => sum + exp.amount, 0);
-      const totalRefunds = refunds.reduce((sum, ref) => sum + ref.amount, 0);
+      // Exclude discount_adjustment: invoice.amount is already reduced
+      const totalRefunds = refunds.filter((r: any) => r.refund_type !== 'discount_adjustment').reduce((sum: number, ref: any) => sum + ref.amount, 0);
 
       // IPD calculations
       const ipdDoctorRevenue = ipdInvoices.reduce((sum, inv) => sum + (Number(inv.doctor_charges_total) || 0), 0);
@@ -660,7 +666,10 @@ export default function FinanceDaily() {
           const labRevenue = invoices?.reduce((sum, inv) => sum + (inv.amount || 0), 0) || 0;
 
           const emergencyRevenue = (transactionsData?.emergencyAppointments || []).reduce((sum: number, apt: any) => sum + (apt.consultation_fee_at_time || 0), 0) + (transactionsData?.hospitalInvoices || []).filter((inv: any) => inv.description?.toLowerCase().includes('emergency') || inv.emergency_patient_data).reduce((sum: number, inv: any) => sum + Number(inv.amount || 0), 0);
-          const xrayRevenue = (transactionsData?.xrayReports || []).reduce((sum: number, xray: any) => sum + (xray.price || 0), 0);
+          const xrayRevenue = (transactionsData?.hospitalInvoices || [])
+            .filter((inv: any) => /^XR-/i.test(inv.invoice_number || ''))
+            .reduce((sum: number, inv: any) => sum + Number(inv.amount || 0), 0)
+            || (transactionsData?.xrayReports || []).reduce((sum: number, xray: any) => sum + (xray.price || 0), 0);
           const otHospitalRevenue = (transactionsData?.otSchedules || []).reduce((sum: number, ot: any) => sum + ((ot.total_cost || 0) - (ot.doctor_expense || 0)), 0);
           const miscellaneousIncome = (transactionsData?.miscellaneousIncome || []).reduce((sum: number, income: any) => sum + (income.amount || 0), 0);
 

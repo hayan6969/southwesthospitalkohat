@@ -343,8 +343,10 @@ function calculateAnalytics(data: FinanceData) {
   ).reduce((sum, inv) => sum + Number(inv.amount || 0), 0);
   const labRevenue = labReports.filter(report => report.price).reduce((sum, report) => sum + Number(report.price), 0) + pathologyLabRevenue;
   
-  // X-ray revenue goes to hospital (both completed and pending with prices)
-  const xrayRevenue = xrayReports.filter(report => report.price).reduce((sum, report) => sum + Number(report.price), 0);
+  // X-ray revenue from XR- invoices so post-billing discounts reflect
+  const xrayRevenue = hospitalInvoices.filter(inv =>
+    inv.status === 'paid' && /^XR-/i.test(inv.invoice_number || '')
+  ).reduce((sum, inv) => sum + Number(inv.amount || 0), 0);
   
   // OT revenue - hospital gets total cost minus doctor expense
   const otHospitalRevenue = otSchedules.filter(schedule => schedule.total_cost && schedule.doctor_expense)
@@ -381,10 +383,10 @@ function calculateAnalytics(data: FinanceData) {
     new Date(report.created_at) >= startOfToday && new Date(report.created_at) <= endOfToday
   ).reduce((sum, report) => sum + Number(report.price), 0);
   
-  const todayXrayRevenue = xrayReports.filter(report => 
-    report.price &&
-    new Date(report.created_at) >= startOfToday && new Date(report.created_at) <= endOfToday
-  ).reduce((sum, report) => sum + Number(report.price), 0);
+  const todayXrayRevenue = hospitalInvoices.filter(inv =>
+    inv.status === 'paid' && /^XR-/i.test(inv.invoice_number || '') &&
+    inv.created_at && new Date(inv.created_at) >= startOfToday && new Date(inv.created_at) <= endOfToday
+  ).reduce((sum, inv) => sum + Number(inv.amount || 0), 0);
   
   const todayOTRevenue = otSchedules.filter(schedule => 
     schedule.total_cost && schedule.doctor_expense &&
@@ -409,10 +411,10 @@ function calculateAnalytics(data: FinanceData) {
     new Date(report.created_at) >= startOfThisMonth && new Date(report.created_at) <= endOfThisMonth
   ).reduce((sum, report) => sum + Number(report.price), 0);
   
-  const monthlyXrayRevenue = xrayReports.filter(report => 
-    report.price &&
-    new Date(report.created_at) >= startOfThisMonth && new Date(report.created_at) <= endOfThisMonth
-  ).reduce((sum, report) => sum + Number(report.price), 0);
+  const monthlyXrayRevenue = hospitalInvoices.filter(inv =>
+    inv.status === 'paid' && /^XR-/i.test(inv.invoice_number || '') &&
+    inv.created_at && new Date(inv.created_at) >= startOfThisMonth && new Date(inv.created_at) <= endOfThisMonth
+  ).reduce((sum, inv) => sum + Number(inv.amount || 0), 0);
   
   const monthlyOTRevenue = otSchedules.filter(schedule => 
     schedule.total_cost && schedule.doctor_expense &&

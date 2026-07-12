@@ -207,21 +207,36 @@ export function DetailedDailyReport({
     });
   });
 
-  // X-ray reports
+  // X-ray reports — use the paid XR- invoice amount when available so discounts reflect
+  const xrayInvoiceByReportId = new Map<string, number>();
+  const xrayInvoiceById = new Map<string, number>();
+  (hospitalInvoices || []).forEach((inv: any) => {
+    if (!/^XR-/i.test(inv.invoice_number || '')) return;
+    const amt = Number(inv.amount) || 0;
+    if (inv.id) xrayInvoiceById.set(inv.id, amt);
+  });
+  (xrayReports || []).forEach((xray: any) => {
+    if (xray.invoice_id && xrayInvoiceById.has(xray.invoice_id)) {
+      xrayInvoiceByReportId.set(xray.id, xrayInvoiceById.get(xray.invoice_id)!);
+    }
+  });
   (xrayReports || []).forEach((xray: any) => {
     const patientProfile = (xray as any).patients?.profiles;
     const patientName = patientProfile
       ? `${patientProfile.first_name || ''} ${patientProfile.last_name || ''}`.trim()
       : 'Unknown Patient';
+    const amount = xrayInvoiceByReportId.has(xray.id)
+      ? xrayInvoiceByReportId.get(xray.id)!
+      : Number(xray.price) || 0;
     transactions.push({
       id: xray.id,
       patientName,
       time: xray.created_at,
       procedureName: xray.test_name || 'X-Ray',
       consultant: '—',
-      amountPaid: Number(xray.price) || 0,
+      amountPaid: amount,
       docShare: 0,
-      hosShare: Number(xray.price) || 0,
+      hosShare: amount,
       operator: '—',
       category: 'X-Ray',
       shift: getShift(xray.created_at),
@@ -321,7 +336,9 @@ export function DetailedDailyReport({
   }));
   const totalExpenses = expenseItems.reduce((sum, e) => sum + e.amount, 0);
 
-  // Build refund items
+  // Build refund items — keep discount_adjustment visible for audit but exclude
+  // from totals (invoice.amount is already reduced when a discount is applied,
+  // so counting the refund again would double-subtract from net profit).
   const refundItems: RefundItem[] = (refunds || []).map((ref: any) => ({
     id: ref.id,
     description: ref.description,
@@ -330,7 +347,9 @@ export function DetailedDailyReport({
     date: ref.created_at,
     time: ref.created_at,
   }));
-  const totalRefunds = refundItems.reduce((sum, r) => sum + r.amount, 0);
+  const totalRefunds = refundItems
+    .filter((r) => r.refundType !== 'discount_adjustment')
+    .reduce((sum, r) => sum + r.amount, 0);
 
   // All transactions totals
   const allGrandTotal = transactions.reduce((sum, t) => sum + t.amountPaid, 0);

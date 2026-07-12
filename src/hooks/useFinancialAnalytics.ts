@@ -102,7 +102,7 @@ export const useFinancialAnalytics = (selectedMonth?: Date, filterParams?: Filte
         supabase.from('pharmacy_expenses').select('amount').gte('expense_date', monthStartDate).lte('expense_date', monthEndDate),
         supabase.from('invoices').select('*', { count: 'exact', head: true }).gte('created_at', monthStartISO).lte('created_at', monthEndISO).eq('status', 'paid'),
         supabase.from('invoices').select('id, amount, description, invoice_number, emergency_patient_data, created_at').gte('created_at', monthStartISO).lte('created_at', monthEndISO).eq('status', 'paid'),
-        supabase.from('refunds').select('amount').gte('created_at', monthStartISO).lte('created_at', monthEndISO),
+        supabase.from('refunds').select('amount, refund_type').gte('created_at', monthStartISO).lte('created_at', monthEndISO),
         supabase.from('doctor_payments').select('*', { count: 'exact', head: true }).gte('period_start', monthStartDate).lte('period_end', monthEndDate),
         supabase.from('doctor_payments').select('total_earnings').gte('period_start', monthStartDate).lte('period_end', monthEndDate),
         supabase.from('lab_reports').select('price').not('price', 'is', null).gte('created_at', monthStartISO).lte('created_at', monthEndISO),
@@ -196,7 +196,10 @@ export const useFinancialAnalytics = (selectedMonth?: Date, filterParams?: Filte
 
       const totalLabRevenue =
         labReportsArr.reduce((s: number, r: any) => s + (Number(r.price) || 0), 0) + pathologyLabRevenue;
-      const totalXrayRevenue = xrayReportsArr.reduce((s: number, r: any) => s + (Number(r.price) || 0), 0);
+      // X-ray revenue: read from XR- invoices so post-billing discounts reflect
+      const totalXrayRevenue = hospitalInvoicesArr
+        .filter((inv: any) => /^XR-/i.test(inv.invoice_number || ''))
+        .reduce((s: number, inv: any) => s + (Number(inv.amount) || 0), 0);
       const totalOperationsRevenue = otSchedulesArr.reduce((s: number, ot: any) =>
         s + ((Number(ot.total_cost) || 0) - (Number(ot.doctor_expense) || 0)), 0);
       const otDoctorExpense = otSchedulesArr.reduce((s: number, ot: any) => s + (Number(ot.doctor_expense) || 0), 0);
@@ -241,7 +244,11 @@ export const useFinancialAnalytics = (selectedMonth?: Date, filterParams?: Filte
       const finalPharmacyExpensesAmount = pharmacyExpenses?.reduce((sum, exp) => sum + (Number(exp.amount) || 0), 0) || 0;
       const totalInvoicesCount = hospitalInvoicesCount || 0;
       const totalInvoicesAmount = hospitalInvoicesArr.reduce((sum, inv: any) => sum + (Number(inv.amount) || 0), 0);
-      const totalRefunds = refunds?.reduce((sum, r) => sum + (Number(r.amount) || 0), 0) || 0;
+      // Exclude discount_adjustment: those already reduced invoice.amount, so
+      // subtracting them again would double-count the discount against profit.
+      const totalRefunds = refunds
+        ?.filter((r: any) => r.refund_type !== 'discount_adjustment')
+        .reduce((sum, r) => sum + (Number(r.amount) || 0), 0) || 0;
       const doctorPaymentsPaidCount = doctorPaymentsCount || 0;
       const doctorPaymentsPaidAmount = doctorPayments?.reduce((sum, dp) => sum + (Number(dp.total_earnings) || 0), 0) || 0;
 
