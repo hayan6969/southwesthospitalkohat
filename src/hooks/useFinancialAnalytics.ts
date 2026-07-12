@@ -102,7 +102,7 @@ export const useFinancialAnalytics = (selectedMonth?: Date, filterParams?: Filte
         supabase.from('pharmacy_expenses').select('amount').gte('expense_date', monthStartDate).lte('expense_date', monthEndDate),
         supabase.from('invoices').select('*', { count: 'exact', head: true }).gte('created_at', monthStartISO).lte('created_at', monthEndISO).eq('status', 'paid'),
         supabase.from('invoices').select('id, amount, description, invoice_number, emergency_patient_data, created_at').gte('created_at', monthStartISO).lte('created_at', monthEndISO).eq('status', 'paid'),
-        supabase.from('refunds').select('amount').gte('created_at', monthStartISO).lte('created_at', monthEndISO),
+        supabase.from('refunds').select('amount, refund_type').gte('created_at', monthStartISO).lte('created_at', monthEndISO),
         supabase.from('doctor_payments').select('*', { count: 'exact', head: true }).gte('period_start', monthStartDate).lte('period_end', monthEndDate),
         supabase.from('doctor_payments').select('total_earnings').gte('period_start', monthStartDate).lte('period_end', monthEndDate),
         supabase.from('lab_reports').select('price').not('price', 'is', null).gte('created_at', monthStartISO).lte('created_at', monthEndISO),
