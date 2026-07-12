@@ -567,10 +567,16 @@ export default function FinanceRefunds() {
       return;
     }
 
+    if (formData.refundType === 'emergency' && !selectedEmergency) {
+      toast.error("Please look up an emergency invoice first");
+      return;
+    }
+
     if (!proofFile) {
       toast.error("Please attach a receipt/proof");
       return;
     }
+
 
     setShowConfirmDialog(true);
   };
