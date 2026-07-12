@@ -666,7 +666,10 @@ export default function FinanceDaily() {
           const labRevenue = invoices?.reduce((sum, inv) => sum + (inv.amount || 0), 0) || 0;
 
           const emergencyRevenue = (transactionsData?.emergencyAppointments || []).reduce((sum: number, apt: any) => sum + (apt.consultation_fee_at_time || 0), 0) + (transactionsData?.hospitalInvoices || []).filter((inv: any) => inv.description?.toLowerCase().includes('emergency') || inv.emergency_patient_data).reduce((sum: number, inv: any) => sum + Number(inv.amount || 0), 0);
-          const xrayRevenue = (transactionsData?.xrayReports || []).reduce((sum: number, xray: any) => sum + (xray.price || 0), 0);
+          const xrayRevenue = (transactionsData?.hospitalInvoices || [])
+            .filter((inv: any) => /^XR-/i.test(inv.invoice_number || ''))
+            .reduce((sum: number, inv: any) => sum + Number(inv.amount || 0), 0)
+            || (transactionsData?.xrayReports || []).reduce((sum: number, xray: any) => sum + (xray.price || 0), 0);
           const otHospitalRevenue = (transactionsData?.otSchedules || []).reduce((sum: number, ot: any) => sum + ((ot.total_cost || 0) - (ot.doctor_expense || 0)), 0);
           const miscellaneousIncome = (transactionsData?.miscellaneousIncome || []).reduce((sum: number, income: any) => sum + (income.amount || 0), 0);
 
