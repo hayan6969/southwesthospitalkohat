@@ -518,14 +518,20 @@ export default function FinanceRefunds() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['refunds'] });
       queryClient.invalidateQueries({ queryKey: ['financial-analytics'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-finance-analytics'] });
+      queryClient.invalidateQueries({ queryKey: ['daily-detailed'] });
       queryClient.invalidateQueries({ queryKey: ['expenses'] });
+      queryClient.refetchQueries({ type: 'active' });
       setFormData({ amount: "", refundType: "", description: "", doctorId: "" });
       setSelectedOrder(null);
       setOrderSearch("");
+      setSelectedEmergency(null);
+      setEmergencySearch("");
       setShowConfirmDialog(false);
       setProofFile(null);
-      toast.success("Test cancelled and refund processed successfully");
+      toast.success("Refund processed successfully");
     },
+
     onError: (error: any) => {
       toast.error(error.message || "Failed to process refund");
     }
