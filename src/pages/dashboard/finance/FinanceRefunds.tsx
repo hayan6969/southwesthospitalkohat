@@ -648,7 +648,11 @@ export default function FinanceRefunds() {
                 <Label>Refund Type *</Label>
                 <Select 
                   value={formData.refundType} 
-                  onValueChange={(value) => setFormData(prev => ({ ...prev, refundType: value, doctorId: "" }))}
+                  onValueChange={(value) => {
+                    setFormData(prev => ({ ...prev, refundType: value, doctorId: "" }));
+                    if (value !== 'lab') clearLabSelection();
+                    if (value !== 'emergency') clearEmergencySelection();
+                  }}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select refund type" />
@@ -659,10 +663,12 @@ export default function FinanceRefunds() {
                     <SelectItem value="ot_simple">OT Simple</SelectItem>
                     <SelectItem value="lab">Lab Report</SelectItem>
                     <SelectItem value="pharmacy">Pharmacy</SelectItem>
+                    <SelectItem value="emergency">Emergency</SelectItem>
                     <SelectItem value="other">Other Hospital Services</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
+
 
               {isDoctorRelated(formData.refundType) && (
                 <div className="space-y-2">
