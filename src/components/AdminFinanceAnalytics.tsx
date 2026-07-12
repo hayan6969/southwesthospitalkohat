@@ -411,10 +411,10 @@ function calculateAnalytics(data: FinanceData) {
     new Date(report.created_at) >= startOfThisMonth && new Date(report.created_at) <= endOfThisMonth
   ).reduce((sum, report) => sum + Number(report.price), 0);
   
-  const monthlyXrayRevenue = xrayReports.filter(report => 
-    report.price &&
-    new Date(report.created_at) >= startOfThisMonth && new Date(report.created_at) <= endOfThisMonth
-  ).reduce((sum, report) => sum + Number(report.price), 0);
+  const monthlyXrayRevenue = hospitalInvoices.filter(inv =>
+    inv.status === 'paid' && /^XR-/i.test(inv.invoice_number || '') &&
+    inv.created_at && new Date(inv.created_at) >= startOfThisMonth && new Date(inv.created_at) <= endOfThisMonth
+  ).reduce((sum, inv) => sum + Number(inv.amount || 0), 0);
   
   const monthlyOTRevenue = otSchedules.filter(schedule => 
     schedule.total_cost && schedule.doctor_expense &&
