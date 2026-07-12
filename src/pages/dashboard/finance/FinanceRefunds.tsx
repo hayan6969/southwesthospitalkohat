@@ -79,6 +79,22 @@ export default function FinanceRefunds() {
   // Actual amount the patient paid (invoice amount, after any discount). The
   // order_items prices are catalog snapshots and don't reflect discounts.
   const [invoiceAmount, setInvoiceAmount] = useState<number | null>(null);
+
+  // Emergency refund lookup state
+  const [emergencySearch, setEmergencySearch] = useState("");
+  const [searchingEmergency, setSearchingEmergency] = useState(false);
+  const [selectedEmergency, setSelectedEmergency] = useState<{
+    kind: 'invoice' | 'appointment';
+    id: string;
+    number: string;
+    amount: number;
+    patient_id: string | null;
+    description?: string | null;
+    patient_name?: string;
+    patient_number?: string;
+    phone?: string | null;
+  } | null>(null);
+  
   
   // Filtering and pagination state
   const [filteredRefunds, setFilteredRefunds] = useState<any[]>([]);
