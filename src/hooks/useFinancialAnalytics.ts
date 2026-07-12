@@ -244,7 +244,11 @@ export const useFinancialAnalytics = (selectedMonth?: Date, filterParams?: Filte
       const finalPharmacyExpensesAmount = pharmacyExpenses?.reduce((sum, exp) => sum + (Number(exp.amount) || 0), 0) || 0;
       const totalInvoicesCount = hospitalInvoicesCount || 0;
       const totalInvoicesAmount = hospitalInvoicesArr.reduce((sum, inv: any) => sum + (Number(inv.amount) || 0), 0);
-      const totalRefunds = refunds?.reduce((sum, r) => sum + (Number(r.amount) || 0), 0) || 0;
+      // Exclude discount_adjustment: those already reduced invoice.amount, so
+      // subtracting them again would double-count the discount against profit.
+      const totalRefunds = refunds
+        ?.filter((r: any) => r.refund_type !== 'discount_adjustment')
+        .reduce((sum, r) => sum + (Number(r.amount) || 0), 0) || 0;
       const doctorPaymentsPaidCount = doctorPaymentsCount || 0;
       const doctorPaymentsPaidAmount = doctorPayments?.reduce((sum, dp) => sum + (Number(dp.total_earnings) || 0), 0) || 0;
 
