@@ -79,6 +79,22 @@ export default function FinanceRefunds() {
   // Actual amount the patient paid (invoice amount, after any discount). The
   // order_items prices are catalog snapshots and don't reflect discounts.
   const [invoiceAmount, setInvoiceAmount] = useState<number | null>(null);
+
+  // Emergency refund lookup state
+  const [emergencySearch, setEmergencySearch] = useState("");
+  const [searchingEmergency, setSearchingEmergency] = useState(false);
+  const [selectedEmergency, setSelectedEmergency] = useState<{
+    kind: 'invoice' | 'appointment';
+    id: string;
+    number: string;
+    amount: number;
+    patient_id: string | null;
+    description?: string | null;
+    patient_name?: string;
+    patient_number?: string;
+    phone?: string | null;
+  } | null>(null);
+  
   
   // Filtering and pagination state
   const [filteredRefunds, setFilteredRefunds] = useState<any[]>([]);
@@ -253,6 +269,87 @@ export default function FinanceRefunds() {
     setFormData(prev => ({ ...prev, amount: "", description: "" }));
   };
 
+  const clearEmergencySelection = () => {
+    setSelectedEmergency(null);
+    setEmergencySearch("");
+    setFormData(prev => ({ ...prev, amount: "", description: "" }));
+  };
+
+  const lookupEmergency = async () => {
+    const q = emergencySearch.trim();
+    if (!q) {
+      toast.error("Enter an emergency invoice number");
+      return;
+    }
+    setSearchingEmergency(true);
+    setSelectedEmergency(null);
+    try {
+      // Try invoice by number (EMG-, EMERGENCY-, or any invoice tagged emergency)
+      const { data: inv } = await supabase
+        .from('invoices')
+        .select('id, invoice_number, amount, description, patient_id, status, emergency_patient_data')
+        .eq('invoice_number', q)
+        .maybeSingle();
+
+      if (inv) {
+        if (inv.status === 'cancelled') {
+          toast.error("This invoice is already cancelled");
+          return;
+        }
+        const isEmergency =
+          /^(EMG-|EMERGENCY-)/i.test(inv.invoice_number || '') ||
+          (inv.description || '').toLowerCase().includes('emergency') ||
+          !!inv.emergency_patient_data;
+        if (!isEmergency) {
+          toast.error("This invoice is not an emergency invoice");
+          return;
+        }
+        let patient_name: string | undefined;
+        let patient_number: string | undefined;
+        let phone: string | null | undefined;
+        if (inv.emergency_patient_data && typeof inv.emergency_patient_data === 'object') {
+          const ep: any = inv.emergency_patient_data;
+          patient_name = [ep.first_name, ep.last_name].filter(Boolean).join(' ') || ep.name;
+          phone = ep.phone || null;
+        }
+        if (!patient_name && inv.patient_id) {
+          const [pr, pt] = await Promise.all([
+            supabase.from('profiles').select('first_name, last_name, phone').eq('id', inv.patient_id).maybeSingle(),
+            supabase.from('patients').select('patient_number').eq('id', inv.patient_id).maybeSingle(),
+          ]);
+          patient_name = [pr.data?.first_name, pr.data?.last_name].filter(Boolean).join(' ');
+          phone = pr.data?.phone || null;
+          patient_number = pt.data?.patient_number;
+        }
+        setSelectedEmergency({
+          kind: 'invoice',
+          id: inv.id,
+          number: inv.invoice_number,
+          amount: Number(inv.amount) || 0,
+          patient_id: inv.patient_id,
+          description: inv.description,
+          patient_name,
+          patient_number,
+          phone,
+        });
+        setFormData(prev => ({
+          ...prev,
+          amount: String(Number(inv.amount) || 0),
+          description: `Emergency refund for invoice ${inv.invoice_number}`,
+        }));
+        return;
+      }
+
+      toast.error("Emergency invoice not found");
+    } catch (err) {
+      console.error('Emergency lookup error:', err);
+      toast.error("Failed to look up emergency invoice");
+    } finally {
+      setSearchingEmergency(false);
+    }
+  };
+
+
   const allItems = selectedOrder?.lab_pathology_order_items || [];
   const selectedItems = allItems.filter(item => selectedTestIds.has(item.id));
   const catalogTotal = allItems.reduce((sum, item) => sum + Number(item.price || 0), 0);
@@ -350,6 +447,18 @@ export default function FinanceRefunds() {
         }
       }
 
+      // Emergency refund: void the emergency invoice so it drops out of
+      // emergency revenue in analytics/daily/hospital reports.
+      if (refundData.refundType === 'emergency' && selectedEmergency) {
+        if (selectedEmergency.kind === 'invoice') {
+          const { error: invError } = await supabase
+            .from('invoices')
+            .update({ status: 'cancelled' })
+            .eq('id', selectedEmergency.id);
+          if (invError) throw invError;
+        }
+      }
+
       const { data: refund, error: refundError } = await supabase
         .from('refunds')
         .insert({
@@ -357,8 +466,8 @@ export default function FinanceRefunds() {
           refund_type: refundData.refundType,
           description: refundData.description,
           doctor_id: refundData.doctorId || null,
-          patient_id: selectedOrder?.patient_id || null,
-          related_record_id: selectedOrder?.id || null,
+          patient_id: selectedOrder?.patient_id || selectedEmergency?.patient_id || null,
+          related_record_id: selectedOrder?.id || selectedEmergency?.id || null,
           processed_by: profile?.id,
           proof_url: proofUrl
         })
@@ -366,6 +475,7 @@ export default function FinanceRefunds() {
         .single();
 
       if (refundError) throw refundError;
+
 
       // Generate refund slip PDF for lab cancellations
       if (refundData.refundType === 'lab' && selectedOrder) {
@@ -408,14 +518,20 @@ export default function FinanceRefunds() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['refunds'] });
       queryClient.invalidateQueries({ queryKey: ['financial-analytics'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-finance-analytics'] });
+      queryClient.invalidateQueries({ queryKey: ['daily-detailed'] });
       queryClient.invalidateQueries({ queryKey: ['expenses'] });
+      queryClient.refetchQueries({ type: 'active' });
       setFormData({ amount: "", refundType: "", description: "", doctorId: "" });
       setSelectedOrder(null);
       setOrderSearch("");
+      setSelectedEmergency(null);
+      setEmergencySearch("");
       setShowConfirmDialog(false);
       setProofFile(null);
-      toast.success("Test cancelled and refund processed successfully");
+      toast.success("Refund processed successfully");
     },
+
     onError: (error: any) => {
       toast.error(error.message || "Failed to process refund");
     }
@@ -451,10 +567,16 @@ export default function FinanceRefunds() {
       return;
     }
 
+    if (formData.refundType === 'emergency' && !selectedEmergency) {
+      toast.error("Please look up an emergency invoice first");
+      return;
+    }
+
     if (!proofFile) {
       toast.error("Please attach a receipt/proof");
       return;
     }
+
 
     setShowConfirmDialog(true);
   };
@@ -466,10 +588,11 @@ export default function FinanceRefunds() {
   const getRefundTypeLabel = (type: string) => {
     const labels = {
       consultation: "Consultation",
-      ot_doctor: "OT Doctor", 
+      ot_doctor: "OT Doctor",
       ot_simple: "OT Simple",
       lab: "Lab Report",
       pharmacy: "Pharmacy",
+      emergency: "Emergency",
       other: "Other Hospital Services"
     };
     return labels[type as keyof typeof labels] || type;
@@ -479,13 +602,15 @@ export default function FinanceRefunds() {
     const colors = {
       consultation: "bg-blue-100 text-blue-800",
       ot_doctor: "bg-red-100 text-red-800",
-      ot_simple: "bg-orange-100 text-orange-800", 
+      ot_simple: "bg-orange-100 text-orange-800",
       lab: "bg-green-100 text-green-800",
       pharmacy: "bg-purple-100 text-purple-800",
+      emergency: "bg-rose-100 text-rose-800",
       other: "bg-gray-100 text-gray-800"
     };
     return colors[type as keyof typeof colors] || "bg-gray-100 text-gray-800";
   };
+
 
   const isDoctorRelated = (type: string) => ['consultation', 'ot_doctor'].includes(type);
 
@@ -523,7 +648,11 @@ export default function FinanceRefunds() {
                 <Label>Refund Type *</Label>
                 <Select 
                   value={formData.refundType} 
-                  onValueChange={(value) => setFormData(prev => ({ ...prev, refundType: value, doctorId: "" }))}
+                  onValueChange={(value) => {
+                    setFormData(prev => ({ ...prev, refundType: value, doctorId: "" }));
+                    if (value !== 'lab') clearLabSelection();
+                    if (value !== 'emergency') clearEmergencySelection();
+                  }}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select refund type" />
@@ -534,10 +663,12 @@ export default function FinanceRefunds() {
                     <SelectItem value="ot_simple">OT Simple</SelectItem>
                     <SelectItem value="lab">Lab Report</SelectItem>
                     <SelectItem value="pharmacy">Pharmacy</SelectItem>
+                    <SelectItem value="emergency">Emergency</SelectItem>
                     <SelectItem value="other">Other Hospital Services</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
+
 
               {isDoctorRelated(formData.refundType) && (
                 <div className="space-y-2">
@@ -586,7 +717,66 @@ export default function FinanceRefunds() {
                   </div>
                 </div>
               )}
+
+
+              {formData.refundType === 'emergency' && (
+                <div className="space-y-2 md:col-span-2">
+                  <Label>Find Emergency Invoice</Label>
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder="Emergency invoice number (EMG-... / EMERGENCY-...)"
+                      value={emergencySearch}
+                      onChange={(e) => {
+                        setEmergencySearch(e.target.value);
+                        if (selectedEmergency) clearEmergencySelection();
+                      }}
+                      onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), lookupEmergency())}
+                      className="flex-1"
+                    />
+                    <Button type="button" variant="outline" onClick={lookupEmergency} disabled={searchingEmergency}>
+                      <Search className="w-4 h-4 mr-2" />
+                      {searchingEmergency ? "Searching..." : "Lookup"}
+                    </Button>
+                    {selectedEmergency && (
+                      <Button type="button" variant="ghost" size="icon" onClick={clearEmergencySelection}>
+                        <X className="w-4 h-4" />
+                      </Button>
+                    )}
+                  </div>
+                  {selectedEmergency && (
+                    <div className="p-3 bg-rose-50 border border-rose-200 rounded-md text-sm space-y-1">
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Invoice</span>
+                        <span className="font-medium">{selectedEmergency.number}</span>
+                      </div>
+                      {selectedEmergency.patient_name && (
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Patient</span>
+                          <span className="font-medium">
+                            {selectedEmergency.patient_name}
+                            {selectedEmergency.patient_number ? ` (${selectedEmergency.patient_number})` : ''}
+                          </span>
+                        </div>
+                      )}
+                      {selectedEmergency.phone && (
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Phone</span>
+                          <span className="font-medium">{selectedEmergency.phone}</span>
+                        </div>
+                      )}
+                      <div className="flex justify-between border-t border-rose-200 pt-1 mt-1">
+                        <span className="text-gray-600">Invoice amount</span>
+                        <span className="font-bold text-rose-700">{formatPkrAmount(selectedEmergency.amount)}</span>
+                      </div>
+                      <p className="text-xs text-rose-700 mt-1">
+                        Processing this refund will void the invoice and remove it from emergency revenue.
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
+
 
             <div className="space-y-2">
               <Label htmlFor="description">Description *</Label>
