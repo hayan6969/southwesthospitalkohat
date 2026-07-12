@@ -269,6 +269,87 @@ export default function FinanceRefunds() {
     setFormData(prev => ({ ...prev, amount: "", description: "" }));
   };
 
+  const clearEmergencySelection = () => {
+    setSelectedEmergency(null);
+    setEmergencySearch("");
+    setFormData(prev => ({ ...prev, amount: "", description: "" }));
+  };
+
+  const lookupEmergency = async () => {
+    const q = emergencySearch.trim();
+    if (!q) {
+      toast.error("Enter an emergency invoice number");
+      return;
+    }
+    setSearchingEmergency(true);
+    setSelectedEmergency(null);
+    try {
+      // Try invoice by number (EMG-, EMERGENCY-, or any invoice tagged emergency)
+      const { data: inv } = await supabase
+        .from('invoices')
+        .select('id, invoice_number, amount, description, patient_id, status, emergency_patient_data')
+        .eq('invoice_number', q)
+        .maybeSingle();
+
+      if (inv) {
+        if (inv.status === 'cancelled') {
+          toast.error("This invoice is already cancelled");
+          return;
+        }
+        const isEmergency =
+          /^(EMG-|EMERGENCY-)/i.test(inv.invoice_number || '') ||
+          (inv.description || '').toLowerCase().includes('emergency') ||
+          !!inv.emergency_patient_data;
+        if (!isEmergency) {
+          toast.error("This invoice is not an emergency invoice");
+          return;
+        }
+        let patient_name: string | undefined;
+        let patient_number: string | undefined;
+        let phone: string | null | undefined;
+        if (inv.emergency_patient_data && typeof inv.emergency_patient_data === 'object') {
+          const ep: any = inv.emergency_patient_data;
+          patient_name = [ep.first_name, ep.last_name].filter(Boolean).join(' ') || ep.name;
+          phone = ep.phone || null;
+        }
+        if (!patient_name && inv.patient_id) {
+          const [pr, pt] = await Promise.all([
+            supabase.from('profiles').select('first_name, last_name, phone').eq('id', inv.patient_id).maybeSingle(),
+            supabase.from('patients').select('patient_number').eq('id', inv.patient_id).maybeSingle(),
+          ]);
+          patient_name = [pr.data?.first_name, pr.data?.last_name].filter(Boolean).join(' ');
+          phone = pr.data?.phone || null;
+          patient_number = pt.data?.patient_number;
+        }
+        setSelectedEmergency({
+          kind: 'invoice',
+          id: inv.id,
+          number: inv.invoice_number,
+          amount: Number(inv.amount) || 0,
+          patient_id: inv.patient_id,
+          description: inv.description,
+          patient_name,
+          patient_number,
+          phone,
+        });
+        setFormData(prev => ({
+          ...prev,
+          amount: String(Number(inv.amount) || 0),
+          description: `Emergency refund for invoice ${inv.invoice_number}`,
+        }));
+        return;
+      }
+
+      toast.error("Emergency invoice not found");
+    } catch (err) {
+      console.error('Emergency lookup error:', err);
+      toast.error("Failed to look up emergency invoice");
+    } finally {
+      setSearchingEmergency(false);
+    }
+  };
+
+
   const allItems = selectedOrder?.lab_pathology_order_items || [];
   const selectedItems = allItems.filter(item => selectedTestIds.has(item.id));
   const catalogTotal = allItems.reduce((sum, item) => sum + Number(item.price || 0), 0);
