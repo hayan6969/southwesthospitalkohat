@@ -147,22 +147,26 @@ export function LabReportsTracking() {
                      : catalogCharges;
 
         // If a lab discount was consumed for this patient and hasn't been
-        // applied yet, adjust the charges.  We delete the entry after first
-        // use so the discount is only subtracted once across all reports
-        // for the same patient.
+        // applied yet, adjust the charges.  Only do this when we fell back
+        // to snapshot/catalog pricing — a stored `reportAmount` already
+        // reflects any discount applied to the underlying invoice, so
+        // subtracting again would double-count.
         const pending = discountByPatient.get(r.patient_id);
         if (pending && pending.length > 0) {
-          let totalDiscount = 0;
-          for (const d of pending) {
-            if (d.discount_type === "percentage") {
-              totalDiscount += Math.round((charges * d.discount_value) / 100);
-            } else {
-              totalDiscount += Math.min(d.discount_value, charges);
+          if (reportAmount <= 0) {
+            let totalDiscount = 0;
+            for (const d of pending) {
+              if (d.discount_type === "percentage") {
+                totalDiscount += Math.round((charges * d.discount_value) / 100);
+              } else {
+                totalDiscount += Math.min(d.discount_value, charges);
+              }
             }
+            charges = Math.max(0, charges - totalDiscount);
           }
-          charges = Math.max(0, charges - totalDiscount);
           discountByPatient.delete(r.patient_id);
         }
+
 
         return {
           id: r.id,
