@@ -713,7 +713,11 @@ export default function FinanceRefunds() {
                       <Button type="button" variant="ghost" size="icon" onClick={clearLabSelection}>
                         <X className="w-4 h-4" />
                       </Button>
+                    )}
+                  </div>
+                </div>
               )}
+
 
               {formData.refundType === 'emergency' && (
                 <div className="space-y-2 md:col-span-2">
