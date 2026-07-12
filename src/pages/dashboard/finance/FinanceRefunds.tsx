@@ -447,6 +447,18 @@ export default function FinanceRefunds() {
         }
       }
 
+      // Emergency refund: void the emergency invoice so it drops out of
+      // emergency revenue in analytics/daily/hospital reports.
+      if (refundData.refundType === 'emergency' && selectedEmergency) {
+        if (selectedEmergency.kind === 'invoice') {
+          const { error: invError } = await supabase
+            .from('invoices')
+            .update({ status: 'cancelled' })
+            .eq('id', selectedEmergency.id);
+          if (invError) throw invError;
+        }
+      }
+
       const { data: refund, error: refundError } = await supabase
         .from('refunds')
         .insert({
@@ -454,8 +466,8 @@ export default function FinanceRefunds() {
           refund_type: refundData.refundType,
           description: refundData.description,
           doctor_id: refundData.doctorId || null,
-          patient_id: selectedOrder?.patient_id || null,
-          related_record_id: selectedOrder?.id || null,
+          patient_id: selectedOrder?.patient_id || selectedEmergency?.patient_id || null,
+          related_record_id: selectedOrder?.id || selectedEmergency?.id || null,
           processed_by: profile?.id,
           proof_url: proofUrl
         })
@@ -463,6 +475,7 @@ export default function FinanceRefunds() {
         .single();
 
       if (refundError) throw refundError;
+
 
       // Generate refund slip PDF for lab cancellations
       if (refundData.refundType === 'lab' && selectedOrder) {
