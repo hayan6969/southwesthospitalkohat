@@ -182,7 +182,11 @@ export const generateAnalyticsReportPDF = async (startDate: Date, endDate: Date)
     }, 0);
 
   const totalExpenses = (transactionsData.expenses).reduce((s: number, e: any) => s + (Number(e.amount) || 0), 0);
-  const totalRefunds = (transactionsData.refunds).reduce((s: number, r: any) => s + (Number(r.amount) || 0), 0);
+  // Exclude discount_adjustment refunds — the underlying invoice.amount was
+  // already reduced, so subtracting them again would double-count.
+  const totalRefunds = (transactionsData.refunds)
+    .filter((r: any) => r.refund_type !== 'discount_adjustment')
+    .reduce((s: number, r: any) => s + (Number(r.amount) || 0), 0);
   const netProfit = hospitalRevenue - totalExpenses - totalRefunds + pharmacyProfit;
 
   const dateLabel = startDateStr === endDateStr
