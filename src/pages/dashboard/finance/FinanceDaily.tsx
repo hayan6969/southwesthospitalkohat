@@ -142,7 +142,9 @@ export default function FinanceDaily() {
       const otDoctorExpense = otSchedules?.reduce((sum, ot) => sum + (ot.doctor_expense || 0), 0) || 0;
       const miscellaneousIncome = miscIncome?.reduce((sum, income) => sum + (income.amount || 0), 0) || 0;
       const totalExpenses = expenses?.reduce((sum, exp) => sum + exp.amount, 0) || 0;
-      const totalRefunds = refunds?.reduce((sum, ref) => sum + ref.amount, 0) || 0;
+      // Exclude discount_adjustment refunds — invoice amounts are already reduced,
+      // subtracting the refund too would double-count the discount against profit.
+      const totalRefunds = refunds?.filter(r => r.refund_type !== 'discount_adjustment').reduce((sum, ref) => sum + ref.amount, 0) || 0;
 
       const doctorRevenue = consultationRevenue + otDoctorExpense;
 
