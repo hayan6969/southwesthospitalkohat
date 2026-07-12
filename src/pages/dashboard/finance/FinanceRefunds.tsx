@@ -713,8 +713,66 @@ export default function FinanceRefunds() {
                       <Button type="button" variant="ghost" size="icon" onClick={clearLabSelection}>
                         <X className="w-4 h-4" />
                       </Button>
+              )}
+
+              {formData.refundType === 'emergency' && (
+                <div className="space-y-2 md:col-span-2">
+                  <Label>Find Emergency Invoice</Label>
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder="Emergency invoice number (EMG-... / EMERGENCY-...)"
+                      value={emergencySearch}
+                      onChange={(e) => {
+                        setEmergencySearch(e.target.value);
+                        if (selectedEmergency) clearEmergencySelection();
+                      }}
+                      onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), lookupEmergency())}
+                      className="flex-1"
+                    />
+                    <Button type="button" variant="outline" onClick={lookupEmergency} disabled={searchingEmergency}>
+                      <Search className="w-4 h-4 mr-2" />
+                      {searchingEmergency ? "Searching..." : "Lookup"}
+                    </Button>
+                    {selectedEmergency && (
+                      <Button type="button" variant="ghost" size="icon" onClick={clearEmergencySelection}>
+                        <X className="w-4 h-4" />
+                      </Button>
                     )}
                   </div>
+                  {selectedEmergency && (
+                    <div className="p-3 bg-rose-50 border border-rose-200 rounded-md text-sm space-y-1">
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Invoice</span>
+                        <span className="font-medium">{selectedEmergency.number}</span>
+                      </div>
+                      {selectedEmergency.patient_name && (
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Patient</span>
+                          <span className="font-medium">
+                            {selectedEmergency.patient_name}
+                            {selectedEmergency.patient_number ? ` (${selectedEmergency.patient_number})` : ''}
+                          </span>
+                        </div>
+                      )}
+                      {selectedEmergency.phone && (
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Phone</span>
+                          <span className="font-medium">{selectedEmergency.phone}</span>
+                        </div>
+                      )}
+                      <div className="flex justify-between border-t border-rose-200 pt-1 mt-1">
+                        <span className="text-gray-600">Invoice amount</span>
+                        <span className="font-bold text-rose-700">{formatPkrAmount(selectedEmergency.amount)}</span>
+                      </div>
+                      <p className="text-xs text-rose-700 mt-1">
+                        Processing this refund will void the invoice and remove it from emergency revenue.
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
                 </div>
               )}
             </div>
