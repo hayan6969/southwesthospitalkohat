@@ -80,6 +80,10 @@ export default function DashboardLab() {
           <PathologyReportHistory />
         </TabsContent>
 
+        <TabsContent value="pending">
+          <PendingLabTests />
+        </TabsContent>
+
         <TabsContent value="reports">
           <LabReportsTracking />
         </TabsContent>
