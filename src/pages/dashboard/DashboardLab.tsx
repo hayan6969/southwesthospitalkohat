@@ -8,9 +8,10 @@ import { PathologyReportHistory } from "@/components/lab/PathologyReportHistory"
 import { PathologyTestTypeManager } from "@/components/lab/PathologyTestTypeManager";
 import { LabStockManager } from "@/components/lab/LabStockManager";
 import { LabReportsTracking } from "@/components/lab/LabReportsTracking";
-import { ShoppingCart, Microscope, History, Settings2, BedDouble, Boxes, BarChart3 } from "lucide-react";
+import { ShoppingCart, Microscope, History, Settings2, BedDouble, Boxes, BarChart3, ClipboardList } from "lucide-react";
 import AppLayout from "@/layouts/AppLayout";
 import { IPDLabQueue } from "@/components/ipd/IPDLabQueue";
+import { PendingLabTests } from "@/components/lab/PendingLabTests";
 
 export default function DashboardLab() {
   const [searchParams, setSearchParams] = useSearchParams();
