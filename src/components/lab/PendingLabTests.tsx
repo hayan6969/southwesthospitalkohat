@@ -14,8 +14,8 @@ const PAGE_SIZE = 10;
 
 const STATUS_OPTIONS = [
   { value: "pending", label: "All Pending" },
+  { value: "ready", label: "Awaiting Report" },
   { value: "in_progress", label: "In Progress" },
-  { value: "ready", label: "Ready" },
 ];
 
 export function PendingLabTests() {
