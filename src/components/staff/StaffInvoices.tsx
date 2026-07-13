@@ -439,6 +439,13 @@ export function StaffInvoices() {
     });
   }, [allInvoices, searchTerm, filterType, filterDate]);
 
+  // Reset to page 1 whenever filters change, otherwise a stale currentPage
+  // (e.g. page 5 with 200 rows) can leave the table blank after a search
+  // narrows the result set to fewer pages.
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, filterType, filterDate]);
+
   const totalPages = Math.ceil(filteredInvoices.length / itemsPerPage);
   const paginatedInvoices = filteredInvoices.slice(
     (currentPage - 1) * itemsPerPage,
