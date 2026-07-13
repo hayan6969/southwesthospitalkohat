@@ -42,6 +42,10 @@ export default function DashboardLab() {
             <History className="w-3.5 h-3.5" />
             <span>Report History</span>
           </TabsTrigger>
+          <TabsTrigger value="pending" className="flex items-center gap-1.5 text-xs sm:text-sm">
+            <ClipboardList className="w-3.5 h-3.5" />
+            <span>Pending Tests</span>
+          </TabsTrigger>
           <TabsTrigger value="reports" className="flex items-center gap-1.5 text-xs sm:text-sm">
             <BarChart3 className="w-3.5 h-3.5" />
             <span>Reports &amp; Tracking</span>
