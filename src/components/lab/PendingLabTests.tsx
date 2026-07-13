@@ -201,14 +201,14 @@ export function PendingLabTests() {
                       <TableCell className="text-sm">{o.referred_by || "—"}</TableCell>
                       <TableCell>
                         <Badge
-                          variant={o.lab_status === "ready" ? "default" : "secondary"}
+                          variant="secondary"
                           className={
                             o.lab_status === "in_progress"
-                              ? "bg-amber-100 text-amber-800 hover:bg-amber-100"
-                              : ""
+                              ? "bg-blue-100 text-blue-800 hover:bg-blue-100"
+                              : "bg-amber-100 text-amber-800 hover:bg-amber-100"
                           }
                         >
-                          {o.lab_status === "in_progress" ? "In Progress" : "Ready"}
+                          {o.lab_status === "in_progress" ? "In Progress" : "Pending"}
                         </Badge>
                       </TableCell>
                       <TableCell className="text-xs whitespace-nowrap">
