@@ -87,42 +87,26 @@ export const hasMatchingOtHospitalInvoice = (otSchedule: OTScheduleLike, hospita
 };
 
 /**
- * Remove duplicate hospital invoices.
- * Two invoices are duplicates when they share the same patient_id,
- * the same amount, and were created within a short time window.
- * The invoice with the shorter (older-style) invoice_number is kept.
+ * Remove duplicate invoices. Two invoices are treated as duplicates ONLY when
+ * they share the same id or the same invoice_number. The older fuzzy rule
+ * (same patient + same amount within 2 minutes) also collapsed legitimate
+ * separate bills (e.g. two Rs. 100 BLOOD GROUP tests for the same patient in
+ * quick succession) and made them invisible in the invoice list.
  */
-const DUPLICATE_WINDOW_MS = 2 * 60 * 1000; // 2 minutes
-
-export const deduplicateInvoices = <T extends InvoiceLike & { id?: string }>(invoices: T[]): T[] => {
-  const kept: T[] = [];
+export const deduplicateInvoices = <T extends InvoiceLike & { id?: string; invoice_number?: string | null }>(
+  invoices: T[],
+): T[] => {
   const seen = new Set<string>();
-
+  const kept: T[] = [];
   for (const inv of invoices) {
-    // Build a fuzzy key: patient + rounded amount
-    const amt = toNumber(inv.amount);
-    const ts = toTimestamp(inv.created_at);
-    const patientKey = inv.patient_id || '';
-
-    // Check against already-kept invoices for a near-duplicate
-    let isDuplicate = false;
-    for (const existing of kept) {
-      if (
-        existing.patient_id === patientKey &&
-        toNumber(existing.amount) === amt
-      ) {
-        const existingTs = toTimestamp(existing.created_at);
-        if (ts !== null && existingTs !== null && Math.abs(ts - existingTs) <= DUPLICATE_WINDOW_MS) {
-          isDuplicate = true;
-          break;
-        }
-      }
-    }
-
-    if (!isDuplicate) {
+    const key = inv.id || inv.invoice_number || '';
+    if (!key) {
       kept.push(inv);
+      continue;
     }
+    if (seen.has(key)) continue;
+    seen.add(key);
+    kept.push(inv);
   }
-
   return kept;
 };
