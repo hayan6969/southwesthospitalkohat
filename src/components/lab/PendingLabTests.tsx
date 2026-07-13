@@ -38,28 +38,45 @@ export function PendingLabTests() {
     placeholderData: (prev) => prev,
     staleTime: 15_000,
     queryFn: async () => {
-      // Resolve patient search → ids
+      // Resolve patient search → ids (search across patients + profiles)
       let patientIds: string[] = [];
       if (debounced) {
-        const { data: pats } = await supabase
-          .from("patients")
-          .select("id")
-          .or(`patient_number.ilike.%${debounced}%,name.ilike.%${debounced}%,phone.ilike.%${debounced}%`)
-          .limit(50);
-        patientIds = (pats ?? []).map((p: any) => p.id);
+        const [{ data: pats }, { data: profs }] = await Promise.all([
+          supabase
+            .from("patients")
+            .select("id")
+            .or(`patient_number.ilike.%${debounced}%,cnic.ilike.%${debounced}%`)
+            .limit(50),
+          supabase
+            .from("profiles")
+            .select("id")
+            .or(
+              `first_name.ilike.%${debounced}%,last_name.ilike.%${debounced}%,phone.ilike.%${debounced}%`
+            )
+            .limit(50),
+        ]);
+        patientIds = Array.from(
+          new Set([
+            ...(pats ?? []).map((p: any) => p.id),
+            ...(profs ?? []).map((p: any) => p.id),
+          ])
+        );
       }
 
       const from = (page - 1) * PAGE_SIZE;
       const to = from + PAGE_SIZE - 1;
 
+      // !inner join with invoices lets us exclude cancelled / zero-amount (returned/removed) bills at the DB level
       let q = supabase
         .from("lab_pathology_orders")
         .select(
-          "id, order_number, patient_id, referred_by, sample_type, lab_status, payment_status, created_at, lab_pathology_order_items(test_name_snapshot)",
+          "id, order_number, patient_id, referred_by, sample_type, lab_status, payment_status, created_at, lab_pathology_order_items(test_name_snapshot), invoices!inner(status, amount)",
           { count: "exact" }
         )
         .neq("lab_status", "reported")
         .neq("lab_status", "cancelled")
+        .neq("invoices.status", "cancelled")
+        .gt("invoices.amount", 0)
         .order("created_at", { ascending: false });
 
       if (status !== "pending") q = q.eq("lab_status", status);
@@ -73,19 +90,25 @@ export function PendingLabTests() {
       const { data: orders, error, count } = await q.range(from, to);
       if (error) throw error;
 
-      // Fetch patient info for display
+      // Fetch patient info (patient_number from patients, name/phone from profiles)
       const pIds = Array.from(new Set((orders ?? []).map((o: any) => o.patient_id).filter(Boolean)));
-      let patientMap: Record<string, { name: string; patient_number: string; phone: string | null }> = {};
+      const patientMap: Record<
+        string,
+        { name: string; patient_number: string; phone: string | null }
+      > = {};
       if (pIds.length) {
-        const { data: pats } = await supabase
-          .from("patients")
-          .select("id, name, patient_number, phone")
-          .in("id", pIds);
-        for (const p of pats ?? []) {
-          patientMap[(p as any).id] = {
-            name: (p as any).name,
-            patient_number: (p as any).patient_number,
-            phone: (p as any).phone,
+        const [{ data: pats }, { data: profs }] = await Promise.all([
+          supabase.from("patients").select("id, patient_number").in("id", pIds),
+          supabase.from("profiles").select("id, first_name, last_name, phone").in("id", pIds),
+        ]);
+        for (const id of pIds) {
+          const pat = (pats ?? []).find((x: any) => x.id === id) as any;
+          const prof = (profs ?? []).find((x: any) => x.id === id) as any;
+          patientMap[id] = {
+            name:
+              [prof?.first_name, prof?.last_name].filter(Boolean).join(" ").trim() || "—",
+            patient_number: pat?.patient_number ?? "—",
+            phone: prof?.phone ?? null,
           };
         }
       }
