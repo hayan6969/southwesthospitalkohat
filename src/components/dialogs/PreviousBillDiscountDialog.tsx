@@ -171,7 +171,23 @@ export function PreviousBillDiscountDialog({ open, onOpenChange }: Props) {
       const serviceType = inferServiceType(selectedInvoice);
       const recordedDiscountValue = discountType === "percentage" ? Number(discountValue) : effectiveDiscount;
 
-      const [refundResult, invoiceUpdateResult, discountRecordResult] = await Promise.all([
+      // Update the financial source of truth first and require the row to be
+      // returned. A policy-blocked/no-op update must never be shown as success.
+      const { data: updatedInvoice, error: invoiceUpdateError } = await supabase
+        .from("invoices")
+        .update({
+          amount: newInvoiceAmount,
+          description: `${selectedInvoice.description || ''} [Adjusted: ${discountLabel}, Refund: ${formatPkrAmount(effectiveDiscount)}]${authorizedBy.trim() ? ` [Authorized by: ${authorizedBy.trim()}]` : ''}`,
+        })
+        .eq("id", selectedInvoice.id)
+        .select("id, amount")
+        .maybeSingle();
+      if (invoiceUpdateError) throw invoiceUpdateError;
+      if (!updatedInvoice || Number(updatedInvoice.amount) !== newInvoiceAmount) {
+        throw new Error("Invoice amount was not updated. Discount was not recorded.");
+      }
+
+      const [refundResult, discountRecordResult] = await Promise.all([
         supabase.from("refunds").insert({
           amount: effectiveDiscount,
           refund_type: "discount_adjustment",
@@ -180,10 +196,6 @@ export function PreviousBillDiscountDialog({ open, onOpenChange }: Props) {
           related_record_id: selectedInvoice.id,
           processed_by: profile?.id,
         }),
-        supabase.from("invoices").update({
-          amount: newInvoiceAmount,
-          description: `${selectedInvoice.description || ''} [Adjusted: ${discountLabel}, Refund: ${formatPkrAmount(effectiveDiscount)}]${authorizedBy.trim() ? ` [Authorized by: ${authorizedBy.trim()}]` : ''}`,
-        }).eq("id", selectedInvoice.id),
         supabase.from("patient_discounts").insert({
           patient_id: selectedInvoice.patient_id,
           discount_type: discountType,
@@ -199,9 +211,6 @@ export function PreviousBillDiscountDialog({ open, onOpenChange }: Props) {
 
       if (refundResult.error) throw refundResult.error;
       if (discountRecordResult.error) throw discountRecordResult.error;
-      if (invoiceUpdateResult.error) {
-        console.error("Failed to update invoice amount:", invoiceUpdateResult.error);
-      }
 
       // ── Adjust doctor earnings for consultation discounts ──────────────
       if (serviceType === "consultation" && selectedInvoice.doctor_id && effectiveDiscount > 0) {
@@ -231,6 +240,15 @@ export function PreviousBillDiscountDialog({ open, onOpenChange }: Props) {
 
       // ── Update lab_pathology_reports.amount for lab discounts ─────
       if (serviceType === "lab" && effectiveDiscount > 0) {
+        // Keep the billed order aligned as well. New reports are created from
+        // this order, so leaving its original catalog total would restore stale
+        // revenue in the Lab Register after the discount.
+        const { error: orderSyncError } = await supabase
+          .from("lab_pathology_orders")
+          .update({ total_amount: newInvoiceAmount })
+          .eq("invoice_id", selectedInvoice.id);
+        if (orderSyncError) throw orderSyncError;
+
         // Exact path: reports linked to THIS invoice (set at report creation or
         // backfilled via the order link). No date/patient guessing.
         const { data: linked } = await supabase

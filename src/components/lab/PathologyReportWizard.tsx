@@ -596,8 +596,9 @@ export function PathologyReportWizard() {
       if (!reportId) {
         // INSERT new report
         const status = pendingTestIds.size > 0 ? "partial" : (mode === "final" ? "final" : "partial");
-        // Carry the exact invoice link + actual charge from the billed order, so
-        // the Lab Register shows the real (post-discount) amount, not catalog price.
+        // Carry the exact invoice link + actual paid charge. The invoice is the
+        // financial source of truth because a previous-bill discount can reduce
+        // it after the pathology order was created.
         let orderInvoiceId: string | null = null;
         let orderAmount: number | null = null;
         if (selectedOrderId) {
@@ -608,6 +609,18 @@ export function PathologyReportWizard() {
             .maybeSingle();
           orderInvoiceId = ord?.invoice_id ?? null;
           orderAmount = ord?.total_amount != null ? Number(ord.total_amount) : null;
+
+          if (orderInvoiceId) {
+            const { data: linkedInvoice, error: invoiceAmountError } = await supabase
+              .from("invoices")
+              .select("amount")
+              .eq("id", orderInvoiceId)
+              .maybeSingle();
+            if (invoiceAmountError) throw invoiceAmountError;
+            if (linkedInvoice?.amount != null) {
+              orderAmount = Number(linkedInvoice.amount);
+            }
+          }
         }
         const { data: report, error: rErr } = await supabase
           .from("lab_pathology_reports")

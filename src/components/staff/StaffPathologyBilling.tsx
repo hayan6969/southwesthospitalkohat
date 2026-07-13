@@ -270,7 +270,7 @@ export function StaffPathologyBilling() {
           patient_id: patient.id,
           invoice_id: invoice.id,
           referred_by: referringName,
-          total_amount: total,
+          total_amount: invoiceAmount,
           payment_status: "paid",
           lab_status: "ready",
           created_by: user?.id ?? null,

@@ -256,7 +256,11 @@ export default function DashboardFinance() {
   const doctorsRevenue = consultationRevenue + otDoctorRevenue;
   const hospitalRevenue = emergencyConsultationRevenue + labRevenue + xrayRevenue + otHospitalRevenue + miscellaneousIncome;
   const totalExpenses = expenses?.reduce((sum, exp) => sum + (exp.amount || 0), 0) || 0;
-  const totalRefunds = refunds?.reduce((sum, r) => sum + (Number(r.amount) || 0), 0) || 0;
+  // Previous-bill discounts already reduce invoices.amount. Excluding their
+  // audit refund prevents the same discount reducing net profit twice.
+  const totalRefunds = refunds
+    ?.filter(r => r.refund_type !== 'discount_adjustment')
+    .reduce((sum, r) => sum + (Number(r.amount) || 0), 0) || 0;
   const hospitalNetProfit = hospitalRevenue + pharmacyProfit - totalExpenses - totalRefunds;
   const pharmacyTotalExpenses = pharmacyExpenses?.reduce((sum, exp) => sum + exp.amount, 0) || 0;
 
