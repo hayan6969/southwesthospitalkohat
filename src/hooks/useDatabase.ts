@@ -287,9 +287,11 @@ export const useMedicalRecords = () => {
   });
 };
 
-export const useInvoices = () => {
+export const useInvoices = (options: { includeCancelled?: boolean } = {}) => {
+  const includeCancelled = options.includeCancelled ?? false;
+
   return useQuery({
-    queryKey: ['invoices'],
+    queryKey: ['invoices', { includeCancelled }],
     queryFn: async () => {
       // Page through invoices so we're not silently capped at PostgREST's
       // default 1000-row limit (the table has more than that).
@@ -297,15 +299,20 @@ export const useInvoices = () => {
       const all: any[] = [];
       let from = 0;
       while (true) {
-        const { data, error } = await supabase
+        let query = supabase
           .from('invoices')
           .select(`
             *,
             patient:patients(*,profiles!patients_id_fkey(first_name, last_name, phone, email))
           `)
-          .neq('status', 'cancelled')
           .order('created_at', { ascending: false })
           .range(from, from + PAGE_SIZE - 1);
+
+        if (!includeCancelled) {
+          query = query.neq('status', 'cancelled');
+        }
+
+        const { data, error } = await query;
 
         if (error) throw error;
         if (!data || data.length === 0) break;
