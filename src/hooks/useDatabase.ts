@@ -291,17 +291,29 @@ export const useInvoices = () => {
   return useQuery({
     queryKey: ['invoices'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('invoices')
-        .select(`
-          *,
-          patient:patients(*,profiles!patients_id_fkey(first_name, last_name, phone, email))
-        `)
-        .neq('status', 'cancelled')
-        .order('created_at', { ascending: false });
+      // Page through invoices so we're not silently capped at PostgREST's
+      // default 1000-row limit (the table has more than that).
+      const PAGE_SIZE = 1000;
+      const all: any[] = [];
+      let from = 0;
+      while (true) {
+        const { data, error } = await supabase
+          .from('invoices')
+          .select(`
+            *,
+            patient:patients(*,profiles!patients_id_fkey(first_name, last_name, phone, email))
+          `)
+          .neq('status', 'cancelled')
+          .order('created_at', { ascending: false })
+          .range(from, from + PAGE_SIZE - 1);
 
-      if (error) throw error;
-      return data;
+        if (error) throw error;
+        if (!data || data.length === 0) break;
+        all.push(...data);
+        if (data.length < PAGE_SIZE) break;
+        from += PAGE_SIZE;
+      }
+      return all;
     }
   });
 };
