@@ -232,7 +232,9 @@ export function StaffInvoices() {
   };
 
   // Fetch hospital invoices
-  const { data: hospitalInvoices, isLoading: hospitalLoading } = useInvoices();
+  // Staff invoice history includes voided records so an invoice remains
+  // searchable after cancellation. Revenue cards below still use active rows.
+  const { data: hospitalInvoices, isLoading: hospitalLoading } = useInvoices({ includeCancelled: true });
   const { data: patientNames } = usePatientNames();
 
   // Fetch X-ray reports without linked invoices to avoid duplicates in invoice lists
@@ -951,7 +953,8 @@ export function StaffInvoices() {
     const config = {
       paid: { color: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300', label: 'Paid' },
       pending: { color: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300', label: 'Pending' },
-      overdue: { color: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300', label: 'Overdue' }
+      overdue: { color: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300', label: 'Overdue' },
+      cancelled: { color: 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300', label: 'Cancelled' }
     };
     
     const { color, label } = config[status as keyof typeof config] || config.pending;
@@ -959,7 +962,8 @@ export function StaffInvoices() {
   };
 
   const isLoading = hospitalLoading || xrayLoading || labLoading || otLoading;
-  const totalAmount = allInvoices.reduce((sum, invoice) => sum + Number(invoice.amount || 0), 0);
+  const activeInvoices = allInvoices.filter(invoice => invoice.status !== 'cancelled');
+  const totalAmount = activeInvoices.reduce((sum, invoice) => sum + Number(invoice.amount || 0), 0);
 
   return (
     <div className="space-y-6">
@@ -971,7 +975,7 @@ export function StaffInvoices() {
             <FileText className="w-4 h-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{allInvoices.length}</div>
+            <div className="text-2xl font-bold">{activeInvoices.length}</div>
             <p className="text-xs text-muted-foreground">All invoice types</p>
           </CardContent>
         </Card>
@@ -983,10 +987,10 @@ export function StaffInvoices() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-purple-600">
-              {allInvoices.filter(inv => inv.type === 'lab').length}
+              {activeInvoices.filter(inv => inv.type === 'lab').length}
             </div>
             <p className="text-xs text-muted-foreground">
-              {formatPkrAmount(allInvoices.filter(inv => inv.type === 'lab').reduce((sum, inv) => sum + Number(inv.amount), 0))}
+              {formatPkrAmount(activeInvoices.filter(inv => inv.type === 'lab').reduce((sum, inv) => sum + Number(inv.amount), 0))}
             </p>
           </CardContent>
         </Card>
@@ -998,10 +1002,10 @@ export function StaffInvoices() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-red-600">
-              {allInvoices.filter(inv => inv.type === 'ot').length}
+              {activeInvoices.filter(inv => inv.type === 'ot').length}
             </div>
             <p className="text-xs text-muted-foreground">
-              {formatPkrAmount(allInvoices.filter(inv => inv.type === 'ot').reduce((sum, inv) => sum + Number(inv.amount), 0))}
+              {formatPkrAmount(activeInvoices.filter(inv => inv.type === 'ot').reduce((sum, inv) => sum + Number(inv.amount), 0))}
             </p>
           </CardContent>
         </Card>
@@ -1013,10 +1017,10 @@ export function StaffInvoices() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-orange-600">
-              {allInvoices.filter(inv => inv.type === 'xray').length}
+              {activeInvoices.filter(inv => inv.type === 'xray').length}
             </div>
             <p className="text-xs text-muted-foreground">
-              {formatPkrAmount(allInvoices.filter(inv => inv.type === 'xray').reduce((sum, inv) => sum + Number(inv.amount), 0))}
+              {formatPkrAmount(activeInvoices.filter(inv => inv.type === 'xray').reduce((sum, inv) => sum + Number(inv.amount), 0))}
             </p>
           </CardContent>
         </Card>
