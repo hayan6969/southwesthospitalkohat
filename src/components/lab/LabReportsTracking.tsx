@@ -136,7 +136,7 @@ export function LabReportsTracking() {
         discountByPatient.set(d.patient_id, arr);
       });
 
-      return all.map((r: any): RawRow => {
+      const mapped = all.map((r: any): RawRow => {
         const tts = (r.lab_pathology_report_test_types ?? []) as any[];
         const tests = tts.map((t) => t.lab_test_types?.name).filter(Boolean) as string[];
         const reportAmount = r.amount != null ? Number(r.amount) : 0;
@@ -146,11 +146,6 @@ export function LabReportsTracking() {
                      : snapshotCharges > 0 ? snapshotCharges
                      : catalogCharges;
 
-        // If a lab discount was consumed for this patient and hasn't been
-        // applied yet, adjust the charges.  Only do this when we fell back
-        // to snapshot/catalog pricing — a stored `reportAmount` already
-        // reflects any discount applied to the underlying invoice, so
-        // subtracting again would double-count.
         const pending = discountByPatient.get(r.patient_id);
         if (pending && pending.length > 0) {
           if (reportAmount <= 0) {
@@ -167,7 +162,6 @@ export function LabReportsTracking() {
           discountByPatient.delete(r.patient_id);
         }
 
-
         return {
           id: r.id,
           reportNumber: r.report_number ?? "—",
@@ -180,6 +174,47 @@ export function LabReportsTracking() {
           status: r.status ?? "",
         };
       });
+
+      // Also include paid lab invoices whose pathology_report row was
+      // deleted (e.g. after items were returned/edited). Their amount is
+      // still real lab revenue that Daily Finance counts, so the register
+      // must include it or the two totals will diverge.
+      const linkedInvoiceIds = new Set(all.map((r: any) => r.invoice_id).filter(Boolean));
+      const { data: labInvoices } = await supabase
+        .from("invoices")
+        .select("id, invoice_number, amount, description, created_at, patient_id")
+        .eq("status", "paid")
+        .or("invoice_number.like.LAB-%,invoice_number.like.PATH-INV-%")
+        .gte("created_at", startISO)
+        .lte("created_at", endISO);
+
+      const orphans = (labInvoices ?? []).filter((inv: any) => !linkedInvoiceIds.has(inv.id) && Number(inv.amount) > 0);
+
+      const missingPids = Array.from(new Set(orphans.map((i: any) => i.patient_id).filter(Boolean)))
+        .filter((id) => !patientMap.has(id as string)) as string[];
+      if (missingPids.length) {
+        const { data: pats2 } = await supabase.from("patients").select("id, patient_number").in("id", missingPids);
+        (pats2 ?? []).forEach((p: any) => { if (p.patient_number) patientMap.set(p.id, p.patient_number); });
+      }
+
+      const orphanRows: RawRow[] = orphans.map((inv: any) => {
+        const desc = String(inv.description || "");
+        const testsStr = desc.replace(/^Lab:\s*/i, "").split(/\s*\[/)[0];
+        const tests = testsStr.split(",").map((s) => s.trim()).filter((s) => s && s.toUpperCase() !== "RETURN");
+        return {
+          id: inv.id,
+          reportNumber: inv.invoice_number ?? "—",
+          date: inv.created_at,
+          patientId: patientMap.get(inv.patient_id) ?? "—",
+          patientName: "—",
+          referredBy: "—",
+          tests,
+          charges: Number(inv.amount) || 0,
+          status: "invoice-only",
+        };
+      });
+
+      return [...mapped, ...orphanRows].sort((a, b) => (a.date || "").localeCompare(b.date || ""));
     },
   });
 
