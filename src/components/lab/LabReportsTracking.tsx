@@ -96,7 +96,7 @@ export function LabReportsTracking() {
       while (true) {
         const { data, error } = await supabase
           .from("lab_pathology_reports")
-          .select("id, report_number, patient_id, patient_name_snapshot, referred_by, status, created_at, amount, lab_pathology_report_test_types(price_snapshot, lab_test_types(name, price))")
+          .select("id, report_number, patient_id, patient_name_snapshot, referred_by, status, created_at, amount, invoice_id, lab_pathology_report_test_types(price_snapshot, lab_test_types(name, price))")
           .gte("created_at", startISO)
           .lte("created_at", endISO)
           .order("created_at", { ascending: true })
