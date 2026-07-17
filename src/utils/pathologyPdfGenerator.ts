@@ -218,7 +218,7 @@ export async function generatePathologyReportPDF(
 
     // Address / contact
     doc.setFont('helvetica', 'normal');
-    doc.setFontSize(7);
+    doc.setFontSize(9.1);
     doc.setTextColor(0, 0, 0);
     const addrParts = [hospital?.hospital_address, hospital?.contact_number, hospital?.email].filter(Boolean);
     if (addrParts.length) {
@@ -228,7 +228,7 @@ export async function generatePathologyReportPDF(
     if (data.reportNumber) {
       doc.setFont('helvetica', 'bold');
       doc.setTextColor(...accentBlue);
-      doc.setFontSize(7.5);
+      doc.setFontSize(9.8);
       doc.text(`Report #: ${data.reportNumber}`, titleX, y + 15);
     }
 
@@ -244,7 +244,7 @@ export async function generatePathologyReportPDF(
       try { doc.addImage(qrDataUrl, 'PNG', qx, qy, 16, 16); } catch { /* ignore */ }
       doc.setTextColor(...accentBlue);
       doc.setFont('helvetica', 'bold');
-      doc.setFontSize(4.2);
+      doc.setFontSize(5.5);
       doc.text('SCAN TO VERIFY', qx + 8, qy + 18.5, { align: 'center' });
     }
 
@@ -272,17 +272,17 @@ export async function generatePathologyReportPDF(
     patientRows.forEach((row, i) => {
       const ry = y + i * pRowH;
       doc.setFont('helvetica', 'bold');
-      doc.setFontSize(7);
+      doc.setFontSize(9.1);
       doc.setTextColor(0, 0, 0);
       doc.text(row.lLabel, leftLabelX, ry + 3.5);
       doc.setFont('helvetica', 'normal');
-      doc.setFontSize(8);
+      doc.setFontSize(10.4);
       doc.text(doc.splitTextToSize(row.lValue, rightLabelX - leftValueX - 4)[0], leftValueX, ry + 3.5);
       doc.setFont('helvetica', 'bold');
-      doc.setFontSize(7);
+      doc.setFontSize(9.1);
       doc.text(row.rLabel, rightLabelX, ry + 3.5);
       doc.setFont('helvetica', 'normal');
-      doc.setFontSize(8);
+      doc.setFontSize(10.4);
       doc.text(doc.splitTextToSize(row.rValue, pageWidth - MR - rightValueX - 2)[0], rightValueX, ry + 3.5);
     });
 
@@ -301,7 +301,7 @@ export async function generatePathologyReportPDF(
     doc.line(ML, pageHeight - MB - FOOTER_H + 1, pageWidth - MR, pageHeight - MB - FOOTER_H + 1);
     doc.setTextColor(0, 0, 0);
     doc.setFont('helvetica', 'normal');
-    doc.setFontSize(6);
+    doc.setFontSize(7.8);
     const left = data.status === 'final' ? 'FINAL REPORT' : 'DRAFT';
     doc.text(left, ML, pageHeight - MB - FOOTER_H + 5);
     doc.text(hospital?.hospital_name || 'Hospital', pageWidth / 2, pageHeight - MB - FOOTER_H + 5, { align: 'center' });
@@ -331,7 +331,7 @@ export async function generatePathologyReportPDF(
 
     doc.setTextColor(...accentBlue);
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(7);
+    doc.setFontSize(9.1);
     const labels = ['INVESTIGATION', 'RESULT', 'PREVIOUS', 'REFERENCE', 'UNIT'];
     const ty = y + 4.5;
     labels.forEach((l, i) => {
@@ -341,7 +341,7 @@ export async function generatePathologyReportPDF(
     // Previous date sub-label
     if (prevHeaderDate) {
       doc.setFont('helvetica', 'normal');
-      doc.setFontSize(5.5);
+      doc.setFontSize(7.2);
       doc.setTextColor(0, 0, 0);
       const prevX = colX[2] + 2 + doc.getTextWidth('PREVIOUS') + 1;
       const prevW = colW[2] - 4 - doc.getTextWidth('PREVIOUS') - 1;
@@ -363,7 +363,7 @@ export async function generatePathologyReportPDF(
     const pillBg: [number, number, number] = [229, 231, 235];
     const pillText: [number, number, number] = [17, 24, 39];
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(6);
+    doc.setFontSize(7.8);
     const w = doc.getTextWidth(flag) + 4;
     doc.setFillColor(...pillBg);
     doc.roundedRect(x, baselineY - 2.8, w, 4.2, 2.1, 2.1, 'F');
@@ -377,7 +377,7 @@ export async function generatePathologyReportPDF(
   // ── Draw a single parameter row ──
   const ROW_MIN_H = 6;
   const rowHeightForParam = (p: PathologyPdfParameter): number => {
-    doc.setFontSize(7.5);
+    doc.setFontSize(9.8);
     const invW = colW[0] - 4;
     const refW = colW[3] - 4;
     const invLines = doc.splitTextToSize(p.parameter_name, invW).length;
@@ -424,7 +424,7 @@ export async function generatePathologyReportPDF(
         doc.line(ML, y + 6, pageWidth - MR, y + 6);
         doc.setTextColor(...accentBlue);
         doc.setFont('helvetica', 'bold');
-        doc.setFontSize(7.5);
+        doc.setFontSize(9.8);
         doc.text(p.category_heading.toUpperCase(), ML + 4, y + 4);
         doc.setTextColor(0, 0, 0);
         y += 6;
@@ -439,7 +439,7 @@ export async function generatePathologyReportPDF(
 
       // ── INVESTIGATION ──
       doc.setFont('helvetica', 'bold');
-      doc.setFontSize(7.5);
+      doc.setFontSize(9.8);
       doc.setTextColor(0, 0, 0);
       const invW = colW[0] - 4;
       const invLines = doc.splitTextToSize(p.parameter_name, invW);
@@ -454,7 +454,7 @@ export async function generatePathologyReportPDF(
         doc.setTextColor(0, 0, 0);
       }
       doc.setFont('helvetica', flag ? 'bold' : 'normal');
-      doc.setFontSize(7.5);
+      doc.setFontSize(9.8);
       let rx = colX[1] + 2;
       doc.text(resultText, rx, y + 4);
       if (flag) {
@@ -467,7 +467,7 @@ export async function generatePathologyReportPDF(
       // ── PREVIOUS ──
       const prev = p.parameter_id ? previousByParam.get(p.parameter_id) : undefined;
       const latest = prev?.[0];
-      doc.setFontSize(7.5);
+      doc.setFontSize(9.8);
       if (latest) {
         doc.setTextColor(0, 0, 0);
         doc.text(latest.value, colX[2] + 2, y + 4);
@@ -481,7 +481,7 @@ export async function generatePathologyReportPDF(
       const refW = colW[3] - 4;
       const refStr = refTextOf(p);
       doc.setFont('helvetica', 'normal');
-      doc.setFontSize(7);
+      doc.setFontSize(9.1);
       doc.setTextColor(0, 0, 0);
       const refLines = doc.splitTextToSize(refStr, refW);
       doc.text(refLines, colX[3] + 2, y + 4);
@@ -489,7 +489,7 @@ export async function generatePathologyReportPDF(
 
       // ── UNIT ──
       doc.setFont('helvetica', 'normal');
-      doc.setFontSize(7);
+      doc.setFontSize(9.1);
       doc.text(p.unit || '—', colX[4] + 2, y + 4);
 
       y += rH;
@@ -514,7 +514,7 @@ export async function generatePathologyReportPDF(
             // Sub-range label + ref combined in REFERENCE col only
             const srRef = sr.ref_display || (sr.ref_min != null && sr.ref_max != null ? `${sr.ref_min} – ${sr.ref_max}` : '—');
             doc.setFont('helvetica', 'normal');
-            doc.setFontSize(6.5);
+            doc.setFontSize(8.5);
             doc.setTextColor(0, 0, 0);
             doc.text(`${sr.label || '—'}  ${srRef}`, colX[3] + 2, y + 3);
             doc.setTextColor(0, 0, 0);
@@ -540,7 +540,7 @@ export async function generatePathologyReportPDF(
             }
 
             doc.setFont('helvetica', isSelected ? 'bold' : 'normal');
-            doc.setFontSize(6.5);
+            doc.setFontSize(8.5);
             doc.setTextColor(0, 0, 0);
             doc.text(`${sr.label || '—'}  ${srRef}`, colX[3] + 2, y + 3);
             doc.setTextColor(0, 0, 0);
@@ -587,7 +587,7 @@ export async function generatePathologyReportPDF(
       y += 3;
       doc.setTextColor(...accentBlue);
       doc.setFont('helvetica', 'bold');
-      doc.setFontSize(14);
+      doc.setFontSize(18.2);
       doc.text(testName, pageWidth / 2, y, { align: 'center' });
       doc.setTextColor(0, 0, 0);
       y += 2;
@@ -599,7 +599,7 @@ export async function generatePathologyReportPDF(
 
     if (tt.report_category) {
       doc.setFont('helvetica', 'normal');
-      doc.setFontSize(7);
+      doc.setFontSize(9.1);
       doc.setTextColor(0, 0, 0);
       doc.text(tt.report_category, pageWidth / 2, y, { align: 'center' });
       doc.setTextColor(0, 0, 0);
@@ -608,7 +608,7 @@ export async function generatePathologyReportPDF(
 
     if (data.sampleType) {
       doc.setFont('helvetica', 'bold');
-      doc.setFontSize(7.5);
+      doc.setFontSize(9.8);
       doc.setTextColor(0, 0, 0);
       doc.text('Sample Type:', ML, y);
       doc.setFont('helvetica', 'normal');
@@ -628,7 +628,7 @@ export async function generatePathologyReportPDF(
     if (tt.method || data.instrument) {
       if (y > safeBottom() - 6) y = newPage();
       doc.setFont('helvetica', 'bold');
-      doc.setFontSize(7);
+      doc.setFontSize(9.1);
       doc.setTextColor(0, 0, 0);
       const segs: string[] = [];
       if (data.instrument) segs.push(`Instrument: ${data.instrument}`);
@@ -640,7 +640,7 @@ export async function generatePathologyReportPDF(
     if (tt.notes) {
       if (y > safeBottom() - 8) y = newPage();
       doc.setFont('helvetica', 'italic');
-      doc.setFontSize(7);
+      doc.setFontSize(9.1);
       doc.setTextColor(0, 0, 0);
       const noteLines = doc.splitTextToSize(tt.notes, CW);
       doc.text(noteLines, ML, y);
@@ -653,7 +653,7 @@ export async function generatePathologyReportPDF(
   if (data.interpretation) {
     if (y > safeBottom() - 15) y = newPage();
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(8);
+    doc.setFontSize(10.4);
     doc.setTextColor(0, 0, 0);
     doc.text('Interpretation:', ML, y);
     doc.setFont('helvetica', 'normal');
@@ -667,7 +667,7 @@ export async function generatePathologyReportPDF(
   y += 4;
   doc.setTextColor(...accentBlue);
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(9);
+  doc.setFontSize(11.7);
   doc.text('**** End of Report ****', pageWidth / 2, y, { align: 'center' });
   doc.setTextColor(0, 0, 0);
 
@@ -682,7 +682,7 @@ export async function generatePathologyReportPDF(
     doc.line(ML, pageHeight - MB - FOOTER_H + 1, pageWidth - MR, pageHeight - MB - FOOTER_H + 1);
     doc.setTextColor(0, 0, 0);
     doc.setFont('helvetica', 'normal');
-    doc.setFontSize(6);
+    doc.setFontSize(7.8);
     const left = data.status === 'final' ? 'FINAL REPORT' : 'DRAFT';
     doc.text(left, ML, pageHeight - MB - FOOTER_H + 5);
     doc.text(hospital?.hospital_name || 'Hospital', pageWidth / 2, pageHeight - MB - FOOTER_H + 5, { align: 'center' });
