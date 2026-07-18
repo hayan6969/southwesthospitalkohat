@@ -7,8 +7,9 @@ import { PathologyReportWizard } from "@/components/lab/PathologyReportWizard";
 import { PathologyReportHistory } from "@/components/lab/PathologyReportHistory";
 import { PathologyTestTypeManager } from "@/components/lab/PathologyTestTypeManager";
 import { LabReportsTracking } from "@/components/lab/LabReportsTracking";
+import { PendingLabTests } from "@/components/lab/PendingLabTests";
 import { IPDLabQueue } from "@/components/ipd/IPDLabQueue";
-import { ShoppingCart, FlaskConical, Microscope, History, Settings2, BedDouble, BarChart3 } from "lucide-react";
+import { ShoppingCart, FlaskConical, Microscope, History, Settings2, BedDouble, BarChart3, ClipboardList } from "lucide-react";
 
 export default function AdminLabs() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -35,6 +36,10 @@ export default function AdminLabs() {
             <TabsTrigger value="pathology-history" className="flex items-center gap-1.5 text-xs sm:text-sm">
               <History className="w-3.5 h-3.5" />
               <span>Report History</span>
+            </TabsTrigger>
+            <TabsTrigger value="pending" className="flex items-center gap-1.5 text-xs sm:text-sm">
+              <ClipboardList className="w-3.5 h-3.5" />
+              <span>Pending Tests</span>
             </TabsTrigger>
             <TabsTrigger value="reports" className="flex items-center gap-1.5 text-xs sm:text-sm">
               <BarChart3 className="w-3.5 h-3.5" />
@@ -63,6 +68,9 @@ export default function AdminLabs() {
           </TabsContent>
           <TabsContent value="pathology-history">
             <PathologyReportHistory />
+          </TabsContent>
+          <TabsContent value="pending">
+            <PendingLabTests />
           </TabsContent>
           <TabsContent value="reports">
             <LabReportsTracking />

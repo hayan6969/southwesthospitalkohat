@@ -66,17 +66,19 @@ export function PendingLabTests() {
       const from = (page - 1) * PAGE_SIZE;
       const to = from + PAGE_SIZE - 1;
 
-      // !inner join with invoices lets us exclude cancelled / zero-amount (returned/removed) bills at the DB level
+      // Inner joins keep only active invoices with at least one currently billable test item.
+      // This excludes cancelled/returned orders, removed tests, and zero-value RETURN markers.
       let q = supabase
         .from("lab_pathology_orders")
         .select(
-          "id, order_number, patient_id, referred_by, sample_type, lab_status, payment_status, created_at, lab_pathology_order_items(test_name_snapshot), invoices!inner(status, amount)",
+          "id, order_number, patient_id, referred_by, sample_type, lab_status, payment_status, created_at, lab_pathology_order_items!inner(test_name_snapshot, price), invoices!inner(status, amount)",
           { count: "exact" }
         )
-        .neq("lab_status", "reported")
-        .neq("lab_status", "cancelled")
-        .neq("invoices.status", "cancelled")
+        .in("lab_status", ["ready", "in_progress"])
+        .eq("payment_status", "paid")
+        .eq("invoices.status", "paid")
         .gt("invoices.amount", 0)
+        .gt("lab_pathology_order_items.price", 0)
         .order("created_at", { ascending: false });
 
       if (status !== "pending") q = q.eq("lab_status", status);
