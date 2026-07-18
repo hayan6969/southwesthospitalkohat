@@ -63,34 +63,55 @@ export function PendingLabTests() {
         );
       }
 
-      const from = (page - 1) * PAGE_SIZE;
-      const to = from + PAGE_SIZE - 1;
-
-      // Inner joins keep only active invoices with at least one currently billable test item.
-      // This excludes cancelled/returned orders, removed tests, and zero-value RETURN markers.
-      let q = supabase
+      // No FK between lab_pathology_orders and invoices, so we can't use PostgREST
+      // inner-join on invoices. Fetch pending orders (with items inner-joined to
+      // exclude fully-removed test lists), then filter out cancelled / zero-value
+      // invoices client-side, then paginate.
+      let baseQ = supabase
         .from("lab_pathology_orders")
         .select(
-          "id, order_number, patient_id, referred_by, sample_type, lab_status, payment_status, created_at, lab_pathology_order_items!inner(test_name_snapshot, price), invoices!inner(status, amount)",
-          { count: "exact" }
+          "id, order_number, patient_id, invoice_id, referred_by, sample_type, lab_status, payment_status, created_at, lab_pathology_order_items!inner(test_name_snapshot, price)"
         )
         .in("lab_status", ["ready", "in_progress"])
         .eq("payment_status", "paid")
-        .eq("invoices.status", "paid")
-        .gt("invoices.amount", 0)
         .gt("lab_pathology_order_items.price", 0)
         .order("created_at", { ascending: false });
 
-      if (status !== "pending") q = q.eq("lab_status", status);
+      if (status !== "pending") baseQ = baseQ.eq("lab_status", status);
 
       if (debounced) {
         const orParts: string[] = [`order_number.ilike.%${debounced}%`];
         if (patientIds.length) orParts.push(`patient_id.in.(${patientIds.join(",")})`);
-        q = q.or(orParts.join(","));
+        baseQ = baseQ.or(orParts.join(","));
       }
 
-      const { data: orders, error, count } = await q.range(from, to);
+      const { data: allOrders, error } = await baseQ.limit(500);
       if (error) throw error;
+
+      // Validate against invoices: only keep orders whose linked invoice is paid & non-zero.
+      const invIds = Array.from(
+        new Set((allOrders ?? []).map((o: any) => o.invoice_id).filter(Boolean))
+      );
+      const validInvIds = new Set<string>();
+      if (invIds.length) {
+        const { data: invs } = await supabase
+          .from("invoices")
+          .select("id, status, amount")
+          .in("id", invIds);
+        for (const inv of invs ?? []) {
+          if ((inv as any).status === "paid" && Number((inv as any).amount) > 0) {
+            validInvIds.add((inv as any).id);
+          }
+        }
+      }
+      const filtered = (allOrders ?? []).filter(
+        (o: any) => o.invoice_id && validInvIds.has(o.invoice_id)
+      );
+
+      const totalCount = filtered.length;
+      const fromIdx = (page - 1) * PAGE_SIZE;
+      const orders = filtered.slice(fromIdx, fromIdx + PAGE_SIZE);
+      const count = totalCount;
 
       // Fetch patient info (patient_number from patients, name/phone from profiles)
       const pIds = Array.from(new Set((orders ?? []).map((o: any) => o.patient_id).filter(Boolean)));
