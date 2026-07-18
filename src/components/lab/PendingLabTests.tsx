@@ -85,27 +85,25 @@ export function PendingLabTests() {
         baseQ = baseQ.or(orParts.join(","));
       }
 
-      const { data: allOrders, error } = await baseQ.limit(500);
+      const { data: allOrders, error } = await baseQ.limit(2000);
       if (error) throw error;
 
-      // Validate against invoices: only keep orders whose linked invoice is paid & non-zero.
+      // Validate invoices: exclude only orders whose linked invoice is explicitly
+      // cancelled. Orders without an invoice link, or with a paid invoice, are kept.
       const invIds = Array.from(
         new Set((allOrders ?? []).map((o: any) => o.invoice_id).filter(Boolean))
       );
-      const validInvIds = new Set<string>();
+      const cancelledInvIds = new Set<string>();
       if (invIds.length) {
         const { data: invs } = await supabase
           .from("invoices")
-          .select("id, status, amount")
-          .in("id", invIds);
-        for (const inv of invs ?? []) {
-          if ((inv as any).status === "paid" && Number((inv as any).amount) > 0) {
-            validInvIds.add((inv as any).id);
-          }
-        }
+          .select("id, status")
+          .in("id", invIds)
+          .eq("status", "cancelled");
+        for (const inv of invs ?? []) cancelledInvIds.add((inv as any).id);
       }
       const filtered = (allOrders ?? []).filter(
-        (o: any) => o.invoice_id && validInvIds.has(o.invoice_id)
+        (o: any) => !o.invoice_id || !cancelledInvIds.has(o.invoice_id)
       );
 
       const totalCount = filtered.length;
