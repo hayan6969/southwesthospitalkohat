@@ -85,7 +85,7 @@ export function PendingLabTests() {
         baseQ = baseQ.or(orParts.join(","));
       }
 
-      const { data: allOrders, error } = await baseQ.limit(500);
+      const { data: allOrders, error } = await baseQ.limit(2000);
       if (error) throw error;
 
       // Validate invoices: exclude only orders whose linked invoice is explicitly
