@@ -75,7 +75,8 @@ export function PendingLabTests() {
           { count: "exact" }
         )
         .in("lab_status", ["ready", "in_progress"])
-        .neq("invoices.status", "cancelled")
+        .eq("payment_status", "paid")
+        .eq("invoices.status", "paid")
         .gt("invoices.amount", 0)
         .gt("lab_pathology_order_items.price", 0)
         .order("created_at", { ascending: false });
