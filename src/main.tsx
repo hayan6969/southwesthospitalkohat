@@ -3,6 +3,9 @@ import { createRoot } from 'react-dom/client'
 import App from './App.tsx'
 import './index.css'
 import { supabase } from "@/integrations/supabase/client";
+import { installConsoleCapture } from "@/utils/consoleCapture";
+
+installConsoleCapture();
 
 // Function to update favicon dynamically
 const updateFavicon = async () => {
