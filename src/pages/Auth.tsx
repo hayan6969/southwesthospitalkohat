@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -12,7 +12,21 @@ import { supabase } from '@/integrations/supabase/client';
 import { ALL_PROVINCES, getCitiesForProvince } from '@/utils/pakistanCities';
 
 export default function Auth() {
-  const { signIn, signUp, loading } = useAuth();
+  const { signIn, signUp, loading, user, profile } = useAuth();
+
+  // If the user is already authenticated with a role, forward them to their
+  // dashboard instead of letting them get stuck staring at the login form
+  // (this was the pharmacy-PC loop: ProtectedRoute would bounce back here on
+  // a transient getSession() null and nothing would push them out again).
+  useEffect(() => {
+    if (loading) return;
+    if (!user || !profile?.role) return;
+    let dashboardRole: string;
+    if (profile.role === 'super_admin') dashboardRole = 'admin';
+    else if (profile.role.includes('pharmacist')) dashboardRole = 'pharmacy';
+    else dashboardRole = profile.role;
+    window.location.replace(`/dashboard/${dashboardRole}`);
+  }, [loading, user, profile]);
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isPatientLogin, setIsPatientLogin] = useState(false);
