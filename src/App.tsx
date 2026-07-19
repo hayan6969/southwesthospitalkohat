@@ -60,6 +60,7 @@ import AdminRegions from "./pages/dashboard/admin/AdminRegions";
 import AdminIPD from "./pages/dashboard/admin/AdminIPD";
 import AdminLabs from "./pages/dashboard/admin/AdminLabs";
 import InvoiceAuditTrail from "./pages/dashboard/admin/InvoiceAuditTrail";
+import AdminClientLogs from "./pages/dashboard/admin/AdminClientLogs";
 
 // Pharmacy pages
 import PharmacyMedicines from "./pages/dashboard/pharmacy/PharmacyMedicines";
@@ -276,6 +277,11 @@ const App = () => {
             <Route path="/dashboard/admin/invoice-audit" element={
               <ProtectedRoute allowedRoles={['super_admin']}>
                 <InvoiceAuditTrail />
+              </ProtectedRoute>
+            } />
+            <Route path="/dashboard/admin/client-logs" element={
+              <ProtectedRoute allowedRoles={ADMIN_ROLES}>
+                <AdminClientLogs />
               </ProtectedRoute>
             } />
 
