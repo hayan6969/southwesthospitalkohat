@@ -270,6 +270,51 @@ export type Database = {
           },
         ]
       }
+      client_error_logs: {
+        Row: {
+          created_at: string
+          extra: Json | null
+          id: string
+          level: string
+          message: string
+          occurred_at: string
+          route: string | null
+          url: string | null
+          user_agent: string | null
+          user_email: string | null
+          user_id: string | null
+          user_role: string | null
+        }
+        Insert: {
+          created_at?: string
+          extra?: Json | null
+          id?: string
+          level: string
+          message: string
+          occurred_at?: string
+          route?: string | null
+          url?: string | null
+          user_agent?: string | null
+          user_email?: string | null
+          user_id?: string | null
+          user_role?: string | null
+        }
+        Update: {
+          created_at?: string
+          extra?: Json | null
+          id?: string
+          level?: string
+          message?: string
+          occurred_at?: string
+          route?: string | null
+          url?: string | null
+          user_agent?: string | null
+          user_email?: string | null
+          user_id?: string | null
+          user_role?: string | null
+        }
+        Relationships: []
+      }
       daily_closings: {
         Row: {
           closing_date: string
