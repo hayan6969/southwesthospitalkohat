@@ -23,6 +23,12 @@ export default function LoginSuccessReport() {
   const location = useLocation();
   const [open, setOpen] = useState(false);
   const [flag, setFlag] = useState<{ at: number; where: string } | null>(null);
+  const [, force] = useState(0);
+
+  useEffect(() => {
+    const unsub = subscribeConsoleCapture(() => force((n) => n + 1));
+    return unsub;
+  }, []);
 
   useEffect(() => {
     if (loading) return;
@@ -43,10 +49,13 @@ export default function LoginSuccessReport() {
   const expiresAt = session?.expires_at ? new Date(session.expires_at * 1000) : null;
   const recent = getAuthLog().slice(-8).reverse();
   const debugOn = isAuthDebugEnabled();
+  const consoleEntries = getConsoleCapture().slice(-20).reverse();
+  const errorCount = consoleEntries.filter((e) => e.level === 'error').length;
+  const warnCount = consoleEntries.filter((e) => e.level === 'warn').length;
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogContent className="max-w-md z-[9999]">
+      <DialogContent className="max-w-md z-[9999] max-h-[85vh] overflow-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-emerald-600">
             <CheckCircle2 className="h-5 w-5" />
@@ -65,7 +74,32 @@ export default function LoginSuccessReport() {
             <div><span className="text-muted-foreground">signed in via:</span> {flag.where}</div>
             <div><span className="text-muted-foreground">session expires:</span> {expiresAt ? expiresAt.toLocaleString() : '—'}</div>
             <div><span className="text-muted-foreground">login at:</span> {new Date(flag.at).toLocaleTimeString()}</div>
+            <div>
+              <span className="text-muted-foreground">console:</span>{' '}
+              <span className={errorCount > 0 ? 'text-red-600 font-semibold' : 'text-emerald-600'}>
+                {errorCount} errors
+              </span>
+              {', '}
+              <span className={warnCount > 0 ? 'text-amber-600 font-semibold' : 'text-emerald-600'}>
+                {warnCount} warnings
+              </span>
+            </div>
           </div>
+
+          {consoleEntries.length > 0 && (
+            <div className="rounded-md border bg-muted/40 p-3 font-mono text-[10px] max-h-48 overflow-auto">
+              <div className="mb-1 text-muted-foreground">console output (latest {consoleEntries.length}):</div>
+              {consoleEntries.map((e, i) => (
+                <div
+                  key={i}
+                  className={`whitespace-pre-wrap break-words ${e.level === 'error' ? 'text-red-600' : 'text-amber-600'}`}
+                >
+                  <span className="text-muted-foreground">{new Date(e.ts).toLocaleTimeString()}</span>{' '}
+                  [{e.level}] {e.message}
+                </div>
+              ))}
+            </div>
+          )}
 
           {debugOn && recent.length > 0 && (
             <div className="rounded-md border bg-muted/40 p-3 font-mono text-[10px] max-h-40 overflow-auto">
