@@ -11,6 +11,7 @@ import { Eye, EyeOff, User, Lock, Mail, Phone, Search } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { ALL_PROVINCES, getCitiesForProvince } from '@/utils/pakistanCities';
 import { logAuthEvent } from '@/utils/authDebug';
+import { markLoginSuccess } from '@/components/LoginSuccessReport';
 
 export default function Auth() {
   const { signIn, signUp, loading, user, profile } = useAuth();
@@ -120,6 +121,7 @@ export default function Auth() {
           variant: 'destructive',
         });
       } else {
+        markLoginSuccess(isPatientLogin ? 'patient login (phone + CNIC)' : 'staff login (email + password)');
         toast({
           title: 'Login Successful',
           description: 'Redirecting to your dashboard...',

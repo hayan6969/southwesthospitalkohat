@@ -17,6 +17,7 @@ import OfflineModePharmacy from "./pages/OfflineModePharmacy";
 import VerifyReport from "./pages/VerifyReport";
 import PrintPrescription from "./pages/PrintPrescription";
 import AuthDebugOverlay from "./components/AuthDebugOverlay";
+import LoginSuccessReport from "./components/LoginSuccessReport";
 
 
 // Dashboard main pages
@@ -104,6 +105,7 @@ const App = () => {
           <Sonner />
           <BrowserRouter>
           <AuthDebugOverlay />
+          <LoginSuccessReport />
           <Routes>
             <Route path="/auth" element={<Auth />} />
             <Route path="/offline-mode" element={<OfflineMode />} />
