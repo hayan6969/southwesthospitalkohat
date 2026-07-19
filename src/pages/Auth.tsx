@@ -28,6 +28,7 @@ export default function Auth() {
       where: 'Auth',
       message: `already signed in (${profile.role}) → /dashboard/${dashboardRole}`,
     });
+    markLoginSuccess(`already signed in as ${profile.role}`);
     window.location.replace(`/dashboard/${dashboardRole}`);
   }, [loading, user, profile]);
   const [showPassword, setShowPassword] = useState(false);
