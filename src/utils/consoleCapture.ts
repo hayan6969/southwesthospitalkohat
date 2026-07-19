@@ -51,9 +51,14 @@ const DUPLICATE_WINDOW_MS = 60_000;
 
 async function sendToDatabase(level: 'error' | 'warn', message: string) {
   try {
+    // Only record to DB when auth-debug mode is enabled (via ?authdebug=1)
+    const { isAuthDebugEnabled } = await import('@/utils/authDebug');
+    if (!isAuthDebugEnabled()) return;
+
     // Skip noisy known messages
     if (message.includes('RESET_BLANK_CHECK')) return;
     if (message.includes('[auth-debug]')) return;
+
 
     const key = `${level}::${message}`;
     const now = Date.now();
