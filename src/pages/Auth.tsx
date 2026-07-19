@@ -10,14 +10,11 @@ import { toast } from '@/hooks/use-toast';
 import { Eye, EyeOff, User, Lock, Mail, Phone, Search } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { ALL_PROVINCES, getCitiesForProvince } from '@/utils/pakistanCities';
+import { logAuthEvent } from '@/utils/authDebug';
 
 export default function Auth() {
   const { signIn, signUp, loading, user, profile } = useAuth();
 
-  // If the user is already authenticated with a role, forward them to their
-  // dashboard instead of letting them get stuck staring at the login form
-  // (this was the pharmacy-PC loop: ProtectedRoute would bounce back here on
-  // a transient getSession() null and nothing would push them out again).
   useEffect(() => {
     if (loading) return;
     if (!user || !profile?.role) return;
@@ -25,6 +22,11 @@ export default function Auth() {
     if (profile.role === 'super_admin') dashboardRole = 'admin';
     else if (profile.role.includes('pharmacist')) dashboardRole = 'pharmacy';
     else dashboardRole = profile.role;
+    logAuthEvent({
+      kind: 'redirect',
+      where: 'Auth',
+      message: `already signed in (${profile.role}) → /dashboard/${dashboardRole}`,
+    });
     window.location.replace(`/dashboard/${dashboardRole}`);
   }, [loading, user, profile]);
   const [showPassword, setShowPassword] = useState(false);

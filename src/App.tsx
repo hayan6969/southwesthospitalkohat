@@ -16,6 +16,7 @@ import OfflineMode from "./pages/OfflineMode";
 import OfflineModePharmacy from "./pages/OfflineModePharmacy";
 import VerifyReport from "./pages/VerifyReport";
 import PrintPrescription from "./pages/PrintPrescription";
+import AuthDebugOverlay from "./components/AuthDebugOverlay";
 
 
 // Dashboard main pages
@@ -102,6 +103,7 @@ const App = () => {
           <Toaster />
           <Sonner />
           <BrowserRouter>
+          <AuthDebugOverlay />
           <Routes>
             <Route path="/auth" element={<Auth />} />
             <Route path="/offline-mode" element={<OfflineMode />} />

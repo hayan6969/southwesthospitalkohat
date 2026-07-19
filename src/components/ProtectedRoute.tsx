@@ -1,6 +1,7 @@
 
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
+import { logAuthEvent } from '@/utils/authDebug';
 
 type ProtectedRouteProps = {
   children: React.ReactNode;
@@ -11,10 +12,6 @@ export default function ProtectedRoute({ children, allowedRoles }: ProtectedRout
   const { user, profile, loading } = useAuth();
   const [graceElapsed, setGraceElapsed] = useState(false);
 
-  // Give the auth listener a brief window to hydrate from localStorage before
-  // we kick anyone out — otherwise fast-loading protected pages on slow
-  // machines (old Windows/Chrome) can bounce authenticated users back to
-  // /auth for a fraction of a second and cause a login loop.
   useEffect(() => {
     const t = setTimeout(() => setGraceElapsed(true), 1500);
     return () => clearTimeout(t);
@@ -22,6 +19,11 @@ export default function ProtectedRoute({ children, allowedRoles }: ProtectedRout
 
   useEffect(() => {
     if (!loading && graceElapsed && !user) {
+      logAuthEvent({
+        kind: 'redirect',
+        where: 'ProtectedRoute',
+        message: `no user after grace → /auth (from ${window.location.pathname})`,
+      });
       window.location.href = '/auth';
     }
   }, [user, loading, graceElapsed]);
@@ -40,6 +42,11 @@ export default function ProtectedRoute({ children, allowedRoles }: ProtectedRout
 
   const role = profile?.role;
   if (allowedRoles && role && role !== 'super_admin' && !allowedRoles.includes(role)) {
+    logAuthEvent({
+      kind: 'warn',
+      where: 'ProtectedRoute',
+      message: `role "${role}" not in [${allowedRoles.join(',')}] on ${window.location.pathname}`,
+    });
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-red-50 to-red-100">
         <div className="text-center">
