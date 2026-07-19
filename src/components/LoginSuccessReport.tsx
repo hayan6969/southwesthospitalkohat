@@ -34,6 +34,7 @@ export default function LoginSuccessReport() {
     if (loading) return;
     if (!user || !profile) return;
     if (location.pathname === '/auth') return;
+    if (!isAuthDebugEnabled()) return;
     try {
       const raw = sessionStorage.getItem(FLAG_KEY);
       if (!raw) return;
