@@ -5,6 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Button } from '@/components/ui/button';
 import { CheckCircle2 } from 'lucide-react';
 import { getAuthLog, isAuthDebugEnabled } from '@/utils/authDebug';
+import { getConsoleCapture, subscribeConsoleCapture } from '@/utils/consoleCapture';
 
 const FLAG_KEY = 'hims_login_success_report';
 
