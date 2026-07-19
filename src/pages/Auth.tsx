@@ -530,6 +530,44 @@ export default function Auth() {
                 </form>
               </TabsContent>
             </Tabs>
+
+            <div className="mt-4 pt-4 border-t">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="w-full text-xs"
+                onClick={async () => {
+                  try {
+                    if ('serviceWorker' in navigator) {
+                      const regs = await navigator.serviceWorker.getRegistrations();
+                      await Promise.all(regs.map((r) => r.unregister()));
+                    }
+                    if ('caches' in window) {
+                      const keys = await caches.keys();
+                      await Promise.all(keys.map((k) => caches.delete(k)));
+                    }
+                    if ((indexedDB as any).databases) {
+                      const dbs = await (indexedDB as any).databases();
+                      await Promise.all(
+                        dbs.map((db: any) => db.name && new Promise((res) => {
+                          const req = indexedDB.deleteDatabase(db.name);
+                          req.onsuccess = req.onerror = (req as any).onblocked = () => res(null);
+                        }))
+                      );
+                    }
+                  } catch (err) {
+                    console.error('Cache clear error:', err);
+                  } finally {
+                    try { localStorage.clear(); } catch {}
+                    try { sessionStorage.clear(); } catch {}
+                    window.location.replace('/auth?fresh=' + Date.now());
+                  }
+                }}
+              >
+                Stuck on login? Clear cache & reload
+              </Button>
+            </div>
           </CardContent>
         </Card>
       </div>
