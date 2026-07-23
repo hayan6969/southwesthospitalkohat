@@ -73,22 +73,40 @@ async function sendToDatabase(level: 'error' | 'warn', message: string) {
     }
 
     const { supabase } = await import('@/integrations/supabase/client');
-    const { data: { user } } = await supabase.auth.getUser();
-    let role: string | null = null;
-    if (user) {
-      const { data: prof } = await supabase.from('profiles').select('role').eq('id', user.id).maybeSingle();
-      role = prof?.role ?? null;
-    }
+
+    // IMPORTANT: do NOT call supabase.auth.getUser()/getSession() here.
+    // They acquire the "sb-<ref>-auth-token" Web Lock and can steal it from
+    // the app's own auth init, causing "Lock broken by another request with
+    // the 'steal' option" → fetchUserProfile aborts → profile stays null →
+    // ProtectedRoute bounces the user back to /auth (login loop).
+    // Read the cached session directly from localStorage instead.
+    let userId: string | null = null;
+    let userEmail: string | null = null;
+    try {
+      const key = Object.keys(localStorage).find(
+        (k) => k.startsWith('sb-') && k.endsWith('-auth-token')
+      );
+      if (key) {
+        const raw = localStorage.getItem(key);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          userId = parsed?.user?.id ?? parsed?.currentSession?.user?.id ?? null;
+          userEmail = parsed?.user?.email ?? parsed?.currentSession?.user?.email ?? null;
+        }
+      }
+    } catch { /* ignore */ }
+
     await supabase.from('client_error_logs').insert({
-      user_id: user?.id ?? null,
-      user_email: user?.email ?? null,
-      user_role: role,
+      user_id: userId,
+      user_email: userEmail,
+      user_role: null,
       level,
       message: message.slice(0, 4000),
       route: window.location.pathname + window.location.search,
       user_agent: navigator.userAgent,
       url: window.location.href,
     });
+
   } catch { /* swallow — never let logging break the app */ }
 }
 
