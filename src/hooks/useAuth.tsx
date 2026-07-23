@@ -37,35 +37,31 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(true);
   const { logLogin, logLogout } = useAuditLogger();
 
-  const fetchUserProfile = async (userId: string) => {
+  const fetchUserProfile = async (userId: string, attempt = 0): Promise<UserProfile | null> => {
     try {
       console.log('Fetching profile for user:', userId);
-      
+
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', userId)
-        .single();
+        .maybeSingle();
 
       if (error) {
-        console.error('Error fetching user profile:', error);
-        // If profile doesn't exist, return null but don't throw
-        if (error.code === 'PGRST116') {
-          console.log('No profile found for user, this might be a new user');
-          return null;
+        const msg = (error as any)?.message || '';
+        // Auth-lock steal aborts the request; retry once after the lock settles.
+        if (attempt < 2 && /Lock broken|AbortError|aborted/i.test(msg)) {
+          console.warn('Profile fetch aborted by auth lock, retrying...', msg);
+          await new Promise((r) => setTimeout(r, 300));
+          return fetchUserProfile(userId, attempt + 1);
         }
+        console.error('Error fetching user profile:', error);
         return null;
       }
 
       if (data) {
         console.log('Profile fetched successfully:', data);
-        // Cast the role to the proper type
-        const profile: UserProfile = {
-          ...data,
-          role: data.role as 'admin' | 'doctor' | 'staff' | 'ota' | 'ipd' | 'head_pharmacist' | 'assistant_pharmacist' | 'salesman_pharmacist' | 'patient' | 'finance' | 'nursing' | 'inventory_manager' | 'store' | 'lab' | 'super_admin'
-        };
-        
-        return profile;
+        return { ...data, role: data.role as UserProfile['role'] };
       }
 
       console.log('No profile data returned');
@@ -75,6 +71,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       return null;
     }
   };
+
 
   useEffect(() => {
     let mounted = true;
