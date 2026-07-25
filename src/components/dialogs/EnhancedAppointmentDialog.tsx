@@ -213,7 +213,7 @@ export function EnhancedAppointmentDialog() {
       return;
     }
 
-    let patientId = selectedPatient?.id;
+    let patientId = bookingForId || selectedPatient?.id;
     
     // If registering new patient
     if (activeTab === "register") {
@@ -359,10 +359,29 @@ export function EnhancedAppointmentDialog() {
                             {selectedPatient.profile?.phone && <div><strong>Phone:</strong> {selectedPatient.profile.phone}</div>}
                           </div>
                         </div>
-                        <Button variant="ghost" size="sm" onClick={() => setSelectedPatient(null)}>
+                        <Button variant="ghost" size="sm" onClick={() => { setSelectedPatient(null); setFamilyMembers([]); setBookingForId(""); }}>
                           <X className="w-4 h-4" />
                         </Button>
                       </div>
+                      {familyMembers.length > 1 && (
+                        <div className="space-y-2 mt-3">
+                          <Label>Booking For</Label>
+                          <Select value={bookingForId} onValueChange={setBookingForId}>
+                            <SelectTrigger className="w-full">
+                              <SelectValue placeholder="Select family member..." />
+                            </SelectTrigger>
+                            <SelectContent className="z-[10000]">
+                              {familyMembers.map((m) => (
+                                <SelectItem key={m.id} value={m.id}>
+                                  {m.first_name} {m.last_name}
+                                  {m.is_guardian ? " (Primary)" : m.relation ? ` (${m.relation})` : ""}
+                                  {m.patient_number ? ` · ${m.patient_number}` : ""}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      )}
                     </div>
                   ) : (
                     <>
