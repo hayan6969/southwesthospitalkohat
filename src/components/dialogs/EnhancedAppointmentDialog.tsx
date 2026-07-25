@@ -40,6 +40,8 @@ export function EnhancedAppointmentDialog() {
   // Search existing patient
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedPatient, setSelectedPatient] = useState<any>(null);
+  const [familyMembers, setFamilyMembers] = useState<any[]>([]);
+  const [bookingForId, setBookingForId] = useState<string>("");
   
   // New patient registration
   const [newPatient, setNewPatient] = useState({
