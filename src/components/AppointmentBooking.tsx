@@ -39,7 +39,7 @@ interface HospitalSettings {
 
 export const AppointmentBooking = () => {
   const { profile } = useAuth();
-  const { activePatientId } = useActivePatient();
+  const { activePatientId, setActivePatientId, members } = useActivePatient();
   const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [filteredDoctors, setFilteredDoctors] = useState<Doctor[]>([]);
   // doctorComboOpen removed - using Select
@@ -282,6 +282,27 @@ export const AppointmentBooking = () => {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
+            {members.length > 1 && (
+              <div className="space-y-2">
+                <Label htmlFor="for-whom">Booking For</Label>
+                <Select
+                  value={activePatientId ?? ""}
+                  onValueChange={(id) => setActivePatientId(id)}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Select family member..." />
+                  </SelectTrigger>
+                  <SelectContent className="z-[9999] max-h-[300px]">
+                    {members.map((m) => (
+                      <SelectItem key={m.id} value={m.id}>
+                        {m.first_name} {m.last_name}
+                        {m.is_guardian ? " (Myself)" : m.relation ? ` (${m.relation})` : ""}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
             <div className="space-y-2">
               <Label htmlFor="doctor">Select Doctor</Label>
               <Select value={selectedDoctor} onValueChange={setSelectedDoctor}>
