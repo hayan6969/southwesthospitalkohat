@@ -291,10 +291,6 @@ export function EnhancedAppointmentDialog() {
             last_name: newPatient.last_name,
             phone: newPatient.phone,
             cnic: newPatient.cnic,
-            date_of_birth: newPatient.date_of_birth,
-            address: newPatient.address,
-            blood_type: newPatient.blood_type,
-            allergies: newPatient.allergies,
           });
           patientId = result.patient.id;
           toast.success("Patient registered successfully");
