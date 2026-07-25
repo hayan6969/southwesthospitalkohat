@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
+import { useActivePatient } from "@/contexts/PatientContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -41,6 +42,7 @@ interface AppointmentWithQueue {
 
 export const MyAppointments = () => {
   const { profile } = useAuth();
+  const { activePatientId } = useActivePatient();
   const [appointments, setAppointments] = useState<AppointmentWithQueue[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("today");
@@ -52,21 +54,21 @@ export const MyAppointments = () => {
 
   useEffect(() => {
     fetchMyAppointments();
-  }, [profile?.id]);
+  }, [activePatientId]);
 
   // Set up real-time updates
   useEffect(() => {
-    if (!profile?.id) return;
+    if (!activePatientId) return;
 
     const channel = supabase
-      .channel(`patient-appointments-${profile.id}`) // Use unique channel name per user
+      .channel(`patient-appointments-${activePatientId}`) // Use unique channel name per user
       .on(
         'postgres_changes',
         {
           event: '*',
           schema: 'public',
           table: 'appointments',
-          filter: `patient_id=eq.${profile.id}`
+          filter: `patient_id=eq.${activePatientId}`
         },
         () => {
           console.log('Patient appointments updated, refetching...');
@@ -91,7 +93,7 @@ export const MyAppointments = () => {
           event: '*',
           schema: 'public',
           table: 'invoices',
-          filter: `patient_id=eq.${profile.id}`
+          filter: `patient_id=eq.${activePatientId}`
         },
         () => {
           console.log('Patient invoices updated, refetching appointments...');
@@ -103,10 +105,10 @@ export const MyAppointments = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [profile?.id]); // Keep profile dependency but use unique channel name
+  }, [activePatientId]); // Keep profile dependency but use unique channel name
 
   const fetchMyAppointments = async () => {
-    if (!profile?.id) return;
+    if (!activePatientId) return;
 
     try {
       setLoading(true);
@@ -124,7 +126,7 @@ export const MyAppointments = () => {
           booking_type,
           doctor_id
         `)
-        .eq('patient_id', profile.id)
+        .eq('patient_id', activePatientId)
         .order('appointment_date', { ascending: true });
 
       if (appointmentsError) throw appointmentsError;
@@ -139,7 +141,7 @@ export const MyAppointments = () => {
       const [doctorsData, profilesData, invoicesData] = await Promise.all([
         supabase.from('doctors').select('id, specialization, consultation_fee').in('id', doctorIds),
         supabase.from('profiles').select('id, first_name, last_name').in('id', doctorIds),
-        supabase.from('invoices').select('id, patient_id, amount, description').eq('patient_id', profile.id)
+        supabase.from('invoices').select('id, patient_id, amount, description').eq('patient_id', activePatientId)
       ]);
 
       if (doctorsData.error) throw doctorsData.error;
