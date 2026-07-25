@@ -483,6 +483,35 @@ export function EnhancedAppointmentDialog() {
                 </TabsContent>
                 
                 <TabsContent value="register" className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="phone">Phone Number *</Label>
+                    <Input
+                      id="phone"
+                      type="tel"
+                      value={newPatient.phone}
+                      onChange={(e) => setNewPatient(prev => ({ ...prev, phone: e.target.value }))}
+                      placeholder="03001234567"
+                      required
+                    />
+                    {checkingPhone && (
+                      <p className="text-xs text-muted-foreground">Checking phone…</p>
+                    )}
+                    {isFamilyMode && guardian && (
+                      <div className="flex items-start gap-2 rounded-md border border-amber-300 bg-amber-50 p-3 text-sm">
+                        <Users className="mt-0.5 h-4 w-4 shrink-0 text-amber-700" />
+                        <div className="text-amber-900">
+                          <div className="font-semibold">
+                            This phone is registered to {guardian.first_name} {guardian.last_name} ({guardian.patient_number})
+                          </div>
+                          <div className="text-xs mt-1">
+                            Existing family members: <strong>{guardian.family_member_count}</strong>.
+                            The new entry will be added as a linked family member — no new login is created.
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="firstName">First Name *</Label>
@@ -503,29 +532,34 @@ export function EnhancedAppointmentDialog() {
                       />
                     </div>
                   </div>
-                  
-                  <div className="grid grid-cols-2 gap-4">
+
+                  {isFamilyMode && (
                     <div className="space-y-2">
-                      <Label htmlFor="phone">Phone Number *</Label>
-                      <Input
-                        id="phone"
-                        value={newPatient.phone}
-                        onChange={(e) => setNewPatient(prev => ({ ...prev, phone: e.target.value }))}
-                        placeholder="03001234567"
-                        required
-                      />
+                      <Label>Relation *</Label>
+                      <Select value={relation} onValueChange={setRelation}>
+                        <SelectTrigger><SelectValue placeholder="Select relation to phone owner" /></SelectTrigger>
+                        <SelectContent className="z-[10000]">
+                          {["Spouse", "Son", "Daughter", "Father", "Mother", "Brother", "Sister", "Other"].map((r) => (
+                            <SelectItem key={r} value={r}>{r}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="cnic">CNIC *</Label>
-                      <Input
-                        id="cnic"
-                        value={newPatient.cnic}
-                        onChange={(e) => setNewPatient(prev => ({ ...prev, cnic: e.target.value }))}
-                        placeholder="12345-6789012-3"
-                        required
-                      />
-                    </div>
+                  )}
+
+                  <div className="space-y-2">
+                    <Label htmlFor="cnic">
+                      CNIC {isFamilyMode ? "(optional)" : "*"}
+                    </Label>
+                    <Input
+                      id="cnic"
+                      value={newPatient.cnic}
+                      onChange={(e) => setNewPatient(prev => ({ ...prev, cnic: e.target.value }))}
+                      placeholder="12345-6789012-3"
+                      required={!isFamilyMode}
+                    />
                   </div>
+
                   
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
