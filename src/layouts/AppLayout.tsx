@@ -44,7 +44,14 @@ const AppLayout = ({ children, sidebarRole, hideSidebar }: AppLayoutProps) => {
               )}
             </div>
             <div className="flex items-center gap-2 sm:gap-4">
-              
+              <Link
+                to="/dashboard/help"
+                className="hidden sm:inline-flex items-center gap-1.5 text-sm text-gray-600 hover:text-blue-600"
+                title="Dashboard Guide"
+              >
+                <BookOpen className="w-4 h-4" />
+                <span className="hidden md:inline">Guide</span>
+              </Link>
               <div className="hidden sm:flex items-center gap-2 text-sm text-gray-600">
                 <User className="w-4 h-4" />
                 <span>{profile.first_name} {profile.last_name}</span>
