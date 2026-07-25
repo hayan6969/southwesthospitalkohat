@@ -375,6 +375,13 @@ const App = () => {
               </ProtectedRoute>
             } />
             
+            {/* Dashboard guide / help */}
+            <Route path="/dashboard/help" element={
+              <ProtectedRoute>
+                <DashboardGuide />
+              </ProtectedRoute>
+            } />
+
             {/* Redirect for unknown dashboard routes */}
             <Route path="/dashboard" element={<Navigate to="/" replace />} />
 
