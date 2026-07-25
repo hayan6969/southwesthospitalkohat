@@ -140,9 +140,6 @@ export default function DashboardPatient() {
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
         <StatsCard
-      
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
-        <StatsCard
           title="Upcoming Appointments"
           value={upcomingAppointments.toString()}
           icon={<Calendar className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600" />}
