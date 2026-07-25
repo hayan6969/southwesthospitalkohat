@@ -31,6 +31,7 @@ import DashboardOTA from "./pages/dashboard/DashboardOTA";
 import DashboardStore from "./pages/dashboard/DashboardStore";
 import DashboardLab from "./pages/dashboard/DashboardLab";
 import DashboardIpd from "./pages/dashboard/DashboardIpd";
+import DashboardGuide from "./pages/dashboard/DashboardGuide";
 
 // Doctor pages
 import DoctorSchedule from "./pages/dashboard/doctor/DoctorSchedule";
