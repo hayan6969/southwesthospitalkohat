@@ -9,25 +9,27 @@ import { format } from "date-fns";
 import { formatPkrAmount } from "@/utils/currency";
 import { generateInvoicePDF } from "@/utils/pdfGenerator";
 import { useToast } from "@/hooks/use-toast";
+import { useActivePatient } from "@/contexts/PatientContext";
 
 export default function PatientInvoices() {
   const { profile } = useAuth();
+  const { activePatientId, activePatient } = useActivePatient();
   const { toast } = useToast();
 
   const { data: patientInvoices = [], isLoading } = useQuery({
-    queryKey: ['patient-invoices-page', profile?.id],
+    queryKey: ['patient-invoices-page', activePatientId],
     queryFn: async () => {
-      if (!profile?.id) return [];
+      if (!activePatientId) return [];
       const { data, error } = await supabase
         .from('invoices')
         .select('*')
-        .eq('patient_id', profile.id)
+        .eq('patient_id', activePatientId)
         .neq('status', 'cancelled')
         .order('created_at', { ascending: false });
       if (error) throw error;
       return data || [];
     },
-    enabled: !!profile?.id,
+    enabled: !!activePatientId,
   });
 
   const handleDownloadInvoice = async (invoice: any) => {

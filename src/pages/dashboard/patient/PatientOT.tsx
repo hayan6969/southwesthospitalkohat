@@ -10,6 +10,7 @@ import { formatPkrAmount } from "@/utils/currency";
 import { generateOTPDF } from "@/utils/pdfGenerator";
 import { useToast } from "@/hooks/use-toast";
 import { generateDischargeSlipPDF } from "@/utils/dischargeSlipPdfGenerator";
+import { useActivePatient } from "@/contexts/PatientContext";
 
 interface OTSchedule {
   id: string;
@@ -35,16 +36,17 @@ export default function PatientOT() {
   const [otSchedules, setOtSchedules] = useState<OTSchedule[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const { profile } = useAuth();
+  const { activePatientId } = useActivePatient();
   const { toast } = useToast();
 
   useEffect(() => {
-    if (profile?.id) {
+    if (activePatientId) {
       fetchOTSchedules();
     }
-  }, [profile?.id]);
+  }, [activePatientId]);
 
   const fetchOTSchedules = async () => {
-    if (!profile?.id) return;
+    if (!activePatientId) return;
 
     try {
       const { data, error } = await supabase
@@ -54,7 +56,7 @@ export default function PatientOT() {
           operation:ot_operations(operation_name),
           room:ot_rooms(room_name)
         `)
-        .eq("patient_id", profile.id)
+        .eq("patient_id", activePatientId)
         .order("operation_date", { ascending: false });
 
       if (error) throw error;

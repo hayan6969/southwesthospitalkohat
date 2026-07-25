@@ -9,31 +9,33 @@ import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { generatePathologyReportPDF, type PathologyPdfData } from "@/utils/pathologyPdfGenerator";
+import { useActivePatient } from "@/contexts/PatientContext";
 
 export default function PatientLabs() {
   const { profile } = useAuth();
+  const { activePatientId } = useActivePatient();
   const { data: labReports, isLoading } = useLabReports();
 
-  const patientLabs = labReports?.filter(lab => lab.patient_id === profile?.id) || [];
+  const patientLabs = labReports?.filter(lab => lab.patient_id === activePatientId) || [];
 
   const [pathReports, setPathReports] = useState<any[]>([]);
   const [pathLoading, setPathLoading] = useState(true);
   const [printingId, setPrintingId] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!profile?.id) return;
+    if (!activePatientId) return;
     (async () => {
       setPathLoading(true);
       const { data, error } = await supabase
         .from("lab_pathology_reports")
         .select("id, report_number, status, reported_at, created_at, referred_by, sample_type, lab_pathology_report_test_types(lab_test_types(name))")
-        .eq("patient_id", profile.id)
+        .eq("patient_id", activePatientId)
         .order("created_at", { ascending: false });
       if (error) toast.error("Failed to load pathology reports");
       setPathReports(data ?? []);
       setPathLoading(false);
     })();
-  }, [profile?.id]);
+  }, [activePatientId]);
 
   const handleDownloadResult = async (resultFileUrl: string) => {
     try {

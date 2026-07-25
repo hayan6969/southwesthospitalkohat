@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
+import { useActivePatient } from "@/contexts/PatientContext";
 import { useDoctorAvailability, useCheckDoctorAvailability } from "@/hooks/useDoctorAvailability";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -38,6 +39,7 @@ interface HospitalSettings {
 
 export const AppointmentBooking = () => {
   const { profile } = useAuth();
+  const { activePatientId } = useActivePatient();
   const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [filteredDoctors, setFilteredDoctors] = useState<Doctor[]>([]);
   // doctorComboOpen removed - using Select
@@ -198,11 +200,13 @@ export const AppointmentBooking = () => {
     setLoading(true);
 
     try {
+      const bookingPatientId = activePatientId ?? profile?.id;
+
       // First, ensure a patient record exists for this user
       const { data: existingPatient, error: checkError } = await supabase
         .from('patients')
         .select('id')
-        .eq('id', profile?.id)
+        .eq('id', bookingPatientId)
         .maybeSingle();
 
       if (checkError && checkError.code !== 'PGRST116') {
@@ -214,7 +218,7 @@ export const AppointmentBooking = () => {
         const { error: patientError } = await supabase
           .from('patients')
           .insert({
-            id: profile?.id,
+            id: bookingPatientId,
             cnic: '', // Set empty CNIC to avoid uniqueness conflicts for online patient accounts
           });
         
@@ -232,7 +236,7 @@ export const AppointmentBooking = () => {
       const { data, error } = await supabase
         .from('appointments')
         .insert({
-          patient_id: profile?.id,
+          patient_id: bookingPatientId,
           doctor_id: selectedDoctor,
           appointment_date: appointmentDateTime.toISOString(),
           type: appointmentType,

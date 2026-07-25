@@ -10,6 +10,7 @@ import { formatPkrAmount } from "@/utils/currency";
 import { format } from "date-fns";
 import { generateDischargeBillPDF } from "@/utils/dischargeBillPdfGenerator";
 import { toast } from "sonner";
+import { useActivePatient } from "@/contexts/PatientContext";
 
 interface Admission {
   id: string;
@@ -35,32 +36,34 @@ interface Invoice {
 
 export function PatientIPDView() {
   const { profile } = useAuth();
+  const { activePatientId, activePatient } = useActivePatient();
   const [loading, setLoading] = useState(true);
   const [admissions, setAdmissions] = useState<Admission[]>([]);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [downloading, setDownloading] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!profile?.id) return;
+    if (!activePatientId) return;
     (async () => {
       setLoading(true);
       const [aRes, iRes] = await Promise.all([
         supabase
           .from("ipd_admissions")
           .select("id,admission_number,status,admission_date,discharge_date,complaint,wards(name),beds(bed_number)")
-          .eq("patient_id", profile.id)
+          .eq("patient_id", activePatientId)
           .order("admission_date", { ascending: false }),
         supabase
           .from("ipd_invoices")
           .select("id,invoice_number,admission_id,total_amount,paid_amount,status,finalized_at,created_at")
-          .eq("patient_id", profile.id)
+          .eq("patient_id", activePatientId)
           .order("created_at", { ascending: false }),
       ]);
       setAdmissions((aRes.data ?? []) as any);
       setInvoices((iRes.data ?? []) as any);
       setLoading(false);
     })();
-  }, [profile?.id]);
+  }, [activePatientId]);
+
 
   const downloadInvoice = async (inv: Invoice) => {
     setDownloading(inv.id);
@@ -86,8 +89,10 @@ export function PatientIPDView() {
       await generateDischargeBillPDF({
         invoiceNumber: inv.invoice_number,
         admissionNumber: adm?.admission_number ?? "",
-        patientName: `${profile?.first_name ?? ""} ${profile?.last_name ?? ""}`.trim(),
-        patientId: profile?.id,
+        patientName: activePatient
+          ? `${activePatient.first_name ?? ""} ${activePatient.last_name ?? ""}`.trim()
+          : `${profile?.first_name ?? ""} ${profile?.last_name ?? ""}`.trim(),
+        patientId: activePatientId,
         wardName: adm?.wards?.name,
         bedNumber: adm?.beds?.bed_number,
         admissionDate: adm?.admission_date ?? new Date().toISOString(),

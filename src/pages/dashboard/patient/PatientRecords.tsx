@@ -14,10 +14,13 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { toast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 
+import { useActivePatient } from "@/contexts/PatientContext";
+
 export default function PatientRecords() {
   const { profile } = useAuth();
+  const { activePatientId } = useActivePatient();
   const { data: medicalRecords, isLoading: medicalLoading } = useMedicalRecords();
-  const { data: documents, isLoading: documentsLoading } = usePatientDocuments(profile?.id);
+  const { data: documents, isLoading: documentsLoading } = usePatientDocuments(activePatientId);
   const uploadMutation = useUploadPatientDocument();
   const deleteMutation = useDeletePatientDocument();
   
@@ -26,7 +29,7 @@ export default function PatientRecords() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [viewingDocument, setViewingDocument] = useState<any>(null);
 
-  const patientRecords = medicalRecords?.filter(record => record.patient_id === profile?.id) || [];
+  const patientRecords = medicalRecords?.filter(record => record.patient_id === activePatientId) || [];
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -56,7 +59,7 @@ export default function PatientRecords() {
   };
 
   const handleUpload = async () => {
-    if (!selectedFile || !documentLabel.trim() || !profile?.id) {
+    if (!selectedFile || !documentLabel.trim() || !activePatientId) {
       toast({
         title: "Missing information",
         description: "Please select a file and provide a label",
@@ -69,7 +72,7 @@ export default function PatientRecords() {
     try {
       await uploadMutation.mutateAsync({
         file: selectedFile,
-        patientId: profile.id,
+        patientId: activePatientId,
         documentLabel: documentLabel.trim()
       });
 
