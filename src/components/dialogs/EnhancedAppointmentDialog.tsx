@@ -105,6 +105,82 @@ export function EnhancedAppointmentDialog() {
     }
   }, [open]);
 
+  // Load family members whenever a patient is selected
+  useEffect(() => {
+    const loadFamily = async () => {
+      if (!selectedPatient?.id) {
+        setFamilyMembers([]);
+        setBookingForId("");
+        return;
+      }
+
+      // Determine guardian: if selected patient has guardian_id, use it; else self is guardian
+      const { data: selfRow } = await supabase
+        .from("patients")
+        .select("id, guardian_id, relation, patient_number")
+        .eq("id", selectedPatient.id)
+        .maybeSingle();
+
+      const guardianId = selfRow?.guardian_id || selectedPatient.id;
+
+      const [{ data: guardianRow }, { data: linked }] = await Promise.all([
+        supabase
+          .from("patients")
+          .select("id, patient_number, relation")
+          .eq("id", guardianId)
+          .maybeSingle(),
+        supabase
+          .from("patients")
+          .select("id, patient_number, relation")
+          .eq("guardian_id", guardianId),
+      ]);
+
+      const ids = [
+        ...(guardianRow ? [guardianRow.id] : []),
+        ...((linked ?? []).map((l) => l.id)),
+      ];
+
+      if (ids.length === 0) {
+        setFamilyMembers([]);
+        setBookingForId(selectedPatient.id);
+        return;
+      }
+
+      const { data: profs } = await supabase
+        .from("profiles")
+        .select("id, first_name, last_name")
+        .in("id", ids);
+      const pmap = new Map((profs ?? []).map((p: any) => [p.id, p]));
+
+      const rows = [
+        ...(guardianRow
+          ? [{
+              id: guardianRow.id,
+              patient_number: guardianRow.patient_number,
+              relation: null as string | null,
+              is_guardian: true,
+              first_name: pmap.get(guardianRow.id)?.first_name ?? "",
+              last_name: pmap.get(guardianRow.id)?.last_name ?? "",
+            }]
+          : []),
+        ...((linked ?? []).map((l) => ({
+          id: l.id,
+          patient_number: l.patient_number,
+          relation: l.relation,
+          is_guardian: false,
+          first_name: pmap.get(l.id)?.first_name ?? "",
+          last_name: pmap.get(l.id)?.last_name ?? "",
+        }))),
+      ];
+
+      setFamilyMembers(rows);
+      setBookingForId(selectedPatient.id);
+    };
+
+    loadFamily();
+  }, [selectedPatient]);
+
+
   const submissionLockRef = useRef(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
