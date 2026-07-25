@@ -120,9 +120,26 @@ export default function DashboardPatient() {
     .reduce((total, invoice) => total + (invoice.amount || 0), 0);
   const totalLabReports = patientLabReports.length;
 
+  const isViewingSelf = !activePatient || activePatient.is_guardian;
+  const viewingName = activePatient
+    ? `${activePatient.first_name ?? ""} ${activePatient.last_name ?? ""}`.trim()
+    : `${profile?.first_name ?? ""}`;
+
   const renderOverviewTab = () => (
     <div className="space-y-6">
-      <h2 className="text-xl sm:text-2xl font-bold">Welcome back, {profile?.first_name}!</h2>
+      <div>
+        <h2 className="text-xl sm:text-2xl font-bold">
+          {isViewingSelf ? `Welcome back, ${profile?.first_name}!` : `Viewing ${viewingName}`}
+        </h2>
+        {!isViewingSelf && activePatient?.relation && (
+          <p className="text-sm text-muted-foreground mt-1">
+            {activePatient.relation} · {activePatient.patient_number ?? ""}
+          </p>
+        )}
+      </div>
+
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
+        <StatsCard
       
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
         <StatsCard
