@@ -9,6 +9,7 @@ import { format } from "date-fns";
 import { formatPkrAmount } from "@/utils/currency";
 import { generateInvoicePDF } from "@/utils/pdfGenerator";
 import { useToast } from "@/hooks/use-toast";
+import { useActivePatient } from "@/contexts/PatientContext";
 
 export default function PatientInvoices() {
   const { profile } = useAuth();

@@ -10,6 +10,7 @@ import { formatPkrAmount } from "@/utils/currency";
 import { generateOTPDF } from "@/utils/pdfGenerator";
 import { useToast } from "@/hooks/use-toast";
 import { generateDischargeSlipPDF } from "@/utils/dischargeSlipPdfGenerator";
+import { useActivePatient } from "@/contexts/PatientContext";
 
 interface OTSchedule {
   id: string;

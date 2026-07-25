@@ -86,8 +86,10 @@ export function PatientIPDView() {
       await generateDischargeBillPDF({
         invoiceNumber: inv.invoice_number,
         admissionNumber: adm?.admission_number ?? "",
-        patientName: `${profile?.first_name ?? ""} ${profile?.last_name ?? ""}`.trim(),
-        patientId: profile?.id,
+        patientName: activePatient
+          ? `${activePatient.first_name ?? ""} ${activePatient.last_name ?? ""}`.trim()
+          : `${profile?.first_name ?? ""} ${profile?.last_name ?? ""}`.trim(),
+        patientId: activePatientId,
         wardName: adm?.wards?.name,
         bedNumber: adm?.beds?.bed_number,
         admissionDate: adm?.admission_date ?? new Date().toISOString(),
