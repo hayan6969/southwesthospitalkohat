@@ -29,7 +29,7 @@ export default function DashboardPatient() {
 
   // Fetch patient-specific data
   const { data: patientAppointments = [] } = useQuery({
-    queryKey: ['patient-appointments', profile?.id],
+    queryKey: ['patient-appointments', activePatientId],
     queryFn: async () => {
       if (!profile?.id) return [];
       const { data, error } = await supabase
@@ -50,7 +50,7 @@ export default function DashboardPatient() {
   });
 
   const { data: patientMedicalRecords = [] } = useQuery({
-    queryKey: ['patient-medical-records', profile?.id],
+    queryKey: ['patient-medical-records', activePatientId],
     queryFn: async () => {
       if (!profile?.id) return [];
       const { data, error } = await supabase
@@ -65,7 +65,7 @@ export default function DashboardPatient() {
   });
 
   const { data: patientInvoices = [] } = useQuery({
-    queryKey: ['patient-invoices', profile?.id],
+    queryKey: ['patient-invoices', activePatientId],
     queryFn: async () => {
       if (!profile?.id) return [];
       const { data, error } = await supabase
@@ -81,7 +81,7 @@ export default function DashboardPatient() {
   });
 
   const { data: patientLabReports = [] } = useQuery({
-    queryKey: ['patient-lab-reports', profile?.id],
+    queryKey: ['patient-lab-reports', activePatientId],
     queryFn: async () => {
       if (!profile?.id) return [];
       const { data, error } = await supabase
@@ -96,7 +96,7 @@ export default function DashboardPatient() {
   });
 
   const { data: recentActivity = [] } = useQuery({
-    queryKey: ['patient-recent-activity', profile?.id],
+    queryKey: ['patient-recent-activity', activePatientId],
     queryFn: async () => {
       if (!profile?.id) return [];
       const { data, error } = await supabase
