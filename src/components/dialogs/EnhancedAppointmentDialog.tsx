@@ -16,7 +16,7 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { PatientDiscountBadge } from "@/components/PatientDiscountBadge";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { toast } from "sonner";
-import { Plus, Search, UserPlus, Check, ChevronsUpDown, X } from "lucide-react";
+import { Plus, Search, UserPlus, Check, ChevronsUpDown, X, Users } from "lucide-react";
 import { formatCurrency } from "@/utils/currency";
 import { getCurrentPakistanDate, getCurrentPakistanTimeString, formatDateForDisplay, formatTimeForDisplay, fromPakistanTime } from "@/utils/timezone";
 import { supabase } from "@/integrations/supabase/client";
@@ -54,6 +54,16 @@ export function EnhancedAppointmentDialog() {
     blood_type: "",
     allergies: ""
   });
+  const [relation, setRelation] = useState("");
+  const [guardian, setGuardian] = useState<{
+    guardian_id: string;
+    first_name: string;
+    last_name: string;
+    patient_number: string;
+    phone: string;
+    family_member_count: number;
+  } | null>(null);
+  const [checkingPhone, setCheckingPhone] = useState(false);
   
   // Appointment details
   const [doctorId, setDoctorId] = useState("");
