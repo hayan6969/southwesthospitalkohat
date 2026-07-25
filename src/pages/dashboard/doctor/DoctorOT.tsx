@@ -110,7 +110,7 @@ export default function DoctorOT() {
               patient_number,
               date_of_birth,
               address,
-              profiles (
+              profiles!patients_id_fkey (
                 first_name,
                 last_name,
                 phone
