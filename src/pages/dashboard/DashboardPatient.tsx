@@ -31,14 +31,14 @@ export default function DashboardPatient() {
   const { data: patientAppointments = [] } = useQuery({
     queryKey: ['patient-appointments', activePatientId],
     queryFn: async () => {
-      if (!profile?.id) return [];
+      if (!activePatientId) return [];
       const { data, error } = await supabase
         .from('appointments')
         .select(`
           *,
           doctor:doctors(*, profiles(first_name, last_name))
         `)
-        .eq('patient_id', profile.id)
+        .eq('patient_id', activePatientId)
         .eq('status', 'scheduled')
         .gte('appointment_date', new Date().toISOString())
         .order('appointment_date', { ascending: true });
@@ -46,70 +46,70 @@ export default function DashboardPatient() {
       if (error) throw error;
       return data || [];
     },
-    enabled: !!profile?.id
+    enabled: !!activePatientId
   });
 
   const { data: patientMedicalRecords = [] } = useQuery({
     queryKey: ['patient-medical-records', activePatientId],
     queryFn: async () => {
-      if (!profile?.id) return [];
+      if (!activePatientId) return [];
       const { data, error } = await supabase
         .from('medical_records')
         .select('*')
-        .eq('patient_id', profile.id);
+        .eq('patient_id', activePatientId);
       
       if (error) throw error;
       return data || [];
     },
-    enabled: !!profile?.id
+    enabled: !!activePatientId
   });
 
   const { data: patientInvoices = [] } = useQuery({
     queryKey: ['patient-invoices', activePatientId],
     queryFn: async () => {
-      if (!profile?.id) return [];
+      if (!activePatientId) return [];
       const { data, error } = await supabase
         .from('invoices')
         .select('*')
-        .eq('patient_id', profile.id)
+        .eq('patient_id', activePatientId)
         .order('created_at', { ascending: false });
       
       if (error) throw error;
       return data || [];
     },
-    enabled: !!profile?.id
+    enabled: !!activePatientId
   });
 
   const { data: patientLabReports = [] } = useQuery({
     queryKey: ['patient-lab-reports', activePatientId],
     queryFn: async () => {
-      if (!profile?.id) return [];
+      if (!activePatientId) return [];
       const { data, error } = await supabase
         .from('lab_reports')
         .select('*')
-        .eq('patient_id', profile.id);
+        .eq('patient_id', activePatientId);
       
       if (error) throw error;
       return data || [];
     },
-    enabled: !!profile?.id
+    enabled: !!activePatientId
   });
 
   const { data: recentActivity = [] } = useQuery({
     queryKey: ['patient-recent-activity', activePatientId],
     queryFn: async () => {
-      if (!profile?.id) return [];
+      if (!activePatientId) return [];
       const { data, error } = await supabase
         .from('audit_logs')
         .select('*')
-        .eq('user_id', profile.id)
+        .eq('user_id', activePatientId)
         .order('created_at', { ascending: false })
         .limit(5);
       
       if (error) throw error;
       return data || [];
     },
-    enabled: !!profile?.id
+    enabled: !!activePatientId
   });
 
   // Calculate stats
