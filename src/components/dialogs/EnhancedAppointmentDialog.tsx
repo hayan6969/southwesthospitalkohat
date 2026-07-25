@@ -98,6 +98,8 @@ export function EnhancedAppointmentDialog() {
       blood_type: "",
       allergies: ""
     });
+    setRelation("");
+    setGuardian(null);
     setDoctorId("");
     setAppointmentDate("");
     setAppointmentTime("");
@@ -105,6 +107,30 @@ export function EnhancedAppointmentDialog() {
     setNotes("");
     setActiveTab("search");
   };
+
+  const isFamilyMode = !!guardian;
+
+  // Debounced phone lookup for the Register tab
+  useEffect(() => {
+    if (activeTab !== "register") return;
+    const trimmed = newPatient.phone.trim();
+    if (trimmed.length < 7) {
+      setGuardian(null);
+      return;
+    }
+    let cancelled = false;
+    setCheckingPhone(true);
+    const t = setTimeout(async () => {
+      try {
+        const { data, error } = await supabase.rpc("lookup_guardian_by_phone", { p_phone: trimmed });
+        if (cancelled) return;
+        setGuardian(error ? null : ((data as any) ?? null));
+      } finally {
+        if (!cancelled) setCheckingPhone(false);
+      }
+    }, 400);
+    return () => { cancelled = true; clearTimeout(t); };
+  }, [newPatient.phone, activeTab]);
 
   // Set current date and time when dialog opens using Pakistani timezone
   useEffect(() => {
