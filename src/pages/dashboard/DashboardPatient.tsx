@@ -20,9 +20,11 @@ import PatientLabs from "./patient/PatientLabs";
 import PatientInvoices from "./patient/PatientInvoices";
 import PatientOT from "./patient/PatientOT";
 import { PatientSettings } from "@/components/PatientSettings";
+import { useActivePatient } from "@/contexts/PatientContext";
 
 export default function DashboardPatient() {
   const { profile } = useAuth();
+  const { activePatientId, activePatient } = useActivePatient();
   const [activeTab, setActiveTab] = useState("overview");
 
   // Fetch patient-specific data
