@@ -2973,9 +2973,11 @@ export type Database = {
           date_of_birth: string | null
           emergency_contact_name: string | null
           emergency_contact_phone: string | null
+          guardian_id: string | null
           id: string
           patient_number: string | null
           province: string | null
+          relation: string | null
         }
         Insert: {
           address?: string | null
@@ -2986,9 +2988,11 @@ export type Database = {
           date_of_birth?: string | null
           emergency_contact_name?: string | null
           emergency_contact_phone?: string | null
+          guardian_id?: string | null
           id: string
           patient_number?: string | null
           province?: string | null
+          relation?: string | null
         }
         Update: {
           address?: string | null
@@ -2999,11 +3003,20 @@ export type Database = {
           date_of_birth?: string | null
           emergency_contact_name?: string | null
           emergency_contact_phone?: string | null
+          guardian_id?: string | null
           id?: string
           patient_number?: string | null
           province?: string | null
+          relation?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "patients_guardian_id_fkey"
+            columns: ["guardian_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "patients_id_fkey"
             columns: ["id"]
@@ -3889,6 +3902,19 @@ export type Database = {
         }
         Returns: string
       }
+      create_family_member: {
+        Args: {
+          p_city?: string
+          p_cnic?: string
+          p_date_of_birth?: string
+          p_first_name: string
+          p_guardian_phone: string
+          p_last_name: string
+          p_province?: string
+          p_relation: string
+        }
+        Returns: Json
+      }
       create_patient_account: {
         Args: {
           p_city?: string
@@ -3954,6 +3980,7 @@ export type Database = {
         Args: { appointment_date_param: string; doctor_uuid: string }
         Returns: number
       }
+      lookup_guardian_by_phone: { Args: { p_phone: string }; Returns: Json }
       reorder_queue_after_cancellation: {
         Args: {
           p_appointment_date: string
