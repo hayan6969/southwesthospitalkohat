@@ -4,7 +4,8 @@ import { SidebarNav } from "@/components/SidebarNav";
 import { useAuth } from "@/hooks/useAuth";
 import { getRoleLabel, getRoleBadgeClass } from "@/hooks/useDisplayHelpers";
 import { Button } from "@/components/ui/button";
-import { LogOut, User } from "lucide-react";
+import { LogOut, User, BookOpen } from "lucide-react";
+import { Link } from "react-router-dom";
 import { AdminDashboardNav } from "@/components/AdminDashboardNav";
 
 
