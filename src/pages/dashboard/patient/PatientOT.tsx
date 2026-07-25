@@ -36,6 +36,7 @@ export default function PatientOT() {
   const [otSchedules, setOtSchedules] = useState<OTSchedule[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const { profile } = useAuth();
+  const { activePatientId } = useActivePatient();
   const { toast } = useToast();
 
   useEffect(() => {
