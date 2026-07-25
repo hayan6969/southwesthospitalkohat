@@ -282,8 +282,8 @@ export function EnhancedAppointmentDialog() {
             p_city: null,
           });
           if (error) throw error;
-          const result = data as { patient_id?: string; patient_number?: string } | null;
-          patientId = result?.patient_id;
+          const result = data as { user_id?: string; patient_number?: string } | null;
+          patientId = result?.user_id;
           toast.success(`Family member added under ${guardian.first_name} ${guardian.last_name}`);
         } else {
           const result = await createPatientWithProfile.mutateAsync({
