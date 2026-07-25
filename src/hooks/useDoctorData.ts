@@ -83,7 +83,7 @@ export const useDoctorTodayAppointments = () => {
           *,
           patients (
             *,
-            profiles (first_name, last_name, email, phone)
+            profiles!patients_id_fkey (first_name, last_name, email, phone)
           )
         `)
         .eq('doctor_id', profile.id)
