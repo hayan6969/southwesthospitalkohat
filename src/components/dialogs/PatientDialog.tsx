@@ -90,12 +90,30 @@ export function PatientDialog() {
     setLastName("");
     setPhone("");
     setCnic("");
+    setAge("");
+    setGuardianRelation("");
+    setGuardianName("");
     setProvince("");
     setCity("");
     setCitySearch("");
     setRelation("");
     setGuardian(null);
   };
+
+  const extraPatientFields = () => ({
+    age: age.trim() ? Number(age) : null,
+    guardian_relation: guardianRelation || null,
+    guardian_name: guardianName.trim() || null,
+  });
+
+  const saveExtraFields = async (patientId?: string) => {
+    if (!patientId) return;
+    const fields = extraPatientFields();
+    if (fields.age === null && !fields.guardian_relation && !fields.guardian_name) return;
+    const { error } = await supabase.from("patients").update(fields as any).eq("id", patientId);
+    if (error) console.warn("Failed to save age/guardian details", error);
+  };
+
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
