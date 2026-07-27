@@ -306,6 +306,9 @@ export function PathologyReportWizard() {
         if (tid) filledTests.add(tid);
       });
 
+      const { data: pat } = await supabase
+        .from("patients").select("age, date_of_birth").eq("id", report.patient_id).maybeSingle();
+
       setExistingReportId(reportId);
       setSelectedTestIds(allTestIds);
       setCompletedTestIds(filledTests);
