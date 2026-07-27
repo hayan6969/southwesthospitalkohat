@@ -582,7 +582,49 @@ export function EnhancedAppointmentDialog() {
                     />
                   </div>
 
-                  
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="age">Age (years)</Label>
+                      <Input
+                        id="age"
+                        type="number"
+                        min={0}
+                        max={130}
+                        value={newPatient.age}
+                        onFocus={(e) => { if (e.target.value === "0") setNewPatient(prev => ({ ...prev, age: "" })); }}
+                        onChange={(e) => setNewPatient(prev => ({ ...prev, age: e.target.value }))}
+                        placeholder="e.g. 32"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Relation Type</Label>
+                      <Select
+                        value={newPatient.guardian_relation}
+                        onValueChange={(value) => setNewPatient(prev => ({ ...prev, guardian_relation: value }))}
+                      >
+                        <SelectTrigger><SelectValue placeholder="S/O, D/O, W/O..." /></SelectTrigger>
+                        <SelectContent className="z-[10000]">
+                          {["Son of", "Daughter of", "Wife of", "Mother of", "Father of", "Husband of"].map((r) => (
+                            <SelectItem key={r} value={r}>{r}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="guardianName">
+                      {newPatient.guardian_relation ? `${newPatient.guardian_relation} (Name)` : "Father / Husband Name"}
+                    </Label>
+                    <Input
+                      id="guardianName"
+                      value={newPatient.guardian_name}
+                      onChange={(e) => setNewPatient(prev => ({ ...prev, guardian_name: e.target.value }))}
+                      placeholder="e.g. Muhammad Aslam"
+                    />
+                  </div>
+
+
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="dob">Date of Birth</Label>
