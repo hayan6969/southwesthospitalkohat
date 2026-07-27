@@ -296,6 +296,45 @@ export function PatientDialog() {
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
+              <Label htmlFor="age">Age (years)</Label>
+              <Input
+                id="age"
+                type="number"
+                min={0}
+                max={130}
+                value={age}
+                onFocus={(e) => { if (e.target.value === "0") setAge(""); }}
+                onChange={(e) => setAge(e.target.value)}
+                placeholder="e.g. 32"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Relation Type</Label>
+              <Select value={guardianRelation} onValueChange={setGuardianRelation}>
+                <SelectTrigger><SelectValue placeholder="S/O, D/O, W/O..." /></SelectTrigger>
+                <SelectContent portal={false} className="z-[10000]">
+                  {GUARDIAN_RELATIONS.map((r) => <SelectItem key={r} value={r}>{r}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="guardianName">
+              {guardianRelation ? `${guardianRelation} (Name)` : "Father / Husband Name"}
+            </Label>
+            <Input
+              id="guardianName"
+              value={guardianName}
+              onChange={(e) => setGuardianName(e.target.value)}
+              placeholder="e.g. Muhammad Aslam"
+            />
+          </div>
+
+
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
               <Label>Province</Label>
               <Select value={province} onValueChange={handleProvinceChange}>
                 <SelectTrigger><SelectValue placeholder="Select province" /></SelectTrigger>
