@@ -321,7 +321,7 @@ export function PathologyReportWizard() {
         registered_at: report.registered_at ? new Date(report.registered_at).toISOString().slice(0, 16) : m.registered_at,
         collected_at: report.collected_at ? new Date(report.collected_at).toISOString().slice(0, 16) : m.collected_at,
         reported_at: new Date().toISOString().slice(0, 16),
-        age: report.patient_age_snapshot != null ? String(report.patient_age_snapshot) : "",
+        age: report.patient_age_snapshot != null ? String(report.patient_age_snapshot) : (derivePatientAge(pat) ?? ""),
         sex: report.patient_sex_snapshot ?? "",
       }));
       setInterpretation(report.interpretation ?? "");
