@@ -23,12 +23,17 @@ type GuardianInfo = {
 
 const RELATIONS = ["Spouse", "Son", "Daughter", "Father", "Mother", "Brother", "Sister", "Other"];
 
+const GUARDIAN_RELATIONS = ["Son of", "Daughter of", "Wife of", "Mother of", "Father of", "Husband of"];
+
 export function PatientDialog() {
   const [open, setOpen] = useState(false);
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [phone, setPhone] = useState("");
   const [cnic, setCnic] = useState("");
+  const [age, setAge] = useState("");
+  const [guardianRelation, setGuardianRelation] = useState("");
+  const [guardianName, setGuardianName] = useState("");
   const [province, setProvince] = useState("");
   const [city, setCity] = useState("");
   const [citySearch, setCitySearch] = useState("");
@@ -38,6 +43,7 @@ export function PatientDialog() {
 
   const createPatientWithProfile = useCreatePatientWithProfile();
   const { logAction } = useAuditLogger();
+
 
   const availableCities = useMemo(() => {
     const cities = getCitiesForProvince(province);
