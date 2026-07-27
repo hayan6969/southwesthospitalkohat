@@ -23,12 +23,17 @@ type GuardianInfo = {
 
 const RELATIONS = ["Spouse", "Son", "Daughter", "Father", "Mother", "Brother", "Sister", "Other"];
 
+const GUARDIAN_RELATIONS = ["Son of", "Daughter of", "Wife of", "Mother of", "Father of", "Husband of"];
+
 export function PatientDialog() {
   const [open, setOpen] = useState(false);
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [phone, setPhone] = useState("");
   const [cnic, setCnic] = useState("");
+  const [age, setAge] = useState("");
+  const [guardianRelation, setGuardianRelation] = useState("");
+  const [guardianName, setGuardianName] = useState("");
   const [province, setProvince] = useState("");
   const [city, setCity] = useState("");
   const [citySearch, setCitySearch] = useState("");
@@ -38,6 +43,7 @@ export function PatientDialog() {
 
   const createPatientWithProfile = useCreatePatientWithProfile();
   const { logAction } = useAuditLogger();
+
 
   const availableCities = useMemo(() => {
     const cities = getCitiesForProvince(province);
@@ -84,12 +90,30 @@ export function PatientDialog() {
     setLastName("");
     setPhone("");
     setCnic("");
+    setAge("");
+    setGuardianRelation("");
+    setGuardianName("");
     setProvince("");
     setCity("");
     setCitySearch("");
     setRelation("");
     setGuardian(null);
   };
+
+  const extraPatientFields = () => ({
+    age: age.trim() ? Number(age) : null,
+    guardian_relation: guardianRelation || null,
+    guardian_name: guardianName.trim() || null,
+  });
+
+  const saveExtraFields = async (patientId?: string) => {
+    if (!patientId) return;
+    const fields = extraPatientFields();
+    if (fields.age === null && !fields.guardian_relation && !fields.guardian_name) return;
+    const { error } = await supabase.from("patients").update(fields as any).eq("id", patientId);
+    if (error) console.warn("Failed to save age/guardian details", error);
+  };
+
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -118,8 +142,10 @@ export function PatientDialog() {
         });
         if (error) throw error;
 
-        const result = data as { patient_number?: string } | null;
+        const result = data as { patient_number?: string; user_id?: string } | null;
+        await saveExtraFields(result?.user_id);
         await logAction(
+
           "Registered family member",
           `${firstName} ${lastName} (${relation}) under ${guardian.first_name} ${guardian.last_name} (${guardian.patient_number}) · phone ${phone}`
         );
@@ -157,7 +183,11 @@ export function PatientDialog() {
         city: city || undefined,
       });
 
+      await saveExtraFields((result as any)?.patient?.id ?? (result as any)?.user?.id);
+
       await logAction(
+
+
         "Registered new patient",
         `Patient: ${firstName} ${lastName} (Phone: ${phone}, CNIC: ${cnic})`
       );
@@ -263,6 +293,45 @@ export function PatientDialog() {
               required={!isFamilyMode}
             />
           </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="age">Age (years)</Label>
+              <Input
+                id="age"
+                type="number"
+                min={0}
+                max={130}
+                value={age}
+                onFocus={(e) => { if (e.target.value === "0") setAge(""); }}
+                onChange={(e) => setAge(e.target.value)}
+                placeholder="e.g. 32"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Relation Type</Label>
+              <Select value={guardianRelation} onValueChange={setGuardianRelation}>
+                <SelectTrigger><SelectValue placeholder="S/O, D/O, W/O..." /></SelectTrigger>
+                <SelectContent portal={false} className="z-[10000]">
+                  {GUARDIAN_RELATIONS.map((r) => <SelectItem key={r} value={r}>{r}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="guardianName">
+              {guardianRelation ? `${guardianRelation} (Name)` : "Father / Husband Name"}
+            </Label>
+            <Input
+              id="guardianName"
+              value={guardianName}
+              onChange={(e) => setGuardianName(e.target.value)}
+              placeholder="e.g. Muhammad Aslam"
+            />
+          </div>
+
+
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">

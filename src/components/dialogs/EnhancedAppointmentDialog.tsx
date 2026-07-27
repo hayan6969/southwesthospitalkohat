@@ -50,10 +50,14 @@ export function EnhancedAppointmentDialog() {
     phone: "",
     cnic: "",
     date_of_birth: "",
+    age: "",
+    guardian_relation: "",
+    guardian_name: "",
     address: "",
     blood_type: "",
     allergies: ""
   });
+
   const [relation, setRelation] = useState("");
   const [guardian, setGuardian] = useState<{
     guardian_id: string;
@@ -94,10 +98,14 @@ export function EnhancedAppointmentDialog() {
       phone: "",
       cnic: "",
       date_of_birth: "",
+      age: "",
+      guardian_relation: "",
+      guardian_name: "",
       address: "",
       blood_type: "",
       allergies: ""
     });
+
     setRelation("");
     setGuardian(null);
     setDoctorId("");
@@ -295,6 +303,20 @@ export function EnhancedAppointmentDialog() {
           patientId = result.patient.id;
           toast.success("Patient registered successfully");
         }
+
+        // Persist age / guardian details (S/O, D/O, W/O ...) on the patient record
+        if (patientId) {
+          const extra: Record<string, any> = {};
+          if (newPatient.age.trim()) extra.age = Number(newPatient.age);
+          if (newPatient.guardian_relation) extra.guardian_relation = newPatient.guardian_relation;
+          if (newPatient.guardian_name.trim()) extra.guardian_name = newPatient.guardian_name.trim();
+          if (newPatient.blood_type) extra.blood_type = newPatient.blood_type;
+          if (Object.keys(extra).length > 0) {
+            const { error: extraError } = await supabase.from("patients").update(extra as any).eq("id", patientId);
+            if (extraError) console.warn("Failed to save age/guardian details", extraError);
+          }
+        }
+
       } catch (error: any) {
         console.error("Error creating patient:", error);
         toast.error(`Failed to register patient: ${error?.message ?? "Unknown error"}`);
@@ -560,7 +582,49 @@ export function EnhancedAppointmentDialog() {
                     />
                   </div>
 
-                  
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="age">Age (years)</Label>
+                      <Input
+                        id="age"
+                        type="number"
+                        min={0}
+                        max={130}
+                        value={newPatient.age}
+                        onFocus={(e) => { if (e.target.value === "0") setNewPatient(prev => ({ ...prev, age: "" })); }}
+                        onChange={(e) => setNewPatient(prev => ({ ...prev, age: e.target.value }))}
+                        placeholder="e.g. 32"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Relation Type</Label>
+                      <Select
+                        value={newPatient.guardian_relation}
+                        onValueChange={(value) => setNewPatient(prev => ({ ...prev, guardian_relation: value }))}
+                      >
+                        <SelectTrigger><SelectValue placeholder="S/O, D/O, W/O..." /></SelectTrigger>
+                        <SelectContent className="z-[10000]">
+                          {["Son of", "Daughter of", "Wife of", "Mother of", "Father of", "Husband of"].map((r) => (
+                            <SelectItem key={r} value={r}>{r}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="guardianName">
+                      {newPatient.guardian_relation ? `${newPatient.guardian_relation} (Name)` : "Father / Husband Name"}
+                    </Label>
+                    <Input
+                      id="guardianName"
+                      value={newPatient.guardian_name}
+                      onChange={(e) => setNewPatient(prev => ({ ...prev, guardian_name: e.target.value }))}
+                      placeholder="e.g. Muhammad Aslam"
+                    />
+                  </div>
+
+
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="dob">Date of Birth</Label>
