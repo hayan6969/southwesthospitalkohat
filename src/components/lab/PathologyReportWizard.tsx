@@ -258,6 +258,7 @@ export function PathologyReportWizard() {
     setCompletedTestIds(new Set());
     setMeta((m) => ({
       ...m,
+      age: derivePatientAge(pat) ?? m.age,
       referred_by: order.referred_by ?? "",
       sample_type: order.sample_type ?? m.sample_type,
     }));
