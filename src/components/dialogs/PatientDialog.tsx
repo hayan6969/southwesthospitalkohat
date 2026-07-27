@@ -142,8 +142,10 @@ export function PatientDialog() {
         });
         if (error) throw error;
 
-        const result = data as { patient_number?: string } | null;
+        const result = data as { patient_number?: string; user_id?: string } | null;
+        await saveExtraFields(result?.user_id);
         await logAction(
+
           "Registered family member",
           `${firstName} ${lastName} (${relation}) under ${guardian.first_name} ${guardian.last_name} (${guardian.patient_number}) · phone ${phone}`
         );
