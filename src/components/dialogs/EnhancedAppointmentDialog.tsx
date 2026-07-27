@@ -98,10 +98,14 @@ export function EnhancedAppointmentDialog() {
       phone: "",
       cnic: "",
       date_of_birth: "",
+      age: "",
+      guardian_relation: "",
+      guardian_name: "",
       address: "",
       blood_type: "",
       allergies: ""
     });
+
     setRelation("");
     setGuardian(null);
     setDoctorId("");
