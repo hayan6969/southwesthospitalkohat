@@ -604,7 +604,7 @@ export function EnhancedAppointmentDialog() {
                       >
                         <SelectTrigger><SelectValue placeholder="S/O, D/O, W/O..." /></SelectTrigger>
                         <SelectContent className="z-[10000]">
-                          {["Son of", "Daughter of", "Wife of", "Mother of", "Father of", "Husband of"].map((r) => (
+                          {["Son of", "Daughter of", "Wife of", "Mother of", "Father of"].map((r) => (
                             <SelectItem key={r} value={r}>{r}</SelectItem>
                           ))}
                         </SelectContent>
