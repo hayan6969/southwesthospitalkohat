@@ -76,6 +76,25 @@ const initialMeta = () => ({
   sex: "",
 });
 
+// Age for the report: prefer the age stored on the patient record, else derive from DOB.
+const derivePatientAge = (pat: any): string | null => {
+  if (!pat) return null;
+  if (pat.age != null && pat.age !== "") return String(pat.age);
+  if (pat.date_of_birth) {
+    const dob = new Date(pat.date_of_birth);
+    if (!isNaN(dob.getTime())) {
+      const now = new Date();
+      let years = now.getFullYear() - dob.getFullYear();
+      const m = now.getMonth() - dob.getMonth();
+      if (m < 0 || (m === 0 && now.getDate() < dob.getDate())) years--;
+      if (years >= 0) return String(years);
+    }
+  }
+  return null;
+};
+
+
+
 export function PathologyReportWizard() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
