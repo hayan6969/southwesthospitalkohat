@@ -50,10 +50,14 @@ export function EnhancedAppointmentDialog() {
     phone: "",
     cnic: "",
     date_of_birth: "",
+    age: "",
+    guardian_relation: "",
+    guardian_name: "",
     address: "",
     blood_type: "",
     allergies: ""
   });
+
   const [relation, setRelation] = useState("");
   const [guardian, setGuardian] = useState<{
     guardian_id: string;
