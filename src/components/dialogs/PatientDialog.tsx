@@ -187,6 +187,7 @@ export function PatientDialog() {
 
       await logAction(
 
+
         "Registered new patient",
         `Patient: ${firstName} ${lastName} (Phone: ${phone}, CNIC: ${cnic})`
       );
