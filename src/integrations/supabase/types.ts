@@ -2966,6 +2966,7 @@ export type Database = {
       patients: {
         Row: {
           address: string | null
+          age: number | null
           allergies: string | null
           blood_type: string | null
           city: string | null
@@ -2974,6 +2975,8 @@ export type Database = {
           emergency_contact_name: string | null
           emergency_contact_phone: string | null
           guardian_id: string | null
+          guardian_name: string | null
+          guardian_relation: string | null
           id: string
           patient_number: string | null
           province: string | null
@@ -2981,6 +2984,7 @@ export type Database = {
         }
         Insert: {
           address?: string | null
+          age?: number | null
           allergies?: string | null
           blood_type?: string | null
           city?: string | null
@@ -2989,6 +2993,8 @@ export type Database = {
           emergency_contact_name?: string | null
           emergency_contact_phone?: string | null
           guardian_id?: string | null
+          guardian_name?: string | null
+          guardian_relation?: string | null
           id: string
           patient_number?: string | null
           province?: string | null
@@ -2996,6 +3002,7 @@ export type Database = {
         }
         Update: {
           address?: string | null
+          age?: number | null
           allergies?: string | null
           blood_type?: string | null
           city?: string | null
@@ -3004,6 +3011,8 @@ export type Database = {
           emergency_contact_name?: string | null
           emergency_contact_phone?: string | null
           guardian_id?: string | null
+          guardian_name?: string | null
+          guardian_relation?: string | null
           id?: string
           patient_number?: string | null
           province?: string | null
