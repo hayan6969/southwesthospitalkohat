@@ -183,7 +183,10 @@ export function PatientDialog() {
         city: city || undefined,
       });
 
+      await saveExtraFields((result as any)?.patient?.id ?? (result as any)?.user?.id);
+
       await logAction(
+
         "Registered new patient",
         `Patient: ${firstName} ${lastName} (Phone: ${phone}, CNIC: ${cnic})`
       );
