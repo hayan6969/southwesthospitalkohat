@@ -23,7 +23,7 @@ type GuardianInfo = {
 
 const RELATIONS = ["Spouse", "Son", "Daughter", "Father", "Mother", "Brother", "Sister", "Other"];
 
-const GUARDIAN_RELATIONS = ["Son of", "Daughter of", "Wife of", "Mother of", "Father of", "Husband of"];
+const GUARDIAN_RELATIONS = ["Son of", "Daughter of", "Wife of", "Mother of", "Father of"];
 
 export function PatientDialog() {
   const [open, setOpen] = useState(false);
