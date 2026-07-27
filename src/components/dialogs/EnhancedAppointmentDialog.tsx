@@ -303,6 +303,20 @@ export function EnhancedAppointmentDialog() {
           patientId = result.patient.id;
           toast.success("Patient registered successfully");
         }
+
+        // Persist age / guardian details (S/O, D/O, W/O ...) on the patient record
+        if (patientId) {
+          const extra: Record<string, any> = {};
+          if (newPatient.age.trim()) extra.age = Number(newPatient.age);
+          if (newPatient.guardian_relation) extra.guardian_relation = newPatient.guardian_relation;
+          if (newPatient.guardian_name.trim()) extra.guardian_name = newPatient.guardian_name.trim();
+          if (newPatient.blood_type) extra.blood_type = newPatient.blood_type;
+          if (Object.keys(extra).length > 0) {
+            const { error: extraError } = await supabase.from("patients").update(extra as any).eq("id", patientId);
+            if (extraError) console.warn("Failed to save age/guardian details", extraError);
+          }
+        }
+
       } catch (error: any) {
         console.error("Error creating patient:", error);
         toast.error(`Failed to register patient: ${error?.message ?? "Unknown error"}`);
