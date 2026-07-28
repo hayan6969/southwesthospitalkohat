@@ -141,7 +141,7 @@ async function loadFromDb(patientId: string): Promise<RxData> {
     supabase.from("profiles").select("first_name,last_name,phone,email").eq("id", patientId).maybeSingle(),
     supabase
       .from("patients")
-      .select("patient_number,date_of_birth,cnic,address,city,province")
+      .select("patient_number,date_of_birth,age,cnic,address,city,province")
       .eq("id", patientId)
       .maybeSingle(),
     supabase
