@@ -141,7 +141,7 @@ async function loadFromDb(patientId: string): Promise<RxData> {
     supabase.from("profiles").select("first_name,last_name,phone,email").eq("id", patientId).maybeSingle(),
     supabase
       .from("patients")
-      .select("patient_number,date_of_birth,cnic,address,city,province")
+      .select("patient_number,date_of_birth,age,cnic,address,city,province")
       .eq("id", patientId)
       .maybeSingle(),
     supabase
@@ -248,7 +248,9 @@ async function loadFromDb(patientId: string): Promise<RxData> {
     patient: {
       name: profile ? `${profile.first_name ?? ""} ${profile.last_name ?? ""}`.trim() || null : null,
       patientNumber: patient?.patient_number ?? null,
-      age: computeAge(patient?.date_of_birth),
+      age: (patient as any)?.age != null && (patient as any)?.age !== ""
+        ? String((patient as any).age)
+        : computeAge(patient?.date_of_birth),
       gender: null, // not stored on the live patients table
       cnic: patient?.cnic ?? null,
       address: patient?.address ?? null,
