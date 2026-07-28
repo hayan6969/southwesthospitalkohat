@@ -226,11 +226,24 @@ export function EnhancedAppointmentDialog() {
 
 
   const submissionLockRef = useRef(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    // Double-click / double-submit protection
     if (submissionLockRef.current) return;
     submissionLockRef.current = true;
+    setIsSubmitting(true);
+    try {
+      await runSubmit();
+    } finally {
+      submissionLockRef.current = false;
+      setIsSubmitting(false);
+    }
+  };
+
+  const runSubmit = async () => {
+    
     
     if (!doctorId || !appointmentDate || !appointmentTime || !type.trim()) {
       toast.error("Please fill in all required fields");
