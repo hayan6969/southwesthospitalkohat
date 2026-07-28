@@ -775,12 +775,13 @@ export function EnhancedAppointmentDialog() {
             <Button 
               type="submit" 
               disabled={
+                isSubmitting ||
                 createAppointmentWithInvoice.isPending || 
                 createPatientWithProfile.isPending ||
                 (availability && !availability.canBook)
               }
             >
-              {createAppointmentWithInvoice.isPending || createPatientWithProfile.isPending 
+              {isSubmitting || createAppointmentWithInvoice.isPending || createPatientWithProfile.isPending 
                 ? "Creating..." 
                 : "Create Appointment & Slip"
               }
