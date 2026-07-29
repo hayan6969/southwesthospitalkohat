@@ -437,7 +437,7 @@ export function LabReportsTracking() {
 
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div className="text-xs text-muted-foreground">
-              Showing <b>{periodLabel}</b> · charges reflect actual invoice amounts (discounts included).
+              Showing <b>{periodLabel}</b> · driven by paid lab invoices (same flow as Daily Finance) — charges are actual invoice amounts, discounts included.
             </div>
             <div className="flex flex-wrap gap-2">
               <Button variant="outline" size="sm" onClick={resetFilters}>
