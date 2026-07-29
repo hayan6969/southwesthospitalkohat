@@ -332,12 +332,12 @@ export function LabReportsTracking() {
   return (
     <div className="space-y-4">
       {/* Summary cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
         <Card>
           <CardContent className="pt-6 flex items-center gap-3">
             <div className="rounded-lg bg-blue-50 p-2"><FileText className="w-5 h-5 text-blue-600" /></div>
             <div>
-              <div className="text-xs text-muted-foreground">Total Reports</div>
+              <div className="text-xs text-muted-foreground">Total Bills</div>
               <div className="text-2xl font-bold">{isLoading ? "…" : summary.totalReports}</div>
             </div>
           </CardContent>
@@ -346,8 +346,18 @@ export function LabReportsTracking() {
           <CardContent className="pt-6 flex items-center gap-3">
             <div className="rounded-lg bg-green-50 p-2"><Receipt className="w-5 h-5 text-green-600" /></div>
             <div>
-              <div className="text-xs text-muted-foreground">Total Charges</div>
+              <div className="text-xs text-muted-foreground">Total Charges (matches Finance)</div>
               <div className="text-2xl font-bold">{isLoading ? "…" : formatPkrAmount(summary.totalCharges)}</div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className={pendingRows.length > 0 ? "border-amber-300" : undefined}>
+          <CardContent className="pt-6 flex items-center gap-3">
+            <div className="rounded-lg bg-amber-50 p-2"><Loader2 className="w-5 h-5 text-amber-600" /></div>
+            <div>
+              <div className="text-xs text-muted-foreground">Report Pending (billed)</div>
+              <div className="text-2xl font-bold">{isLoading ? "…" : pendingRows.length}</div>
+              <div className="text-xs text-muted-foreground">{formatPkrAmount(pendingCharges)}</div>
             </div>
           </CardContent>
         </Card>
@@ -361,6 +371,25 @@ export function LabReportsTracking() {
           </CardContent>
         </Card>
       </div>
+
+      {pendingRows.length > 0 && !isLoading && (
+        <Card className="border-amber-300 bg-amber-50/40">
+          <CardContent className="pt-4 pb-4 text-xs">
+            <div className="font-semibold text-amber-800 mb-1">
+              {pendingRows.length} bill{pendingRows.length === 1 ? "" : "s"} still waiting for a lab report ({formatPkrAmount(pendingCharges)})
+            </div>
+            <div className="flex flex-wrap gap-1">
+              {pendingRows.slice(0, 20).map((r) => (
+                <Badge key={r.reportNumber} variant="outline" className="border-amber-300 bg-white text-amber-800 font-mono">
+                  {r.reportNumber} · {formatPkrAmount(r.charges)}
+                </Badge>
+              ))}
+              {pendingRows.length > 20 && <span className="text-muted-foreground">+{pendingRows.length - 20} more</span>}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
 
       {/* Filters */}
       <Card>
