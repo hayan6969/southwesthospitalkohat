@@ -223,7 +223,7 @@ export function LabReportsTracking() {
 
 
   // ── Apply text search, then number the rows ─────────────────────────────────
-  const rows: LabRegisterRow[] = useMemo(() => {
+  const rows: (LabRegisterRow & { pending?: boolean })[] = useMemo(() => {
     const q = search.trim().toLowerCase();
     const filtered = (rawRows ?? []).filter((r) => {
       if (!q) return true;
@@ -244,8 +244,12 @@ export function LabReportsTracking() {
       referredBy: r.referredBy,
       tests: r.tests,
       charges: r.charges,
+      pending: r.pending,
     }));
   }, [rawRows, search]);
+
+  const pendingRows = useMemo(() => rows.filter((r) => r.pending), [rows]);
+  const pendingCharges = useMemo(() => pendingRows.reduce((s, r) => s + r.charges, 0), [pendingRows]);
 
   const summary: LabRegisterSummary = useMemo(() => {
     const totalCharges = rows.reduce((s, r) => s + r.charges, 0);
@@ -259,6 +263,7 @@ export function LabReportsTracking() {
       topTest: topCount ? `${topTest} (${topCount})` : "—",
     };
   }, [rows]);
+
 
   const totalPages = Math.max(1, Math.ceil(rows.length / PAGE_SIZE));
   const pageRows = rows.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
