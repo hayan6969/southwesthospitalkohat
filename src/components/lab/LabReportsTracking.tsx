@@ -482,7 +482,17 @@ export function LabReportsTracking() {
                   <TableRow key={`${r.reportNumber}-${r.serial}`}>
                     <TableCell className="text-xs text-muted-foreground">{r.serial}</TableCell>
                     <TableCell className="text-xs whitespace-nowrap">{r.date ? formatInPakistanTime(r.date, "dd/MM/yyyy") : "—"}</TableCell>
-                    <TableCell className="font-mono text-xs">{r.reportNumber}</TableCell>
+                    <TableCell className="font-mono text-xs">
+                      <div className="flex items-center gap-1.5">
+                        <span>{r.reportNumber}</span>
+                        {r.pending && (
+                          <Badge variant="outline" className="border-amber-300 bg-amber-50 text-amber-700 font-sans text-[10px]">
+                            report pending
+                          </Badge>
+                        )}
+                      </div>
+                    </TableCell>
+
                     <TableCell className="text-xs">{r.patientId}</TableCell>
                     <TableCell className="text-sm">{r.patientName}</TableCell>
                     <TableCell className="text-xs">{r.referredBy}</TableCell>
