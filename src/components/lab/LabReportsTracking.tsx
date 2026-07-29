@@ -32,7 +32,10 @@ interface RawRow {
   tests: string[];
   charges: number;
   status: string;
+  /** Billed, but the pathology report row has not been created yet. */
+  pending?: boolean;
 }
+
 
 const localDate = (ymd: string) => new Date(`${ymd}T00:00:00`);
 
