@@ -82,7 +82,11 @@ export function LabReportsTracking() {
 
   useEffect(() => { setPage(1); }, [startISO, endISO, search]);
 
-  // ── Fetch every report in range (paged internally), with tests + prices ─────
+  // ── Fetch the register for the range ────────────────────────────────────────
+  // Aligned with Daily Finance: the register is driven by PAID lab invoices
+  // (LAB-% / PATH-INV-%) using the INVOICE date, exactly like FinanceDaily.
+  // The pathology report row (if it exists yet) only supplies display details.
+  // Reports that were made without an invoice are appended so nothing is lost.
   const { data: rawRows, isLoading, isError } = useQuery<RawRow[]>({
     queryKey: ["lab_register", startISO, endISO],
     placeholderData: (prev) => prev,
@@ -90,25 +94,70 @@ export function LabReportsTracking() {
     refetchOnWindowFocus: false,
     queryFn: async () => {
       const FETCH = 1000;
-      let fromIdx = 0;
-      const all: any[] = [];
+
+      // 1) Paid lab invoices in range — the same source Finance uses.
+      const invoices: any[] = [];
+      let invIdx = 0;
+      // eslint-disable-next-line no-constant-condition
+      while (true) {
+        const { data, error } = await supabase
+          .from("invoices")
+          .select("id, invoice_number, amount, description, created_at, patient_id")
+          .eq("status", "paid")
+          .or("invoice_number.like.LAB-%,invoice_number.like.PATH-INV-%")
+          .gte("created_at", startISO)
+          .lte("created_at", endISO)
+          .order("created_at", { ascending: true })
+          .range(invIdx, invIdx + FETCH - 1);
+        if (error) throw error;
+        invoices.push(...(data ?? []));
+        if (!data || data.length < FETCH) break;
+        invIdx += FETCH;
+      }
+
+      const reportSelect =
+        "id, report_number, patient_id, patient_name_snapshot, referred_by, status, created_at, amount, invoice_id, lab_pathology_report_test_types(price_snapshot, lab_test_types(name, price))";
+
+      // 2) Reports linked to those invoices (may be created later than the bill).
+      const invoiceIds = invoices.map((i) => i.id);
+      const linkedReports: any[] = [];
+      for (let i = 0; i < invoiceIds.length; i += 200) {
+        const chunk = invoiceIds.slice(i, i + 200);
+        const { data, error } = await supabase
+          .from("lab_pathology_reports")
+          .select(reportSelect)
+          .in("invoice_id", chunk);
+        if (error) throw error;
+        linkedReports.push(...(data ?? []));
+      }
+      const reportByInvoice = new Map<string, any>();
+      linkedReports.forEach((r) => { if (r.invoice_id) reportByInvoice.set(r.invoice_id, r); });
+
+      // 3) Reports created in range that have no invoice at all (rare, but real).
+      const noInvoiceReports: any[] = [];
+      let repIdx = 0;
       // eslint-disable-next-line no-constant-condition
       while (true) {
         const { data, error } = await supabase
           .from("lab_pathology_reports")
-          .select("id, report_number, patient_id, patient_name_snapshot, referred_by, status, created_at, amount, invoice_id, lab_pathology_report_test_types(price_snapshot, lab_test_types(name, price))")
+          .select(reportSelect)
+          .is("invoice_id", null)
           .gte("created_at", startISO)
           .lte("created_at", endISO)
           .order("created_at", { ascending: true })
-          .range(fromIdx, fromIdx + FETCH - 1);
+          .range(repIdx, repIdx + FETCH - 1);
         if (error) throw error;
-        all.push(...(data ?? []));
+        noInvoiceReports.push(...(data ?? []));
         if (!data || data.length < FETCH) break;
-        fromIdx += FETCH;
+        repIdx += FETCH;
       }
 
       // Resolve friendly patient numbers (no FK metadata → fetch separately).
-      const pids = Array.from(new Set(all.map((r) => r.patient_id).filter(Boolean)));
+      const pids = Array.from(new Set([
+        ...invoices.map((i) => i.patient_id),
+        ...linkedReports.map((r) => r.patient_id),
+        ...noInvoiceReports.map((r) => r.patient_id),
+      ].filter(Boolean))) as string[];
       const patientMap = new Map<string, string>();
       for (let i = 0; i < pids.length; i += 200) {
         const chunk = pids.slice(i, i + 200);
@@ -116,52 +165,41 @@ export function LabReportsTracking() {
         (pats ?? []).forEach((p: any) => { if (p.patient_number) patientMap.set(p.id, p.patient_number); });
       }
 
-      // Fetch consumed lab discounts in the same range so we can adjust
-      // charges for reports whose stored amount does not yet reflect the
-      // discount (e.g. invoices created before StaffPathologyBilling
-      // applied discounts at checkout).
-      const { data: usedDiscounts } = await supabase
-        .from("patient_discounts")
-        .select("patient_id, discount_type, discount_value")
-        .eq("service_type", "lab")
-        .not("used_at", "is", null)
-        .gte("used_at", startISO)
-        .lte("used_at", endISO);
-      // Group discounts by patient_id (no date — the discount may have been
-      // consumed on a different day than the report was created).
-      const discountByPatient = new Map<string, { discount_type: string; discount_value: number }[]>();
-      (usedDiscounts ?? []).forEach((d: any) => {
-        const arr = discountByPatient.get(d.patient_id) || [];
-        arr.push({ discount_type: d.discount_type, discount_value: Number(d.discount_value ?? 0) });
-        discountByPatient.set(d.patient_id, arr);
+      const testsFromReport = (r: any): string[] =>
+        ((r?.lab_pathology_report_test_types ?? []) as any[])
+          .map((t) => t.lab_test_types?.name)
+          .filter(Boolean) as string[];
+
+      const testsFromDescription = (desc: string): string[] => {
+        const testsStr = String(desc || "").replace(/^Lab:\s*/i, "").split(/\s*\[/)[0];
+        return testsStr.split(",").map((s) => s.trim()).filter((s) => s && s.toUpperCase() !== "RETURN");
+      };
+
+      // Invoice-driven rows (charges = invoice amount → matches Finance exactly).
+      const invoiceRows: RawRow[] = invoices.map((inv: any) => {
+        const rep = reportByInvoice.get(inv.id);
+        const tests = rep ? testsFromReport(rep) : [];
+        return {
+          id: inv.id,
+          reportNumber: rep?.report_number ?? inv.invoice_number ?? "—",
+          date: inv.created_at,
+          patientId: patientMap.get(rep?.patient_id ?? inv.patient_id) ?? "—",
+          patientName: rep?.patient_name_snapshot ?? "—",
+          referredBy: rep?.referred_by ?? "—",
+          tests: tests.length ? tests : testsFromDescription(inv.description),
+          charges: Number(inv.amount) || 0,
+          status: rep ? (rep.status ?? "") : "awaiting-report",
+          pending: !rep,
+        };
       });
 
-      const mapped = all.map((r: any): RawRow => {
+      // Reports with no invoice — fall back to snapshot / catalog prices.
+      const reportOnlyRows: RawRow[] = noInvoiceReports.map((r: any): RawRow => {
         const tts = (r.lab_pathology_report_test_types ?? []) as any[];
-        const tests = tts.map((t) => t.lab_test_types?.name).filter(Boolean) as string[];
         const reportAmount = r.amount != null ? Number(r.amount) : 0;
         const snapshotCharges = tts.reduce((sum, t) => sum + (Number(t.price_snapshot) || 0), 0);
         const catalogCharges = tts.reduce((sum, t) => sum + (Number(t.lab_test_types?.price) || 0), 0);
-        let charges = reportAmount > 0 ? reportAmount
-                     : snapshotCharges > 0 ? snapshotCharges
-                     : catalogCharges;
-
-        const pending = discountByPatient.get(r.patient_id);
-        if (pending && pending.length > 0) {
-          if (reportAmount <= 0) {
-            let totalDiscount = 0;
-            for (const d of pending) {
-              if (d.discount_type === "percentage") {
-                totalDiscount += Math.round((charges * d.discount_value) / 100);
-              } else {
-                totalDiscount += Math.min(d.discount_value, charges);
-              }
-            }
-            charges = Math.max(0, charges - totalDiscount);
-          }
-          discountByPatient.delete(r.patient_id);
-        }
-
+        const charges = reportAmount > 0 ? reportAmount : snapshotCharges > 0 ? snapshotCharges : catalogCharges;
         return {
           id: r.id,
           reportNumber: r.report_number ?? "—",
@@ -169,54 +207,17 @@ export function LabReportsTracking() {
           patientId: patientMap.get(r.patient_id) ?? "—",
           patientName: r.patient_name_snapshot ?? "—",
           referredBy: r.referred_by ?? "—",
-          tests,
+          tests: testsFromReport(r),
           charges,
           status: r.status ?? "",
+          pending: false,
         };
       });
 
-      // Also include paid lab invoices whose pathology_report row was
-      // deleted (e.g. after items were returned/edited). Their amount is
-      // still real lab revenue that Daily Finance counts, so the register
-      // must include it or the two totals will diverge.
-      const linkedInvoiceIds = new Set(all.map((r: any) => r.invoice_id).filter(Boolean));
-      const { data: labInvoices } = await supabase
-        .from("invoices")
-        .select("id, invoice_number, amount, description, created_at, patient_id")
-        .eq("status", "paid")
-        .or("invoice_number.like.LAB-%,invoice_number.like.PATH-INV-%")
-        .gte("created_at", startISO)
-        .lte("created_at", endISO);
-
-      const orphans = (labInvoices ?? []).filter((inv: any) => !linkedInvoiceIds.has(inv.id) && Number(inv.amount) > 0);
-
-      const missingPids = Array.from(new Set(orphans.map((i: any) => i.patient_id).filter(Boolean)))
-        .filter((id) => !patientMap.has(id as string)) as string[];
-      if (missingPids.length) {
-        const { data: pats2 } = await supabase.from("patients").select("id, patient_number").in("id", missingPids);
-        (pats2 ?? []).forEach((p: any) => { if (p.patient_number) patientMap.set(p.id, p.patient_number); });
-      }
-
-      const orphanRows: RawRow[] = orphans.map((inv: any) => {
-        const desc = String(inv.description || "");
-        const testsStr = desc.replace(/^Lab:\s*/i, "").split(/\s*\[/)[0];
-        const tests = testsStr.split(",").map((s) => s.trim()).filter((s) => s && s.toUpperCase() !== "RETURN");
-        return {
-          id: inv.id,
-          reportNumber: inv.invoice_number ?? "—",
-          date: inv.created_at,
-          patientId: patientMap.get(inv.patient_id) ?? "—",
-          patientName: "—",
-          referredBy: "—",
-          tests,
-          charges: Number(inv.amount) || 0,
-          status: "invoice-only",
-        };
-      });
-
-      return [...mapped, ...orphanRows].sort((a, b) => (a.date || "").localeCompare(b.date || ""));
+      return [...invoiceRows, ...reportOnlyRows].sort((a, b) => (a.date || "").localeCompare(b.date || ""));
     },
   });
+
 
   // ── Apply text search, then number the rows ─────────────────────────────────
   const rows: LabRegisterRow[] = useMemo(() => {
