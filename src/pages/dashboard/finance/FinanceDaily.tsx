@@ -837,6 +837,15 @@ export default function FinanceDaily() {
             Daily Closing
           </Button>
           <PreviousClosingsDialog />
+          <Button
+            onClick={() => rebuildBlankClosingsMutation.mutate()}
+            variant="outline"
+            className="flex items-center gap-2"
+            disabled={rebuildBlankClosingsMutation.isPending}
+          >
+            <RefreshCw className={`h-4 w-4 ${rebuildBlankClosingsMutation.isPending ? 'animate-spin' : ''}`} />
+            {rebuildBlankClosingsMutation.isPending ? 'Rebuilding…' : 'Rebuild Blank Closings'}
+          </Button>
           <Button onClick={handleRefresh} variant="outline" size="icon">
             <RefreshCw className="h-4 w-4" />
           </Button>
