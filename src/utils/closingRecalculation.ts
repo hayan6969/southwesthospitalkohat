@@ -41,24 +41,27 @@ export async function computeClosingTotals(cutoffTime: string, upperBound: strin
       .gt('created_at', cutoffTime)
       .lte('created_at', upperBound),
 
+    // xray_reports / ot_schedules / appointments have no FK to patients in the
+    // schema cache, so patient names are resolved separately below.
     supabase.from('xray_reports')
-      .select('*, patients(profiles!patients_id_fkey(first_name, last_name))')
+      .select('*')
       .not('price', 'is', null)
       .gt('created_at', cutoffTime)
       .lte('created_at', upperBound),
 
     supabase.from('ot_schedules')
-      .select('*, patients(profiles!patients_id_fkey(first_name, last_name))')
+      .select('*')
       .in('status', ['completed', 'pending'])
       .gt('created_at', cutoffTime)
       .lte('created_at', upperBound),
 
     supabase.from('appointments')
-      .select('*, patients(profiles!patients_id_fkey(first_name, last_name))')
+      .select('*')
       .ilike('type', 'emergency')
       .eq('status', 'completed')
       .gt('appointment_date', cutoffTime)
       .lte('appointment_date', upperBound),
+
 
     supabase.from('expenses').select('*').gt('created_at', cutoffTime).lte('created_at', upperBound),
     supabase.from('refunds').select('*').gt('created_at', cutoffTime).lte('created_at', upperBound),
@@ -89,6 +92,30 @@ export async function computeClosingTotals(cutoffTime: string, upperBound: strin
   const totalStock = totalStockRes.data || [];
   const miscellaneousIncome = miscellaneousIncomeRes.data || [];
   const ipdInvoices = ipdRes.data || [];
+
+  // Hydrate patient names for the tables without a schema-cache relationship.
+  const patientIds = Array.from(new Set(
+    [...xrayReports, ...otSchedules, ...emergencyAppointments]
+      .map((row: any) => row.patient_id)
+      .filter(Boolean)
+  ));
+  if (patientIds.length) {
+    const { data: profileRows } = await supabase
+      .from('profiles')
+      .select('id, first_name, last_name')
+      .in('id', patientIds);
+    const nameMap = new Map((profileRows || []).map((p: any) => [p.id, p]));
+    const attach = (row: any) => {
+      const p = nameMap.get(row.patient_id);
+      if (p) row.patients = { profiles: { first_name: p.first_name, last_name: p.last_name } };
+      return row;
+    };
+    xrayReports.forEach(attach);
+    otSchedules.forEach(attach);
+    emergencyAppointments.forEach(attach);
+  }
+
+
 
   const isEmergencyInvoice = (invoice: any) =>
     invoice.description?.toLowerCase().includes('emergency') || Boolean(invoice.emergency_patient_data);
