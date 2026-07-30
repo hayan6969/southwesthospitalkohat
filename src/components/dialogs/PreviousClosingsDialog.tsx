@@ -45,7 +45,7 @@ export function PreviousClosingsDialog() {
   const [selectedClosing, setSelectedClosing] = useState<DailyClosing | null>(null);
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [viewMode, setViewMode] = useState<string>("detailed");
-  const itemsPerPage = 10;
+  const itemsPerPage = 5;
 
   // Fetch all previous daily closings
   const { data: closings, isLoading } = useQuery({
@@ -465,43 +465,50 @@ export function PreviousClosingsDialog() {
                     </Card>
                   )}
                 </div>
-
-                {/* Pagination */}
-                {totalPages > 1 && (
-                  <div className="flex items-center justify-between">
-                    <div className="text-xs text-muted-foreground">
-                      Showing {startIndex + 1} to {Math.min(endIndex, filteredClosings.length)} of {filteredClosings.length}
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <Button variant="outline" size="sm" onClick={() => setCurrentPage(currentPage - 1)} disabled={currentPage === 1} className="h-7 text-xs">
-                        <ChevronLeft className="h-3 w-3 mr-1" /> Prev
-                      </Button>
-                      {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                        const pageNum = Math.max(1, Math.min(totalPages - 4, currentPage - 2)) + i;
-                        if (pageNum > totalPages) return null;
-                        return (
-                          <Button
-                            key={pageNum}
-                            variant={currentPage === pageNum ? "default" : "outline"}
-                            size="sm"
-                            onClick={() => setCurrentPage(pageNum)}
-                            className="w-7 h-7 p-0 text-xs"
-                          >
-                            {pageNum}
-                          </Button>
-                        );
-                      })}
-                      <Button variant="outline" size="sm" onClick={() => setCurrentPage(currentPage + 1)} disabled={currentPage === totalPages} className="h-7 text-xs">
-                        Next <ChevronRight className="h-3 w-3 ml-1" />
-                      </Button>
-                    </div>
-                  </div>
-                )}
               </>
             )}
           </div>
         </ScrollArea>
+
+        {/* Pagination (always visible footer) */}
+        {totalPages > 1 && (
+          <div className="flex flex-wrap items-center justify-between gap-2 border-t pt-3 mt-2 shrink-0 bg-background">
+            <div className="text-xs text-muted-foreground">
+              Showing {startIndex + 1} to {Math.min(endIndex, filteredClosings.length)} of {filteredClosings.length}
+            </div>
+            <div className="flex items-center gap-1">
+              <Button variant="outline" size="sm" onClick={() => setCurrentPage(1)} disabled={currentPage === 1} className="h-7 text-xs">
+                First
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => setCurrentPage(currentPage - 1)} disabled={currentPage === 1} className="h-7 text-xs">
+                <ChevronLeft className="h-3 w-3 mr-1" /> Prev
+              </Button>
+              {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                const pageNum = Math.max(1, Math.min(Math.max(1, totalPages - 4), currentPage - 2)) + i;
+                if (pageNum > totalPages) return null;
+                return (
+                  <Button
+                    key={pageNum}
+                    variant={currentPage === pageNum ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setCurrentPage(pageNum)}
+                    className="w-7 h-7 p-0 text-xs"
+                  >
+                    {pageNum}
+                  </Button>
+                );
+              })}
+              <Button variant="outline" size="sm" onClick={() => setCurrentPage(currentPage + 1)} disabled={currentPage === totalPages} className="h-7 text-xs">
+                Next <ChevronRight className="h-3 w-3 ml-1" />
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => setCurrentPage(totalPages)} disabled={currentPage === totalPages} className="h-7 text-xs">
+                Last
+              </Button>
+            </div>
+          </div>
+        )}
       </DialogContent>
+
     </Dialog>
   );
 }
