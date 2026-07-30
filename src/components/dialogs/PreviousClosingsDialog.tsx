@@ -45,7 +45,7 @@ export function PreviousClosingsDialog() {
   const [selectedClosing, setSelectedClosing] = useState<DailyClosing | null>(null);
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [viewMode, setViewMode] = useState<string>("detailed");
-  const itemsPerPage = 10;
+  const itemsPerPage = 5;
 
   // Fetch all previous daily closings
   const { data: closings, isLoading } = useQuery({
