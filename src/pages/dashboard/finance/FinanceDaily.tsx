@@ -716,6 +716,65 @@ export default function FinanceDaily() {
       toast.error(`Failed to recalculate closings: ${error.message}`);
     }
   });
+
+  // Rebuilds closings that were saved with empty data (caused by the earlier
+  // patients->profiles ambiguity bug) by recomputing each closing window from source records.
+  const rebuildBlankClosingsMutation = useMutation({
+    mutationFn: async () => {
+      const { data: closings, error } = await supabase
+        .from('daily_closings')
+        .select('*')
+        .order('closing_time', { ascending: true });
+      if (error) throw error;
+      if (!closings?.length) throw new Error('No closings found');
+
+      let rebuilt = 0;
+      for (let i = 0; i < closings.length; i++) {
+        const closing = closings[i];
+        const blob = (closing.transactions_data || {}) as any;
+        const isBlank =
+          (blob.hospitalInvoices?.length || 0) === 0 &&
+          (blob.labReports?.length || 0) === 0 &&
+          (blob.pharmacyInvoices?.length || 0) === 0;
+        if (!isBlank) continue;
+
+        const previous = closings[i - 1];
+        const cutoffTime = previous
+          ? previous.closing_time
+          : toPakistanTime(new Date(`${closing.closing_date}T00:00:00`)).toISOString();
+
+        const totals = await computeClosingTotals(cutoffTime, closing.closing_time);
+
+        const { error: updateError } = await supabase
+          .from('daily_closings')
+          .update({
+            hospital_revenue: totals.hospitalRevenue,
+            pharmacy_revenue: totals.pharmacyRevenue,
+            pharmacy_profit: totals.pharmacyProfit,
+            total_expenses: totals.totalExpenses,
+            total_refunds: totals.totalRefunds,
+            net_profit: totals.netProfit,
+            transactions_data: totals.transactionsData as any,
+          })
+          .eq('id', closing.id);
+
+        if (updateError) {
+          console.error('Failed to rebuild closing', closing.closing_date, updateError);
+        } else {
+          rebuilt++;
+        }
+      }
+      return { total: closings.length, rebuilt };
+    },
+    onSuccess: ({ rebuilt, total }) => {
+      toast.success(`Rebuilt ${rebuilt} blank closing(s) out of ${total}`);
+      queryClient.invalidateQueries({ queryKey: ['daily-closings'] });
+      queryClient.invalidateQueries({ queryKey: ['last-daily-closing'] });
+      queryClient.invalidateQueries({ queryKey: ['daily-finance'] });
+    },
+    onError: (err: any) => toast.error(`Rebuild failed: ${err.message}`),
+  });
+
   return <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
