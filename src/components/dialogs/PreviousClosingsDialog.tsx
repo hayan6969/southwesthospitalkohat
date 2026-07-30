@@ -197,7 +197,10 @@ export function PreviousClosingsDialog() {
           Previous Closings
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-[95vw] lg:max-w-6xl max-h-[90vh] overflow-hidden flex flex-col">
+      <DialogContent
+        className="max-w-[95vw] lg:max-w-6xl h-[90vh] max-h-[90vh] overflow-hidden"
+        style={{ display: 'flex', flexDirection: 'column' }}
+      >
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             {selectedClosing && (
