@@ -752,7 +752,7 @@ const queryTransactionDataForDate = async (closingDate: string, closingTime: str
   ] = await Promise.all([
     supabase
       .from('invoices')
-      .select('*, patients(id, profiles(first_name, last_name)), emergency_patient_data')
+      .select('*, patients(id, profiles!patients_id_fkey(first_name, last_name)), emergency_patient_data')
       .eq('status', 'paid')
       .gte('created_at', cutoffTime)
       .lte('created_at', upperBound),
@@ -774,7 +774,7 @@ const queryTransactionDataForDate = async (closingDate: string, closingTime: str
     
     supabase
       .from('lab_reports')
-      .select('*, patients(id, profiles(first_name, last_name))')
+      .select('*, patients(id, profiles!patients_id_fkey(first_name, last_name))')
       .not('price', 'is', null)
       .gte('created_at', cutoffTime)
       .lte('created_at', upperBound),
