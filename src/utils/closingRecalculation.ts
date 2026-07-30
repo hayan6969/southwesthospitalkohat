@@ -93,6 +93,30 @@ export async function computeClosingTotals(cutoffTime: string, upperBound: strin
   const miscellaneousIncome = miscellaneousIncomeRes.data || [];
   const ipdInvoices = ipdRes.data || [];
 
+  // Hydrate patient names for the tables without a schema-cache relationship.
+  const patientIds = Array.from(new Set(
+    [...xrayReports, ...otSchedules, ...emergencyAppointments]
+      .map((row: any) => row.patient_id)
+      .filter(Boolean)
+  ));
+  if (patientIds.length) {
+    const { data: profileRows } = await supabase
+      .from('profiles')
+      .select('id, first_name, last_name')
+      .in('id', patientIds);
+    const nameMap = new Map((profileRows || []).map((p: any) => [p.id, p]));
+    const attach = (row: any) => {
+      const p = nameMap.get(row.patient_id);
+      if (p) row.patients = { profiles: { first_name: p.first_name, last_name: p.last_name } };
+      return row;
+    };
+    xrayReports.forEach(attach);
+    otSchedules.forEach(attach);
+    emergencyAppointments.forEach(attach);
+  }
+
+
+
   const isEmergencyInvoice = (invoice: any) =>
     invoice.description?.toLowerCase().includes('emergency') || Boolean(invoice.emergency_patient_data);
 
