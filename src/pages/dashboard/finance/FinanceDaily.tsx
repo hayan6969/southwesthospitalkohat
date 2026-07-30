@@ -20,6 +20,7 @@ import { HospitalClosingBalanceDialog } from "@/components/dialogs/HospitalClosi
 import { PreviousClosingsDialog } from "@/components/dialogs/PreviousClosingsDialog";
 import { getCurrentPakistanTime, toPakistanTime, formatInPakistanTime } from "@/utils/timezone";
 import { exportDailyClosingToCSV } from "@/utils/exportUtils";
+import { computeClosingTotals } from "@/utils/closingRecalculation";
 export default function FinanceDaily() {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [showClosingDialog, setShowClosingDialog] = useState(false);
