@@ -231,7 +231,7 @@ export default function FinanceDaily() {
       const isToday = currentPakTime.toDateString() === selectedDatePakTime.toDateString();
       const upperBound = isToday ? currentPakTime.toISOString() : toPakistanTime(new Date(`${targetDate}T23:59:59`)).toISOString();
 
-      const [hospitalInvoicesRes, pharmacyInvoicesRes, labInvoicesRes, xrayReportsRes, otSchedulesRes, emergencyAppointmentsRes, expensesRes, refundsRes, pharmacyExpensesRes, pharmacyAccountRes, totalStockRes, miscellaneousIncomeRes, staffShiftClosingsRes] = await Promise.all([supabase.from('invoices').select('*, patients(id, profiles(first_name, last_name))').eq('status', 'paid').gt('created_at', cutoffTime).lte('created_at', upperBound), supabase.from('pharmacy_invoices').select(`
+      const [hospitalInvoicesRes, pharmacyInvoicesRes, labInvoicesRes, xrayReportsRes, otSchedulesRes, emergencyAppointmentsRes, expensesRes, refundsRes, pharmacyExpensesRes, pharmacyAccountRes, totalStockRes, miscellaneousIncomeRes, staffShiftClosingsRes] = await Promise.all([supabase.from('invoices').select('*, patients(id, profiles!patients_id_fkey(first_name, last_name))').eq('status', 'paid').gt('created_at', cutoffTime).lte('created_at', upperBound), supabase.from('pharmacy_invoices').select(`
             *,
             pharmacy_invoice_items(
               quantity,
@@ -240,7 +240,7 @@ export default function FinanceDaily() {
               medicine_id,
               medicines(name, purchase_price, selling_price)
             )
-          `).gt('created_at', cutoffTime).lte('created_at', upperBound), supabase.from('lab_reports').select('*, patients(id, profiles(first_name, last_name))').not('price', 'is', null).gt('created_at', cutoffTime).lte('created_at', upperBound), supabase.from('xray_reports').select('*, patients(id, profiles(first_name, last_name))').not('price', 'is', null).gt('created_at', cutoffTime).lte('created_at', upperBound), supabase.from('ot_schedules').select('*, patients(id, profiles(first_name, last_name)), ot_operations(operation_name)').in('status', ['completed', 'pending']).gt('created_at', cutoffTime).lte('created_at', upperBound), supabase.from('appointments').select('*, patients(id, profiles(first_name, last_name)), doctors(id, profiles(first_name, last_name))').ilike('type', 'emergency').eq('status', 'completed').gte('appointment_date', cutoffTime).lte('appointment_date', upperBound), supabase.from('expenses').select('*').gt('created_at', cutoffTime).lte('created_at', upperBound), supabase.from('refunds').select('*').gt('created_at', cutoffTime).lte('created_at', upperBound), supabase.from('pharmacy_expenses').select('*').gt('created_at', cutoffTime).lte('created_at', upperBound), supabase.from('pharmacy_account').select('*').order('created_at', {
+          `).gt('created_at', cutoffTime).lte('created_at', upperBound), supabase.from('lab_reports').select('*, patients(id, profiles!patients_id_fkey(first_name, last_name))').not('price', 'is', null).gt('created_at', cutoffTime).lte('created_at', upperBound), supabase.from('xray_reports').select('*, patients(id, profiles!patients_id_fkey(first_name, last_name))').not('price', 'is', null).gt('created_at', cutoffTime).lte('created_at', upperBound), supabase.from('ot_schedules').select('*, patients(id, profiles!patients_id_fkey(first_name, last_name)), ot_operations(operation_name)').in('status', ['completed', 'pending']).gt('created_at', cutoffTime).lte('created_at', upperBound), supabase.from('appointments').select('*, patients(id, profiles!patients_id_fkey(first_name, last_name)), doctors(id, profiles(first_name, last_name))').ilike('type', 'emergency').eq('status', 'completed').gte('appointment_date', cutoffTime).lte('appointment_date', upperBound), supabase.from('expenses').select('*').gt('created_at', cutoffTime).lte('created_at', upperBound), supabase.from('refunds').select('*').gt('created_at', cutoffTime).lte('created_at', upperBound), supabase.from('pharmacy_expenses').select('*').gt('created_at', cutoffTime).lte('created_at', upperBound), supabase.from('pharmacy_account').select('*').order('created_at', {
         ascending: false
       }).limit(1), supabase.from('medicines').select('stock_quantity, selling_price'), supabase.from('miscellaneous_income').select('*').gt('created_at', cutoffTime).lte('created_at', upperBound),
       supabase.from('staff_shift_closings').select('*').gt('created_at', cutoffTime).lte('created_at', upperBound).order('created_at', { ascending: true })
@@ -332,7 +332,7 @@ export default function FinanceDaily() {
         ipdRes
       ] = await Promise.all([
         supabase.from('invoices')
-          .select('*, patients(id, profiles(first_name, last_name))')
+          .select('*, patients(id, profiles!patients_id_fkey(first_name, last_name))')
           .eq('status', 'paid')
           .gt('created_at', cutoffTime)
           .lte('created_at', upperBound),
@@ -352,26 +352,26 @@ export default function FinanceDaily() {
           .lte('created_at', upperBound),
         
         supabase.from('invoices')
-          .select('*, patients(id, profiles(first_name, last_name))')
+          .select('*, patients(id, profiles!patients_id_fkey(first_name, last_name))')
           .eq('status', 'paid')
           .or('invoice_number.like.LAB-%,invoice_number.like.PATH-INV-%')
           .gt('created_at', cutoffTime)
           .lte('created_at', upperBound),
 
         supabase.from('xray_reports')
-          .select('*, patients(profiles(first_name, last_name))')
+          .select('*, patients(profiles!patients_id_fkey(first_name, last_name))')
           .not('price', 'is', null)
           .gt('created_at', cutoffTime)
           .lte('created_at', upperBound),
         
         supabase.from('ot_schedules')
-          .select('*, patients(profiles(first_name, last_name))')
+          .select('*, patients(profiles!patients_id_fkey(first_name, last_name))')
           .in('status', ['completed', 'pending'])
           .gt('created_at', cutoffTime)
           .lte('created_at', upperBound),
         
         supabase.from('appointments')
-          .select('*, patients(profiles(first_name, last_name))')
+          .select('*, patients(profiles!patients_id_fkey(first_name, last_name))')
           .ilike('type', 'emergency')
           .eq('status', 'completed')
           .gt('appointment_date', cutoffTime)

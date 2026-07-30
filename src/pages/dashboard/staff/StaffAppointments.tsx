@@ -72,13 +72,13 @@ export default function StaffAppointments() {
       // Get patient and doctor details for invoice
       const { data: patientData } = await supabase
         .from('patients')
-        .select('*, profiles(*)')
+        .select('*, profiles!patients_id_fkey(*)')
         .eq('id', appointment.patient_id)
         .single();
 
       const { data: doctorData } = await supabase
         .from('doctors')
-        .select('*, profiles(*)')
+        .select('*, profiles!patients_id_fkey(*)')
         .eq('id', appointment.doctor_id)
         .single();
 
