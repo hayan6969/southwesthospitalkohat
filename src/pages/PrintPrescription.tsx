@@ -851,7 +851,7 @@ const CSS = `
   .rx-print-btn, .rx-overlay{ display:none !important; }
   .rx-page *{ -webkit-print-color-adjust:exact; print-color-adjust:exact; }
 }
-`
+
 /* ── Eye OPD template ── */
 .eye-sheet{ padding:0; display:flex; flex-direction:column; }
 .eye-head{ display:flex; align-items:stretch; background:#1A237E; min-height:26mm; }
