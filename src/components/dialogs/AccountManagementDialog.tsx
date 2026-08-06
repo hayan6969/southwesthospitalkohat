@@ -30,6 +30,7 @@ export function AccountManagementDialog() {
   const [consultationFee, setConsultationFee] = useState(0);
   const [degrees, setDegrees] = useState("");
   const [paPhone, setPaPhone] = useState("");
+  const [isEyeSpecialist, setIsEyeSpecialist] = useState(false);
 
   const { createUserAccount, profile: currentProfile } = useAuth();
   const { data: departments } = useDepartments();
