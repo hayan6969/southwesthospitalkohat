@@ -156,6 +156,7 @@ export function EditUserDialog({ user, open, onOpenChange, onUserUpdated }: Edit
           specialization: specialization.trim() || null,
           license_number: licenseNumber.trim() || null,
           consultation_fee: consultationFee,
+          is_eye_specialist: isEyeSpecialist,
           prescription_template: merged,
         };
         const { error: docError } = await supabase
