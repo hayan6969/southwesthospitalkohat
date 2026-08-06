@@ -42,6 +42,7 @@ interface RxData {
     headerLogo: string | null;
     consultationFee: number | null;
     prescriptionTemplate: Record<string, any>;
+    isEyeSpecialist?: boolean;
   };
   patient: {
     name: string | null;
@@ -115,6 +116,7 @@ function normalizePreview(raw: any): RxData {
       headerLogo: raw?.doctor?.headerLogo ?? null,
       consultationFee: raw?.doctor?.consultationFee ?? null,
       prescriptionTemplate: raw?.doctor?.prescriptionTemplate ?? {},
+      isEyeSpecialist: raw?.doctor?.isEyeSpecialist ?? false,
     },
     patient: {
       name: raw?.patient?.name ?? null,
@@ -202,7 +204,7 @@ async function loadFromDb(patientId: string): Promise<RxData> {
       supabase
         .from("doctors")
         .select(
-          "specialization,license_number,consultation_fee,avatar_url,prescription_template," +
+          "specialization,license_number,consultation_fee,avatar_url,prescription_template,is_eye_specialist," +
             "clinic_name,clinic_short_name,phone,address,qualifications,title,doctor_details," +
             "urdu_doctor_name,urdu_details,signature_url,stamp_url,header_logo"
         )
@@ -244,6 +246,7 @@ async function loadFromDb(patientId: string): Promise<RxData> {
       headerLogo: doctorRow?.header_logo ?? null,
       consultationFee: doctorRow?.consultation_fee ?? null,
       prescriptionTemplate: (doctorRow?.prescription_template as Record<string, any>) ?? {},
+      isEyeSpecialist: Boolean(doctorRow?.is_eye_specialist),
     },
     patient: {
       name: profile ? `${profile.first_name ?? ""} ${profile.last_name ?? ""}`.trim() || null : null,
