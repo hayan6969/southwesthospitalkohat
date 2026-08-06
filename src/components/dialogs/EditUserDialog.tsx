@@ -72,18 +72,20 @@ export function EditUserDialog({ user, open, onOpenChange, onUserUpdated }: Edit
       setConsultationFee(0);
       setDegrees("");
       setPaPhone("");
+      setIsEyeSpecialist(false);
       setTemplateObj({});
       if (user.role === 'doctor') {
         (async () => {
           const { data } = await supabase
             .from('doctors')
-            .select('specialization, license_number, consultation_fee, prescription_template')
+            .select('specialization, license_number, consultation_fee, prescription_template, is_eye_specialist')
             .eq('id', user.id)
             .maybeSingle();
           if (data) {
             setSpecialization(data.specialization || "");
             setLicenseNumber(data.license_number || "");
             setConsultationFee(data.consultation_fee || 0);
+            setIsEyeSpecialist((data as any).is_eye_specialist || false);
             const tpl = ((data as any).prescription_template || {}) as Record<string, any>;
             setTemplateObj(tpl);
             setDegrees(tpl.degrees || "");
