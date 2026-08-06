@@ -48,6 +48,7 @@ export function EditUserDialog({ user, open, onOpenChange, onUserUpdated }: Edit
   const [consultationFee, setConsultationFee] = useState(0);
   const [degrees, setDegrees] = useState("");
   const [paPhone, setPaPhone] = useState("");
+  const [isEyeSpecialist, setIsEyeSpecialist] = useState(false);
   // Full existing template so we merge (not clobber) urdu/credentials/toggles
   const [templateObj, setTemplateObj] = useState<Record<string, any>>({});
 
