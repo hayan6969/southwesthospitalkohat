@@ -424,13 +424,31 @@ export default function PrintPrescription() {
         </div>
       )}
 
-      {data && !error && (
+      {data && !error && data.doctor.isEyeSpecialist && (
+        <>
+          <button className="rx-print-btn" onClick={() => window.print()}>
+            🖨 Print Prescription
+          </button>
+          <EyeSheet
+            data={data}
+            hospitalName={hospitalName}
+            logoSrc={logoSrc}
+            doctorLines={doctorLines}
+            visitDate={visitDate}
+            paPhone={paPhone}
+            notValidText={notValidText}
+          />
+        </>
+      )}
+
+      {data && !error && !data.doctor.isEyeSpecialist && (
         <>
           <button className="rx-print-btn" onClick={() => window.print()}>
             🖨 Print Prescription
           </button>
 
           <div className="rx-sheet">
+
             {/* ── 2. HEADER ─────────────────────────────────────────── */}
             <h1 className="rx-hospital">{hospitalName}</h1>
 
