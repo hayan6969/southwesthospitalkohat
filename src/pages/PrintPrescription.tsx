@@ -718,7 +718,7 @@ function EyeSheet({
           )}
         </div>
       </div>
-      <div className="eye-addr">{data.hospital.address || data.doctor.address || ""}</div>
+      <div className="eye-addr">{data.hospital.address || data.doctor.clinicName || ""}</div>
     </div>
   );
 }
