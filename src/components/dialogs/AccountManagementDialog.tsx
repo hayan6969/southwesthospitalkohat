@@ -69,6 +69,7 @@ export function AccountManagementDialog() {
         // a profiles row, so we must upsert here — update() would hit zero rows).
         if (role === 'doctor' && userId) {
           const doctorRow: Record<string, any> = { id: userId };
+          doctorRow.is_eye_specialist = isEyeSpecialist;
           if (specialization.trim()) doctorRow.specialization = specialization.trim();
           if (licenseNumber.trim()) doctorRow.license_number = licenseNumber.trim();
           if (consultationFee > 0) doctorRow.consultation_fee = consultationFee;
