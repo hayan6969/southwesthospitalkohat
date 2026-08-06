@@ -103,6 +103,7 @@ export function AccountManagementDialog() {
         setConsultationFee(0);
         setDegrees("");
         setPaPhone("");
+        setIsEyeSpecialist(false);
       }
     } catch (error) {
       toast.error("Failed to create account");
