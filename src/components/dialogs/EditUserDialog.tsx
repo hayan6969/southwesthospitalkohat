@@ -352,6 +352,19 @@ export function EditUserDialog({ user, open, onOpenChange, onUserUpdated }: Edit
                   placeholder="MBBS, FCPS, CHPE"
                 />
               </div>
+              <div className="flex items-start gap-2 rounded-md border bg-background p-3">
+                <Checkbox
+                  id="doc_eye"
+                  checked={isEyeSpecialist}
+                  onCheckedChange={(v) => setIsEyeSpecialist(v === true)}
+                />
+                <div className="space-y-1 leading-none">
+                  <Label htmlFor="doc_eye" className="cursor-pointer">Eye Specialist</Label>
+                  <p className="text-xs text-muted-foreground">
+                    Prints the Eye OPD prescription template (investigation grid) instead of the standard slip.
+                  </p>
+                </div>
+              </div>
               <p className="text-xs text-muted-foreground">
                 Urdu header, credentials &amp; toggles are edited by the doctor in their dashboard settings and are preserved here.
               </p>
