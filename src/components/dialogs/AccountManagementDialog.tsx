@@ -8,6 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { Plus } from "lucide-react";
@@ -30,6 +31,7 @@ export function AccountManagementDialog() {
   const [consultationFee, setConsultationFee] = useState(0);
   const [degrees, setDegrees] = useState("");
   const [paPhone, setPaPhone] = useState("");
+  const [isEyeSpecialist, setIsEyeSpecialist] = useState(false);
 
   const { createUserAccount, profile: currentProfile } = useAuth();
   const { data: departments } = useDepartments();
@@ -68,6 +70,7 @@ export function AccountManagementDialog() {
         // a profiles row, so we must upsert here — update() would hit zero rows).
         if (role === 'doctor' && userId) {
           const doctorRow: Record<string, any> = { id: userId };
+          doctorRow.is_eye_specialist = isEyeSpecialist;
           if (specialization.trim()) doctorRow.specialization = specialization.trim();
           if (licenseNumber.trim()) doctorRow.license_number = licenseNumber.trim();
           if (consultationFee > 0) doctorRow.consultation_fee = consultationFee;
@@ -101,6 +104,7 @@ export function AccountManagementDialog() {
         setConsultationFee(0);
         setDegrees("");
         setPaPhone("");
+        setIsEyeSpecialist(false);
       }
     } catch (error) {
       toast.error("Failed to create account");
@@ -270,7 +274,21 @@ export function AccountManagementDialog() {
                   placeholder="MBBS, FCPS, CHPE"
                 />
               </div>
+              <div className="flex items-start gap-2 rounded-md border bg-background p-3">
+                <Checkbox
+                  id="doc_eye"
+                  checked={isEyeSpecialist}
+                  onCheckedChange={(v) => setIsEyeSpecialist(v === true)}
+                />
+                <div className="space-y-1 leading-none">
+                  <Label htmlFor="doc_eye" className="cursor-pointer">Eye Specialist</Label>
+                  <p className="text-xs text-muted-foreground">
+                    Prints the Eye OPD prescription template (investigation grid) instead of the standard slip.
+                  </p>
+                </div>
+              </div>
             </div>
+
           )}
 
           {['staff', 'nursing', 'ota'].includes(role) && (

@@ -616,6 +616,7 @@ export type Database = {
           header_logo: string | null
           hospital_share_percentage: number
           id: string
+          is_eye_specialist: boolean
           license_number: string | null
           phone: string | null
           prescription_template: Json | null
@@ -641,6 +642,7 @@ export type Database = {
           header_logo?: string | null
           hospital_share_percentage?: number
           id: string
+          is_eye_specialist?: boolean
           license_number?: string | null
           phone?: string | null
           prescription_template?: Json | null
@@ -666,6 +668,7 @@ export type Database = {
           header_logo?: string | null
           hospital_share_percentage?: number
           id?: string
+          is_eye_specialist?: boolean
           license_number?: string | null
           phone?: string | null
           prescription_template?: Json | null

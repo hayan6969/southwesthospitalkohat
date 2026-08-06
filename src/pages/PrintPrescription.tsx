@@ -42,6 +42,7 @@ interface RxData {
     headerLogo: string | null;
     consultationFee: number | null;
     prescriptionTemplate: Record<string, any>;
+    isEyeSpecialist?: boolean;
   };
   patient: {
     name: string | null;
@@ -115,6 +116,7 @@ function normalizePreview(raw: any): RxData {
       headerLogo: raw?.doctor?.headerLogo ?? null,
       consultationFee: raw?.doctor?.consultationFee ?? null,
       prescriptionTemplate: raw?.doctor?.prescriptionTemplate ?? {},
+      isEyeSpecialist: raw?.doctor?.isEyeSpecialist ?? false,
     },
     patient: {
       name: raw?.patient?.name ?? null,
@@ -202,7 +204,7 @@ async function loadFromDb(patientId: string): Promise<RxData> {
       supabase
         .from("doctors")
         .select(
-          "specialization,license_number,consultation_fee,avatar_url,prescription_template," +
+          "specialization,license_number,consultation_fee,avatar_url,prescription_template,is_eye_specialist," +
             "clinic_name,clinic_short_name,phone,address,qualifications,title,doctor_details," +
             "urdu_doctor_name,urdu_details,signature_url,stamp_url,header_logo"
         )
@@ -244,6 +246,7 @@ async function loadFromDb(patientId: string): Promise<RxData> {
       headerLogo: doctorRow?.header_logo ?? null,
       consultationFee: doctorRow?.consultation_fee ?? null,
       prescriptionTemplate: (doctorRow?.prescription_template as Record<string, any>) ?? {},
+      isEyeSpecialist: Boolean(doctorRow?.is_eye_specialist),
     },
     patient: {
       name: profile ? `${profile.first_name ?? ""} ${profile.last_name ?? ""}`.trim() || null : null,
@@ -421,13 +424,31 @@ export default function PrintPrescription() {
         </div>
       )}
 
-      {data && !error && (
+      {data && !error && data.doctor.isEyeSpecialist && (
+        <>
+          <button className="rx-print-btn" onClick={() => window.print()}>
+            🖨 Print Prescription
+          </button>
+          <EyeSheet
+            data={data}
+            hospitalName={hospitalName}
+            logoSrc={logoSrc}
+            doctorLines={doctorLines}
+            visitDate={visitDate}
+            paPhone={paPhone}
+            notValidText={notValidText}
+          />
+        </>
+      )}
+
+      {data && !error && !data.doctor.isEyeSpecialist && (
         <>
           <button className="rx-print-btn" onClick={() => window.print()}>
             🖨 Print Prescription
           </button>
 
           <div className="rx-sheet">
+
             {/* ── 2. HEADER ─────────────────────────────────────────── */}
             <h1 className="rx-hospital">{hospitalName}</h1>
 
@@ -579,6 +600,129 @@ export default function PrintPrescription() {
   );
 }
 
+
+// ---------------------------------------------------------------------------
+// Eye OPD template (used when the doctor is flagged as an eye specialist)
+// ---------------------------------------------------------------------------
+const EYE_INVESTIGATIONS: { label: string; sub?: string; value: string }[] = [
+  { label: "Dilate", value: "Rt/Lt" },
+  { label: "Fundus Photo", value: "Rt/Lt" },
+  { label: "Oct", sub: "Macula", value: "Rt/Lt" },
+  { label: "Oct", sub: "ONH", value: "Rt/Lt" },
+  { label: "Yag Laser", value: "Rt/Lt" },
+  { label: "PRP Laser", value: "Rt/Lt" },
+  { label: "Blood Sugar", value: "F / R" },
+  { label: "BP", value: "" },
+];
+
+function EyeSheet({
+  data,
+  hospitalName,
+  logoSrc,
+  doctorLines,
+  visitDate,
+  paPhone,
+  notValidText,
+}: {
+  data: RxData;
+  hospitalName: string;
+  logoSrc: string | null;
+  doctorLines: string[];
+  visitDate: string;
+  paPhone: string | null;
+  notValidText: string;
+}) {
+  return (
+    <div className="rx-sheet eye-sheet">
+      {/* Header band */}
+      <div className="eye-head">
+        <div className="eye-head-left">
+          {logoSrc && <img src={logoSrc} alt="" />}
+          <span className="eye-brand">SWHC</span>
+        </div>
+        <div className="eye-head-right">
+          <div className="eye-h1">{(hospitalName || "SOUTH WEST HEALTH COMPLEX").toUpperCase()}</div>
+        </div>
+      </div>
+
+      {/* Doctor name bar */}
+      <div className="eye-docbar">{data.doctor.fullName || ""}</div>
+
+      {/* Qualifications + OPD box */}
+      <div className="eye-info">
+        <div className="eye-quals">
+          {doctorLines.map((line, i) => (
+            <div key={i}>{line.toUpperCase()}</div>
+          ))}
+        </div>
+        <div className="eye-opd">
+          <div className="eye-opd-title">EYE OPD</div>
+          <div className="eye-opd-box">
+            {data.token ? <span>Token {data.token}</span> : <span>&nbsp;</span>}
+          </div>
+          {paPhone && <div className="eye-opd-cap">{paPhone}</div>}
+        </div>
+      </div>
+
+      {/* Patient line */}
+      <div className="eye-ptrow">
+        <span className="eye-f eye-f-lg">
+          <i>Name</i>
+          <u>{data.patient.name || ""}</u>
+        </span>
+        <span className="eye-f">
+          <i>Age</i>
+          <u>{data.patient.age || ""}</u>
+        </span>
+        <span className="eye-f">
+          <i>Gender</i>
+          <u>{data.patient.gender || ""}</u>
+        </span>
+        <span className="eye-f">
+          <i>Date</i>
+          <u>{visitDate}</u>
+        </span>
+      </div>
+
+      {/* Body: investigation grid + writing area */}
+      <div className="eye-body">
+        <div className="eye-invest">
+          <div className="eye-invest-title">Investigation</div>
+          <table className="eye-table">
+            <tbody>
+              {EYE_INVESTIGATIONS.map((row, i) => (
+                <tr key={i}>
+                  <td className="eye-td-l">
+                    {row.label}
+                    {row.sub && <span className="eye-sub"> {row.sub}</span>}
+                  </td>
+                  <td className="eye-td-r">{row.value}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <div className="eye-write">
+          {data.prescription.text && <pre className="eye-rx-text">{data.prescription.text}</pre>}
+        </div>
+      </div>
+
+      {/* Footer */}
+      <div className="eye-foot">
+        <div className="eye-foot-note">
+          <div>{notValidText}</div>
+          {paPhone && (
+            <div className="eye-foot-phone">
+              For Contact# <b>{paPhone}</b>
+            </div>
+          )}
+        </div>
+      </div>
+      <div className="eye-addr">{data.hospital.address || data.doctor.clinicName || ""}</div>
+    </div>
+  );
+}
+
 // ---------------------------------------------------------------------------
 // Styles — matches PRESCRIPTION TEMPLATE – SPECIFICATION
 //   Red #B22222 · Blue #1A237E · Text #000000 · Georgia headings / Arial body
@@ -707,4 +851,50 @@ const CSS = `
   .rx-print-btn, .rx-overlay{ display:none !important; }
   .rx-page *{ -webkit-print-color-adjust:exact; print-color-adjust:exact; }
 }
+
+/* ── Eye OPD template ── */
+.eye-sheet{ padding:0; display:flex; flex-direction:column; }
+.eye-head{ display:flex; align-items:stretch; background:#1A237E; min-height:26mm; }
+.eye-head-left{ background:#fff; display:flex; align-items:center; gap:10px; padding:0 18px 0 14px;
+  clip-path:polygon(0 0, 100% 0, 78% 100%, 0 100%); min-width:52%; }
+.eye-head-left img{ max-height:52px; max-width:70px; object-fit:contain; }
+.eye-brand{ font-family:Georgia,'Times New Roman',serif; font-weight:bold; font-size:34px; color:#1A237E;
+  letter-spacing:1px; }
+.eye-head-right{ flex:1; display:flex; align-items:center; justify-content:flex-end; padding-right:12mm; }
+.eye-h1{ color:#fff; font-family:Arial,sans-serif; font-weight:bold; font-size:24px; line-height:1.15;
+  text-align:right; letter-spacing:.5px; }
+.eye-docbar{ background:#1A237E; color:#fff; font-family:Georgia,'Times New Roman',serif; font-weight:bold;
+  font-size:22px; padding:6px 12mm; margin-top:-1px; }
+
+.eye-info{ display:flex; gap:10mm; padding:8px 12mm 0; }
+.eye-quals{ flex:1; font-size:12px; line-height:1.55; font-weight:600; }
+.eye-opd{ width:36mm; text-align:center; }
+.eye-opd-title{ background:#1A237E; color:#fff; font-size:11px; font-weight:bold; padding:2px 0; }
+.eye-opd-box{ border:1px solid #1A237E; height:22mm; display:flex; align-items:center; justify-content:center;
+  font-size:11px; font-weight:bold; color:#1A237E; }
+.eye-opd-cap{ font-size:9px; font-weight:bold; color:#1A237E; margin-top:2px; }
+
+.eye-ptrow{ display:flex; gap:8px; padding:8px 12mm 0; font-size:13px; align-items:baseline; }
+.eye-f{ display:flex; align-items:baseline; gap:6px; flex:1; }
+.eye-f-lg{ flex:2; }
+.eye-f i{ font-family:Georgia,serif; font-style:italic; }
+.eye-f u{ flex:1; text-decoration:none; border-bottom:1px solid #000; min-height:16px; padding:0 4px; }
+
+.eye-body{ display:flex; gap:6mm; padding:6px 12mm 0; flex:1; min-height:0; }
+.eye-invest{ width:52mm; }
+.eye-invest-title{ font-size:12px; font-weight:bold; margin-bottom:2px; }
+.eye-table{ border-collapse:collapse; width:100%; }
+.eye-table td{ border:1px solid #000; font-size:11px; padding:2px 4px; }
+.eye-td-l{ width:62%; }
+.eye-td-r{ text-align:center; font-size:10px; }
+.eye-sub{ font-size:9px; }
+.eye-write{ flex:1; }
+.eye-rx-text{ margin:0; font-family:Arial,sans-serif; font-size:13px; line-height:1.7; white-space:pre-wrap; }
+
+.eye-foot{ padding:0 12mm 4px; display:flex; justify-content:flex-end; }
+.eye-foot-note{ text-align:right; font-size:12px; }
+.eye-foot-phone{ font-size:15px; font-weight:bold; }
+.eye-addr{ background:#1A237E; color:#fff; text-align:center; font-weight:bold; font-size:13px;
+  padding:6px 12mm; line-height:1.35; }
+
 `;
