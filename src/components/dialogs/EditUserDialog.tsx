@@ -7,6 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -47,6 +48,7 @@ export function EditUserDialog({ user, open, onOpenChange, onUserUpdated }: Edit
   const [consultationFee, setConsultationFee] = useState(0);
   const [degrees, setDegrees] = useState("");
   const [paPhone, setPaPhone] = useState("");
+  const [isEyeSpecialist, setIsEyeSpecialist] = useState(false);
   // Full existing template so we merge (not clobber) urdu/credentials/toggles
   const [templateObj, setTemplateObj] = useState<Record<string, any>>({});
 
@@ -70,18 +72,20 @@ export function EditUserDialog({ user, open, onOpenChange, onUserUpdated }: Edit
       setConsultationFee(0);
       setDegrees("");
       setPaPhone("");
+      setIsEyeSpecialist(false);
       setTemplateObj({});
       if (user.role === 'doctor') {
         (async () => {
           const { data } = await supabase
             .from('doctors')
-            .select('specialization, license_number, consultation_fee, prescription_template')
+            .select('specialization, license_number, consultation_fee, prescription_template, is_eye_specialist')
             .eq('id', user.id)
             .maybeSingle();
           if (data) {
             setSpecialization(data.specialization || "");
             setLicenseNumber(data.license_number || "");
             setConsultationFee(data.consultation_fee || 0);
+            setIsEyeSpecialist((data as any).is_eye_specialist || false);
             const tpl = ((data as any).prescription_template || {}) as Record<string, any>;
             setTemplateObj(tpl);
             setDegrees(tpl.degrees || "");
@@ -152,6 +156,7 @@ export function EditUserDialog({ user, open, onOpenChange, onUserUpdated }: Edit
           specialization: specialization.trim() || null,
           license_number: licenseNumber.trim() || null,
           consultation_fee: consultationFee,
+          is_eye_specialist: isEyeSpecialist,
           prescription_template: merged,
         };
         const { error: docError } = await supabase
@@ -346,6 +351,19 @@ export function EditUserDialog({ user, open, onOpenChange, onUserUpdated }: Edit
                   onChange={(e) => setDegrees(e.target.value)}
                   placeholder="MBBS, FCPS, CHPE"
                 />
+              </div>
+              <div className="flex items-start gap-2 rounded-md border bg-background p-3">
+                <Checkbox
+                  id="doc_eye"
+                  checked={isEyeSpecialist}
+                  onCheckedChange={(v) => setIsEyeSpecialist(v === true)}
+                />
+                <div className="space-y-1 leading-none">
+                  <Label htmlFor="doc_eye" className="cursor-pointer">Eye Specialist</Label>
+                  <p className="text-xs text-muted-foreground">
+                    Prints the Eye OPD prescription template (investigation grid) instead of the standard slip.
+                  </p>
+                </div>
               </div>
               <p className="text-xs text-muted-foreground">
                 Urdu header, credentials &amp; toggles are edited by the doctor in their dashboard settings and are preserved here.
