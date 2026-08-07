@@ -181,7 +181,7 @@ export const generateLabInvoicePDF = async (data: {
   const settings = await getThermalHospitalSettings();
 
   // Estimate receipt height (mirrors pharmacy generator approach)
-  const baseHeight = 120;
+  const baseHeight = 128;
   const perItemHeight = 12;
   const hasDiscount = !!(data.discount && data.discount.discountApplied > 0);
   const pageHeight =
@@ -510,7 +510,7 @@ export const generateXrayInvoicePDF = async (data: {
   const settings = await getThermalHospitalSettings();
 
   // Estimate receipt height (mirrors pharmacy generator approach)
-  const baseHeight = 125;
+  const baseHeight = 133;
   const perItemHeight = 12;
   const notesLineCount = data.notes ? Math.ceil(data.notes.length / 40) + 1 : 0;
   const pageHeight =
