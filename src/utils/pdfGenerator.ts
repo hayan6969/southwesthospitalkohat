@@ -188,93 +188,106 @@ export const generateLabInvoicePDF = async (data: {
     baseHeight + data.tests.length * perItemHeight + (hasDiscount ? 8 : 0) + (createdByName ? 6 : 0);
 
   const pdf = createThermalDoc(pageHeight);
-  let y = await drawThermalHeader(pdf, settings, 'LAB INVOICE');
 
-  // Invoice meta
-  pdf.setFont('helvetica', 'normal');
-  pdf.setFontSize(7.5);
-  y = thermalLine(pdf, `Invoice #: ${data.invoiceNumber}`, y);
-  y = thermalLine(pdf, `Date: ${data.issueDate}`, y);
-  y = thermalLine(pdf, `Patient: ${data.patientName}`, y);
-  if (data.patientId) y = thermalLine(pdf, `Patient ID: ${data.patientId}`, y);
-  if (data.patientPhone) y = thermalLine(pdf, `Phone: ${data.patientPhone}`, y);
-  y = thermalLine(pdf, 'Status: COMPLETED', y);
+  const copies = ['LAB COPY', 'HOSPITAL COPY'];
+  copies.forEach((copyLabel, copyIndex) => {
+    if (copyIndex > 0) pdf.addPage([THERMAL_WIDTH, Math.max(pageHeight, 60)]);
+    let y = headerCursor;
+    drawThermalHeaderSync(pdf, settings, 'LAB INVOICE', logoImg);
 
-  y = thermalDivider(pdf, y);
-
-  // Items header
-  pdf.setFont('helvetica', 'bold');
-  pdf.setFontSize(7.5);
-  pdf.text('Test', THERMAL_MARGIN, y);
-  pdf.text('Price', THERMAL_WIDTH - THERMAL_MARGIN, y, { align: 'right' });
-  y += 2;
-  y = thermalDivider(pdf, y, 0.1);
-
-  // Test items
-  pdf.setFont('helvetica', 'normal');
-  data.tests.forEach((test) => {
-    const nameLines = pdf.splitTextToSize(test.name, THERMAL_CONTENT_WIDTH - 16);
-    pdf.text(nameLines[0], THERMAL_MARGIN, y);
-    pdf.text(formatPkrAmount(test.price), THERMAL_WIDTH - THERMAL_MARGIN, y, { align: 'right' });
-    y += 3.5;
-    for (let i = 1; i < nameLines.length; i++) {
-      pdf.text(nameLines[i], THERMAL_MARGIN, y);
-      y += 3.2;
-    }
-    if (test.description) {
-      pdf.setFont('helvetica', 'italic');
-      pdf.setFontSize(6.5);
-      const descLines = pdf.splitTextToSize(test.description, THERMAL_CONTENT_WIDTH);
-      descLines.forEach((line: string) => {
-        pdf.text(line, THERMAL_MARGIN, y);
-        y += 3;
-      });
-      pdf.setFont('helvetica', 'normal');
-      pdf.setFontSize(7.5);
-    }
-    y += 1;
-  });
-
-  y = thermalDivider(pdf, y, 0.2);
-  y += 1;
-
-  // Totals
-  pdf.setFontSize(8);
-  if (hasDiscount && data.discount) {
-    pdf.setFont('helvetica', 'normal');
-    pdf.text('Subtotal:', THERMAL_MARGIN, y);
-    pdf.text(formatPkrAmount(data.discount.originalAmount), THERMAL_WIDTH - THERMAL_MARGIN, y, { align: 'right' });
+    // Copy label
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(8);
+    pdf.text(`*** ${copyLabel} ***`, THERMAL_CENTER, y, { align: 'center' });
     y += 4;
-    pdf.text(`Discount${data.discount.discountLabel ? ` (${data.discount.discountLabel})` : ''}:`, THERMAL_MARGIN, y);
-    pdf.text(`-${formatPkrAmount(data.discount.discountApplied)}`, THERMAL_WIDTH - THERMAL_MARGIN, y, { align: 'right' });
+
+    // Invoice meta
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(7.5);
+    y = thermalLine(pdf, `Invoice #: ${data.invoiceNumber}`, y);
+    y = thermalLine(pdf, `Date: ${data.issueDate}`, y);
+    y = thermalLine(pdf, `Patient: ${data.patientName}`, y);
+    if (data.patientId) y = thermalLine(pdf, `Patient ID: ${data.patientId}`, y);
+    if (data.patientPhone) y = thermalLine(pdf, `Phone: ${data.patientPhone}`, y);
+    y = thermalLine(pdf, 'Status: COMPLETED', y);
+
+    y = thermalDivider(pdf, y);
+
+    // Items header
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(7.5);
+    pdf.text('Test', THERMAL_MARGIN, y);
+    pdf.text('Price', THERMAL_WIDTH - THERMAL_MARGIN, y, { align: 'right' });
     y += 2;
     y = thermalDivider(pdf, y, 0.1);
-  }
-  pdf.setFont('helvetica', 'bold');
-  pdf.setFontSize(9.5);
-  pdf.text('TOTAL:', THERMAL_MARGIN, y + 1);
-  const totalAmount = hasDiscount && data.discount ? data.discount.discountedAmount : data.totalAmount;
-  pdf.text(formatPkrAmount(totalAmount), THERMAL_WIDTH - THERMAL_MARGIN, y + 1, { align: 'right' });
-  y += 5;
-  y = thermalDivider(pdf, y, 0.2);
 
-  // Served by
-  if (createdByName) {
+    // Test items
     pdf.setFont('helvetica', 'normal');
-    pdf.setFontSize(7);
-    y = thermalLine(pdf, `Served by: ${createdByName}`, y, 3.5);
-  }
+    data.tests.forEach((test) => {
+      const nameLines = pdf.splitTextToSize(test.name, THERMAL_CONTENT_WIDTH - 16);
+      pdf.text(nameLines[0], THERMAL_MARGIN, y);
+      pdf.text(formatPkrAmount(test.price), THERMAL_WIDTH - THERMAL_MARGIN, y, { align: 'right' });
+      y += 3.5;
+      for (let i = 1; i < nameLines.length; i++) {
+        pdf.text(nameLines[i], THERMAL_MARGIN, y);
+        y += 3.2;
+      }
+      if (test.description) {
+        pdf.setFont('helvetica', 'italic');
+        pdf.setFontSize(6.5);
+        const descLines = pdf.splitTextToSize(test.description, THERMAL_CONTENT_WIDTH);
+        descLines.forEach((line: string) => {
+          pdf.text(line, THERMAL_MARGIN, y);
+          y += 3;
+        });
+        pdf.setFont('helvetica', 'normal');
+        pdf.setFontSize(7.5);
+      }
+      y += 1;
+    });
 
-  // Footer
-  y += 2;
-  pdf.setFont('helvetica', 'italic');
-  pdf.setFontSize(7);
-  pdf.text('Payment is due before test collection.', THERMAL_CENTER, y, { align: 'center' });
-  y += 3.2;
-  pdf.text('Thank you for your visit!', THERMAL_CENTER, y, { align: 'center' });
+    y = thermalDivider(pdf, y, 0.2);
+    y += 1;
+
+    // Totals
+    pdf.setFontSize(8);
+    if (hasDiscount && data.discount) {
+      pdf.setFont('helvetica', 'normal');
+      pdf.text('Subtotal:', THERMAL_MARGIN, y);
+      pdf.text(formatPkrAmount(data.discount.originalAmount), THERMAL_WIDTH - THERMAL_MARGIN, y, { align: 'right' });
+      y += 4;
+      pdf.text(`Discount${data.discount.discountLabel ? ` (${data.discount.discountLabel})` : ''}:`, THERMAL_MARGIN, y);
+      pdf.text(`-${formatPkrAmount(data.discount.discountApplied)}`, THERMAL_WIDTH - THERMAL_MARGIN, y, { align: 'right' });
+      y += 2;
+      y = thermalDivider(pdf, y, 0.1);
+    }
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(9.5);
+    pdf.text('TOTAL:', THERMAL_MARGIN, y + 1);
+    const totalAmount = hasDiscount && data.discount ? data.discount.discountedAmount : data.totalAmount;
+    pdf.text(formatPkrAmount(totalAmount), THERMAL_WIDTH - THERMAL_MARGIN, y + 1, { align: 'right' });
+    y += 5;
+    y = thermalDivider(pdf, y, 0.2);
+
+    // Served by
+    if (createdByName) {
+      pdf.setFont('helvetica', 'normal');
+      pdf.setFontSize(7);
+      y = thermalLine(pdf, `Served by: ${createdByName}`, y, 3.5);
+    }
+
+    // Footer
+    y += 2;
+    pdf.setFont('helvetica', 'italic');
+    pdf.setFontSize(7);
+    pdf.text('Payment is due before test collection.', THERMAL_CENTER, y, { align: 'center' });
+    y += 3.2;
+    pdf.text('Thank you for your visit!', THERMAL_CENTER, y, { align: 'center' });
+  });
 
   return openThermalPDF(pdf, opts);
 };
+
 
 export const generateInvoicePDF = async (invoice: any) => {
   console.log('generateInvoicePDF called with:', JSON.stringify(invoice, null, 2));
