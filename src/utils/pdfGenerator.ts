@@ -181,100 +181,115 @@ export const generateLabInvoicePDF = async (data: {
   const settings = await getThermalHospitalSettings();
 
   // Estimate receipt height (mirrors pharmacy generator approach)
-  const baseHeight = 120;
+  const baseHeight = 128;
   const perItemHeight = 12;
   const hasDiscount = !!(data.discount && data.discount.discountApplied > 0);
   const pageHeight =
     baseHeight + data.tests.length * perItemHeight + (hasDiscount ? 8 : 0) + (createdByName ? 6 : 0);
 
   const pdf = createThermalDoc(pageHeight);
-  let y = await drawThermalHeader(pdf, settings, 'LAB INVOICE');
 
-  // Invoice meta
-  pdf.setFont('helvetica', 'normal');
-  pdf.setFontSize(7.5);
-  y = thermalLine(pdf, `Invoice #: ${data.invoiceNumber}`, y);
-  y = thermalLine(pdf, `Date: ${data.issueDate}`, y);
-  y = thermalLine(pdf, `Patient: ${data.patientName}`, y);
-  if (data.patientId) y = thermalLine(pdf, `Patient ID: ${data.patientId}`, y);
-  if (data.patientPhone) y = thermalLine(pdf, `Phone: ${data.patientPhone}`, y);
-  y = thermalLine(pdf, 'Status: COMPLETED', y);
+  const copies = ['LAB COPY', 'HOSPITAL COPY'];
+  for (let copyIndex = 0; copyIndex < copies.length; copyIndex++) {
+    const copyLabel = copies[copyIndex];
+    if (copyIndex > 0) pdf.addPage([THERMAL_WIDTH, Math.max(pageHeight, 60)]);
+    let y = await drawThermalHeader(pdf, settings, 'LAB INVOICE');
 
-  y = thermalDivider(pdf, y);
 
-  // Items header
-  pdf.setFont('helvetica', 'bold');
-  pdf.setFontSize(7.5);
-  pdf.text('Test', THERMAL_MARGIN, y);
-  pdf.text('Price', THERMAL_WIDTH - THERMAL_MARGIN, y, { align: 'right' });
-  y += 2;
-  y = thermalDivider(pdf, y, 0.1);
-
-  // Test items
-  pdf.setFont('helvetica', 'normal');
-  data.tests.forEach((test) => {
-    const nameLines = pdf.splitTextToSize(test.name, THERMAL_CONTENT_WIDTH - 16);
-    pdf.text(nameLines[0], THERMAL_MARGIN, y);
-    pdf.text(formatPkrAmount(test.price), THERMAL_WIDTH - THERMAL_MARGIN, y, { align: 'right' });
-    y += 3.5;
-    for (let i = 1; i < nameLines.length; i++) {
-      pdf.text(nameLines[i], THERMAL_MARGIN, y);
-      y += 3.2;
-    }
-    if (test.description) {
-      pdf.setFont('helvetica', 'italic');
-      pdf.setFontSize(6.5);
-      const descLines = pdf.splitTextToSize(test.description, THERMAL_CONTENT_WIDTH);
-      descLines.forEach((line: string) => {
-        pdf.text(line, THERMAL_MARGIN, y);
-        y += 3;
-      });
-      pdf.setFont('helvetica', 'normal');
-      pdf.setFontSize(7.5);
-    }
-    y += 1;
-  });
-
-  y = thermalDivider(pdf, y, 0.2);
-  y += 1;
-
-  // Totals
-  pdf.setFontSize(8);
-  if (hasDiscount && data.discount) {
-    pdf.setFont('helvetica', 'normal');
-    pdf.text('Subtotal:', THERMAL_MARGIN, y);
-    pdf.text(formatPkrAmount(data.discount.originalAmount), THERMAL_WIDTH - THERMAL_MARGIN, y, { align: 'right' });
+    // Copy label
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(8);
+    pdf.text(`*** ${copyLabel} ***`, THERMAL_CENTER, y, { align: 'center' });
     y += 4;
-    pdf.text(`Discount${data.discount.discountLabel ? ` (${data.discount.discountLabel})` : ''}:`, THERMAL_MARGIN, y);
-    pdf.text(`-${formatPkrAmount(data.discount.discountApplied)}`, THERMAL_WIDTH - THERMAL_MARGIN, y, { align: 'right' });
+
+    // Invoice meta
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(7.5);
+    y = thermalLine(pdf, `Invoice #: ${data.invoiceNumber}`, y);
+    y = thermalLine(pdf, `Date: ${data.issueDate}`, y);
+    y = thermalLine(pdf, `Patient: ${data.patientName}`, y);
+    if (data.patientId) y = thermalLine(pdf, `Patient ID: ${data.patientId}`, y);
+    if (data.patientPhone) y = thermalLine(pdf, `Phone: ${data.patientPhone}`, y);
+    y = thermalLine(pdf, 'Status: COMPLETED', y);
+
+    y = thermalDivider(pdf, y);
+
+    // Items header
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(7.5);
+    pdf.text('Test', THERMAL_MARGIN, y);
+    pdf.text('Price', THERMAL_WIDTH - THERMAL_MARGIN, y, { align: 'right' });
     y += 2;
     y = thermalDivider(pdf, y, 0.1);
-  }
-  pdf.setFont('helvetica', 'bold');
-  pdf.setFontSize(9.5);
-  pdf.text('TOTAL:', THERMAL_MARGIN, y + 1);
-  const totalAmount = hasDiscount && data.discount ? data.discount.discountedAmount : data.totalAmount;
-  pdf.text(formatPkrAmount(totalAmount), THERMAL_WIDTH - THERMAL_MARGIN, y + 1, { align: 'right' });
-  y += 5;
-  y = thermalDivider(pdf, y, 0.2);
 
-  // Served by
-  if (createdByName) {
+    // Test items
     pdf.setFont('helvetica', 'normal');
+    data.tests.forEach((test) => {
+      const nameLines = pdf.splitTextToSize(test.name, THERMAL_CONTENT_WIDTH - 16);
+      pdf.text(nameLines[0], THERMAL_MARGIN, y);
+      pdf.text(formatPkrAmount(test.price), THERMAL_WIDTH - THERMAL_MARGIN, y, { align: 'right' });
+      y += 3.5;
+      for (let i = 1; i < nameLines.length; i++) {
+        pdf.text(nameLines[i], THERMAL_MARGIN, y);
+        y += 3.2;
+      }
+      if (test.description) {
+        pdf.setFont('helvetica', 'italic');
+        pdf.setFontSize(6.5);
+        const descLines = pdf.splitTextToSize(test.description, THERMAL_CONTENT_WIDTH);
+        descLines.forEach((line: string) => {
+          pdf.text(line, THERMAL_MARGIN, y);
+          y += 3;
+        });
+        pdf.setFont('helvetica', 'normal');
+        pdf.setFontSize(7.5);
+      }
+      y += 1;
+    });
+
+    y = thermalDivider(pdf, y, 0.2);
+    y += 1;
+
+    // Totals
+    pdf.setFontSize(8);
+    if (hasDiscount && data.discount) {
+      pdf.setFont('helvetica', 'normal');
+      pdf.text('Subtotal:', THERMAL_MARGIN, y);
+      pdf.text(formatPkrAmount(data.discount.originalAmount), THERMAL_WIDTH - THERMAL_MARGIN, y, { align: 'right' });
+      y += 4;
+      pdf.text(`Discount${data.discount.discountLabel ? ` (${data.discount.discountLabel})` : ''}:`, THERMAL_MARGIN, y);
+      pdf.text(`-${formatPkrAmount(data.discount.discountApplied)}`, THERMAL_WIDTH - THERMAL_MARGIN, y, { align: 'right' });
+      y += 2;
+      y = thermalDivider(pdf, y, 0.1);
+    }
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(9.5);
+    pdf.text('TOTAL:', THERMAL_MARGIN, y + 1);
+    const totalAmount = hasDiscount && data.discount ? data.discount.discountedAmount : data.totalAmount;
+    pdf.text(formatPkrAmount(totalAmount), THERMAL_WIDTH - THERMAL_MARGIN, y + 1, { align: 'right' });
+    y += 5;
+    y = thermalDivider(pdf, y, 0.2);
+
+    // Served by
+    if (createdByName) {
+      pdf.setFont('helvetica', 'normal');
+      pdf.setFontSize(7);
+      y = thermalLine(pdf, `Served by: ${createdByName}`, y, 3.5);
+    }
+
+    // Footer
+    y += 2;
+    pdf.setFont('helvetica', 'italic');
     pdf.setFontSize(7);
-    y = thermalLine(pdf, `Served by: ${createdByName}`, y, 3.5);
+    pdf.text('Payment is due before test collection.', THERMAL_CENTER, y, { align: 'center' });
+    y += 3.2;
+    pdf.text('Thank you for your visit!', THERMAL_CENTER, y, { align: 'center' });
   }
 
-  // Footer
-  y += 2;
-  pdf.setFont('helvetica', 'italic');
-  pdf.setFontSize(7);
-  pdf.text('Payment is due before test collection.', THERMAL_CENTER, y, { align: 'center' });
-  y += 3.2;
-  pdf.text('Thank you for your visit!', THERMAL_CENTER, y, { align: 'center' });
 
   return openThermalPDF(pdf, opts);
 };
+
 
 export const generateInvoicePDF = async (invoice: any) => {
   console.log('generateInvoicePDF called with:', JSON.stringify(invoice, null, 2));
@@ -495,7 +510,7 @@ export const generateXrayInvoicePDF = async (data: {
   const settings = await getThermalHospitalSettings();
 
   // Estimate receipt height (mirrors pharmacy generator approach)
-  const baseHeight = 125;
+  const baseHeight = 133;
   const perItemHeight = 12;
   const notesLineCount = data.notes ? Math.ceil(data.notes.length / 40) + 1 : 0;
   const pageHeight =
@@ -505,93 +520,106 @@ export const generateXrayInvoicePDF = async (data: {
     (createdByName ? 6 : 0);
 
   const pdf = createThermalDoc(pageHeight);
-  let y = await drawThermalHeader(pdf, settings, 'X-RAY INVOICE');
 
-  // Invoice meta
-  pdf.setFont('helvetica', 'normal');
-  pdf.setFontSize(7.5);
-  y = thermalLine(pdf, `Invoice #: ${data.invoiceNumber}`, y);
-  y = thermalLine(pdf, `Issue Date: ${data.issueDate}`, y);
-  y = thermalLine(pdf, `Patient: ${data.patientName}`, y);
-  if (data.patientId) y = thermalLine(pdf, `Patient ID: ${data.patientId}`, y);
-  if (data.patientPhone) y = thermalLine(pdf, `Phone: ${data.patientPhone}`, y);
-  y = thermalLine(pdf, `X-ray Date: ${data.xrayDate}`, y);
-  if (data.doctorName) y = thermalLine(pdf, `Doctor: ${data.doctorName}`, y);
-  y = thermalLine(pdf, 'Status: SCHEDULED', y);
+  const xrayCopies = ['X-RAY COPY', 'HOSPITAL COPY'];
+  for (let copyIndex = 0; copyIndex < xrayCopies.length; copyIndex++) {
+    const copyLabel = xrayCopies[copyIndex];
+    if (copyIndex > 0) pdf.addPage([THERMAL_WIDTH, Math.max(pageHeight, 60)]);
+    let y = await drawThermalHeader(pdf, settings, 'X-RAY INVOICE');
 
-  y = thermalDivider(pdf, y);
-
-  // Items header
-  pdf.setFont('helvetica', 'bold');
-  pdf.setFontSize(7.5);
-  pdf.text('X-ray Test', THERMAL_MARGIN, y);
-  pdf.text('Price', THERMAL_WIDTH - THERMAL_MARGIN, y, { align: 'right' });
-  y += 2;
-  y = thermalDivider(pdf, y, 0.1);
-
-  // Test items
-  pdf.setFont('helvetica', 'normal');
-  data.tests.forEach((test) => {
-    const nameLines = pdf.splitTextToSize(test.name, THERMAL_CONTENT_WIDTH - 16);
-    pdf.text(nameLines[0], THERMAL_MARGIN, y);
-    pdf.text(formatPkrAmount(test.price), THERMAL_WIDTH - THERMAL_MARGIN, y, { align: 'right' });
-    y += 3.5;
-    for (let i = 1; i < nameLines.length; i++) {
-      pdf.text(nameLines[i], THERMAL_MARGIN, y);
-      y += 3.2;
-    }
-    if (test.description) {
-      pdf.setFont('helvetica', 'italic');
-      pdf.setFontSize(6.5);
-      const descLines = pdf.splitTextToSize(test.description, THERMAL_CONTENT_WIDTH);
-      descLines.forEach((line: string) => {
-        pdf.text(line, THERMAL_MARGIN, y);
-        y += 3;
-      });
-      pdf.setFont('helvetica', 'normal');
-      pdf.setFontSize(7.5);
-    }
-    y += 1;
-  });
-
-  y = thermalDivider(pdf, y, 0.2);
-  y += 1;
-
-  // Total
-  pdf.setFont('helvetica', 'bold');
-  pdf.setFontSize(9.5);
-  pdf.text('TOTAL:', THERMAL_MARGIN, y + 1);
-  pdf.text(formatPkrAmount(data.totalAmount), THERMAL_WIDTH - THERMAL_MARGIN, y + 1, { align: 'right' });
-  y += 5;
-  y = thermalDivider(pdf, y, 0.2);
-
-  // Notes
-  if (data.notes) {
+    // Copy label
     pdf.setFont('helvetica', 'bold');
-    pdf.setFontSize(7);
-    pdf.text('Notes:', THERMAL_MARGIN, y);
-    y += 3.2;
+    pdf.setFontSize(8);
+    pdf.text(`*** ${copyLabel} ***`, THERMAL_CENTER, y, { align: 'center' });
+    y += 4;
+
+    // Invoice meta
     pdf.setFont('helvetica', 'normal');
-    y = thermalLine(pdf, data.notes, y, 3.2);
+    pdf.setFontSize(7.5);
+    y = thermalLine(pdf, `Invoice #: ${data.invoiceNumber}`, y);
+    y = thermalLine(pdf, `Issue Date: ${data.issueDate}`, y);
+    y = thermalLine(pdf, `Patient: ${data.patientName}`, y);
+    if (data.patientId) y = thermalLine(pdf, `Patient ID: ${data.patientId}`, y);
+    if (data.patientPhone) y = thermalLine(pdf, `Phone: ${data.patientPhone}`, y);
+    y = thermalLine(pdf, `X-ray Date: ${data.xrayDate}`, y);
+    if (data.doctorName) y = thermalLine(pdf, `Doctor: ${data.doctorName}`, y);
+    y = thermalLine(pdf, 'Status: SCHEDULED', y);
+
+    y = thermalDivider(pdf, y);
+
+    // Items header
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(7.5);
+    pdf.text('X-ray Test', THERMAL_MARGIN, y);
+    pdf.text('Price', THERMAL_WIDTH - THERMAL_MARGIN, y, { align: 'right' });
+    y += 2;
+    y = thermalDivider(pdf, y, 0.1);
+
+    // Test items
+    pdf.setFont('helvetica', 'normal');
+    data.tests.forEach((test) => {
+      const nameLines = pdf.splitTextToSize(test.name, THERMAL_CONTENT_WIDTH - 16);
+      pdf.text(nameLines[0], THERMAL_MARGIN, y);
+      pdf.text(formatPkrAmount(test.price), THERMAL_WIDTH - THERMAL_MARGIN, y, { align: 'right' });
+      y += 3.5;
+      for (let i = 1; i < nameLines.length; i++) {
+        pdf.text(nameLines[i], THERMAL_MARGIN, y);
+        y += 3.2;
+      }
+      if (test.description) {
+        pdf.setFont('helvetica', 'italic');
+        pdf.setFontSize(6.5);
+        const descLines = pdf.splitTextToSize(test.description, THERMAL_CONTENT_WIDTH);
+        descLines.forEach((line: string) => {
+          pdf.text(line, THERMAL_MARGIN, y);
+          y += 3;
+        });
+        pdf.setFont('helvetica', 'normal');
+        pdf.setFontSize(7.5);
+      }
+      y += 1;
+    });
+
+    y = thermalDivider(pdf, y, 0.2);
     y += 1;
-  }
 
-  // Served by
-  if (createdByName) {
-    pdf.setFont('helvetica', 'normal');
+    // Total
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(9.5);
+    pdf.text('TOTAL:', THERMAL_MARGIN, y + 1);
+    pdf.text(formatPkrAmount(data.totalAmount), THERMAL_WIDTH - THERMAL_MARGIN, y + 1, { align: 'right' });
+    y += 5;
+    y = thermalDivider(pdf, y, 0.2);
+
+    // Notes
+    if (data.notes) {
+      pdf.setFont('helvetica', 'bold');
+      pdf.setFontSize(7);
+      pdf.text('Notes:', THERMAL_MARGIN, y);
+      y += 3.2;
+      pdf.setFont('helvetica', 'normal');
+      y = thermalLine(pdf, data.notes, y, 3.2);
+      y += 1;
+    }
+
+    // Served by
+    if (createdByName) {
+      pdf.setFont('helvetica', 'normal');
+      pdf.setFontSize(7);
+      y = thermalLine(pdf, `Served by: ${createdByName}`, y, 3.5);
+    }
+
+    // Footer
+    y += 2;
+    pdf.setFont('helvetica', 'italic');
     pdf.setFontSize(7);
-    y = thermalLine(pdf, `Served by: ${createdByName}`, y, 3.5);
+    pdf.text('Please arrive 15 minutes before your appointment.', THERMAL_CENTER, y, { align: 'center' });
+    y += 3.2;
+    pdf.text('Payment is required before the examination.', THERMAL_CENTER, y, { align: 'center' });
   }
-
-  // Footer
-  y += 2;
-  pdf.setFont('helvetica', 'italic');
-  pdf.setFontSize(7);
-  pdf.text('Please arrive 15 minutes before your appointment.', THERMAL_CENTER, y, { align: 'center' });
-  y += 3.2;
-  pdf.text('Payment is required before the examination.', THERMAL_CENTER, y, { align: 'center' });
 
   return openThermalPDF(pdf, opts);
+
 };
 
 export const generateOTPDF = async (data: {
