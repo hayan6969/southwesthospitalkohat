@@ -845,6 +845,22 @@ export function StaffPathologyBilling() {
           )}
         </CardContent>
       </Card>
+
+      <PrintCopiesDialog
+        open={!!printPayload}
+        onOpenChange={(o) => { if (!o) setPrintPayload(null); }}
+        title="Print Lab Receipt"
+        description="Select the copies to print. Each copy prints on its own thermal slip."
+        options={["Patient Copy", "Lab Copy", "Hospital Copy"]}
+        onPrint={async (copies) => {
+          try {
+            await generateLabInvoicePDF(printPayload, { autoPrint: true, copies });
+          } catch (err) {
+            console.error("Receipt print failed:", err);
+            toast.error("Receipt failed to open");
+          }
+        }}
+      />
     </div>
   );
 }
