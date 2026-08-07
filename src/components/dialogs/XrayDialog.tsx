@@ -17,6 +17,7 @@ import { Calendar, Search, X, CalendarIcon } from "lucide-react";
 import { formatPkrAmount } from "@/utils/currency";
 import { generateXrayInvoicePDF } from "@/utils/pdfGenerator";
 import { XrayOrderConfirmationDialog } from "./XrayOrderConfirmationDialog";
+import { PrintCopiesDialog } from "./PrintCopiesDialog";
 import { PatientDiscountBadge } from "@/components/PatientDiscountBadge";
 
 import { useSearchPatientsWithNames } from "@/hooks/useDisplayHelpers";
@@ -73,6 +74,7 @@ export function XrayDialog({ open, onOpenChange, onSuccess }: XrayDialogProps) {
   const [confirmationData, setConfirmationData] = useState<any>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isPreparing, setIsPreparing] = useState(false);
+  const [printPayload, setPrintPayload] = useState<any>(null);
 
   const queryClient = useQueryClient();
   const { data: searchResults } = useSearchPatientsWithNames(searchTerm);
@@ -303,7 +305,7 @@ export function XrayDialog({ open, onOpenChange, onSuccess }: XrayDialogProps) {
           } : null;
         }).filter(Boolean) as any[];
 
-        await generateXrayInvoicePDF({
+        setPrintPayload({
           invoiceNumber: invoice.invoice_number,
           patientName: patientName,
           patientEmail: "N/A",
@@ -316,7 +318,7 @@ export function XrayDialog({ open, onOpenChange, onSuccess }: XrayDialogProps) {
           xrayDate: xrayDate ? format(xrayDate, "MMM dd, yyyy") : new Date().toLocaleDateString(),
           notes: notes.trim(),
           createdBy: user?.id
-        }, { autoPrint: true });
+        });
       }
 
       toast.success(`${selectedTests.length} X-ray examination(s) scheduled successfully`);
@@ -630,6 +632,22 @@ export function XrayDialog({ open, onOpenChange, onSuccess }: XrayDialogProps) {
           isProcessing={isSubmitting}
         />
       )}
+
+      <PrintCopiesDialog
+        open={!!printPayload}
+        onOpenChange={(o) => { if (!o) setPrintPayload(null); }}
+        title="Print X-ray Receipt"
+        description="Select the copies to print. Each copy prints on its own thermal slip."
+        options={["Patient Copy", "X-ray Copy", "Hospital Copy"]}
+        onPrint={async (copies) => {
+          try {
+            await generateXrayInvoicePDF(printPayload, { autoPrint: true, copies });
+          } catch (err) {
+            console.error("Receipt print failed:", err);
+            toast.error("Receipt failed to open");
+          }
+        }}
+      />
     </>
   );
 }
