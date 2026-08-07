@@ -284,7 +284,8 @@ export const generateLabInvoicePDF = async (data: {
     pdf.text('Payment is due before test collection.', THERMAL_CENTER, y, { align: 'center' });
     y += 3.2;
     pdf.text('Thank you for your visit!', THERMAL_CENTER, y, { align: 'center' });
-  });
+  }
+
 
   return openThermalPDF(pdf, opts);
 };
