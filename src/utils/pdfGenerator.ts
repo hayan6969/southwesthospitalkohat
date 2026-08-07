@@ -190,10 +190,11 @@ export const generateLabInvoicePDF = async (data: {
   const pdf = createThermalDoc(pageHeight);
 
   const copies = ['LAB COPY', 'HOSPITAL COPY'];
-  copies.forEach((copyLabel, copyIndex) => {
+  for (let copyIndex = 0; copyIndex < copies.length; copyIndex++) {
+    const copyLabel = copies[copyIndex];
     if (copyIndex > 0) pdf.addPage([THERMAL_WIDTH, Math.max(pageHeight, 60)]);
-    let y = headerCursor;
-    drawThermalHeaderSync(pdf, settings, 'LAB INVOICE', logoImg);
+    let y = await drawThermalHeader(pdf, settings, 'LAB INVOICE');
+
 
     // Copy label
     pdf.setFont('helvetica', 'bold');
