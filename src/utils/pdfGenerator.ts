@@ -15,13 +15,7 @@ import {
   thermalDivider,
   thermalLine,
   openThermalPDF,
-  drawThermalCopyBadge,
 } from './thermalReceipt';
-import type { ThermalPrintOptions } from './thermalReceipt';
-
-// When no explicit copies are requested, print a single unlabelled receipt.
-const resolveCopies = (opts: ThermalPrintOptions): Array<string | undefined> =>
-  opts.copies && opts.copies.length ? opts.copies : [undefined];
 
 // Deduplicate hospital invoices: same patient, same amount, within 2 minutes
 const DEDUP_WINDOW_MS = 2 * 60 * 1000;
@@ -182,7 +176,7 @@ export const generateLabInvoicePDF = async (data: {
     discountLabel: string | null;
   };
   createdBy?: string;
-}, opts: ThermalPrintOptions = {}) => {
+}, opts: { autoPrint?: boolean } = {}) => {
   const createdByName = await fetchCreatorName(data.createdBy);
   const settings = await getThermalHospitalSettings();
 
@@ -194,12 +188,7 @@ export const generateLabInvoicePDF = async (data: {
     baseHeight + data.tests.length * perItemHeight + (hasDiscount ? 8 : 0) + (createdByName ? 6 : 0);
 
   const pdf = createThermalDoc(pageHeight);
-  const copyList = resolveCopies(opts);
-  for (let copyIndex = 0; copyIndex < copyList.length; copyIndex++) {
-  const copyLabel = copyList[copyIndex];
-  if (copyIndex > 0) pdf.addPage([THERMAL_WIDTH, Math.max(pageHeight, 60)]);
   let y = await drawThermalHeader(pdf, settings, 'LAB INVOICE');
-  if (copyLabel) y = drawThermalCopyBadge(pdf, y, copyLabel);
 
   // Invoice meta
   pdf.setFont('helvetica', 'normal');
@@ -283,7 +272,6 @@ export const generateLabInvoicePDF = async (data: {
   pdf.text('Payment is due before test collection.', THERMAL_CENTER, y, { align: 'center' });
   y += 3.2;
   pdf.text('Thank you for your visit!', THERMAL_CENTER, y, { align: 'center' });
-  }
 
   return openThermalPDF(pdf, opts);
 };
@@ -502,7 +490,7 @@ export const generateXrayInvoicePDF = async (data: {
   xrayDate: string;
   notes?: string;
   createdBy?: string;
-}, opts: ThermalPrintOptions = {}) => {
+}, opts: { autoPrint?: boolean } = {}) => {
   const createdByName = await fetchCreatorName(data.createdBy);
   const settings = await getThermalHospitalSettings();
 
@@ -517,12 +505,7 @@ export const generateXrayInvoicePDF = async (data: {
     (createdByName ? 6 : 0);
 
   const pdf = createThermalDoc(pageHeight);
-  const copyList = resolveCopies(opts);
-  for (let copyIndex = 0; copyIndex < copyList.length; copyIndex++) {
-  const copyLabel = copyList[copyIndex];
-  if (copyIndex > 0) pdf.addPage([THERMAL_WIDTH, Math.max(pageHeight, 60)]);
   let y = await drawThermalHeader(pdf, settings, 'X-RAY INVOICE');
-  if (copyLabel) y = drawThermalCopyBadge(pdf, y, copyLabel);
 
   // Invoice meta
   pdf.setFont('helvetica', 'normal');
@@ -607,7 +590,6 @@ export const generateXrayInvoicePDF = async (data: {
   pdf.text('Please arrive 15 minutes before your appointment.', THERMAL_CENTER, y, { align: 'center' });
   y += 3.2;
   pdf.text('Payment is required before the examination.', THERMAL_CENTER, y, { align: 'center' });
-  }
 
   return openThermalPDF(pdf, opts);
 };

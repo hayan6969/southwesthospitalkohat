@@ -46,7 +46,6 @@ import { formatPkrAmount } from "@/utils/currency";
 import { format } from "date-fns";
 import { generateLabInvoicePDF } from "@/utils/pdfGenerator";
 import { applyPatientDiscount } from "@/utils/discountUtils";
-import { PrintCopiesDialog } from "@/components/dialogs/PrintCopiesDialog";
 
 interface TestType {
   id: string;
@@ -77,7 +76,6 @@ export function StaffPathologyBilling() {
 
   const [search, setSearch] = useState("");
   const [selectedPatient, setSelectedPatient] = useState<any>(null);
-  const [printPayload, setPrintPayload] = useState<any>(null);
   const [selectedTestIds, setSelectedTestIds] = useState<string[]>([]);
   const [testSearchQuery, setTestSearchQuery] = useState("");
   const [referredBy, setReferredBy] = useState("");
@@ -302,7 +300,7 @@ export function StaffPathologyBilling() {
         (hasDiscount ? ` — discount ${labDiscount.discountLabel} applied` : "")
       );
 
-      // Build the receipt payload and let the user pick which copies to print
+      // Auto-print thermal lab receipt
       try {
         const patientName =
           selectedPatient
@@ -315,7 +313,7 @@ export function StaffPathologyBilling() {
           const t = testTypes!.find((x) => x.id === id)!;
           return { name: t.name, price: Number(t.price ?? 0) };
         });
-        setPrintPayload({
+        await generateLabInvoicePDF({
           invoiceNumber,
           patientName: patientName || "Patient",
           patientEmail: "",
@@ -333,10 +331,10 @@ export function StaffPathologyBilling() {
               discountLabel: labDiscount.discountLabel,
             }
           } : {}),
-        });
+        }, { autoPrint: true });
       } catch (printErr) {
-        console.error("Receipt preparation failed:", printErr);
-        toast.error("Order saved but receipt could not be prepared");
+        console.error("Receipt print failed:", printErr);
+        toast.error("Order saved but receipt failed to open");
       }
 
       qc.invalidateQueries({ queryKey: ["pathology_orders_recent"] });
@@ -845,22 +843,6 @@ export function StaffPathologyBilling() {
           )}
         </CardContent>
       </Card>
-
-      <PrintCopiesDialog
-        open={!!printPayload}
-        onOpenChange={(o) => { if (!o) setPrintPayload(null); }}
-        title="Print Lab Receipt"
-        description="Select the copies to print. Each copy prints on its own thermal slip."
-        options={["Patient Copy", "Lab Copy", "Hospital Copy"]}
-        onPrint={async (copies) => {
-          try {
-            await generateLabInvoicePDF(printPayload, { autoPrint: true, copies });
-          } catch (err) {
-            console.error("Receipt print failed:", err);
-            toast.error("Receipt failed to open");
-          }
-        }}
-      />
     </div>
   );
 }

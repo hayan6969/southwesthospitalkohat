@@ -139,30 +139,11 @@ export const thermalLine = (
   return y;
 };
 
-// Draw a boxed copy label (e.g. "LAB COPY", "HOSPITAL COPY") under the header.
-export const drawThermalCopyBadge = (pdf: jsPDF, y: number, label: string): number => {
-  pdf.setFont('helvetica', 'bold');
-  pdf.setFontSize(8);
-  const boxH = 5;
-  pdf.setLineWidth(0.3);
-  pdf.rect(THERMAL_MARGIN, y - 1, THERMAL_CONTENT_WIDTH, boxH);
-  pdf.text(label.toUpperCase(), THERMAL_CENTER, y + 2.6, { align: 'center' });
-  pdf.setFont('helvetica', 'normal');
-  return y + boxH + 2;
-};
-
-export interface ThermalPrintOptions {
-  autoPrint?: boolean;
-  /** One receipt page per label, e.g. ['Patient Copy', 'Lab Copy', 'Hospital Copy'] */
-  copies?: string[];
-}
-
 // Output the finished receipt.
 // - default: open in a new tab to review, then print manually.
 // - { autoPrint: true }: send straight to the print dialog via a hidden iframe
 //   (no visible tab), e.g. right after creating/confirming an order.
-export const openThermalPDF = (pdf: jsPDF, opts: ThermalPrintOptions = {}): Blob => {
-
+export const openThermalPDF = (pdf: jsPDF, opts: { autoPrint?: boolean } = {}): Blob => {
   if (opts.autoPrint) {
     // Embed a /Print OpenAction so the PDF viewer opens the print dialog itself.
     try { (pdf as unknown as { autoPrint: () => void }).autoPrint(); } catch { /* ignore */ }
