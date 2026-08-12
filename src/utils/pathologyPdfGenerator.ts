@@ -448,19 +448,11 @@ export async function generatePathologyReportPDF(
       // ── RESULT ──
       const flag = p.flag;
       const resultText = p.result_value ?? '—';
-      if (flag) {
-        doc.setTextColor(0, 0, 0);
-      } else {
-        doc.setTextColor(0, 0, 0);
-      }
+      doc.setTextColor(0, 0, 0);
       doc.setFont('helvetica', flag ? 'bold' : 'normal');
       doc.setFontSize(9.8);
-      let rx = colX[1] + 2;
+      const rx = colX[1] + 2;
       doc.text(resultText, rx, y + 4);
-      if (flag) {
-        const valW = doc.getTextWidth(resultText);
-        drawBadge(rx + valW + 2, y + 4, flag);
-      }
       doc.setTextColor(0, 0, 0);
       doc.setFont('helvetica', 'normal');
 
