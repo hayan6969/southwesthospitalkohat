@@ -28,12 +28,16 @@ const deduplicateHospitalInvoices = (invoices: any[]): any[] => {
       (e) =>
         e.patient_id === inv.patient_id &&
         Number(e.amount ?? 0) === amt &&
+        // Distinct invoice numbers are distinct real bills (e.g. emergency slips
+        // that all share the EMERGENCY placeholder patient id) — never collapse them
+        (!e.invoice_number || !inv.invoice_number || e.invoice_number === inv.invoice_number) &&
         Math.abs((e.created_at ? new Date(e.created_at).getTime() : 0) - ts) <= DEDUP_WINDOW_MS
     );
     if (!isDup) kept.push(inv);
   }
   return kept;
 };
+
 
 // Get hospital settings for PDF branding
 const getHospitalSettings = async () => {
@@ -866,11 +870,30 @@ const queryTransactionDataForDate = async (closingDate: string, closingTime: str
     invoice_amount: lr.invoice_id ? labInvoiceMap.get(lr.invoice_id) ?? null : null,
   }));
 
+  // Enrich x-ray reports with invoice amounts (for discount visibility)
+  const xrayReports = xrayReportsRes.data || [];
+  const xrayInvoiceIds = xrayReports.map((xr: any) => xr.invoice_id).filter(Boolean);
+  const xrayInvoiceMap = new Map<string, number>();
+  if (xrayInvoiceIds.length > 0) {
+    const { data: xrayInvoices } = await supabase
+      .from('invoices')
+      .select('id, amount')
+      .in('id', xrayInvoiceIds);
+    (xrayInvoices || []).forEach((inv: any) => {
+      xrayInvoiceMap.set(inv.id, Number(inv.amount) || 0);
+    });
+  }
+  const enrichedXrayReports = xrayReports.map((xr: any) => ({
+    ...xr,
+    invoice_amount: xr.invoice_id ? xrayInvoiceMap.get(xr.invoice_id) ?? null : null,
+  }));
+
   return {
     hospitalInvoices: hospitalInvoicesRes.data || [],
     pharmacyInvoices: pharmacyInvoicesRes.data || [],
     labReports: enrichedLabReports,
-    xrayReports: xrayReportsRes.data || [],
+    xrayReports: enrichedXrayReports,
+
     otSchedules: otSchedulesRes.data || [],
     emergencyAppointments: emergencyAppointmentsRes.data || [],
     expenses: expensesRes.data || [],
@@ -1376,23 +1399,31 @@ export const generateDailyClosingPDF = async (data: {
     });
   });
 
-  // X-ray reports
+  // X-ray reports - use invoice amount (includes discount) if available, fallback to price
   (transactionsData?.xrayReports || []).forEach((xray: any) => {
     const p = (xray as any).xray_patient || (xray as any).patients?.profiles;
-    const xrayTestName = xray.test_name || xray.xray_tests?.name || 'X-Ray';
+    const originalPrice = Number(xray.price) || 0;
+    const invoiceAmount = xray.invoice_amount != null ? Number(xray.invoice_amount) : null;
+    const finalAmount = invoiceAmount != null ? invoiceAmount : originalPrice;
+    const discountApplied = originalPrice > 0 && finalAmount < originalPrice ? originalPrice - finalAmount : 0;
+    let xrayTestName = xray.test_name || xray.xray_tests?.name || 'X-Ray';
+    if (discountApplied > 0) {
+      xrayTestName = `${xrayTestName} (Disc: Rs. ${discountApplied.toFixed(2)})`;
+    }
     allTxns.push({
       patientName: p ? `${p.first_name || ''} ${p.last_name || ''}`.trim() : 'Unknown',
       time: xray.created_at,
       procedure: xrayTestName,
       consultant: '—',
-      amount: Number(xray.price) || 0,
+      amount: finalAmount,
       docShare: 0,
-      hosShare: Number(xray.price) || 0,
+      hosShare: finalAmount,
       operator: resolveXrayOperator(xray),
       category: 'X-Ray',
       shift: getShiftFromTime(xray.created_at),
     });
   });
+
 
   // OT schedules
   (transactionsData?.otSchedules || []).forEach((ot: any) => {
@@ -1857,7 +1888,7 @@ export const generateDailyClosingPDF = async (data: {
 
   (transactionsData?.xrayReports || []).forEach((xray: any) => {
     const originalPrice = Number(xray.price) || 0;
-    const finalAmount = Number(xray.amount) || originalPrice;
+    const finalAmount = xray.invoice_amount != null ? Number(xray.invoice_amount) : (Number(xray.amount) || originalPrice);
     if (originalPrice > 0 && finalAmount < originalPrice) {
       const p = (xray as any).patients?.profiles;
       discountItems.push({
@@ -2026,7 +2057,7 @@ export const generateDailyClosingPDF = async (data: {
   const correctLabRevenue = hospitalInvoicesAll
     .filter((inv: any) => inv.invoice_number?.startsWith?.('LAB-'))
     .reduce((sum: number, inv: any) => sum + (Number(inv.amount) || 0), 0);
-  const correctXrayRevenue = transactionsData?.xrayReports?.reduce((sum: number, xray: any) => sum + (xray.price || 0), 0) || 0;
+  const correctXrayRevenue = transactionsData?.xrayReports?.reduce((sum: number, xray: any) => sum + (xray.invoice_amount != null ? Number(xray.invoice_amount) : (Number(xray.price) || 0)), 0) || 0;
   const correctOtRevenue = transactionsData?.otSchedules?.reduce((sum: number, ot: any) => sum + ((ot.total_cost || 0) - (ot.doctor_expense || 0)), 0) || 0;
   const emergencyAppointmentRevenue = transactionsData?.emergencyAppointments?.reduce((sum: number, e: any) => sum + (e.consultation_fee_at_time || 0), 0) || 0;
   const emergencyInvoiceRevenue = hospitalInvoicesAll.filter(isEmergencyInv).reduce((sum: number, inv: any) => sum + (Number(inv.amount) || 0), 0);
@@ -2606,7 +2637,7 @@ export const generateDailyClosingSummaryPDF = async (data: {
   const labRevenue = labReports.reduce((s: number, r: any) => s + (r.invoice_amount != null ? Number(r.invoice_amount) : (Number(r.price) || 0)), 0);
 
   const xrayReports = transactionsData?.xrayReports || [];
-  const xrayRevenue = xrayReports.reduce((s: number, r: any) => s + (Number(r.price) || 0), 0);
+  const xrayRevenue = xrayReports.reduce((s: number, r: any) => s + (r.invoice_amount != null ? Number(r.invoice_amount) : (Number(r.price) || 0)), 0);
 
   const otSchedules = transactionsData?.otSchedules || [];
   const otTotalCost = otSchedules.reduce((s: number, ot: any) => s + (Number(ot.total_cost) || 0), 0);
