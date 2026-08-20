@@ -28,12 +28,16 @@ const deduplicateHospitalInvoices = (invoices: any[]): any[] => {
       (e) =>
         e.patient_id === inv.patient_id &&
         Number(e.amount ?? 0) === amt &&
+        // Distinct invoice numbers are distinct real bills (e.g. emergency slips
+        // that all share the EMERGENCY placeholder patient id) — never collapse them
+        (!e.invoice_number || !inv.invoice_number || e.invoice_number === inv.invoice_number) &&
         Math.abs((e.created_at ? new Date(e.created_at).getTime() : 0) - ts) <= DEDUP_WINDOW_MS
     );
     if (!isDup) kept.push(inv);
   }
   return kept;
 };
+
 
 // Get hospital settings for PDF branding
 const getHospitalSettings = async () => {
