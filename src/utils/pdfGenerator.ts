@@ -870,11 +870,30 @@ const queryTransactionDataForDate = async (closingDate: string, closingTime: str
     invoice_amount: lr.invoice_id ? labInvoiceMap.get(lr.invoice_id) ?? null : null,
   }));
 
+  // Enrich x-ray reports with invoice amounts (for discount visibility)
+  const xrayReports = xrayReportsRes.data || [];
+  const xrayInvoiceIds = xrayReports.map((xr: any) => xr.invoice_id).filter(Boolean);
+  const xrayInvoiceMap = new Map<string, number>();
+  if (xrayInvoiceIds.length > 0) {
+    const { data: xrayInvoices } = await supabase
+      .from('invoices')
+      .select('id, amount')
+      .in('id', xrayInvoiceIds);
+    (xrayInvoices || []).forEach((inv: any) => {
+      xrayInvoiceMap.set(inv.id, Number(inv.amount) || 0);
+    });
+  }
+  const enrichedXrayReports = xrayReports.map((xr: any) => ({
+    ...xr,
+    invoice_amount: xr.invoice_id ? xrayInvoiceMap.get(xr.invoice_id) ?? null : null,
+  }));
+
   return {
     hospitalInvoices: hospitalInvoicesRes.data || [],
     pharmacyInvoices: pharmacyInvoicesRes.data || [],
     labReports: enrichedLabReports,
-    xrayReports: xrayReportsRes.data || [],
+    xrayReports: enrichedXrayReports,
+
     otSchedules: otSchedulesRes.data || [],
     emergencyAppointments: emergencyAppointmentsRes.data || [],
     expenses: expensesRes.data || [],
