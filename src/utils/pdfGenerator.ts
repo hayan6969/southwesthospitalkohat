@@ -1399,23 +1399,31 @@ export const generateDailyClosingPDF = async (data: {
     });
   });
 
-  // X-ray reports
+  // X-ray reports - use invoice amount (includes discount) if available, fallback to price
   (transactionsData?.xrayReports || []).forEach((xray: any) => {
     const p = (xray as any).xray_patient || (xray as any).patients?.profiles;
-    const xrayTestName = xray.test_name || xray.xray_tests?.name || 'X-Ray';
+    const originalPrice = Number(xray.price) || 0;
+    const invoiceAmount = xray.invoice_amount != null ? Number(xray.invoice_amount) : null;
+    const finalAmount = invoiceAmount != null ? invoiceAmount : originalPrice;
+    const discountApplied = originalPrice > 0 && finalAmount < originalPrice ? originalPrice - finalAmount : 0;
+    let xrayTestName = xray.test_name || xray.xray_tests?.name || 'X-Ray';
+    if (discountApplied > 0) {
+      xrayTestName = `${xrayTestName} (Disc: Rs. ${discountApplied.toFixed(2)})`;
+    }
     allTxns.push({
       patientName: p ? `${p.first_name || ''} ${p.last_name || ''}`.trim() : 'Unknown',
       time: xray.created_at,
       procedure: xrayTestName,
       consultant: '—',
-      amount: Number(xray.price) || 0,
+      amount: finalAmount,
       docShare: 0,
-      hosShare: Number(xray.price) || 0,
+      hosShare: finalAmount,
       operator: resolveXrayOperator(xray),
       category: 'X-Ray',
       shift: getShiftFromTime(xray.created_at),
     });
   });
+
 
   // OT schedules
   (transactionsData?.otSchedules || []).forEach((ot: any) => {
