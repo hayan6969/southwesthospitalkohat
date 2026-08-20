@@ -1888,7 +1888,7 @@ export const generateDailyClosingPDF = async (data: {
 
   (transactionsData?.xrayReports || []).forEach((xray: any) => {
     const originalPrice = Number(xray.price) || 0;
-    const finalAmount = Number(xray.amount) || originalPrice;
+    const finalAmount = xray.invoice_amount != null ? Number(xray.invoice_amount) : (Number(xray.amount) || originalPrice);
     if (originalPrice > 0 && finalAmount < originalPrice) {
       const p = (xray as any).patients?.profiles;
       discountItems.push({
@@ -2057,7 +2057,7 @@ export const generateDailyClosingPDF = async (data: {
   const correctLabRevenue = hospitalInvoicesAll
     .filter((inv: any) => inv.invoice_number?.startsWith?.('LAB-'))
     .reduce((sum: number, inv: any) => sum + (Number(inv.amount) || 0), 0);
-  const correctXrayRevenue = transactionsData?.xrayReports?.reduce((sum: number, xray: any) => sum + (xray.price || 0), 0) || 0;
+  const correctXrayRevenue = transactionsData?.xrayReports?.reduce((sum: number, xray: any) => sum + (xray.invoice_amount != null ? Number(xray.invoice_amount) : (Number(xray.price) || 0)), 0) || 0;
   const correctOtRevenue = transactionsData?.otSchedules?.reduce((sum: number, ot: any) => sum + ((ot.total_cost || 0) - (ot.doctor_expense || 0)), 0) || 0;
   const emergencyAppointmentRevenue = transactionsData?.emergencyAppointments?.reduce((sum: number, e: any) => sum + (e.consultation_fee_at_time || 0), 0) || 0;
   const emergencyInvoiceRevenue = hospitalInvoicesAll.filter(isEmergencyInv).reduce((sum: number, inv: any) => sum + (Number(inv.amount) || 0), 0);
@@ -2637,7 +2637,7 @@ export const generateDailyClosingSummaryPDF = async (data: {
   const labRevenue = labReports.reduce((s: number, r: any) => s + (r.invoice_amount != null ? Number(r.invoice_amount) : (Number(r.price) || 0)), 0);
 
   const xrayReports = transactionsData?.xrayReports || [];
-  const xrayRevenue = xrayReports.reduce((s: number, r: any) => s + (Number(r.price) || 0), 0);
+  const xrayRevenue = xrayReports.reduce((s: number, r: any) => s + (r.invoice_amount != null ? Number(r.invoice_amount) : (Number(r.price) || 0)), 0);
 
   const otSchedules = transactionsData?.otSchedules || [];
   const otTotalCost = otSchedules.reduce((s: number, ot: any) => s + (Number(ot.total_cost) || 0), 0);
