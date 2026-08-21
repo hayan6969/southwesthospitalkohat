@@ -158,7 +158,13 @@ export function PreviousClosingsDialog() {
   const computeServicesRevenue = (td?: any): number => {
     if (!td) return 0;
     const lab = (td.labReports || []).reduce((s: number, r: any) => s + (Number(r.price) || Number(r.amount) || 0), 0);
-    const xray = (td.xrayReports || []).reduce((s: number, r: any) => s + (Number(r.price) || Number(r.amount) || 0), 0);
+    // X-ray revenue comes from the paid XR- invoices (reflects discounts).
+    // Older snapshots stored xray_reports rows instead, so fall back to those.
+    const xrayFromInvoices = (td.hospitalInvoices || [])
+      .filter((inv: any) => /^XR-/i.test(inv?.invoice_number || ''))
+      .reduce((s: number, inv: any) => s + (Number(inv.amount) || 0), 0);
+    const xrayFromReports = (td.xrayReports || []).reduce((s: number, r: any) => s + (Number(r.price) || Number(r.amount) || 0), 0);
+    const xray = xrayFromInvoices || xrayFromReports;
     const ot = (td.otSchedules || []).reduce((s: number, ot: any) => s + ((Number(ot.total_cost) || 0) - (Number(ot.doctor_expense) || 0)), 0);
     const emergencyAppointments = (td.emergencyAppointments || []).reduce((s: number, e: any) => s + (Number(e.consultation_fee_at_time) || 0), 0);
     const emergencyInvoices = (td.hospitalInvoices || []).filter((inv: any) =>
