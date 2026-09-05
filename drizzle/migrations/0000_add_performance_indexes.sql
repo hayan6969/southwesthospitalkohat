@@ -1,0 +1,10 @@
+CREATE INDEX IF NOT EXISTS idx_profiles_created_at ON public.profiles (created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_invoices_created_at ON public.invoices (created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_invoices_status_created_at ON public.invoices (status, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_created_at ON public.audit_logs (created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_user_id ON public.audit_logs (user_id);
+ANALYZE public.profiles;
+ANALYZE public.invoices;
+ANALYZE public.audit_logs;
+ANALYZE public.lab_pathology_reports;
+ANALYZE public.daily_closings;
