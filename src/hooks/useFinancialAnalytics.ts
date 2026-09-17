@@ -196,10 +196,14 @@ export const useFinancialAnalytics = (selectedMonth?: Date, filterParams?: Filte
 
       const totalLabRevenue =
         labReportsArr.reduce((s: number, r: any) => s + (Number(r.price) || 0), 0) + pathologyLabRevenue;
-      // X-ray revenue: read from XR- invoices so post-billing discounts reflect
+      // X-ray revenue: read from XR- invoices so post-billing discounts reflect,
+      // minus refunds booked against X-ray
+      const xrayRefunds = (refunds || [])
+        .filter((r: any) => r.refund_type === 'xray')
+        .reduce((s: number, r: any) => s + (Number(r.amount) || 0), 0);
       const totalXrayRevenue = hospitalInvoicesArr
         .filter((inv: any) => /^XR-/i.test(inv.invoice_number || ''))
-        .reduce((s: number, inv: any) => s + (Number(inv.amount) || 0), 0);
+        .reduce((s: number, inv: any) => s + (Number(inv.amount) || 0), 0) - xrayRefunds;
       const totalOperationsRevenue = otSchedulesArr.reduce((s: number, ot: any) =>
         s + ((Number(ot.total_cost) || 0) - (Number(ot.doctor_expense) || 0)), 0);
       const otDoctorExpense = otSchedulesArr.reduce((s: number, ot: any) => s + (Number(ot.doctor_expense) || 0), 0);
@@ -246,8 +250,9 @@ export const useFinancialAnalytics = (selectedMonth?: Date, filterParams?: Filte
       const totalInvoicesAmount = hospitalInvoicesArr.reduce((sum, inv: any) => sum + (Number(inv.amount) || 0), 0);
       // Exclude discount_adjustment: those already reduced invoice.amount, so
       // subtracting them again would double-count the discount against profit.
+      // Exclude xray: already deducted from X-ray revenue above.
       const totalRefunds = refunds
-        ?.filter((r: any) => r.refund_type !== 'discount_adjustment')
+        ?.filter((r: any) => r.refund_type !== 'discount_adjustment' && r.refund_type !== 'xray')
         .reduce((sum, r) => sum + (Number(r.amount) || 0), 0) || 0;
       const doctorPaymentsPaidCount = doctorPaymentsCount || 0;
       const doctorPaymentsPaidAmount = doctorPayments?.reduce((sum, dp) => sum + (Number(dp.total_earnings) || 0), 0) || 0;
