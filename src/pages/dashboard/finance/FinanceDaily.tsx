@@ -138,14 +138,17 @@ export default function FinanceDaily() {
         pharmacyProfit = grossPharmacyProfit - returnsProfit;
       }
       const labRevenue = labInvoices?.reduce((sum, inv) => sum + (inv.amount || 0), 0) || 0;
-      const xrayRevenue = xrayReports?.reduce((sum, xray: any) => sum + (Number(xray.amount) || 0), 0) || 0;
+      // X-ray refunds reduce the X-ray bucket directly (not the generic refunds total)
+      const xrayRefunds = refunds?.filter(r => r.refund_type === 'xray').reduce((sum, r) => sum + (Number(r.amount) || 0), 0) || 0;
+      const xrayRevenue = (xrayReports?.reduce((sum, xray: any) => sum + (Number(xray.amount) || 0), 0) || 0) - xrayRefunds;
       const otHospitalRevenue = otSchedules?.reduce((sum, ot) => sum + ((ot.total_cost || 0) - (ot.doctor_expense || 0)), 0) || 0;
       const otDoctorExpense = otSchedules?.reduce((sum, ot) => sum + (ot.doctor_expense || 0), 0) || 0;
       const miscellaneousIncome = miscIncome?.reduce((sum, income) => sum + (income.amount || 0), 0) || 0;
       const totalExpenses = expenses?.reduce((sum, exp) => sum + exp.amount, 0) || 0;
       // Exclude discount_adjustment refunds — invoice amounts are already reduced,
       // subtracting the refund too would double-count the discount against profit.
-      const totalRefunds = refunds?.filter(r => r.refund_type !== 'discount_adjustment').reduce((sum, ref) => sum + ref.amount, 0) || 0;
+      // Exclude xray refunds — already deducted from X-ray revenue above.
+      const totalRefunds = refunds?.filter(r => r.refund_type !== 'discount_adjustment' && r.refund_type !== 'xray').reduce((sum, ref) => sum + ref.amount, 0) || 0;
 
       const doctorRevenue = consultationRevenue + otDoctorExpense;
 
@@ -168,7 +171,7 @@ export default function FinanceDaily() {
 
       const otRefunds = refunds?.filter(r => r.refund_type.includes('ot'))?.reduce((sum, r) => sum + r.amount, 0) || 0;
       const pharmacyRefunds = pharmacyReturnsFromInvoices + (refunds?.filter(r => r.refund_type === 'pharmacy_invoice')?.reduce((sum, r) => sum + r.amount, 0) || 0);
-      const otherRefunds = refunds?.filter(r => !r.refund_type.includes('ot') && r.refund_type !== 'pharmacy_invoice' && r.refund_type !== 'discount_adjustment')?.reduce((sum, r) => sum + r.amount, 0) || 0;
+      const otherRefunds = refunds?.filter(r => !r.refund_type.includes('ot') && r.refund_type !== 'pharmacy_invoice' && r.refund_type !== 'discount_adjustment' && r.refund_type !== 'xray')?.reduce((sum, r) => sum + r.amount, 0) || 0;
 
       return {
         emergencyRevenue,
@@ -488,16 +491,17 @@ export default function FinanceDaily() {
       pharmacyProfit = grossPharmacyProfit - returnsProfit;
 
       const labRevenue = labInvoices.reduce((sum, inv) => sum + (Number(inv.amount) || 0), 0);
-      // X-ray revenue from XR- invoices so discounts reflect
+      // X-ray revenue from XR- invoices so discounts reflect, minus X-ray refunds
+      const xrayRefunds = refunds.filter((r: any) => r.refund_type === 'xray').reduce((sum: number, r: any) => sum + (Number(r.amount) || 0), 0);
       const xrayRevenue = hospitalInvoices
         .filter((inv: any) => /^XR-/i.test(inv.invoice_number || ''))
-        .reduce((sum: number, inv: any) => sum + (Number(inv.amount) || 0), 0);
+        .reduce((sum: number, inv: any) => sum + (Number(inv.amount) || 0), 0) - xrayRefunds;
       const otHospitalRevenue = otSchedules.reduce((sum, ot) => 
         sum + ((ot.total_cost || 0) - (ot.doctor_expense || 0)), 0);
       const miscIncome = miscellaneousIncome.reduce((sum, income) => sum + (income.amount || 0), 0);
       const totalExpenses = expenses.reduce((sum, exp) => sum + exp.amount, 0);
-      // Exclude discount_adjustment: invoice.amount is already reduced
-      const totalRefunds = refunds.filter((r: any) => r.refund_type !== 'discount_adjustment').reduce((sum: number, ref: any) => sum + ref.amount, 0);
+      // Exclude discount_adjustment (invoice.amount already reduced) and xray (deducted from X-ray revenue)
+      const totalRefunds = refunds.filter((r: any) => r.refund_type !== 'discount_adjustment' && r.refund_type !== 'xray').reduce((sum: number, ref: any) => sum + ref.amount, 0);
 
       // IPD calculations
       const ipdDoctorRevenue = ipdInvoices.reduce((sum, inv) => sum + (Number(inv.doctor_charges_total) || 0), 0);
