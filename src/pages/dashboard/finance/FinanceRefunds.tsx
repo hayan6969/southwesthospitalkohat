@@ -591,7 +591,6 @@ export default function FinanceRefunds() {
       ot_doctor: "OT Doctor",
       ot_simple: "OT Simple",
       lab: "Lab Report",
-      xray: "X-ray",
       pharmacy: "Pharmacy",
       emergency: "Emergency",
       other: "Other Hospital Services"
@@ -605,7 +604,6 @@ export default function FinanceRefunds() {
       ot_doctor: "bg-red-100 text-red-800",
       ot_simple: "bg-orange-100 text-orange-800",
       lab: "bg-green-100 text-green-800",
-      xray: "bg-pink-100 text-pink-800",
       pharmacy: "bg-purple-100 text-purple-800",
       emergency: "bg-rose-100 text-rose-800",
       other: "bg-gray-100 text-gray-800"
@@ -664,7 +662,6 @@ export default function FinanceRefunds() {
                     <SelectItem value="ot_doctor">OT Doctor</SelectItem>
                     <SelectItem value="ot_simple">OT Simple</SelectItem>
                     <SelectItem value="lab">Lab Report</SelectItem>
-                    <SelectItem value="xray">X-ray</SelectItem>
                     <SelectItem value="pharmacy">Pharmacy</SelectItem>
                     <SelectItem value="emergency">Emergency</SelectItem>
                     <SelectItem value="other">Other Hospital Services</SelectItem>
