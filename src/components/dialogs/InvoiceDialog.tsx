@@ -9,7 +9,6 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { Plus, X, User } from "lucide-react";
-import { convertUsdToPkr } from "@/utils/currency";
 import { generateInvoicePDF } from "@/utils/pdfGenerator";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -58,13 +57,12 @@ export function InvoiceDialog() {
     }
 
     try {
-      const usdAmount = amountNumber / convertUsdToPkr(1);
       const invoiceNumber = generateInvoiceNumber();
       
       await createInvoice.mutateAsync({
         patient_id: patientId,
         invoice_number: invoiceNumber,
-        amount: usdAmount,
+        amount: amountNumber,
         description: description.trim(),
         due_date: dueDate || undefined,
         status: 'paid'
