@@ -226,7 +226,17 @@ export function PathologyReportWizard() {
         .order("created_at", { ascending: false })
         .limit(50);
       if (error) throw error;
-      return data as any[];
+      const orders = (data || []) as any[];
+      const invIds = Array.from(new Set(orders.map((o) => o.invoice_id).filter(Boolean)));
+      if (invIds.length === 0) return orders;
+      const { data: invs } = await supabase
+        .from("invoices")
+        .select("id, status")
+        .in("id", invIds);
+      const validInvIds = new Set(
+        (invs || []).filter((i: any) => i.status !== "cancelled").map((i: any) => i.id)
+      );
+      return orders.filter((o) => !o.invoice_id || validInvIds.has(o.invoice_id));
     },
   });
 
