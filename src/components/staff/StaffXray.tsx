@@ -9,7 +9,7 @@ import { format } from "date-fns";
 import { Input } from "@/components/ui/input";
 import { Search, X, FileText } from "lucide-react";
 import { formatPkrAmount } from "@/utils/currency";
-import { generateXrayInvoicePDF } from "@/utils/pdfGenerator";
+import { generateXrayInvoicePDF, prepareXrayInvoiceData } from "@/utils/pdfGenerator";
 import { formatPatientInfo } from "@/utils/patientUtils";
 
 export function StaffXray() {
@@ -107,33 +107,8 @@ export function StaffXray() {
 
   const handleDownloadPDF = async (report: any) => {
     try {
-      const patient = patients?.find(p => p.id === report.patient_id);
-      const patientProfile = patientProfiles?.find(p => p.id === report.patient_id);
-      const doctorProfile = doctors?.find(d => d.id === report.doctor_id);
-      
-      // Use patient number for patient info
-      const patientId = patient?.patient_number || 'Not assigned';
-      const patientName = patientProfile ? `${patientProfile.first_name || ''} ${patientProfile.last_name || ''}`.trim() : 'Unknown Patient';
-      
-      await generateXrayInvoicePDF({
-        invoiceNumber: `XR-${report.id.slice(0, 8)}`,
-        patientName: patientName,
-        patientEmail: 'Not provided',
-        patientId: patientId,
-        patientPhone: patientProfile?.phone || 'Not provided',
-        doctorName: report.external_doctor_name || 
-          (doctorProfile ? `Dr. ${doctorProfile.first_name} ${doctorProfile.last_name}` : undefined),
-        tests: [{
-          name: report.test_name,
-          price: report.price || 0,
-          description: report.notes || undefined
-        }],
-        totalAmount: report.price || 0,
-        issueDate: new Date(report.created_at).toLocaleDateString(),
-        xrayDate: new Date(report.xray_date || report.created_at).toLocaleDateString(),
-        notes: report.notes,
-        createdBy: report.created_by
-      });
+      const xrayData = await prepareXrayInvoiceData(report);
+      await generateXrayInvoicePDF(xrayData);
     } catch (error) {
       console.error('Error generating X-ray PDF:', error);
     }

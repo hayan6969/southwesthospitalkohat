@@ -56,6 +56,32 @@ interface PathologyOrder {
   };
 }
 
+interface XrayOrderItem {
+  id: string;
+  test_name: string;
+  price: number;
+  status?: string;
+}
+
+interface XrayOrder {
+  id: string;
+  invoice_number: string;
+  patient_id: string | null;
+  amount: number;
+  status: string;
+  description: string;
+  created_at: string;
+  items: XrayOrderItem[];
+  patient?: {
+    patient_number: string;
+    profile?: {
+      first_name: string;
+      last_name: string;
+      phone: string | null;
+    };
+  };
+}
+
 export default function FinanceRefunds() {
   const { profile } = useAuth();
   const { logCreate } = useAuditLogger();
@@ -79,6 +105,14 @@ export default function FinanceRefunds() {
   // Actual amount the patient paid (invoice amount, after any discount). The
   // order_items prices are catalog snapshots and don't reflect discounts.
   const [invoiceAmount, setInvoiceAmount] = useState<number | null>(null);
+
+  // X-ray refund state
+  const [xraySearch, setXraySearch] = useState("");
+  const [searchingXray, setSearchingXray] = useState(false);
+  const [selectedXrayOrder, setSelectedXrayOrder] = useState<XrayOrder | null>(null);
+  const [selectedXrayTestIds, setSelectedXrayTestIds] = useState<Set<string>>(new Set());
+  const [showXrayConfirm, setShowXrayConfirm] = useState(false);
+  const [xrayInvoiceAmount, setXrayInvoiceAmount] = useState<number | null>(null);
 
   // Emergency refund lookup state
   const [emergencySearch, setEmergencySearch] = useState("");
@@ -275,6 +309,14 @@ export default function FinanceRefunds() {
     setFormData(prev => ({ ...prev, amount: "", description: "" }));
   };
 
+  const clearXraySelection = () => {
+    setSelectedXrayOrder(null);
+    setXraySearch("");
+    setSelectedXrayTestIds(new Set());
+    setXrayInvoiceAmount(null);
+    setFormData(prev => ({ ...prev, amount: "", description: "" }));
+  };
+
   const lookupEmergency = async () => {
     const q = emergencySearch.trim();
     if (!q) {
@@ -349,6 +391,205 @@ export default function FinanceRefunds() {
     }
   };
 
+  const lookupXrayOrder = async () => {
+    const q = xraySearch.trim();
+    if (!q) {
+      toast.error("Enter an X-ray invoice number");
+      return;
+    }
+    setSearchingXray(true);
+    setSelectedXrayOrder(null);
+    setSelectedXrayTestIds(new Set());
+    setXrayInvoiceAmount(null);
+
+    try {
+      // 1. Try finding invoice by exact invoice_number
+      let invoice: any = null;
+      const { data: invByNum } = await supabase
+        .from('invoices')
+        .select('*')
+        .eq('invoice_number', q)
+        .maybeSingle();
+
+      if (invByNum) {
+        invoice = invByNum;
+      } else if (!q.toUpperCase().startsWith('XR-')) {
+        const { data: invWithPrefix } = await supabase
+          .from('invoices')
+          .select('*')
+          .eq('invoice_number', `XR-${q}`)
+          .maybeSingle();
+        if (invWithPrefix) invoice = invWithPrefix;
+      }
+
+      // 2. Try by ID if 36 chars, or ilike
+      if (!invoice) {
+        if (q.length === 36) {
+          const { data: invById } = await supabase
+            .from('invoices')
+            .select('*')
+            .eq('id', q)
+            .maybeSingle();
+          if (invById) invoice = invById;
+        } else {
+          const { data: invLike } = await supabase
+            .from('invoices')
+            .select('*')
+            .ilike('invoice_number', `%${q}%`)
+            .maybeSingle();
+          if (invLike) invoice = invLike;
+        }
+      }
+
+      // 3. Fallback: try finding via xray_reports if user entered report id
+      if (!invoice && q.length === 36) {
+        const { data: rep } = await supabase
+          .from('xray_reports')
+          .select('invoice_id')
+          .eq('id', q)
+          .maybeSingle();
+        if (rep?.invoice_id) {
+          const { data: repInv } = await supabase
+            .from('invoices')
+            .select('*')
+            .eq('id', rep.invoice_id)
+            .maybeSingle();
+          if (repInv) invoice = repInv;
+        }
+      }
+
+      if (!invoice) {
+        toast.error("X-ray invoice not found");
+        return;
+      }
+
+      if (invoice.status === 'cancelled') {
+        toast.error("This X-ray invoice is already cancelled");
+        return;
+      }
+
+      const isXray =
+        /^XR-/i.test(invoice.invoice_number || '') ||
+        (invoice.description || '').toLowerCase().includes('x-ray') ||
+        (invoice.description || '').toLowerCase().includes('xray');
+      if (!isXray) {
+        toast.error("This invoice is not an X-ray invoice");
+        return;
+      }
+
+      // Fetch patient details
+      let patientData: any = undefined;
+      if (invoice.patient_id) {
+        const [patientRes, profileRes] = await Promise.all([
+          supabase.from('patients').select('patient_number').eq('id', invoice.patient_id).maybeSingle(),
+          supabase.from('profiles').select('first_name, last_name, phone').eq('id', invoice.patient_id).maybeSingle(),
+        ]);
+        patientData = {
+          patient_number: patientRes.data?.patient_number || 'N/A',
+          profile: profileRes.data || undefined,
+        };
+      }
+
+      // Fetch linked tests from xray_reports
+      const { data: reports } = await supabase
+        .from('xray_reports')
+        .select('*')
+        .eq('invoice_id', invoice.id)
+        .order('created_at', { ascending: true });
+
+      let items: XrayOrderItem[] = [];
+      if (reports && reports.length > 0) {
+        items = reports
+          .filter((r: any) => r.status !== 'cancelled')
+          .map((r: any) => ({
+            id: r.id,
+            test_name: r.test_name || 'X-Ray Test',
+            price: Number(r.price) || 0,
+            status: r.status,
+          }));
+      }
+
+      // If no xray_reports found, parse description
+      if (items.length === 0) {
+        const desc = invoice.description || '';
+        let descClean = desc.replace(/^X-ray Tests:\s*/i, '');
+        descClean = descClean.replace(/\s*\([^)]*discount[^)]*\)\s*$/i, '');
+        const testNames = descClean.split(',').map((s: string) => s.trim()).filter(Boolean);
+        const totalAmt = Number(invoice.amount || 0);
+        if (testNames.length > 0) {
+          const splitPrice = Math.round((totalAmt / testNames.length) * 100) / 100;
+          items = testNames.map((name: string, idx: number) => ({
+            id: `fallback-${idx}`,
+            test_name: name,
+            price: splitPrice,
+          }));
+        } else {
+          items = [{
+            id: `fallback-0`,
+            test_name: 'X-Ray Examination',
+            price: totalAmt,
+          }];
+        }
+      }
+
+      const invAmount = Number(invoice.amount) || 0;
+      setXrayInvoiceAmount(invAmount);
+
+      const xrayOrderObj: XrayOrder = {
+        id: invoice.id,
+        invoice_number: invoice.invoice_number,
+        patient_id: invoice.patient_id,
+        amount: invAmount,
+        status: invoice.status,
+        description: invoice.description || '',
+        created_at: invoice.created_at,
+        items,
+        patient: patientData,
+      };
+
+      setSelectedXrayOrder(xrayOrderObj);
+      const allIds = new Set(items.map(it => it.id));
+      setSelectedXrayTestIds(allIds);
+
+      setFormData(prev => ({
+        ...prev,
+        amount: String(invAmount),
+        description: `X-ray refund for invoice ${invoice.invoice_number}`,
+      }));
+    } catch (err) {
+      console.error('Error looking up X-ray invoice:', err);
+      toast.error("Failed to look up X-ray invoice");
+    } finally {
+      setSearchingXray(false);
+    }
+  };
+
+  const toggleXrayTestItem = (itemId: string) => {
+    setSelectedXrayTestIds(prev => {
+      const next = new Set(prev);
+      if (next.has(itemId)) next.delete(itemId);
+      else next.add(itemId);
+      return next;
+    });
+  };
+
+  const allXrayItems = selectedXrayOrder?.items || [];
+  const selectedXrayItems = allXrayItems.filter(item => selectedXrayTestIds.has(item.id));
+  const xrayCatalogTotal = allXrayItems.reduce((sum, item) => sum + Number(item.price || 0), 0);
+  const selectedXrayCatalog = selectedXrayItems.reduce((sum, item) => sum + Number(item.price || 0), 0);
+  const isFullXraySelection = allXrayItems.length > 0 && selectedXrayItems.length === allXrayItems.length;
+  const xrayRefundAmount = xrayInvoiceAmount != null
+    ? (isFullXraySelection
+        ? xrayInvoiceAmount
+        : xrayCatalogTotal > 0 ? Math.round((xrayInvoiceAmount * selectedXrayCatalog) / xrayCatalogTotal) : 0)
+    : selectedXrayCatalog;
+  const isXrayDiscounted = xrayInvoiceAmount != null && xrayInvoiceAmount < xrayCatalogTotal;
+
+  useEffect(() => {
+    if (selectedXrayOrder && formData.refundType === 'xray') {
+      setFormData(prev => ({ ...prev, amount: xrayRefundAmount.toString() }));
+    }
+  }, [xrayRefundAmount, selectedXrayOrder, formData.refundType]);
 
   const allItems = selectedOrder?.lab_pathology_order_items || [];
   const selectedItems = allItems.filter(item => selectedTestIds.has(item.id));
@@ -459,6 +700,49 @@ export default function FinanceRefunds() {
         }
       }
 
+      // X-ray refund: full selection voids invoice + cancels xray_reports.
+      // Partial selection cancels selected tests and reduces the invoice amount.
+      if (refundData.refundType === 'xray' && selectedXrayOrder) {
+        if (selectedXrayItems.length === 0) {
+          throw new Error("Select at least one X-ray test to refund");
+        }
+
+        if (isFullXraySelection) {
+          const { error: invError } = await supabase
+            .from('invoices')
+            .update({ status: 'cancelled' })
+            .eq('id', selectedXrayOrder.id);
+          if (invError) throw invError;
+
+          const { error: repError } = await supabase
+            .from('xray_reports')
+            .update({ status: 'cancelled' })
+            .eq('invoice_id', selectedXrayOrder.id);
+          if (repError) console.error('Error cancelling xray_reports:', repError);
+        } else {
+          // Partial: cancel only selected tests and adjust invoice amount
+          const selectedRealReportIds = selectedXrayItems
+            .filter(item => !item.id.startsWith('fallback-'))
+            .map(item => item.id);
+
+          if (selectedRealReportIds.length > 0) {
+            const { error: repError } = await supabase
+              .from('xray_reports')
+              .update({ status: 'cancelled' })
+              .in('id', selectedRealReportIds);
+            if (repError) console.error('Error cancelling selected xray_reports:', repError);
+          }
+
+          const baseAmount = xrayInvoiceAmount != null ? xrayInvoiceAmount : selectedXrayOrder.amount;
+          const newInvoiceAmount = Math.max(0, baseAmount - parseFloat(refundData.amount));
+          const { error: invError } = await supabase
+            .from('invoices')
+            .update({ amount: newInvoiceAmount })
+            .eq('id', selectedXrayOrder.id);
+          if (invError) console.error('Error adjusting invoice:', invError);
+        }
+      }
+
       const { data: refund, error: refundError } = await supabase
         .from('refunds')
         .insert({
@@ -466,8 +750,8 @@ export default function FinanceRefunds() {
           refund_type: refundData.refundType,
           description: refundData.description,
           doctor_id: refundData.doctorId || null,
-          patient_id: selectedOrder?.patient_id || selectedEmergency?.patient_id || null,
-          related_record_id: selectedOrder?.id || selectedEmergency?.id || null,
+          patient_id: selectedOrder?.patient_id || selectedEmergency?.patient_id || selectedXrayOrder?.patient_id || null,
+          related_record_id: selectedOrder?.id || selectedEmergency?.id || selectedXrayOrder?.id || null,
           processed_by: profile?.id,
           proof_url: proofUrl
         })
@@ -503,6 +787,32 @@ export default function FinanceRefunds() {
         }
       }
 
+      // Generate refund slip PDF for X-ray cancellations
+      if (refundData.refundType === 'xray' && selectedXrayOrder) {
+        const patient = selectedXrayOrder.patient;
+        const items = selectedXrayItems.length > 0 ? selectedXrayItems : selectedXrayOrder.items;
+        try {
+          await generateRefundSlipPDF({
+            refundNumber: refund.id.slice(0, 8).toUpperCase(),
+            patientName: patient ? `${patient.profile?.first_name || ''} ${patient.profile?.last_name || ''}`.trim() : 'N/A',
+            patientNumber: patient?.patient_number || 'N/A',
+            patientContact: patient?.profile?.phone || null,
+            orderNumber: selectedXrayOrder.invoice_number,
+            items: items.map(item => ({
+              testName: item.test_name,
+              price: Number(item.price || 0)
+            })),
+            totalAmount: items.reduce((sum, item) => sum + Number(item.price || 0), 0),
+            refundAmount: parseFloat(refundData.amount),
+            reason: refundData.description,
+            processedBy: profile ? `${profile.first_name} ${profile.last_name}` : 'N/A',
+            date: format(new Date(), 'dd/MM/yyyy hh:mm a')
+          });
+        } catch (pdfError) {
+          console.error('Error generating X-ray refund slip:', pdfError);
+        }
+      }
+
       const doctorName = refundData.doctorId ? 
         `Dr. ${doctors?.find(d => d.id === refundData.doctorId)?.first_name} ${doctors?.find(d => d.id === refundData.doctorId)?.last_name}` : 
         'N/A';
@@ -521,12 +831,15 @@ export default function FinanceRefunds() {
       queryClient.invalidateQueries({ queryKey: ['admin-finance-analytics'] });
       queryClient.invalidateQueries({ queryKey: ['daily-detailed'] });
       queryClient.invalidateQueries({ queryKey: ['expenses'] });
+      queryClient.invalidateQueries({ queryKey: ['xray-reports'] });
+      queryClient.invalidateQueries({ queryKey: ['invoices'] });
       queryClient.refetchQueries({ type: 'active' });
       setFormData({ amount: "", refundType: "", description: "", doctorId: "" });
       setSelectedOrder(null);
       setOrderSearch("");
       setSelectedEmergency(null);
       setEmergencySearch("");
+      clearXraySelection();
       setShowConfirmDialog(false);
       setProofFile(null);
       toast.success("Refund processed successfully");
@@ -564,6 +877,16 @@ export default function FinanceRefunds() {
 
     if (formData.refundType === 'lab' && selectedItems.length === 0) {
       toast.error("Please select at least one lab test to refund");
+      return;
+    }
+
+    if (formData.refundType === 'xray' && !selectedXrayOrder) {
+      toast.error("Please select an X-ray invoice to refund");
+      return;
+    }
+
+    if (formData.refundType === 'xray' && selectedXrayItems.length === 0) {
+      toast.error("Please select at least one X-ray test to refund");
       return;
     }
 
@@ -654,6 +977,7 @@ export default function FinanceRefunds() {
                     setFormData(prev => ({ ...prev, refundType: value, doctorId: "" }));
                     if (value !== 'lab') clearLabSelection();
                     if (value !== 'emergency') clearEmergencySelection();
+                    if (value !== 'xray') clearXraySelection();
                   }}
                 >
                   <SelectTrigger>
@@ -714,6 +1038,33 @@ export default function FinanceRefunds() {
                     </Button>
                     {selectedOrder && (
                       <Button type="button" variant="ghost" size="icon" onClick={clearLabSelection}>
+                        <X className="w-4 h-4" />
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {formData.refundType === 'xray' && (
+                <div className="space-y-2">
+                  <Label>Find X-ray Invoice</Label>
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder="X-ray invoice number (XR-...)"
+                      value={xraySearch}
+                      onChange={(e) => {
+                        setXraySearch(e.target.value);
+                        if (selectedXrayOrder) clearXraySelection();
+                      }}
+                      onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), lookupXrayOrder())}
+                      className="flex-1"
+                    />
+                    <Button type="button" variant="outline" onClick={lookupXrayOrder} disabled={searchingXray}>
+                      <Search className="w-4 h-4 mr-2" />
+                      {searchingXray ? "Searching..." : "Lookup"}
+                    </Button>
+                    {selectedXrayOrder && (
+                      <Button type="button" variant="ghost" size="icon" onClick={clearXraySelection}>
                         <X className="w-4 h-4" />
                       </Button>
                     )}
@@ -835,6 +1186,15 @@ export default function FinanceRefunds() {
                     <div className="bg-gray-50 p-3 rounded space-y-1 text-sm">
                       <p><strong>Amount:</strong> {formatPkrAmount(parseFloat(formData.amount || "0"))}</p>
                       <p><strong>Type:</strong> {getRefundTypeLabel(formData.refundType)}</p>
+                      {formData.refundType === 'lab' && selectedOrder && (
+                        <p><strong>Order:</strong> {selectedOrder.order_number}</p>
+                      )}
+                      {formData.refundType === 'xray' && selectedXrayOrder && (
+                        <p><strong>Invoice:</strong> {selectedXrayOrder.invoice_number}</p>
+                      )}
+                      {formData.refundType === 'emergency' && selectedEmergency && (
+                        <p><strong>Invoice:</strong> {selectedEmergency.number}</p>
+                      )}
                       {isDoctorRelated(formData.refundType) && formData.doctorId && (
                         <p><strong>Doctor:</strong> Dr. {doctors?.find(d => d.id === formData.doctorId)?.first_name} {doctors?.find(d => d.id === formData.doctorId)?.last_name}</p>
                       )}
@@ -983,6 +1343,147 @@ export default function FinanceRefunds() {
                       setFormData(prev => ({ ...prev, amount: labRefundAmount.toString() }));
                       setShowConfirmDialog(true);
                       setShowLabConfirm(false);
+                    }}
+                    className="bg-red-600 hover:bg-red-700"
+                  >
+                    Confirm Cancellation
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* X-ray Order Details & Test Selection */}
+      {selectedXrayOrder && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 justify-between">
+              <span>Invoice {selectedXrayOrder.invoice_number}</span>
+              <Badge variant="secondary">{selectedXrayOrder.items.length} tests</Badge>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 bg-gray-50 rounded-lg text-sm">
+              <div>
+                <p className="text-gray-500">Patient</p>
+                <p className="font-medium">
+                  {selectedXrayOrder.patient?.profile?.first_name || ''} {selectedXrayOrder.patient?.profile?.last_name || 'N/A'}
+                </p>
+              </div>
+              <div>
+                <p className="text-gray-500">Patient ID</p>
+                <p className="font-medium">{selectedXrayOrder.patient?.patient_number || 'N/A'}</p>
+              </div>
+              <div>
+                <p className="text-gray-500">Status</p>
+                <p className="font-medium capitalize">{selectedXrayOrder.status}</p>
+              </div>
+              <div>
+                <p className="text-gray-500">Invoice Amount</p>
+                <p className="font-medium">{formatPkrAmount(selectedXrayOrder.amount)}</p>
+              </div>
+            </div>
+
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-10">Select</TableHead>
+                  <TableHead>Test</TableHead>
+                  <TableHead className="text-right">Price</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {selectedXrayOrder.items.map(item => (
+                  <TableRow key={item.id}>
+                    <TableCell>
+                      <input
+                        type="checkbox"
+                        checked={selectedXrayTestIds.has(item.id)}
+                        onChange={() => toggleXrayTestItem(item.id)}
+                        className="h-4 w-4 rounded border-gray-300"
+                      />
+                    </TableCell>
+                    <TableCell className="font-medium">{item.test_name}</TableCell>
+                    <TableCell className="text-right font-mono">
+                      Rs. {Number(item.price || 0).toLocaleString('en-PK', { minimumFractionDigits: 2 })}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+
+            <Separator />
+
+            <div className="space-y-1 text-sm max-w-sm ml-auto">
+              <div className="flex justify-between">
+                <span className="text-gray-600">Selected tests:</span>
+                <span>{selectedXrayItems.length} / {selectedXrayOrder.items.length}</span>
+              </div>
+              {isXrayDiscounted && (
+                <>
+                  <div className="flex justify-between text-gray-500">
+                    <span>Catalog total:</span>
+                    <span className="line-through">{formatPkrAmount(selectedXrayCatalog)}</span>
+                  </div>
+                  <div className="text-xs text-amber-600">
+                    Discount applied to this invoice — refund reflects the amount actually paid.
+                  </div>
+                </>
+              )}
+              <div className="flex justify-between text-lg font-bold pt-1 border-t">
+                <span>Refund amount:</span>
+                <span className="text-green-600">{formatPkrAmount(xrayRefundAmount)}</span>
+              </div>
+            </div>
+
+            <AlertDialog open={showXrayConfirm} onOpenChange={setShowXrayConfirm}>
+              <AlertDialogTrigger asChild>
+                <Button
+                  className="w-full"
+                  disabled={selectedXrayItems.length === 0}
+                >
+                  <AlertTriangle className="w-4 h-4 mr-2" />
+                  Cancel Selected Tests & Refund
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Confirm X-Ray Test Cancellation</AlertDialogTitle>
+                  <AlertDialogDescription asChild>
+                    <div className="space-y-2">
+                      <p>
+                        Cancel <strong>{selectedXrayItems.length} test(s)</strong> and refund{" "}
+                        <strong>{formatPkrAmount(xrayRefundAmount)}</strong> against invoice{" "}
+                        <strong>{selectedXrayOrder.invoice_number}</strong>?
+                      </p>
+                      <ul className="list-disc list-inside text-sm space-y-1">
+                        {selectedXrayItems.map(item => (
+                          <li key={item.id}>{item.test_name} — {formatPkrAmount(Number(item.price))}</li>
+                        ))}
+                      </ul>
+                      <div className="text-sm border-t pt-2">
+                        <Label>Reason for cancellation</Label>
+                        <Textarea
+                          value={formData.description}
+                          onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+                          placeholder="Enter cancellation reason"
+                          rows={2}
+                          className="mt-1"
+                        />
+                      </div>
+                      <p className="text-xs text-muted-foreground">This action cannot be undone</p>
+                    </div>
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={() => {
+                      setFormData(prev => ({ ...prev, amount: xrayRefundAmount.toString() }));
+                      setShowConfirmDialog(true);
+                      setShowXrayConfirm(false);
                     }}
                     className="bg-red-600 hover:bg-red-700"
                   >

@@ -207,20 +207,49 @@ export function DetailedDailyReport({
     });
   });
 
-  // X-ray reports — use the paid XR- invoice amount when available so discounts reflect
-  const xrayInvoiceByReportId = new Map<string, number>();
+  // X-ray reports — use the paid XR- invoice amount when available so discounts reflect.
+  // Group by invoice_id so multi-test orders allocate the invoice amount proportionally
+  // rather than duplicating the entire invoice total on every test.
   const xrayInvoiceById = new Map<string, number>();
+  const xrayInvoiceCreatorById = new Map<string, string>();
   (hospitalInvoices || []).forEach((inv: any) => {
+    if (inv.status === 'cancelled') return;
     if (!/^XR-/i.test(inv.invoice_number || '')) return;
     const amt = Number(inv.amount) || 0;
-    if (inv.id) xrayInvoiceById.set(inv.id, amt);
-  });
-  (xrayReports || []).forEach((xray: any) => {
-    if (xray.invoice_id && xrayInvoiceById.has(xray.invoice_id)) {
-      xrayInvoiceByReportId.set(xray.id, xrayInvoiceById.get(xray.invoice_id)!);
+    if (inv.id) {
+      xrayInvoiceById.set(inv.id, amt);
+      if (inv.created_by) xrayInvoiceCreatorById.set(inv.id, inv.created_by);
     }
   });
+
+  const xrayReportsByInvoice = new Map<string, any[]>();
   (xrayReports || []).forEach((xray: any) => {
+    if (xray.status === 'cancelled') return;
+    if (xray.invoice_id && xrayInvoiceById.has(xray.invoice_id)) {
+      const list = xrayReportsByInvoice.get(xray.invoice_id) || [];
+      list.push(xray);
+      xrayReportsByInvoice.set(xray.invoice_id, list);
+    }
+  });
+
+  const xrayInvoiceByReportId = new Map<string, number>();
+  xrayReportsByInvoice.forEach((reports, invId) => {
+    const invAmount = xrayInvoiceById.get(invId)!;
+    const totalOriginalPrice = reports.reduce((sum, r) => sum + (Number(r.price) || 0), 0);
+    reports.forEach((r) => {
+      const allocated = totalOriginalPrice > 0
+        ? Math.round(((Number(r.price) || 0) / totalOriginalPrice) * invAmount * 100) / 100
+        : Math.round((invAmount / reports.length) * 100) / 100;
+      xrayInvoiceByReportId.set(r.id, allocated);
+    });
+  });
+
+  (xrayReports || []).forEach((xray: any) => {
+    if (xray.status === 'cancelled') return;
+    if (xray.invoice_id && !xrayInvoiceById.has(xray.invoice_id)) {
+      const inv = (hospitalInvoices || []).find((i: any) => i.id === xray.invoice_id);
+      if (inv && inv.status === 'cancelled') return;
+    }
     const patientProfile = (xray as any).patients?.profiles;
     const patientName = patientProfile
       ? `${patientProfile.first_name || ''} ${patientProfile.last_name || ''}`.trim()
@@ -228,6 +257,7 @@ export function DetailedDailyReport({
     const amount = xrayInvoiceByReportId.has(xray.id)
       ? xrayInvoiceByReportId.get(xray.id)!
       : Number(xray.price) || 0;
+    const operatorId = xray.created_by || (xray.invoice_id ? xrayInvoiceCreatorById.get(xray.invoice_id) : null);
     transactions.push({
       id: xray.id,
       patientName,
@@ -237,7 +267,7 @@ export function DetailedDailyReport({
       amountPaid: amount,
       docShare: 0,
       hosShare: amount,
-      operator: '—',
+      operator: getOperatorName(operatorId, staffProfiles),
       category: 'X-Ray',
       shift: getShift(xray.created_at),
     });
