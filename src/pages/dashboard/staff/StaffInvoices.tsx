@@ -2,7 +2,7 @@
 import AppLayout from "@/layouts/AppLayout";
 import { usePaginatedInvoices, usePaginatedPharmacyInvoices, useUpdateInvoice } from "@/hooks/useDatabase";
 import { InvoiceDialog } from "@/components/dialogs/InvoiceDialog";
-import { generateInvoicePDF, generateXrayInvoicePDF } from "@/utils/pdfGenerator";
+import { generateInvoicePDF, generateXrayInvoicePDF, prepareXrayInvoiceData } from "@/utils/pdfGenerator";
 import { generatePharmacyInvoicePDF } from "@/utils/pharmacyPdfGenerator";
 import { Banknote, FileText, Calendar, CheckCircle, Download, ChevronLeft, ChevronRight, Pill } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -262,40 +262,8 @@ export default function StaffInvoices() {
 
         await generatePharmacyInvoicePDF(invoiceData);
       } else if (invoice.type === 'xray') {
-        // For X-ray invoices, fetch patient and doctor data for proper PDF generation
-        const [patientRes, patientProfileRes, doctorRes] = await Promise.all([
-          supabase.from('patients').select('patient_number').eq('id', invoice.patient_id).single(),
-          supabase.from('profiles').select('first_name, last_name, phone').eq('id', invoice.patient_id).single(),
-          invoice.doctor_id ? 
-            supabase.from('profiles').select('first_name, last_name').eq('id', invoice.doctor_id).single() :
-            Promise.resolve({ data: null })
-        ]);
-
-        const patientNumber = patientRes.data?.patient_number || 'N/A';
-        const patientProfile = patientProfileRes.data;
-        const patientName = patientProfile ? `${patientProfile.first_name || ''} ${patientProfile.last_name || ''}`.trim() : 'Unknown Patient';
-        const doctorProfile = doctorRes.data;
-        const doctorName = invoice.external_doctor_name || 
-          (doctorProfile ? `Dr. ${doctorProfile.first_name} ${doctorProfile.last_name}` : 'External Doctor');
-
-        await generateXrayInvoicePDF({
-          invoiceNumber: invoice.displayNumber,
-          patientName: patientName,
-          patientEmail: 'Not provided',
-          patientId: patientNumber,
-          patientPhone: patientProfile?.phone || 'Not provided',
-          doctorName: doctorName,
-          tests: [{
-            name: invoice.test_name,
-            price: invoice.price || 0,
-            description: invoice.notes || undefined
-          }],
-          totalAmount: invoice.price || 0,
-          issueDate: format(new Date(invoice.created_at), 'MMM dd, yyyy'),
-          xrayDate: format(new Date(invoice.xray_date || invoice.created_at), 'MMM dd, yyyy'),
-          notes: invoice.notes,
-          createdBy: invoice.created_by
-        });
+        const xrayData = await prepareXrayInvoiceData(invoice);
+        await generateXrayInvoicePDF(xrayData);
       } else {
         await generateInvoicePDF(invoice);
       }

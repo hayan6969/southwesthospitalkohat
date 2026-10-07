@@ -81,7 +81,7 @@ export const generateAnalyticsReportPDF = async (startDate: Date, endDate: Date)
 
   const labReports = labReportsRes.data || [];
 
-  // Enrich lab reports with invoice amounts (for discount visibility)
+  // Enrich lab reports with invoice amounts (proportional per test when multi-test order)
   const labInvoiceIds = labReports.map((lr: any) => lr.invoice_id).filter(Boolean);
   let labInvoiceMap = new Map<string, number>();
   if (labInvoiceIds.length > 0) {
@@ -93,9 +93,33 @@ export const generateAnalyticsReportPDF = async (startDate: Date, endDate: Date)
       labInvoiceMap.set(inv.id, Number(inv.amount) || 0);
     });
   }
+
+  const labReportsByInv = new Map<string, any[]>();
+  labReports.forEach((lr: any) => {
+    if (lr.invoice_id && labInvoiceMap.has(lr.invoice_id)) {
+      const list = labReportsByInv.get(lr.invoice_id) || [];
+      list.push(lr);
+      labReportsByInv.set(lr.invoice_id, list);
+    }
+  });
+
+  const labAllocatedMap = new Map<string, number>();
+  labReportsByInv.forEach((reports, invId) => {
+    const invAmount = labInvoiceMap.get(invId)!;
+    const totalOriginal = reports.reduce((sum, r) => sum + (Number(r.price) || 0), 0);
+    reports.forEach((r) => {
+      const allocated = totalOriginal > 0
+        ? Math.round(((Number(r.price) || 0) / totalOriginal) * invAmount * 100) / 100
+        : Math.round((invAmount / reports.length) * 100) / 100;
+      labAllocatedMap.set(r.id, allocated);
+    });
+  });
+
   const enrichedLabReports = labReports.map((lr: any) => ({
     ...lr,
-    invoice_amount: lr.invoice_id ? labInvoiceMap.get(lr.invoice_id) ?? null : null,
+    invoice_amount: lr.invoice_id && labAllocatedMap.has(lr.id)
+      ? labAllocatedMap.get(lr.id)
+      : (lr.invoice_id && labInvoiceMap.has(lr.invoice_id) ? labInvoiceMap.get(lr.invoice_id) : null),
   }));
 
   // Deduplicate hospital invoices (same patient, amount, within 2 min)

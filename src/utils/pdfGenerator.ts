@@ -491,8 +491,8 @@ export const generateInvoicePDF = async (invoice: any) => {
   window.open(pdfUrl, '_blank');
 };
 
-// X-ray invoice generation
-export const generateXrayInvoicePDF = async (data: {
+// X-ray invoice data interface
+export interface XrayInvoiceData {
   invoiceNumber: string;
   patientName: string;
   patientEmail: string;
@@ -509,7 +509,144 @@ export const generateXrayInvoicePDF = async (data: {
   xrayDate: string;
   notes?: string;
   createdBy?: string;
-}, opts: { autoPrint?: boolean } = {}) => {
+}
+
+/**
+ * Prepares complete, reliable X-ray invoice data for thermal / A4 printing.
+ * Handles both invoice rows (from public.invoices) and report rows (from public.xray_reports),
+ * querying linked xray_reports to fetch all tests, prices, patient, doctor, and operator details.
+ */
+export const prepareXrayInvoiceData = async (source: any): Promise<XrayInvoiceData> => {
+  let invoiceId = source.invoice_id || (source.invoice_number?.startsWith?.('XR-') ? source.id : null);
+  let invoiceRow: any = null;
+
+  if (invoiceId) {
+    const { data: inv } = await supabase
+      .from('invoices')
+      .select('*, creator:profiles!invoices_created_by_fkey(first_name, last_name)')
+      .eq('id', invoiceId)
+      .maybeSingle();
+    invoiceRow = inv;
+  }
+
+  const patientId = source.patient_id || invoiceRow?.patient_id;
+  const doctorId = source.doctor_id || invoiceRow?.doctor_id;
+
+  const [patientRes, patientProfileRes, doctorRes] = await Promise.all([
+    patientId
+      ? supabase.from('patients').select('patient_number').eq('id', patientId).maybeSingle()
+      : Promise.resolve({ data: null }),
+    patientId
+      ? supabase.from('profiles').select('first_name, last_name, phone').eq('id', patientId).maybeSingle()
+      : Promise.resolve({ data: null }),
+    doctorId
+      ? supabase.from('profiles').select('first_name, last_name').eq('id', doctorId).maybeSingle()
+      : Promise.resolve({ data: null }),
+  ]);
+
+  const patientNumber = patientRes.data?.patient_number || source.patient_number || source.patient?.patient_number || 'Walk-in';
+  const patientProfile = patientProfileRes.data || (source.patient as any)?.profiles || (source.patients as any)?.profiles;
+  const patientName = patientProfile
+    ? `${patientProfile.first_name || ''} ${patientProfile.last_name || ''}`.trim()
+    : (source.patient_name || 'Walk-in Patient');
+  const patientPhone = patientProfile?.phone || source.phone || source.patient_phone || 'Not provided';
+
+  const doctorProfile = doctorRes.data;
+  let doctorName = source.external_doctor_name ||
+    (doctorProfile ? `Dr. ${doctorProfile.first_name} ${doctorProfile.last_name}` : 'External Doctor');
+
+  let tests: Array<{ name: string; price: number; description?: string }> = [];
+  let notes: string | undefined = source.notes || undefined;
+  let xrayDate: string = source.xray_date || source.created_at || invoiceRow?.created_at || new Date().toISOString();
+  let createdBy = source.created_by || invoiceRow?.created_by;
+
+  // Query linked tests from xray_reports
+  if (invoiceId) {
+    const { data: reports } = await supabase
+      .from('xray_reports')
+      .select('*')
+      .eq('invoice_id', invoiceId)
+      .order('created_at', { ascending: true });
+
+    if (reports && reports.length > 0) {
+      tests = reports.map((r: any) => ({
+        name: r.test_name || 'X-Ray Test',
+        price: Number(r.price) || 0,
+        description: r.notes || undefined,
+      }));
+      if (!notes && reports[0]?.notes) notes = reports[0].notes;
+      if (reports[0]?.xray_date) xrayDate = reports[0].xray_date;
+      if (reports[0]?.external_doctor_name && (!doctorName || doctorName === 'External Doctor')) {
+        doctorName = reports[0].external_doctor_name;
+      }
+      if (!createdBy && reports[0]?.created_by) {
+        createdBy = reports[0].created_by;
+      }
+    }
+  }
+
+  // Fallbacks if no reports exist
+  if (tests.length === 0) {
+    if (source.test_name) {
+      tests = [{
+        name: source.test_name,
+        price: Number(source.price || source.amount || source.displayAmount || invoiceRow?.amount || 0),
+        description: source.notes || undefined,
+      }];
+    } else {
+      const desc = source.description || invoiceRow?.description || '';
+      if (desc) {
+        let descClean = desc.replace(/^X-ray Tests:\s*/i, '');
+        descClean = descClean.replace(/\s*\([^)]*discount[^)]*\)\s*$/i, '');
+        const testNames = descClean.split(',').map((s: string) => s.trim()).filter(Boolean);
+        const totalAmt = Number(source.amount ?? source.displayAmount ?? invoiceRow?.amount ?? 0);
+        if (testNames.length > 0) {
+          const splitPrice = Math.round((totalAmt / testNames.length) * 100) / 100;
+          tests = testNames.map((name: string) => ({
+            name,
+            price: splitPrice,
+          }));
+        } else {
+          tests = [{
+            name: 'X-Ray Examination',
+            price: totalAmt,
+          }];
+        }
+      } else {
+        tests = [{
+          name: 'X-Ray Examination',
+          price: Number(source.amount ?? source.displayAmount ?? invoiceRow?.amount ?? 0),
+        }];
+      }
+    }
+  }
+
+  const invoiceNumber = source.displayNumber || source.invoice_number || invoiceRow?.invoice_number || `XR-${source.id?.slice?.(0, 8) || Date.now()}`;
+  const totalAmount = Number(
+    source.amount ?? source.displayAmount ?? invoiceRow?.amount ?? source.price ?? tests.reduce((sum, t) => sum + t.price, 0)
+  );
+
+  return {
+    invoiceNumber,
+    patientName,
+    patientEmail: 'Not provided',
+    patientId: patientNumber,
+    patientPhone,
+    doctorName,
+    tests,
+    totalAmount,
+    issueDate: formatInPakistanTime(source.created_at || invoiceRow?.created_at || new Date(), 'MMM dd, yyyy'),
+    xrayDate: formatInPakistanTime(xrayDate, 'MMM dd, yyyy'),
+    notes: notes || undefined,
+    createdBy,
+  };
+};
+
+// X-ray invoice generation
+export const generateXrayInvoicePDF = async (
+  data: XrayInvoiceData,
+  opts: { autoPrint?: boolean } = {}
+) => {
   const createdByName = await fetchCreatorName(data.createdBy);
   const settings = await getThermalHospitalSettings();
 
@@ -852,7 +989,7 @@ const queryTransactionDataForDate = async (closingDate: string, closingTime: str
       .lte('created_at', upperBound)
   ]);
   
-  // Enrich lab reports with invoice amounts (for discount visibility)
+  // Enrich lab reports with invoice amounts (proportional per test when multi-test order)
   const labReports = labReportsRes.data || [];
   const labInvoiceIds = labReports.map((lr: any) => lr.invoice_id).filter(Boolean);
   let labInvoiceMap = new Map<string, number>();
@@ -865,12 +1002,36 @@ const queryTransactionDataForDate = async (closingDate: string, closingTime: str
       labInvoiceMap.set(inv.id, Number(inv.amount) || 0);
     });
   }
+
+  const labReportsByInv = new Map<string, any[]>();
+  labReports.forEach((lr: any) => {
+    if (lr.invoice_id && labInvoiceMap.has(lr.invoice_id)) {
+      const list = labReportsByInv.get(lr.invoice_id) || [];
+      list.push(lr);
+      labReportsByInv.set(lr.invoice_id, list);
+    }
+  });
+
+  const labAllocatedMap = new Map<string, number>();
+  labReportsByInv.forEach((reports, invId) => {
+    const invAmount = labInvoiceMap.get(invId)!;
+    const totalOriginal = reports.reduce((sum, r) => sum + (Number(r.price) || 0), 0);
+    reports.forEach((r) => {
+      const allocated = totalOriginal > 0
+        ? Math.round(((Number(r.price) || 0) / totalOriginal) * invAmount * 100) / 100
+        : Math.round((invAmount / reports.length) * 100) / 100;
+      labAllocatedMap.set(r.id, allocated);
+    });
+  });
+
   const enrichedLabReports = labReports.map((lr: any) => ({
     ...lr,
-    invoice_amount: lr.invoice_id ? labInvoiceMap.get(lr.invoice_id) ?? null : null,
+    invoice_amount: lr.invoice_id && labAllocatedMap.has(lr.id)
+      ? labAllocatedMap.get(lr.id)
+      : (lr.invoice_id && labInvoiceMap.has(lr.invoice_id) ? labInvoiceMap.get(lr.invoice_id) : null),
   }));
 
-  // Enrich x-ray reports with invoice amounts (for discount visibility)
+  // Enrich x-ray reports with invoice amounts (proportional per test when multi-test order)
   const xrayReports = xrayReportsRes.data || [];
   const xrayInvoiceIds = xrayReports.map((xr: any) => xr.invoice_id).filter(Boolean);
   const xrayInvoiceMap = new Map<string, number>();
@@ -883,9 +1044,33 @@ const queryTransactionDataForDate = async (closingDate: string, closingTime: str
       xrayInvoiceMap.set(inv.id, Number(inv.amount) || 0);
     });
   }
+
+  const xrayReportsByInv = new Map<string, any[]>();
+  xrayReports.forEach((xr: any) => {
+    if (xr.invoice_id && xrayInvoiceMap.has(xr.invoice_id)) {
+      const list = xrayReportsByInv.get(xr.invoice_id) || [];
+      list.push(xr);
+      xrayReportsByInv.set(xr.invoice_id, list);
+    }
+  });
+
+  const xrayAllocatedMap = new Map<string, number>();
+  xrayReportsByInv.forEach((reports, invId) => {
+    const invAmount = xrayInvoiceMap.get(invId)!;
+    const totalOriginal = reports.reduce((sum, r) => sum + (Number(r.price) || 0), 0);
+    reports.forEach((r) => {
+      const allocated = totalOriginal > 0
+        ? Math.round(((Number(r.price) || 0) / totalOriginal) * invAmount * 100) / 100
+        : Math.round((invAmount / reports.length) * 100) / 100;
+      xrayAllocatedMap.set(r.id, allocated);
+    });
+  });
+
   const enrichedXrayReports = xrayReports.map((xr: any) => ({
     ...xr,
-    invoice_amount: xr.invoice_id ? xrayInvoiceMap.get(xr.invoice_id) ?? null : null,
+    invoice_amount: xr.invoice_id && xrayAllocatedMap.has(xr.id)
+      ? xrayAllocatedMap.get(xr.id)
+      : (xr.invoice_id && xrayInvoiceMap.has(xr.invoice_id) ? xrayInvoiceMap.get(xr.invoice_id) : null),
   }));
 
   return {
@@ -1400,11 +1585,33 @@ export const generateDailyClosingPDF = async (data: {
   });
 
   // X-ray reports - use invoice amount (includes discount) if available, fallback to price
-  (transactionsData?.xrayReports || []).forEach((xray: any) => {
+  const xrayList = transactionsData?.xrayReports || [];
+  const xrByInvoice = new Map<string, any[]>();
+  xrayList.forEach((xr: any) => {
+    if (xr.invoice_id) {
+      const list = xrByInvoice.get(xr.invoice_id) || [];
+      list.push(xr);
+      xrByInvoice.set(xr.invoice_id, list);
+    }
+  });
+
+  xrayList.forEach((xray: any) => {
     const p = (xray as any).xray_patient || (xray as any).patients?.profiles;
     const originalPrice = Number(xray.price) || 0;
-    const invoiceAmount = xray.invoice_amount != null ? Number(xray.invoice_amount) : null;
-    const finalAmount = invoiceAmount != null ? invoiceAmount : originalPrice;
+    let finalAmount = originalPrice;
+    if (xray.invoice_amount != null) {
+      finalAmount = Number(xray.invoice_amount);
+    } else if (xray.invoice_id) {
+      const matchingInv = hospitalInvoicesAll.find((inv: any) => inv.id === xray.invoice_id);
+      if (matchingInv) {
+        const invAmt = Number(matchingInv.amount) || 0;
+        const siblings = xrByInvoice.get(xray.invoice_id) || [xray];
+        const sumOriginal = siblings.reduce((s: number, r: any) => s + (Number(r.price) || 0), 0);
+        finalAmount = sumOriginal > 0
+          ? Math.round((originalPrice / sumOriginal) * invAmt * 100) / 100
+          : Math.round((invAmt / siblings.length) * 100) / 100;
+      }
+    }
     const discountApplied = originalPrice > 0 && finalAmount < originalPrice ? originalPrice - finalAmount : 0;
     let xrayTestName = xray.test_name || xray.xray_tests?.name || 'X-Ray';
     if (discountApplied > 0) {
@@ -2057,7 +2264,12 @@ export const generateDailyClosingPDF = async (data: {
   const correctLabRevenue = hospitalInvoicesAll
     .filter((inv: any) => inv.invoice_number?.startsWith?.('LAB-'))
     .reduce((sum: number, inv: any) => sum + (Number(inv.amount) || 0), 0);
-  const correctXrayRevenue = transactionsData?.xrayReports?.reduce((sum: number, xray: any) => sum + (xray.invoice_amount != null ? Number(xray.invoice_amount) : (Number(xray.price) || 0)), 0) || 0;
+  const xrayInvoiceRevClosing = hospitalInvoicesAll
+    .filter((inv: any) => /^XR-/i.test(inv.invoice_number || ''))
+    .reduce((sum: number, inv: any) => sum + (Number(inv.amount) || 0), 0);
+  const correctXrayRevenue = xrayInvoiceRevClosing > 0
+    ? xrayInvoiceRevClosing
+    : (transactionsData?.xrayReports?.reduce((sum: number, xray: any) => sum + (xray.invoice_amount != null ? Number(xray.invoice_amount) : (Number(xray.price) || 0)), 0) || 0);
   const correctOtRevenue = transactionsData?.otSchedules?.reduce((sum: number, ot: any) => sum + ((ot.total_cost || 0) - (ot.doctor_expense || 0)), 0) || 0;
   const emergencyAppointmentRevenue = transactionsData?.emergencyAppointments?.reduce((sum: number, e: any) => sum + (e.consultation_fee_at_time || 0), 0) || 0;
   const emergencyInvoiceRevenue = hospitalInvoicesAll.filter(isEmergencyInv).reduce((sum: number, inv: any) => sum + (Number(inv.amount) || 0), 0);
@@ -2637,7 +2849,11 @@ export const generateDailyClosingSummaryPDF = async (data: {
   const labRevenue = labReports.reduce((s: number, r: any) => s + (r.invoice_amount != null ? Number(r.invoice_amount) : (Number(r.price) || 0)), 0);
 
   const xrayReports = transactionsData?.xrayReports || [];
-  const xrayRevenue = xrayReports.reduce((s: number, r: any) => s + (r.invoice_amount != null ? Number(r.invoice_amount) : (Number(r.price) || 0)), 0);
+  const xrayInvRevRep = hospitalInvoicesAll
+    .filter((inv: any) => /^XR-/i.test(inv.invoice_number || ''))
+    .reduce((sum: number, inv: any) => sum + (Number(inv.amount) || 0), 0);
+  const xrayReportsFallback = xrayReports.reduce((s: number, r: any) => s + (r.invoice_amount != null ? Number(r.invoice_amount) : (Number(r.price) || 0)), 0);
+  const xrayRevenue = xrayInvRevRep > 0 ? xrayInvRevRep : xrayReportsFallback;
 
   const otSchedules = transactionsData?.otSchedules || [];
   const otTotalCost = otSchedules.reduce((s: number, ot: any) => s + (Number(ot.total_cost) || 0), 0);
@@ -3273,24 +3489,7 @@ export const generateLabInvoiceA4PDF = async (data: {
   return pdfBlob;
 };
 
-export const generateXrayInvoiceA4PDF = async (data: {
-  invoiceNumber: string;
-  patientName: string;
-  patientEmail: string;
-  patientId?: string;
-  patientPhone?: string;
-  doctorName?: string;
-  tests: Array<{
-    name: string;
-    price: number;
-    description?: string;
-  }>;
-  totalAmount: number;
-  issueDate: string;
-  xrayDate: string;
-  notes?: string;
-  createdBy?: string;
-}) => {
+export const generateXrayInvoiceA4PDF = async (data: XrayInvoiceData) => {
   const createdByName = await fetchCreatorName(data.createdBy);
   const doc = new jsPDF();
   const pageWidth = doc.internal.pageSize.width;

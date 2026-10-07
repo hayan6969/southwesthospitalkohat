@@ -8,7 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { formatPkrAmount } from "@/utils/currency";
 import { Download, Receipt, Calendar as CalendarIcon, Filter, ChevronLeft, ChevronRight, Pill } from "lucide-react";
 import { format } from "date-fns";
-import { generateInvoicePDF, generateXrayInvoicePDF, generateOTPDF } from "@/utils/pdfGenerator";
+import { generateInvoicePDF, generateXrayInvoicePDF, generateOTPDF, prepareXrayInvoiceData } from "@/utils/pdfGenerator";
 import { generatePharmacyInvoicePDF } from "@/utils/pharmacyPdfGenerator";
 import { useToast } from "@/hooks/use-toast";
 import { Calendar } from "@/components/ui/calendar";
@@ -157,40 +157,8 @@ export default function FinanceInvoices() {
           }
         });
       } else if (invoice.type === 'xray') {
-        // For X-ray invoices, fetch patient and doctor data for proper PDF generation
-        const [patientRes, patientProfileRes, doctorRes] = await Promise.all([
-          supabase.from('patients').select('patient_number').eq('id', invoice.patient_id).single(),
-          supabase.from('profiles').select('first_name, last_name, phone').eq('id', invoice.patient_id).single(),
-          invoice.doctor_id ? 
-            supabase.from('profiles').select('first_name, last_name').eq('id', invoice.doctor_id).single() :
-            Promise.resolve({ data: null })
-        ]);
-
-        const patientNumber = patientRes.data?.patient_number || 'Walk-in';
-        const patientProfile = patientProfileRes.data;
-        const patientName = patientProfile ? `${patientProfile.first_name || ''} ${patientProfile.last_name || ''}`.trim() : 'Walk-in Patient';
-        const doctorProfile = doctorRes.data;
-        const doctorName = invoice.external_doctor_name || 
-          (doctorProfile ? `Dr. ${doctorProfile.first_name} ${doctorProfile.last_name}` : 'External Doctor');
-
-        await generateXrayInvoicePDF({
-          invoiceNumber: invoice.displayNumber,
-          patientName: patientName,
-          patientEmail: 'Not provided',
-          patientId: patientNumber,
-          patientPhone: patientProfile?.phone || 'Not provided',
-          doctorName: doctorName,
-          tests: [{
-            name: invoice.test_name,
-            price: invoice.price || 0,
-            description: invoice.notes || undefined
-          }],
-          totalAmount: invoice.price || 0,
-          issueDate: format(new Date(invoice.created_at), 'MMM dd, yyyy'),
-          xrayDate: format(new Date(invoice.xray_date || invoice.created_at), 'MMM dd, yyyy'),
-          notes: invoice.notes,
-          createdBy: invoice.created_by
-        });
+        const xrayData = await prepareXrayInvoiceData(invoice);
+        await generateXrayInvoicePDF(xrayData);
       } else if (invoice.type === 'ot') {
         // For OT invoices, use the exact same PDF generator as when scheduling OT
         const [patientRes, patientProfileRes] = await Promise.all([
