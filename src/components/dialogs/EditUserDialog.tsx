@@ -124,24 +124,43 @@ export function EditUserDialog({ user, open, onOpenChange, onUserUpdated }: Edit
 
       if (profileError) throw profileError;
 
-      // Update password if provided
-      if (password.trim()) {
-        console.log('Invoking password update function for user:', user.id);
-        const { data, error: passwordError } = await supabase.functions.invoke(
+      // Update auth credentials (password and/or email) if provided/changed
+      const emailTrimmed = email.trim().toLowerCase();
+      const prevEmail = (user.email || '').trim().toLowerCase();
+      const emailChanged = emailTrimmed !== prevEmail;
+      const hasPassword = Boolean(password.trim());
+
+      if (hasPassword || emailChanged) {
+        console.log('Invoking credentials update function for user:', user.id, { emailChanged, hasPassword });
+        const { data, error: authUpdateError } = await supabase.functions.invoke(
           'update-user-password',
           {
             body: {
               userId: user.id,
-              password: password.trim()
+              password: hasPassword ? password.trim() : undefined,
+              email: emailChanged ? emailTrimmed : undefined,
             }
           }
         );
         
-        console.log('Password update response:', { data, error: passwordError });
+        console.log('Credentials update response:', { data, error: authUpdateError });
         
-        if (passwordError) {
-          console.error('Password update error:', passwordError);
-          throw new Error(`Password update failed: ${passwordError.message}`);
+        if (authUpdateError) {
+          console.error('Credentials update error:', authUpdateError);
+          let errMsg = authUpdateError.message;
+          try {
+            if ((authUpdateError as any).context && typeof (authUpdateError as any).context.json === 'function') {
+              const errBody = await (authUpdateError as any).context.json();
+              if (errBody?.error) errMsg = errBody.error;
+            }
+          } catch {
+            // ignore context parse error
+          }
+          throw new Error(`Account credentials update failed: ${errMsg}`);
+        }
+
+        if (data?.error) {
+          throw new Error(`Account credentials update failed: ${data.error}`);
         }
       }
 
